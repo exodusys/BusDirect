@@ -907,7 +907,7 @@ var prods=(cur.products||[]).filter(Boolean);
 var acc=getLineColor(prods[0]||"");
 var myStop=(cur._fromStop||cur.from&&cur.from.station||"").toLowerCase();
 var delay=cur.from&&cur.from.delay||0;
-/* V83 FIX noir + pastilles uniquement départ/vehicule/changement + vrais arrêts ligne */
+/* V84: pastilles dalles uniquement départ/changements/arrivée, points colorés ligne, supprime arrêts avant départ, ARRIVE DANS */
 var progress=0;
 if(liveIdx>=0&&liveIdx<stops.length-1){
   var _tL=ms(stops[liveIdx],false),_tN=ms(stops[liveIdx+1],liveIdx+1===stops.length-1);
@@ -920,8 +920,12 @@ list.forEach(function(entry){
   else if(entry.type==="walk"){ walkBetween[scIdx]=entry.walkMin||0; }
   else if(entry.type==="transfer"){ transferBetween[scIdx]=entry; }
 });
-var firstVisible = liveIdx>0?liveIdx:0;
-var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ return liveIdx<0?true:o.i>=firstVisible; });
+/* supprime tous les arrêts avant le départ : départ = premier arrêt réel après adresse */
+var firstVisible = 0;
+if(pc>0){ firstVisible = pc; } /* pc = nombre d'arrêts précédents estimés = avant départ */
+var globalDepIdx = firstVisible;
+var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ return o.i>=globalDepIdx; });
+
 function chipEl(line){
   if(!line) return null;
   var clean=String(line).trim();
@@ -930,6 +934,11 @@ function chipEl(line){
   var col=getLineColor(clean);
   return c("span",{className:"bdt-chip",style:{background:col,color:"#fff"},children:label});
 }
+var depStop = visibleStops.length?visibleStops[0].s:null;
+var depMs = depStop?ms(depStop,false):null;
+var arriveInMins = depMs!=null?Math.max(0,Math.round((depMs-now)/60000)):null;
+var showArriveBanner = liveIdx>=0 && liveIdx<globalDepIdx && arriveInMins!=null;
+
 var rows=visibleStops.map(function(obj,vi){
  var x=obj.s; var i=obj.i;
  var isFirst = vi===0;
@@ -946,30 +955,24 @@ var rows=visibleStops.map(function(obj,vi){
  var walkMinBefore = walkBetween[i-1];
  var trInfo = transferBetween[i-1];
  var isChange = !!trInfo && prevLineRaw && curLineRaw && prevLineRaw!==curLineRaw;
+ /* colore point départ / changement / arrivée avec couleur ligne */
+ var dotBg = (isFirst||isChange||isLast)?lc:null;
+ var dotStyle = {};
+ if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
+ if(live){ dotStyle.transform="translateY("+(progress*54)+"px)"; dotStyle.transition="transform 1s linear"; }
  var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
- var dotStyle = live?{transform:"translateY("+(progress*54)+"px)",transition:"transform 1s linear"}:{};
  return p("div",{className:cls,style:{"--acc":lc},children:[
   c("span",{className:"bdt-dot",style:dotStyle}),
   p("div",{className:"bdt-main",children:[
    c("div",{className:"bdt-name",children:name}),
    p("div",{className:"bdt-tags",children:[
-    live?c("span",{className:"bdt-live-wrap",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[
-      chipEl(curLineRaw),
-      c("span",{className:"bdt-tag bdt-tag-live",children:"Véhicule ici · "+Math.round(progress*100)+"%"})
-    ]}):null,
-    isFirst&&!live?c("span",{className:"bdt-dep-wrap",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[
-      chipEl(curLineRaw),
-      c("span",{className:"bdt-tag",children:"Départ"})
-    ]}):null,
-    isChange?c("span",{className:"bdt-change-wrap",style:{display:"inline-flex",alignItems:"center",gap:"4px",background:"var(--soft)",padding:"2px 8px",borderRadius:"99px"},children:[
-      chipEl(prevLineRaw),
-      c("span",{style:{fontWeight:700},children:"→"}),
-      chipEl(curLineRaw)
-    ]}):null,
-    isLast?c("span",{className:"bdt-tag",children:"Arrivée"}):null,
-    mine&&!isFirst&&!live?c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"}):null,
+    /* pastilles uniquement départ / changement / arrivée */
+    isFirst?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag",children:"Départ"})]}):null,
+    isChange?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"4px",background:"var(--soft)",padding:"2px 8px",borderRadius:"99px"},children:[chipEl(prevLineRaw),c("span",{style:{fontWeight:700},children:"→"}),chipEl(curLineRaw)]}):null,
+    isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag",children:"Arrivée"})]}):null,
+    mine&&!isFirst&&!isLast&&!isChange?c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"}):null,
     x.platform&&bdIsTrain(x.category||x.line)&&c("span",{className:"bdt-plat",children:"Voie "+x.platform}),
-    walkMinBefore!=null&&walkMinBefore>0?c("span",{className:"bdt-tag",style:{background:"#fffbeb",color:"#b45309"},children:"🚶 "+walkMinBefore+" min"}):null
+    walkMinBefore!=null&&walkMinBefore>0?c("span",{className:"bdt-tag",children:"🚶 "+walkMinBefore+" min"}):null
    ]})
   ]}),
   p("div",{className:"bdt-time",children:[
@@ -978,7 +981,11 @@ var rows=visibleStops.map(function(obj,vi){
   ]})
  ]},"s"+i);
 });
-var rowsEls=rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"});
+var arriveBanner = showArriveBanner? p("div",{className:"bdt-arrive",style:{margin:"0 0 8px 34px",padding:"8px 12px",borderRadius:"12px",background:"rgba(239,68,68,.10)",border:"1px solid rgba(239,68,68,.20)",fontSize:"12px",fontWeight:700,color:"#dc2626",display:"flex",alignItems:"center",gap:"8px"},children:[
+  c("span",{style:{width:"8px",height:"8px",borderRadius:"50%",background:"#ef4444",display:"inline-block"}}),
+  c("span",{children:"ARRIVE DANS "+(arriveInMins<=0?"<1 min":arriveInMins+" min")})
+]}):null;
+var rowsEls = p("div",{children:[arriveBanner, c("div",{className:"bdt-list",children:rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"})})]});
 
 return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
  c("div",{className:"bdt-back",onClick:()=>Tl(null)}),
