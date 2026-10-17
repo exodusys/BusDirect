@@ -182,9 +182,7 @@ html.dark .bdt-pill-late{background:rgba(239,68,68,.18);color:#f87171;}
 .bdt-row.is-past .bdt-dot{background:var(--acc);border-color:var(--acc);}
 .bdt-row.is-end .bdt-dot{width:19px;height:19px;left:4px;top:9px;border-color:var(--acc);}
 .bdt-row.is-end.is-first .bdt-dot{background:var(--acc);}
-.bdt-row.is-live .bdt-dot{background:#ef4444;border-color:var(--card);box-shadow:0 0 0 3px rgba(239,68,68,.35);animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite; will-change:transform;}
-.bdt-walk-inline{font-size:10px;font-weight:700;}
-.bdt-chip{color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;}
+.bdt-row.is-live .bdt-dot{background:#ef4444;border-color:var(--card);box-shadow:0 0 0 3px rgba(239,68,68,.35);animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite;will-change:transform;}
 .bdt-row.is-mine:not(.is-live){background:linear-gradient(90deg,rgba(59,130,246,.08),transparent);border-radius:0 12px 12px 0;}
 .bdt-main{flex:1;min-width:0;}
 .bdt-name{font-size:13px;line-height:1.25;font-weight:500;}
@@ -904,56 +902,74 @@ var status;
 if(!stops.length){status=null}
 else if(arrived){status={k:"done",t:"Trajet terminé",s:"Arrivé à "+nm(stops[stops.length-1])}}
 else if(liveIdx<0){status={k:"wait",t:"Départ "+(firstMs!=null&&mins(firstMs)>0?"dans "+mins(firstMs)+" min":"imminent"),s:"Depuis "+nm(stops[0])}}
-else{var nx=stops[liveIdx+1];var nt2=ms(nx,liveIdx+1===stops.length-1);status={k:"run",t:"Prochain arrêt : "+nm(nx),s:(nt2!=null?(mins(nt2)>0?"dans "+mins(nt2)+" min":"à l'instant"):"")+" · après "+nm(stops[liveIdx])}}var prods=(cur.products||[]).filter(Boolean);
+else{var nx=stops[liveIdx+1];var nt2=ms(nx,liveIdx+1===stops.length-1);status={k:"run",t:"Prochain arrêt : "+nm(nx),s:(nt2!=null?(mins(nt2)>0?"dans "+mins(nt2)+" min":"à l'instant"):"")+" · après "+nm(stops[liveIdx])}}
+var prods=(cur.products||[]).filter(Boolean);
 var acc=getLineColor(prods[0]||"");
 var myStop=(cur._fromStop||cur.from&&cur.from.station||"").toLowerCase();
 var delay=cur.from&&cur.from.delay||0;
-/* === NOUVELLE LOGIQUE: point rouge mobile, arrêts passés disparaissent, pastilles + marche === */
+/* V83 FIX noir + pastilles uniquement départ/vehicule/changement + vrais arrêts ligne */
 var progress=0;
 if(liveIdx>=0&&liveIdx<stops.length-1){
   var _tL=ms(stops[liveIdx],false),_tN=ms(stops[liveIdx+1],liveIdx+1===stops.length-1);
   if(_tL!=null&&_tN!=null&&_tN>_tL){ progress=Math.min(1,Math.max(0,(now-_tL)/(_tN-_tL))); }
 }
-var walkBetween={},transferBetween={};
+var walkBetween={},transferBetween={},sectionLines={};
 var scIdx=-1;
 list.forEach(function(entry){
-  if(entry.type==="stop"||!entry.type){ scIdx++; }
+  if(entry.type==="stop"||!entry.type){ scIdx++; sectionLines[scIdx]=entry.line||entry.category||""; }
   else if(entry.type==="walk"){ walkBetween[scIdx]=entry.walkMin||0; }
   else if(entry.type==="transfer"){ transferBetween[scIdx]=entry; }
 });
 var firstVisible = liveIdx>0?liveIdx:0;
 var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ return liveIdx<0?true:o.i>=firstVisible; });
+function chipEl(line){
+  if(!line) return null;
+  var clean=String(line).trim();
+  var m=clean.match(/\d+|[A-Z]+\d*/);
+  var label=m?m[0]:clean.split(" ")[0];
+  var col=getLineColor(clean);
+  return c("span",{className:"bdt-chip",style:{background:col,color:"#fff"},children:label});
+}
 var rows=visibleStops.map(function(obj,vi){
  var x=obj.s; var i=obj.i;
  var isFirst = vi===0;
  var isLast = i===stops.length-1;
  var name=nm(x);
- var lc=getLineColor(x.line||x.category||prods[0]||"");
+ var curLineRaw = x.line||x.category||sectionLines[i]||prods[0]||"";
+ var lc=getLineColor(curLineRaw);
  var live = i===liveIdx&&!isLast;
  var mine=!!myStop&&!!name&&(name.toLowerCase().indexOf(myStop)>=0||myStop.indexOf(name.toLowerCase())>=0);
  var t=ms(x,isLast),pl=isLast?(x.arrival||x.departure):(x.departure||x.arrival);
  var del=x.delay||0;
  var prevStop = i>0?stops[i-1]:null;
- var prevLine = prevStop?(prevStop.line||prevStop.category||""):"";
- var curLine = x.line||x.category||prods[0]||"";
- var isBoarding = isFirst || (prevLine&&curLine&&prevLine!==curLine) || !!transferBetween[i-1];
+ var prevLineRaw = prevStop?(prevStop.line||prevStop.category||sectionLines[i-1]||""):"";
  var walkMinBefore = walkBetween[i-1];
- var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isBoarding?" is-board":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
- var dotStyle = live?{transform:"translateY("+(progress*54)+"px)",transition:"transform 1s linear"}:{};
  var trInfo = transferBetween[i-1];
+ var isChange = !!trInfo && prevLineRaw && curLineRaw && prevLineRaw!==curLineRaw;
+ var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
+ var dotStyle = live?{transform:"translateY("+(progress*54)+"px)",transition:"transform 1s linear"}:{};
  return p("div",{className:cls,style:{"--acc":lc},children:[
   c("span",{className:"bdt-dot",style:dotStyle}),
   p("div",{className:"bdt-main",children:[
    c("div",{className:"bdt-name",children:name}),
    p("div",{className:"bdt-tags",children:[
-    live&&c("span",{className:"bdt-tag bdt-tag-live",children:"Véhicule ici · "+Math.round(progress*100)+"%"}),
-    isBoarding&&curLine?c("span",{className:"bdt-chip",style:{background:lc,color:"#fff",display:"inline-block",fontSize:"11px",fontWeight:700,padding:"3px 9px",borderRadius:"99px"},children:curLine}):null,
-    isFirst&&c("span",{className:"bdt-tag",children:"Départ"}),
-    isLast&&c("span",{className:"bdt-tag",children:"Arrivée"}),
-    mine&&!isFirst&&c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"}),
+    live?c("span",{className:"bdt-live-wrap",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[
+      chipEl(curLineRaw),
+      c("span",{className:"bdt-tag bdt-tag-live",children:"Véhicule ici · "+Math.round(progress*100)+"%"})
+    ]}):null,
+    isFirst&&!live?c("span",{className:"bdt-dep-wrap",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[
+      chipEl(curLineRaw),
+      c("span",{className:"bdt-tag",children:"Départ"})
+    ]}):null,
+    isChange?c("span",{className:"bdt-change-wrap",style:{display:"inline-flex",alignItems:"center",gap:"4px",background:"var(--soft)",padding:"2px 8px",borderRadius:"99px"},children:[
+      chipEl(prevLineRaw),
+      c("span",{style:{fontWeight:700},children:"→"}),
+      chipEl(curLineRaw)
+    ]}):null,
+    isLast?c("span",{className:"bdt-tag",children:"Arrivée"}):null,
+    mine&&!isFirst&&!live?c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"}):null,
     x.platform&&bdIsTrain(x.category||x.line)&&c("span",{className:"bdt-plat",children:"Voie "+x.platform}),
-    walkMinBefore!=null&&walkMinBefore>0?c("span",{className:"bdt-tag bdt-walk-inline",style:{background:"#fffbeb",color:"#b45309",border:"1px solid rgba(217,119,6,.2)"},children:"🚶 "+walkMinBefore+" min"}):null,
-    trInfo&&trInfo.line&&isBoarding&&!isFirst?c("span",{className:"bdt-tag",children:"⇄ "+trInfo.line+" · "+(trInfo.departure?fm(trInfo.departure):"")}):null
+    walkMinBefore!=null&&walkMinBefore>0?c("span",{className:"bdt-tag",style:{background:"#fffbeb",color:"#b45309"},children:"🚶 "+walkMinBefore+" min"}):null
    ]})
   ]}),
   p("div",{className:"bdt-time",children:[
@@ -963,6 +979,7 @@ var rows=visibleStops.map(function(obj,vi){
  ]},"s"+i);
 });
 var rowsEls=rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"});
+
 return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
  c("div",{className:"bdt-back",onClick:()=>Tl(null)}),
  p("div",{className:"bdt-sheet",children:[
