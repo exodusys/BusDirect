@@ -42,6 +42,13 @@
 :where(code, pre, kbd, samp) {
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
+
+/* V85 PATCH: toutes les popups au centre */
+.bdt-wrap{position:fixed;inset:0;display:flex !important;align-items:center !important;justify-content:center !important;padding:16px !important;}
+.bdt-sheet{margin:auto !important;max-height:90dvh !important;border-radius:28px !important;}
+.fixed.inset-0{ display:flex; align-items:center; justify-content:center; }
+.fixed.inset-0 > div[class*='sheet'], .fixed.inset-0 > div[class*='Sheet']{ margin:auto; }
+
 </style><style>@keyframes departBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}} .depart-bar-anim{animation:departBar 1.2s ease-in-out infinite}</style><style>
 @font-face {
   font-family: "Optimistic";
@@ -127,8 +134,8 @@ html.dark .bdt-follow{background:linear-gradient(135deg,rgba(239,68,68,.20),rgba
 html.dark .bdt-follow-s{color:#a1a1aa;}
 .bdt-follow-go{font-size:22px;font-weight:700;flex:none;}
 /* ===== Suivi en direct ===== */
-.bdt-wrap{display:flex;align-items:flex-end;justify-content:center;}
-@media(min-width:640px){.bdt-wrap{align-items:center;padding:16px;}}
+.bdt-wrap{display:flex;align-items:center;justify-content:center;}
+@media(min-width:640px){.bdt-wrap{align-items:center;justify-content:center;padding:16px;}}
 .bdt-back{position:absolute;inset:0;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);}
 .bdt-sheet{--bg:#FAFAF9;--card:#fff;--bd:#e7e5e4;--tx:#18181b;--mu:#71717a;--ln:#e4e4e7;--soft:#f4f4f5;
  position:relative;width:100%;max-width:640px;max-height:92dvh;display:flex;flex-direction:column;overflow:hidden;
@@ -182,7 +189,7 @@ html.dark .bdt-pill-late{background:rgba(239,68,68,.18);color:#f87171;}
 .bdt-row.is-past .bdt-dot{background:var(--acc);border-color:var(--acc);}
 .bdt-row.is-end .bdt-dot{width:19px;height:19px;left:4px;top:9px;border-color:var(--acc);}
 .bdt-row.is-end.is-first .bdt-dot{background:var(--acc);}
-.bdt-row.is-live .bdt-dot{background:#ef4444;border-color:var(--card);box-shadow:0 0 0 3px rgba(239,68,68,.35);animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite;will-change:transform;}
+.bdt-row.is-live .bdt-dot{background:#ef4444;border-color:var(--card);box-shadow:0 0 0 3px rgba(239,68,68,.35);animation:pulse 2s cubic-bezier(.4,0,.6,1) infinite;}
 .bdt-row.is-mine:not(.is-live){background:linear-gradient(90deg,rgba(59,130,246,.08),transparent);border-radius:0 12px 12px 0;}
 .bdt-main{flex:1;min-width:0;}
 .bdt-name{font-size:13px;line-height:1.25;font-weight:500;}
@@ -765,7 +772,7 @@ const searchDepartAddress = async (q)=>{
     setDepartReloadResults(results);
     /* Si la recherche correspond à des arrêts, les afficher aussi dans ARRÊT(S) À PROXIMITÉ.
        Les rues, adresses et POI n'entrent jamais dans cette liste. */
-    let typedStops=(results||[]).filter(function(x){return x&&x.kind==="stop";}).slice(0,3);
+    let typedStops=(results||[]).filter(function(x){return x&&x.kind==="stop"&&String(x.name||"").trim().length>1;}).slice(0,3);
     if(typedStops.length){
       setNearStops(function(prev){
         let selectedNames=new Set((prev||[]).filter(function(x){return x&&x.selected;}).map(function(x){return String(x.name||"").toLowerCase();}));
@@ -807,7 +814,7 @@ const locateDepart = async ()=>{
         let street=data?.display_name||`${lat.toFixed(5)}, ${lon.toFixed(5)}`;
         setDepartReload(street);
         a({lat:lat,lon:lon,acc:pos.coords.accuracy, street:street});window.__bd_loc={lat:lat,lon:lon,street:street};
-        let stops=await getNearbyStations(lat,lon);
+        let _allStops=await getNearbyStations(lat,lon); let stops=_allStops.filter(function(s){return s&&s.kind==="stop";}).slice(0,3);
         setNearStops(stops);
         if(f){ await fetchLiveFromNearbyStops(stops,f,null,street); }
         L("Départ localisé"); setTimeout(()=>L(null),1500);
@@ -819,7 +826,7 @@ const locateDepart = async ()=>{
 window.__bd_fetchNearby = async function(destObj){
   try{
     if(!o||o.lat==null||o.lon==null){ return; }
-    let stops = await getNearbyStations(o.lat, o.lon);
+    let _st=await getNearbyStations(o.lat, o.lon); let stops=_st.filter(function(s){return s&&s.kind==="stop";}).slice(0,3);
     setNearStops(stops);
     if(destObj && destObj.name && stops.length){
       await fetchLiveFromNearbyStops(stops, destObj.name, null, "");
@@ -907,7 +914,7 @@ var prods=(cur.products||[]).filter(Boolean);
 var acc=getLineColor(prods[0]||"");
 var myStop=(cur._fromStop||cur.from&&cur.from.station||"").toLowerCase();
 var delay=cur.from&&cur.from.delay||0;
-/* V84: pastilles dalles uniquement départ/changements/arrivée, points colorés ligne, supprime arrêts avant départ, ARRIVE DANS */
+/* V85: ARRIVE DANS min+sec, pastilles dalles depart/changements/arrivee uniquement, points colores */
 var progress=0;
 if(liveIdx>=0&&liveIdx<stops.length-1){
   var _tL=ms(stops[liveIdx],false),_tN=ms(stops[liveIdx+1],liveIdx+1===stops.length-1);
@@ -920,12 +927,10 @@ list.forEach(function(entry){
   else if(entry.type==="walk"){ walkBetween[scIdx]=entry.walkMin||0; }
   else if(entry.type==="transfer"){ transferBetween[scIdx]=entry; }
 });
-/* supprime tous les arrêts avant le départ : départ = premier arrêt réel après adresse */
 var firstVisible = 0;
-if(pc>0){ firstVisible = pc; } /* pc = nombre d'arrêts précédents estimés = avant départ */
+if(pc>0){ firstVisible = pc; }
 var globalDepIdx = firstVisible;
 var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ return o.i>=globalDepIdx; });
-
 function chipEl(line){
   if(!line) return null;
   var clean=String(line).trim();
@@ -936,9 +941,16 @@ function chipEl(line){
 }
 var depStop = visibleStops.length?visibleStops[0].s:null;
 var depMs = depStop?ms(depStop,false):null;
-var arriveInMins = depMs!=null?Math.max(0,Math.round((depMs-now)/60000)):null;
-var showArriveBanner = liveIdx>=0 && liveIdx<globalDepIdx && arriveInMins!=null;
-
+var diffMs = depMs!=null?depMs-now:null;
+var arriveText = null;
+if(diffMs!=null){
+  var totalSec = Math.max(0, Math.floor(diffMs/1000));
+  var mm = Math.floor(totalSec/60);
+  var ss = totalSec%60;
+  var ss2 = ss<10?"0"+ss:""+ss;
+  arriveText = mm>0? (mm+" min "+ss2+" s") : (ss2+" s");
+}
+var showArriveBanner = liveIdx>=0 && liveIdx<globalDepIdx && diffMs!=null && diffMs>0;
 var rows=visibleStops.map(function(obj,vi){
  var x=obj.s; var i=obj.i;
  var isFirst = vi===0;
@@ -955,18 +967,15 @@ var rows=visibleStops.map(function(obj,vi){
  var walkMinBefore = walkBetween[i-1];
  var trInfo = transferBetween[i-1];
  var isChange = !!trInfo && prevLineRaw && curLineRaw && prevLineRaw!==curLineRaw;
- /* colore point départ / changement / arrivée avec couleur ligne */
  var dotBg = (isFirst||isChange||isLast)?lc:null;
  var dotStyle = {};
  if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
- if(live){ dotStyle.transform="translateY("+(progress*54)+"px)"; dotStyle.transition="transform 1s linear"; }
  var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
  return p("div",{className:cls,style:{"--acc":lc},children:[
   c("span",{className:"bdt-dot",style:dotStyle}),
   p("div",{className:"bdt-main",children:[
    c("div",{className:"bdt-name",children:name}),
    p("div",{className:"bdt-tags",children:[
-    /* pastilles uniquement départ / changement / arrivée */
     isFirst?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag",children:"Départ"})]}):null,
     isChange?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"4px",background:"var(--soft)",padding:"2px 8px",borderRadius:"99px"},children:[chipEl(prevLineRaw),c("span",{style:{fontWeight:700},children:"→"}),chipEl(curLineRaw)]}):null,
     isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag",children:"Arrivée"})]}):null,
@@ -983,7 +992,7 @@ var rows=visibleStops.map(function(obj,vi){
 });
 var arriveBanner = showArriveBanner? p("div",{className:"bdt-arrive",style:{margin:"0 0 8px 34px",padding:"8px 12px",borderRadius:"12px",background:"rgba(239,68,68,.10)",border:"1px solid rgba(239,68,68,.20)",fontSize:"12px",fontWeight:700,color:"#dc2626",display:"flex",alignItems:"center",gap:"8px"},children:[
   c("span",{style:{width:"8px",height:"8px",borderRadius:"50%",background:"#ef4444",display:"inline-block"}}),
-  c("span",{children:"ARRIVE DANS "+(arriveInMins<=0?"<1 min":arriveInMins+" min")})
+  c("span",{children:"ARRIVE DANS "+(arriveText||"0 s")})
 ]}):null;
 var rowsEls = p("div",{children:[arriveBanner, c("div",{className:"bdt-list",children:rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"})})]});
 
