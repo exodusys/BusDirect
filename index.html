@@ -42,6 +42,27 @@
 :where(code, pre, kbd, samp) {
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
+</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
 
 /* V85 PATCH: toutes les popups au centre */
 .bdt-wrap{position:fixed;inset:0;display:flex !important;align-items:center !important;justify-content:center !important;padding:16px !important;}
@@ -1523,1345 +1544,210 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
     window.__bd_themeOpen=false;
   });
 })();</script>
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><style id="bd-v101-source-menu">
-.bd-v101-hamb{position:fixed!important;right:12px;top:max(10px,env(safe-area-inset-top))!important;z-index:200!important;width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:22px;flex:none}html.dark .bd-v101-hamb{background:#fafafa;color:#09090b}.bd-v101-menu{position:fixed;right:12px;top:max(60px,calc(env(safe-area-inset-top) + 50px));z-index:199;width:min(310px,calc(100vw - 28px));padding:10px;border:1px solid #e7e5e4;border-radius:20px;background:#fff;box-shadow:0 18px 48px rgba(0,0,0,.22);display:none}html.dark .bd-v101-menu{background:#18181b;border-color:rgba(255,255,255,.12);color:#fafafa}.bd-v101-menu.open{display:block}.bd-v101-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bd-v101-item{min-height:62px;border-radius:15px;background:#f4f4f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:700}.bd-v101-item span:first-child{font-size:21px}html.dark .bd-v101-item{background:#27272a}.bd-v101-settings{margin-top:8px;width:100%;height:44px;border-radius:14px;background:#18181b;color:#fff;font-weight:700;font-size:13px}html.dark .bd-v101-settings{background:#fafafa;color:#09090b}.bd-v101-overlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:14px}.bd-v101-overlay.open{display:flex}.bd-v101-sheet{width:100%;max-width:640px;max-height:92dvh;overflow:auto;border-radius:26px;background:#fafaf9;color:#18181b;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}html.dark .bd-v101-sheet{background:#09090b;color:#fafafa}.bd-v101-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:inherit;padding:18px 0 12px;z-index:2}.bd-v101-close{width:36px;height:36px;border-radius:50%;background:#e4e4e7;font-size:20px}html.dark .bd-v101-close{background:#27272a}.bd-v101-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}.bd-v101-action{height:46px;border-radius:14px;background:#18181b;color:#fff;font-size:12px;font-weight:700;padding:0 10px}html.dark .bd-v101-action{background:#fafafa;color:#09090b}.bd-v101-source{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 2px;border-bottom:1px solid #e7e5e4}.dark .bd-v101-source{border-color:rgba(255,255,255,.1)}.bd-v101-dot{width:10px;height:10px;border-radius:50%;background:#a1a1aa;box-shadow:0 0 0 3px rgba(161,161,170,.13);display:inline-block;flex:none}.bd-v101-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}.bd-v101-dot.warn{background:#f59e0b}.bd-v101-dot.bad{background:#ef4444}.bd-v101-name{font-size:13px;font-weight:800}.bd-v101-sub{font-size:10px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}.dark .bd-v101-sub{color:#a1a1aa}.bd-v101-toggle{width:45px;height:26px;border-radius:99px;background:#d4d4d8;padding:3px}.bd-v101-toggle.on{background:#22c55e}.bd-v101-knob{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}.bd-v101-toggle.on .bd-v101-knob{transform:translateX(19px)}.bd-v101-add{display:grid;grid-template-columns:1fr auto;gap:7px;margin:12px 0}.bd-v101-add input{height:42px;border:1px solid #d4d4d8;border-radius:12px;padding:0 11px;background:#fff;color:#18181b;font-size:12px}.dark .bd-v101-add input{background:#18181b;color:#fafafa;border-color:#3f3f46}.bd-v101-add button{padding:0 14px;border-radius:12px;background:#2563eb;color:#fff;font-weight:800}.bd-v101-inline-dot{margin-right:6px;vertical-align:1px}
-</style>
-<script id="bd-v101-source-menu-script">
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script>
+<script>
+/* V155 - BusDirect Google Maps Popup hyper evoluee + bandeau date + Vous etes ici */
 (function(){
-var DEFAULTS=[
-{id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',core:true},
-{id:'photon',name:'Photon / Komoot',type:'Recherche lieux',url:'https://photon.komoot.io',active:true,status:'ok',core:true},
-{id:'nominatim',name:'OpenStreetMap Nominatim',type:'Géocodage / localisation',url:'https://nominatim.openstreetmap.org',active:true,status:'ok',core:true},
-{id:'mobilitydb',name:'MobilityDatabase',type:'Catalogue mondial GTFS / GTFS-RT',url:'https://mobilitydatabase.org/feeds?gtfs=true',active:true,status:'ok',catalog:true}
-];
-var I18N={
-fr:{city:'Villes',language:'Langues',theme:'Clair/sombre',settings:'Sources',smsTickets:'Tickets SMS',sources:'Gestion des sources',update:'Mettre à jour les états',web:'Chercher des sources sur le web',add:'Ajouter',url:'URL GTFS / API de transport',enabled:'active',disabled:'désactivée',catalog:'Catalogue mondial',close:'Fermer'},
-en:{city:'Cities',language:'Languages',theme:'Light/dark',settings:'Sources',smsTickets:'SMS tickets',sources:'Data sources',update:'Refresh source status',web:'Find sources on the web',add:'Add',url:'GTFS / transit API URL',enabled:'enabled',disabled:'disabled',catalog:'Global catalog',close:'Close'},
-de:{city:'Städte',language:'Sprachen',theme:'Hell/dunkel',settings:'Quellen',smsTickets:'SMS-Tickets',sources:'Datenquellen',update:'Quellenstatus aktualisieren',web:'Quellen im Web suchen',add:'Hinzufügen',url:'GTFS-/Verkehrs-API-URL',enabled:'aktiv',disabled:'deaktiviert',catalog:'Weltweiter Katalog',close:'Schließen'},
-es:{city:'Ciudades',language:'Idiomas',theme:'Claro/oscuro',settings:'Fuentes',smsTickets:'Tickets SMS',sources:'Gestión de fuentes',update:'Actualizar estados',web:'Buscar fuentes en la web',add:'Añadir',url:'URL GTFS / API de transporte',enabled:'activa',disabled:'desactivada',catalog:'Catálogo mundial',close:'Cerrar'},
-it:{city:'Città',language:'Lingue',theme:'Chiaro/scuro',settings:'Fonti',smsTickets:'Ticket SMS',sources:'Gestione fonti',update:'Aggiorna stato fonti',web:'Cerca fonti sul web',add:'Aggiungi',url:'URL GTFS / API trasporto',enabled:'attiva',disabled:'disattivata',catalog:'Catalogo mondiale',close:'Chiudi'},
-pt:{city:'Cidades',language:'Idiomas',theme:'Claro/escuro',settings:'Fontes',smsTickets:'Tickets SMS',sources:'Gestão de fontes',update:'Atualizar estados',web:'Procurar fontes na web',add:'Adicionar',url:'URL GTFS / API de transporte',enabled:'ativa',disabled:'desativada',catalog:'Catálogo mundial',close:'Fechar'}
-};
-function lang(){try{return localStorage.getItem('bd_lang')||'fr'}catch(e){return'fr'}} function tr(k){var l=lang();return (I18N[l]||I18N.fr)[k]||I18N.fr[k]||k}
-function load(){try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)){DEFAULTS.forEach(function(d){if(!a.some(function(x){return x.id===d.id}))a.push(d)});return a}}catch(e){}return DEFAULTS.map(function(x){return Object.assign({},x)})}
-var sources=load(); function save(){try{localStorage.setItem('bd_sources_v1',JSON.stringify(sources))}catch(e){}window.__bd_sources=sources;window.dispatchEvent(new CustomEvent('bd-sources-change',{detail:sources}));}
-window.__bd_sources=sources;
-function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');return '<div class="bd-v101-source"><span class="bd-v101-dot '+st+'"></span><div><div class="bd-v101-name">'+esc(s.name)+'</div><div class="bd-v101-sub">'+esc(s.type||'Source transport')+' · '+esc(s.url||'')+'</div></div><button class="bd-v101-toggle '+(s.active?'on':'')+'" data-source-toggle="'+i+'" aria-label="'+(s.active?tr('enabled'):tr('disabled'))+'"><div class="bd-v101-knob"></div></button></div>'}).join('');}
-function syncLabels(){var q=function(id,k){var e=document.getElementById(id);if(e)e.textContent=tr(k)};q('bd-v101-city-l','city');q('bd-v101-lang-l','language');q('bd-v101-theme-l','theme');q('bd-v101-settings-l','settings');q('bd-v101-sms-l','smsTickets');q('bd-v101-title','sources');q('bd-v101-update','update');q('bd-v101-web','web');var inp=document.getElementById('bd-v101-url');if(inp)inp.placeholder=tr('url');q('bd-v101-addbtn','add');}
-function clickExisting(words){var btn=[].slice.call(document.querySelectorAll('button')).find(function(b){var t=(b.textContent||'').toLowerCase();return words.some(function(w){return t.indexOf(w)>=0})&& !b.closest('#bd-v101-menu')});if(btn)btn.click();}
-function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button><button class="bd-v101-item" id="bd-v101-sms"><span>💬</span><span id="bd-v101-sms-l">SMS</span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
-var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><button class="bd-auto-detect-btn" id="bd-auto-detect-sources">Activer la détection automatique</button><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
-b.onclick=function(){m.classList.toggle('open')};document.getElementById('bd-v101-city').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-city-btn');if(b)b.click();else clickExisting(['ville','city','stadt','ciudad','città','cidade']);})()};document.getElementById('bd-v101-lang').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-lang-btn');if(b)b.click();else clickExisting(['langue','language','sprache','idioma','lingua']);})()};document.getElementById('bd-v101-theme').onclick=function(){var cur=localStorage.getItem('bd-theme')==='dark'?'dark':'light',n=cur==='dark'?'light':'dark';localStorage.setItem('bd-theme',n);var dark=n==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';document.documentElement.dataset.theme=n;};function openSrc(){m.classList.remove('open');o.classList.add('open');document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources()}document.getElementById('bd-v101-src').onclick=openSrc;document.getElementById('bd-v101-src2').onclick=openSrc;document.getElementById('bd-v101-close').onclick=function(){o.classList.remove('open');document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')};o.addEventListener('click',function(e){if(e.target===o)document.getElementById('bd-v101-close').click()});o.addEventListener('click',function(e){var t=e.target.closest('[data-source-toggle]');if(!t)return;var i=+t.dataset.sourceToggle;sources[i].active=!sources[i].active;if(!sources[i].active)sources[i].status='';else if(!sources[i].status)sources[i].status='warn';save();renderSources()});document.getElementById('bd-v101-addbtn').onclick=function(){var inp=document.getElementById('bd-v101-url'),url=inp.value.trim();if(!url)return;try{var u=new URL(url);sources.push({id:'custom-'+Date.now(),name:u.hostname,type:'GTFS / API personnalisée',url:url,active:true,status:'warn',custom:true});save();inp.value='';renderSources()}catch(e){inp.focus()}};document.getElementById('bd-v101-web').onclick=async function(){
-  var btn=this,old=btn.textContent;btn.textContent='Scan…';
-  try{
-    var cityBtn=document.getElementById('bd-city-btn');
-    var cityName=(cityBtn&&cityBtn.textContent||'').trim().toLowerCase();
-    var cc='';
-    try{var raw=localStorage.getItem('bd_city')||'';cc=raw}catch(e){}
-    var DISCOVER=[
-      {id:'tl-opendata',name:'TL Lausanne Open Data',type:'GTFS / horaires',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:['lausanne']},
-      {id:'tpg-opendata',name:'TPG Genève',type:'GTFS / horaires',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:['geneve','geneva']},
-      {id:'sbb-gtfs',name:'CFF / SBB GTFS',type:'GTFS national CH',url:'https://opentransportdata.swiss',active:true,status:'ok',cc:'CH',cities:[]},
-      {id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:[]},
-      {id:'ratp-gtfs',name:'RATP / IDFM Open Data',type:'GTFS Paris',url:'https://data.iledefrance-mobilites.fr',active:true,status:'ok',cc:'FR',cities:['paris']},
-      {id:'sncf-gtfs',name:'SNCF Open Data',type:'GTFS France',url:'https://ressources.data.sncf.com',active:true,status:'ok',cc:'FR',cities:[]},
-      {id:'tcl-gtfs',name:'TCL Lyon',type:'GTFS',url:'https://data.grandlyon.com',active:true,status:'ok',cc:'FR',cities:['lyon']},
-      {id:'stib-gtfs',name:'STIB / MIVB',type:'GTFS Bruxelles',url:'https://data.stib-mivb.be',active:true,status:'ok',cc:'BE',cities:['bruxelles','brussels']},
-      {id:'bvg-gtfs',name:'BVG Berlin',type:'GTFS',url:'https://www.vbb.de/vbb-services/api-open-data/datensaetze/',active:true,status:'ok',cc:'DE',cities:['berlin']},
-      {id:'vbb-gtfs',name:'VBB Berlin-Brandenburg',type:'GTFS',url:'https://www.vbb.de',active:true,status:'ok',cc:'DE',cities:['berlin']},
-      {id:'tfl-api',name:'TfL Unified API',type:'API Londres',url:'https://api.tfl.gov.uk',active:true,status:'ok',cc:'GB',cities:['london','londres']},
-      {id:'navitia',name:'Navitia.io',type:'API multimodal',url:'https://api.navitia.io',active:true,status:'ok',cc:'FR',cities:[]},
-      {id:'transitland',name:'Transitland',type:'Catalogue mondial',url:'https://www.transit.land',active:true,status:'ok',cc:'',cities:[]},
-      {id:'mobilitydb',name:'MobilityDatabase',type:'Catalogue GTFS',url:'https://mobilitydatabase.org/feeds?gtfs=true',active:true,status:'ok',catalog:true,cc:'',cities:[]}
-    ];
-    var added=0;
-    DISCOVER.forEach(function(d){
-      var match=!d.cities.length&&!d.cc;
-      if(d.cities&&d.cities.length){match=d.cities.some(function(x){return cityName.indexOf(x)>=0||x.indexOf(cityName)>=0})}
-      if(!match&&d.cc){
-        // country-level: match if city name suggests country or always for CH/FR when city empty
-        if(cityName){
-          var ch=['lausanne','geneve','zurich','berne','bale','fribourg','suisse'];
-          var fr=['paris','lyon','marseille','bordeaux','lille','france'];
-          if(d.cc==='CH'&&ch.some(function(x){return cityName.indexOf(x)>=0})) match=true;
-          if(d.cc==='FR'&&fr.some(function(x){return cityName.indexOf(x)>=0})) match=true;
-          if(d.cc==='BE'&&(cityName.indexOf('brux')>=0||cityName.indexOf('belg')>=0)) match=true;
-          if(d.cc==='DE'&&(cityName.indexOf('berlin')>=0||cityName.indexOf('allemagne')>=0)) match=true;
-          if(d.cc==='GB'&&(cityName.indexOf('london')>=0||cityName.indexOf('londres')>=0)) match=true;
-        } else match=true;
-      }
-      if(!match&&!d.cc) match=true; // global catalogs always
-      if(!match) return;
-      if(sources.some(function(s){return s.id===d.id||s.url===d.url&&s.name===d.name})) return;
-      sources.push({id:d.id,name:d.name,type:d.type,url:d.url,active:true,status:'ok',checkedAt:Date.now(),catalog:!!d.catalog});
-      added++;
-    });
-    // Try live discovery via transport.opendata.ch locations as health check
-    try{
-      var q=encodeURIComponent(cityName||'Lausanne');
-      var ctl=new AbortController();setTimeout(function(){ctl.abort()},5000);
-      await fetch('https://transport.opendata.ch/v1/locations?query='+q,{signal:ctl.signal,mode:'cors'}).then(function(r){return r.ok?r.json():null}).then(function(j){
-        if(j&&j.stations&&j.stations.length){
-          if(!sources.some(function(s){return s.id==='opendata-ch'})){
-            sources.push({id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',checkedAt:Date.now()});
-            added++;
-          } else {
-            var s=sources.find(function(x){return x.id==='opendata-ch'});
-            if(s){s.status='ok';s.active=true;s.checkedAt=Date.now()}
-          }
-        }
-      }).catch(function(){});
-    }catch(e){}
-    save();renderSources();
-    btn.textContent=added?(added+' ajoutée(s)'):('0 nouvelle');
-    setTimeout(function(){btn.textContent=old},1800);
-  }catch(e){btn.textContent=old}
-};document.getElementById('bd-v101-update').onclick=async function(){var btn=this,old=btn.textContent;btn.textContent='…';for(var i=0;i<sources.length;i++){var s=sources[i];if(!s.active)continue;if(s.catalog){s.status='ok';continue}try{var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},4500);await fetch(s.url,{method:'HEAD',mode:'no-cors',cache:'no-store',signal:ctl.signal});clearTimeout(to);s.status='ok';s.checkedAt=Date.now()}catch(e){s.status='bad';s.checkedAt=Date.now()}}save();renderSources();btn.textContent=old};document.addEventListener('click',function(e){if(!m.contains(e.target)&&e.target!==b)m.classList.remove('open')});}
-// Adds a small source-health dot wherever an existing source label is rendered.
-function sourceDots(){document.querySelectorAll('span,div,p').forEach(function(el){if(el.children.length||el.dataset.bdSourceDot)return;var t=(el.textContent||'').trim();if(!/^(src:|source\s*:)/i.test(t))return;el.dataset.bdSourceDot='1';var d=document.createElement('span'),main=sources.find(function(s){return s.id==='opendata-ch'});d.className='bd-v101-dot bd-v101-inline-dot '+(main&&main.active?(main.status||'warn'):'');el.insertBefore(d,el.firstChild)})}
-// Completes translation of text nodes created later (including hidden modal/page content).
-var TXT={en:{'Fermer':'Close','Annuler':'Cancel','Enregistrer':'Save','Supprimer':'Delete','Départ':'Departure','Destination':'Destination','Arrêts à proximité':'Nearby stops','Suivi en direct':'Live tracking','Gestion des sources':'Data sources','Rechercher ville...':'Search city...','Ville active:':'Active city:'},de:{'Fermer':'Schließen','Annuler':'Abbrechen','Enregistrer':'Speichern','Supprimer':'Löschen','Départ':'Abfahrt','Destination':'Ziel','Arrêts à proximité':'Haltestellen in der Nähe','Suivi en direct':'Live-Verfolgung','Gestion des sources':'Datenquellen','Rechercher ville...':'Stadt suchen...'},es:{'Fermer':'Cerrar','Annuler':'Cancelar','Enregistrer':'Guardar','Supprimer':'Eliminar','Départ':'Salida','Destination':'Destino','Arrêts à proximité':'Paradas cercanas','Suivi en direct':'Seguimiento en vivo','Gestion des sources':'Fuentes de datos','Rechercher ville...':'Buscar ciudad...'},it:{'Fermer':'Chiudi','Annuler':'Annulla','Enregistrer':'Salva','Supprimer':'Elimina','Départ':'Partenza','Destination':'Destinazione','Arrêts à proximité':'Fermate vicine','Suivi en direct':'Monitoraggio live','Gestion des sources':'Fonti dati','Rechercher ville...':'Cerca città...'},pt:{'Fermer':'Fechar','Annuler':'Cancelar','Enregistrer':'Guardar','Supprimer':'Eliminar','Départ':'Partida','Destination':'Destino','Arrêts à proximité':'Paragens próximas','Suivi en direct':'Acompanhamento ao vivo','Gestion des sources':'Fontes de dados','Rechercher ville...':'Pesquisar cidade...'}};
-function translateDom(){var l=lang();syncLabels();if(l==='fr'||!TXT[l])return;var map=TXT[l];document.querySelectorAll('button,label,h1,h2,h3,h4,p,span,div,input').forEach(function(el){if(el.id&&el.id.indexOf('bd-v101')===0)return;if(el.tagName==='INPUT'){var p=el.getAttribute('placeholder');if(p&&map[p])el.setAttribute('placeholder',map[p]);return}if(el.children.length===0){var raw=(el.textContent||'').trim();if(map[raw])el.textContent=map[raw]}})}
-function run(){build();sourceDots();translateDom()} if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();var mo=new MutationObserver(function(){clearTimeout(window.__bdv101mo);window.__bdv101mo=setTimeout(function(){sourceDots();translateDom()},40)});setTimeout(function(){if(document.body)mo.observe(document.body,{subtree:true,childList:true})},0);window.addEventListener('storage',run);window.addEventListener('bd-sources-change',sourceDots);
-})();
-</script>
-
-
-<style id="bd-v102-live-source-style">
-.bd-v102-live-sources{margin-top:8px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.72);font-weight:500}
-.bd-v102-live-source-row{display:flex;align-items:center;gap:6px;min-width:0}
-.bd-v102-live-source-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.16);flex:none}
-.bd-v102-live-source-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-</style>
-<script id="bd-v102-live-source-script">
-(function(){
-  var liveSources=new Map();
-  function isScheduleUrl(u){
-    u=String(u||'');
-    return /transport\.opendata\.ch\/v1\/(?:connections|stationboard)/i.test(u) || /(?:gtfs-rt|gtfsrt|realtime|tripupdates|vehiclepositions|servicealerts)/i.test(u);
-  }
-  function sourceName(u){
-    try{
-      var x=new URL(String(u),location.href), host=x.hostname.replace(/^www\./,'');
-      var cfg=(window.__bd_sources||[]).find(function(s){try{return s&&s.url&&new URL(s.url,location.href).hostname===x.hostname}catch(e){return false}});
-      return cfg&&cfg.name?cfg.name:host;
-    }catch(e){return String(u||'Source horaires')}
-  }
-  function mark(u,ok){
-    if(!isScheduleUrl(u)||ok===false)return;
-    var name=sourceName(u); liveSources.set(name,{name:name,url:String(u),at:Date.now()});
-    window.__bd_liveSources=Array.from(liveSources.values()); render();
-  }
-  try{
-    performance.getEntriesByType('resource').forEach(function(e){if(e&&isScheduleUrl(e.name))mark(e.name,true)});
-  }catch(e){}
-  try{
-    var originalFetch=window.fetch;
-    if(originalFetch&&!originalFetch.__bdv102){
-      var wrapped=function(input,init){
-        var u=typeof input==='string'?input:(input&&input.url)||'';
-        return originalFetch.apply(this,arguments).then(function(r){if(r&&r.ok)mark(u,true);return r});
-      };
-      wrapped.__bdv102=true; window.fetch=wrapped;
-    }
-  }catch(e){}
-  function findRecognized(){
-    var els=document.querySelectorAll('.bd-livebox div, .bd-livebox span');
-    for(var i=0;i<els.length;i++) if(/^\s*Dalle reconnue\s*:/i.test(els[i].textContent||'')) return els[i];
-    return null;
-  }
-  function removeConnectionsBox(rec){
-    if(!rec)return;
-    var row=rec.closest('.flex.items-center.justify-between');
-    if(!row)return;
-    Array.from(row.children).forEach(function(ch){
-      if(ch.contains(rec))return;
-      var txt=(ch.textContent||'').trim();
-      if(/\bconnexions?\b/i.test(txt)) ch.remove();
-    });
-  }
-  function render(){
-    var rec=findRecognized(); if(!rec)return;
-    removeConnectionsBox(rec);
-    var box=rec.parentElement; if(!box)return;
-    var old=box.querySelector('.bd-v102-live-sources');
-    var list=Array.from(liveSources.values()).sort(function(a,b){return a.at-b.at});
-    if(!list.length){if(old)old.remove();return;}
-    if(!old){old=document.createElement('div');old.className='bd-v102-live-sources';box.appendChild(old)}
-    old.innerHTML='';
-    list.forEach(function(s){
-      var row=document.createElement('div');row.className='bd-v102-live-source-row';
-      var dot=document.createElement('span');dot.className='bd-v102-live-source-dot';
-      var name=document.createElement('span');name.className='bd-v102-live-source-name';name.textContent='Source horaires : '+s.name;
-      row.appendChild(dot);row.appendChild(name);old.appendChild(row);
-    });
-  }
-  var mo=new MutationObserver(function(){clearTimeout(window.__bdv102t);window.__bdv102t=setTimeout(render,20)});
-  function start(){render();if(document.body)mo.observe(document.body,{subtree:true,childList:true});}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-  window.addEventListener('bd-sources-change',render);
-})();
-</script>
-
-<style id="bd-v103-menu-source-patch">
-/* V103 — menu hamburger vertical + états source strictement vert/rouge */
-.bd-v101-grid{display:flex!important;flex-direction:column!important;gap:7px!important}
-.bd-v101-item{min-height:48px!important;width:100%!important;flex-direction:row!important;justify-content:flex-start!important;padding:0 14px!important;gap:12px!important;font-size:13px!important;text-align:left!important}
-.bd-v101-item .bd-v103-menu-icon{width:24px;height:24px;display:flex;align-items:center;justify-content:center;flex:none}
-.bd-v101-item .bd-v103-menu-icon svg{width:22px!important;height:22px!important}
-.bd-v101-settings{display:none!important}
-.bd-v101-dot{background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.14)!important}
-.bd-v101-dot.ok{background:#22c55e!important;box-shadow:0 0 0 3px rgba(34,197,94,.15)!important}
-.bd-v101-dot.warn,.bd-v101-dot.bad{background:#ef4444!important;box-shadow:0 0 0 3px rgba(239,68,68,.14)!important}
-.bd-v102-live-source-dot{background:#ef4444;box-shadow:0 0 0 2px rgba(239,68,68,.16)}
-.bd-v102-live-source-dot.ok{background:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.16)}
-.bd-v103-moved-control{display:none!important}
-</style>
-<script id="bd-v103-menu-source-script">
-(function(){
- function wordsFor(kind){return kind==='city'?['ville','city','stadt','ciudad','città','cidade']:kind==='lang'?['langue','language','sprache','idioma','lingua']:['clair','sombre','light','dark','theme','thème','modus','tema'];}
- function findOriginal(kind){
-   var words=wordsFor(kind), nodes=[].slice.call(document.querySelectorAll('button,[role="button"]'));
-   return nodes.find(function(el){
-     if(el.closest('#bd-v101-menu')||el.id==='bd-v101-hamb'||el.closest('#bd-v101-overlay'))return false;
-     var hay=((el.textContent||'')+' '+(el.getAttribute('aria-label')||'')+' '+(el.getAttribute('title')||'')).toLowerCase();
-     return words.some(function(w){return hay.indexOf(w)>=0});
-   })||null;
+ const DAYS=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+ const MONTHS=['janvier','fevrier','mars','avril','mai','juin','juillet','aout','septembre','octobre','novembre','decembre'];
+ const pad=n=> (n<10?'0':'')+n;
+ function getBaseDate(){
+   if(!window.__bd_dtValidated || !window.__bd_tripDate || !window.__bd_tripTime) return null;
+   var d=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00');
+   return isNaN(d)?null:d;
  }
- function iconHTML(el,fallback){
-   if(el){var svg=el.querySelector('svg');if(svg)return svg.outerHTML;var im=el.querySelector('img');if(im)return im.outerHTML;}
-   return fallback;
+ function fmtDayTime(d){
+   if(!d) return '';
+   return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' a '+d.getHours()+'h'+pad(d.getMinutes());
  }
- function moveControls(){
-   var cfg=[['city','bd-v101-city','🏙️'],['lang','bd-v101-lang','🌐'],['theme','bd-v101-theme','◐']];
-   cfg.forEach(function(a){
-     var orig=a[0]==='lang'?(document.getElementById('bd-lang-btn')||findOriginal(a[0])):a[0]==='city'?(document.getElementById('bd-city-btn')||findOriginal(a[0])):findOriginal(a[0]);
-     var item=document.getElementById(a[1]); if(!item)return;
-     var first=item.firstElementChild;if(first){first.className='bd-v103-menu-icon';first.innerHTML=iconHTML(orig,a[2]);}
-     if(orig){
-       if(!orig.dataset.bdV103Moved){orig.dataset.bdV103Moved='1';orig.classList.add('bd-v103-moved-control');}
-       item.onclick=function(){var m=document.getElementById('bd-v101-menu');if(m)m.classList.remove('open');orig.click();setTimeout(moveControls,30)};
-     }
-   });
+ function fmtBanner(d){
+   if(!d) return '';
+   return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' '+d.getFullYear()+' — '+d.getHours()+'h'+pad(d.getMinutes());
  }
- function normalizeSourceDots(){
-   var sources=window.__bd_sources||[];
-   document.querySelectorAll('.bd-v101-source').forEach(function(row,i){var d=row.querySelector('.bd-v101-dot'),s=sources[i];if(!d)return;d.classList.remove('warn','bad','ok');d.classList.add(s&&s.active&&s.status==='ok'?'ok':'bad')});
-   document.querySelectorAll('.bd-v101-inline-dot').forEach(function(d){var main=sources.find(function(s){return s.id==='opendata-ch'});d.classList.remove('warn','bad','ok');d.classList.add(main&&main.active&&main.status==='ok'?'ok':'bad')});
+ function sameTime(base, hm){
+   var m=/^(\d{1,2}):(\d{2})$/.exec(String(hm||'').trim());
+   if(!m) return null;
+   var nd=new Date(base.getTime());
+   nd.setHours(+m[1],+m[2],0,0);
+   return nd;
  }
- function normalizeLiveDots(){
-   document.querySelectorAll('.bd-v102-live-source-row').forEach(function(row){var d=row.querySelector('.bd-v102-live-source-dot');if(d)d.classList.add('ok')});
+ function isDark(){ return document.documentElement.classList.contains('dark') || document.documentElement.dataset.theme==='dark'; }
+ function getSearchInputs(){
+   var all=[].slice.call(document.querySelectorAll('input[type="text"], input:not([type])')).filter(function(i){return i.offsetParent!==null});
+   var dep=all.find(function(i){return /depart/i.test(i.placeholder||'') || /depart/i.test(i.getAttribute('aria-label')||'')});
+   var dst=all.find(function(i){return /destination|arriv/i.test(i.placeholder||'') || /destination/i.test(i.getAttribute('aria-label')||'')});
+   if(dep&&dst) return [dep,dst];
+   return all.slice(0,2);
  }
- function run(){moveControls();normalizeSourceDots();normalizeLiveDots()}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
- var mo=new MutationObserver(function(){clearTimeout(window.__bdv103t);window.__bdv103t=setTimeout(run,35)});setTimeout(function(){if(document.body)mo.observe(document.body,{subtree:true,childList:true})},0);
- window.addEventListener('bd-sources-change',run);
-})();
-</script>
-
-
-<style id="bd-v104-sms-cleanup">
-/* Hide ville active meta, raccourcis, download in Ticket SMS card */
-</style>
-<script id="bd-v104-sms-cleanup-script">
-(function(){
-  function hideSmsExtras(){
-    document.querySelectorAll('section').forEach(function(sec){
-      var h = sec.querySelector('h3');
-      if(!h) return;
-      var t = (h.textContent||'').trim();
-      if(t.indexOf('Ticket SMS') < 0 && t.indexOf('SMS') < 0) return;
-      // Hide "Ville active" info block
-      sec.querySelectorAll('div').forEach(function(d){
-        var tx = (d.textContent||'');
-        if(d.children.length <= 3 && /Ville active\s*:/i.test(tx) && tx.length < 200){
-          d.style.display = 'none';
-        }
-      });
-      // Hide Raccourcis SMS block
-      sec.querySelectorAll('div').forEach(function(d){
-        var first = d.firstElementChild;
-        if(first && /Raccourcis SMS/i.test(first.textContent||'')){
-          d.style.display = 'none';
-        }
-      });
-      // Hide download shortcut block
-      sec.querySelectorAll('div').forEach(function(d){
-        var tx = (d.textContent||'');
-        if(/Export Shortcut|Export Tasker|iOS|Tasker/i.test(tx) && /download|raccourci|shortcut|télécharger/i.test(tx)){
-          // check if it's the download header area
-        }
-        var bold = d.querySelector('.font-bold, [class*="font-bold"]');
-        if(bold && /Raccourci|Shortcut|Tasker|Télécharger|Telecharger/i.test(bold.textContent||'')){
-          var block = bold.closest('[class*="rounded"]') || d;
-          if(block && block !== sec) block.style.display = 'none';
-        }
-      });
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(hideSmsExtras, 50); });
-  else setTimeout(hideSmsExtras, 50);
-  var mo = new MutationObserver(function(){ clearTimeout(window.__bdSmsHideT); window.__bdSmsHideT = setTimeout(hideSmsExtras, 40); });
-  setTimeout(function(){ if(document.body) mo.observe(document.body, {childList:true, subtree:true}); }, 100);
-})();
-</script>
-
-<style id="bd-v104-sms-src-style">
-.bd-v104-sms-overlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:14px}
-.bd-v104-sms-overlay.open{display:flex}
-.bd-v104-sms-sheet{width:100%;max-width:640px;max-height:92dvh;overflow:auto;border-radius:26px;background:#fafaf9;color:#18181b;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}
-html.dark .bd-v104-sms-sheet{background:#09090b;color:#fafafa}
-.bd-v104-sms-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:inherit;padding:18px 0 12px;z-index:2}
-.bd-v104-sms-close{width:36px;height:36px;border-radius:50%;background:#e4e4e7;font-size:20px;border:0;cursor:pointer}
-html.dark .bd-v104-sms-close{background:#27272a;color:#fafafa}
-.bd-v104-sms-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
-.bd-v104-sms-action{height:46px;border-radius:14px;background:#18181b;color:#fff;font-size:12px;font-weight:700;padding:0 10px;border:0;cursor:pointer}
-html.dark .bd-v104-sms-action{background:#fafafa;color:#09090b}
-.bd-v104-sms-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 2px;border-bottom:1px solid #e7e5e4}
-html.dark .bd-v104-sms-row{border-color:rgba(255,255,255,.1)}
-.bd-v104-sms-dot{width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.14);flex:none}
-.bd-v104-sms-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
-.bd-v104-sms-name{font-size:13px;font-weight:800}
-.bd-v104-sms-sub{font-size:10px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}
-html.dark .bd-v104-sms-sub{color:#a1a1aa}
-.bd-v104-sms-toggle{width:45px;height:26px;border-radius:99px;background:#d4d4d8;padding:3px;border:0;cursor:pointer}
-.bd-v104-sms-toggle.on{background:#22c55e}
-.bd-v104-sms-knob{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;display:block}
-.bd-v104-sms-toggle.on .bd-v104-sms-knob{transform:translateX(19px)}
-.bd-v104-sms-note{font-size:11px;color:#71717a;margin:8px 0 4px;line-height:1.4}
-html.dark .bd-v104-sms-note{color:#a1a1aa}
-.bd-v104-sms-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;background:#f4f4f5;color:#52525b;margin-left:6px}
-html.dark .bd-v104-sms-badge{background:#27272a;color:#a1a1aa}
-.bd-v104-sms-badge.auto{background:#dbeafe;color:#1d4ed8}
-html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
-</style>
-<script id="bd-v104-sms-src-script">
-(function(){
-  var SMS_DEFAULTS = [
-    {id:'ch-tl',name:'TL Lausanne',cc:'CH',network:'TL',number:'788',
-      tickets:[
-        {code:'TL',label:'Billet simple TL'},
-        {code:'TLC',label:'Billet journée TL'},
-        {code:'TLJOUR',label:'Billet jour TL'}
-      ],
-      keywords:['TL','TLC','TLJOUR'],info:'Tickets SMS TL au 788',cities:['lausanne'],auto:true},
-    {id:'ch-tpg',name:'TPG Genève',cc:'CH',network:'TPG',number:'788',
-      tickets:[
-        {code:'tpg1',label:'Tout Genève 60′ · plein tarif · 3.00 CHF'},
-        {code:'tpg2',label:'Tout Genève 60′ · 1/2 tarif (6-15 ans) · 2.00 CHF'},
-        {code:'tpg3',label:'Tout Genève 60′ · réduit AVS/AI · 2.00 CHF'},
-        {code:'cj1',label:'Carte journalière Tout Genève · plein tarif · 10.00 CHF'},
-        {code:'cj2',label:'Carte journalière Tout Genève · 1/2 tarif · 7.30 CHF'},
-        {code:'cj3',label:'Carte journalière Tout Genève · AVS/AI · 7.30 CHF'},
-        {code:'cj91',label:'Carte journalière dès 9h · plein tarif · 8.00 CHF'},
-        {code:'cj92',label:'Carte journalière dès 9h · 1/2 tarif · 5.60 CHF'},
-        {code:'cj93',label:'Carte journalière dès 9h · AVS/AI · 5.60 CHF'},
-        {code:'10200',label:'Multizones 10+200 · adulte 90′ · 4.60 CHF'},
-        {code:'10200r',label:'Multizones 10+200 · jeune 90′ · 3.30 CHF'},
-        {code:'10210',label:'Multizones 10+210 · adulte 90′ · 4.60 CHF'},
-        {code:'10210r',label:'Multizones 10+210 · jeune 90′ · 3.60 CHF'},
-        {code:'10230',label:'Multizones 10+230 · adulte 90′ · 4.60 CHF'},
-        {code:'10230r',label:'Multizones 10+230 · jeune 90′ · 3.30 CHF'},
-        {code:'10240',label:'Multizones 10+240 · adulte 90′ · 4.60 CHF'},
-        {code:'10240r',label:'Multizones 10+240 · jeune 90′ · 3.30 CHF'},
-        {code:'10250',label:'Multizones 10+250 · adulte 90′ · 4.60 CHF'},
-        {code:'10250r',label:'Multizones 10+250 · jeune 90′ · 3.30 CHF'},
-        {code:'c10',label:'Complémentaire zone 10 · adulte 90′ · 3.00 CHF'},
-        {code:'c10r',label:'Complémentaire zone 10 · jeune 90′ · 2.00 CHF'},
-        {code:'c200',label:'Complémentaire zone 200 · adulte · 1.60 CHF'},
-        {code:'c200r',label:'Complémentaire zone 200 · jeune · 1.30 CHF'},
-        {code:'c210',label:'Complémentaire zone 210 · adulte · 1.60 CHF'},
-        {code:'c210r',label:'Complémentaire zone 210 · jeune · 1.60 CHF'},
-        {code:'c230',label:'Complémentaire zone 230 · adulte · 1.60 CHF'},
-        {code:'c230r',label:'Complémentaire zone 230 · jeune · 1.30 CHF'},
-        {code:'c240',label:'Complémentaire zone 240 · adulte · 1.60 CHF'},
-        {code:'c240r',label:'Complémentaire zone 240 · jeune · 1.30 CHF'},
-        {code:'c250',label:'Complémentaire zone 250 · adulte · 1.60 CHF'},
-        {code:'c250r',label:'Complémentaire zone 250 · jeune · 1.30 CHF'},
-        {code:'200',label:'Zone FR 200 locale 60′ · adulte · 1.60 CHF'},
-        {code:'200r',label:'Zone FR 200 locale 60′ · jeune · 1.30 CHF'},
-        {code:'230',label:'Zone FR 230 locale 60′ · adulte · 1.60 CHF'},
-        {code:'230r',label:'Zone FR 230 locale 60′ · jeune · 1.30 CHF'},
-        {code:'240',label:'Zone FR 240 locale 60′ · adulte · 1.60 CHF'},
-        {code:'240r',label:'Zone FR 240 locale 60′ · jeune · 1.30 CHF'},
-        {code:'250',label:'Zone FR 250 locale 60′ · adulte · 1.60 CHF'},
-        {code:'250r',label:'Zone FR 250 locale 60′ · jeune · 1.30 CHF'}
-      ],
-      keywords:['tpg1','tpg2','tpg3','cj1','cj2','cj3','cj91','cj92','cj93'],info:'Tickets SMS TPG / unireso au 788 — catalogue complet',cities:['geneve','geneva','genève'],auto:true},
-    {id:'ch-tpf',name:'TPF Fribourg',cc:'CH',network:'TPF',number:'873',
-      tickets:[{code:'TPF',label:'Billet TPF Fribourg'}],
-      keywords:['TPF'],info:'Tickets SMS TPF au 873',cities:['fribourg'],auto:true},
-    {id:'ch-travys',name:'TRAVYS Yverdon',cc:'CH',network:'TRAVYS',number:'456',
-      tickets:[{code:'TRAVYS',label:'Billet TRAVYS'}],
-      keywords:['TRAVYS'],info:'SMS TRAVYS',cities:['yverdon'],auto:true},
-    {id:'ch-zvv',name:'ZVV Zurich',cc:'CH',network:'ZVV',number:'988',
-      tickets:[{code:'ZVV',label:'Billet ZVV Zurich'}],
-      keywords:['ZVV'],info:'SMS ZVV Zurich',cities:['zurich'],auto:true},
-    {id:'ch-bern',name:'Bernmobil',cc:'CH',network:'BERNMOBIL',number:'788',
-      tickets:[{code:'BERN',label:'Billet Bernmobil'}],
-      keywords:['BERN'],info:'SMS Bernmobil',cities:['berne','bern'],auto:true},
-    {id:'ch-bvb',name:'BVB Bâle',cc:'CH',network:'BVB',number:'788',
-      tickets:[{code:'BVB',label:'Billet BVB Bâle'}],
-      keywords:['BVB'],info:'SMS BVB Bâle',cities:['bale','basel'],auto:true},
-    {id:'ch-national',name:'SMS Suisse (788/873/988)',cc:'CH',network:'CH',number:'788',
-      tickets:[{code:'SMS',label:'Réseau SMS suisse'}],
-      keywords:['SMS'],info:'Réseaux SMS suisses encore actifs',cities:[],auto:true},
-    {id:'fr-ratp',name:'RATP / IDFM Paris',cc:'FR',network:'RATP',number:'93100',
-      tickets:[{code:'BUS63',label:'Bus 63 (historique)'}, {code:'RATP',label:'Ticket RATP'}],
-      keywords:['BUS63','RATP'],info:'Historique SMS Paris (souvent discontinué)',cities:['paris'],auto:true},
-    {id:'fr-tcl',name:'TCL Lyon',cc:'FR',network:'TCL',number:'93400',
-      tickets:[{code:'TCL',label:'Billet TCL Lyon'}],
-      keywords:['TCL'],info:'SMS TCL Lyon',cities:['lyon'],auto:true},
-    {id:'fr-tbm',name:'TBM Bordeaux',cc:'FR',network:'TBM',number:'93129',
-      tickets:[{code:'TBM',label:'Billet TBM Bordeaux'}],
-      keywords:['TBM'],info:'SMS TBM Bordeaux',cities:['bordeaux'],auto:true},
-    {id:'fr-rtm',name:'RTM Marseille',cc:'FR',network:'RTM',number:'93142',
-      tickets:[{code:'RTM',label:'Billet RTM Marseille'}],
-      keywords:['RTM'],info:'SMS RTM Marseille',cities:['marseille'],auto:true},
-    {id:'fr-ilevia',name:'Ilevia Lille',cc:'FR',network:'ILEVIA',number:'93142',
-      tickets:[{code:'ILEVIA',label:'Billet Ilevia Lille'}],
-      keywords:['ILEVIA'],info:'SMS Ilevia Lille',cities:['lille'],auto:true},
-    {id:'be-stib',name:'STIB Bruxelles',cc:'BE',network:'STIB',number:'4884',
-      tickets:[{code:'STIB',label:'Billet STIB Bruxelles'}],
-      keywords:['STIB'],info:'SMS STIB Bruxelles',cities:['bruxelles','brussels'],auto:true},
-    {id:'de-bvg',name:'BVG Berlin',cc:'DE',network:'BVG',number:'APP',
-      tickets:[],keywords:['BVG'],info:'Ticket via app BVG (pas SMS)',cities:['berlin'],auto:true},
-    {id:'gb-tfl',name:'TfL Londres',cc:'GB',network:'TFL',number:'87287',
-      tickets:[{code:'STOPCODE',label:'Horaires arrêt TfL'}],
-      keywords:['STOPCODE'],info:'Horaires SMS / Oyster app',cities:['londres','london'],auto:true}
-  ];
-
-
-  // Catalogues officiels — rechargés à chaque mise à jour des sources SMS
-  var OFFICIAL_SMS_COVERAGE = {
-    'ch-tpg': {
-      name:'TPG Genève', number:'788',
-      tickets:[
-        {code:'tpg1',label:'Tout Genève 60′ · plein tarif · 3.00 CHF'},
-        {code:'tpg2',label:'Tout Genève 60′ · 1/2 tarif (6-15 ans) · 2.00 CHF'},
-        {code:'tpg3',label:'Tout Genève 60′ · réduit AVS/AI · 2.00 CHF'},
-        {code:'cj1',label:'Carte journalière Tout Genève · plein tarif · 10.00 CHF'},
-        {code:'cj2',label:'Carte journalière Tout Genève · 1/2 tarif · 7.30 CHF'},
-        {code:'cj3',label:'Carte journalière Tout Genève · AVS/AI · 7.30 CHF'},
-        {code:'cj91',label:'Carte journalière dès 9h · plein tarif · 8.00 CHF'},
-        {code:'cj92',label:'Carte journalière dès 9h · 1/2 tarif · 5.60 CHF'},
-        {code:'cj93',label:'Carte journalière dès 9h · AVS/AI · 5.60 CHF'},
-        {code:'10200',label:'Multizones 10+200 · adulte 90′ · 4.60 CHF'},
-        {code:'10200r',label:'Multizones 10+200 · jeune 90′ · 3.30 CHF'},
-        {code:'10210',label:'Multizones 10+210 · adulte 90′ · 4.60 CHF'},
-        {code:'10210r',label:'Multizones 10+210 · jeune 90′ · 3.60 CHF'},
-        {code:'10230',label:'Multizones 10+230 · adulte 90′ · 4.60 CHF'},
-        {code:'10230r',label:'Multizones 10+230 · jeune 90′ · 3.30 CHF'},
-        {code:'10240',label:'Multizones 10+240 · adulte 90′ · 4.60 CHF'},
-        {code:'10240r',label:'Multizones 10+240 · jeune 90′ · 3.30 CHF'},
-        {code:'10250',label:'Multizones 10+250 · adulte 90′ · 4.60 CHF'},
-        {code:'10250r',label:'Multizones 10+250 · jeune 90′ · 3.30 CHF'},
-        {code:'c10',label:'Complémentaire zone 10 · adulte 90′ · 3.00 CHF'},
-        {code:'c10r',label:'Complémentaire zone 10 · jeune 90′ · 2.00 CHF'},
-        {code:'c200',label:'Complémentaire zone 200 · adulte · 1.60 CHF'},
-        {code:'c200r',label:'Complémentaire zone 200 · jeune · 1.30 CHF'},
-        {code:'c210',label:'Complémentaire zone 210 · adulte · 1.60 CHF'},
-        {code:'c210r',label:'Complémentaire zone 210 · jeune · 1.60 CHF'},
-        {code:'c230',label:'Complémentaire zone 230 · adulte · 1.60 CHF'},
-        {code:'c230r',label:'Complémentaire zone 230 · jeune · 1.30 CHF'},
-        {code:'c240',label:'Complémentaire zone 240 · adulte · 1.60 CHF'},
-        {code:'c240r',label:'Complémentaire zone 240 · jeune · 1.30 CHF'},
-        {code:'c250',label:'Complémentaire zone 250 · adulte · 1.60 CHF'},
-        {code:'c250r',label:'Complémentaire zone 250 · jeune · 1.30 CHF'},
-        {code:'200',label:'Zone FR 200 locale 60′ · adulte · 1.60 CHF'},
-        {code:'200r',label:'Zone FR 200 locale 60′ · jeune · 1.30 CHF'},
-        {code:'230',label:'Zone FR 230 locale 60′ · adulte · 1.60 CHF'},
-        {code:'230r',label:'Zone FR 230 locale 60′ · jeune · 1.30 CHF'},
-        {code:'240',label:'Zone FR 240 locale 60′ · adulte · 1.60 CHF'},
-        {code:'240r',label:'Zone FR 240 locale 60′ · jeune · 1.30 CHF'},
-        {code:'250',label:'Zone FR 250 locale 60′ · adulte · 1.60 CHF'},
-        {code:'250r',label:'Zone FR 250 locale 60′ · jeune · 1.30 CHF'}
-      ],
-      keywords:['tpg1','tpg2','tpg3','cj1','cj2','cj3','cj91','cj92','cj93'],
-      info:'Tickets SMS TPG / unireso au 788 — catalogue officiel'
-    },
-    'ch-tl': {
-      name:'TL Lausanne', number:'788',
-      tickets:[
-        {code:'TL',label:'Billet simple TL'},
-        {code:'TLC',label:'Billet journée TL'},
-        {code:'TLJOUR',label:'Billet jour TL'}
-      ],
-      keywords:['TL','TLC','TLJOUR'],
-      info:'Tickets SMS TL au 788 — catalogue officiel'
-    },
-    'ch-tpf': {
-      name:'TPF Fribourg', number:'873',
-      tickets:[{code:'TPF',label:'Billet TPF Fribourg'}],
-      keywords:['TPF'],
-      info:'Tickets SMS TPF au 873 — catalogue officiel'
-    },
-    'ch-zvv': {
-      name:'ZVV Zurich', number:'988',
-      tickets:[{code:'ZVV',label:'Billet ZVV Zurich'}],
-      keywords:['ZVV'],
-      info:'SMS ZVV Zurich — catalogue officiel'
-    },
-    'ch-bern': {
-      name:'Bernmobil', number:'788',
-      tickets:[{code:'BERN',label:'Billet Bernmobil'}],
-      keywords:['BERN'],
-      info:'SMS Bernmobil — catalogue officiel'
-    },
-    'ch-bvb': {
-      name:'BVB Bâle', number:'788',
-      tickets:[{code:'BVB',label:'Billet BVB Bâle'}],
-      keywords:['BVB'],
-      info:'SMS BVB Bâle — catalogue officiel'
-    },
-    'ch-travys': {
-      name:'TRAVYS Yverdon', number:'456',
-      tickets:[{code:'TRAVYS',label:'Billet TRAVYS'}],
-      keywords:['TRAVYS'],
-      info:'SMS TRAVYS — catalogue officiel'
-    }
-  };
-
-  function applyOfficialCoverage(list){
-    if(!Array.isArray(list)) return list;
-    list.forEach(function(s){
-      var off=OFFICIAL_SMS_COVERAGE[s.id];
-      if(!off) return;
-      if(off.tickets) s.tickets=off.tickets.slice();
-      if(off.keywords) s.keywords=off.keywords.slice();
-      if(off.info) s.info=off.info;
-      if(off.number) s.number=off.number;
-      if(off.name) s.name=off.name;
-      s.coverageUpdatedAt=Date.now();
-      s.coverageOfficial=true;
-    });
-    return list;
-  }
-
-  function load(){
-    try{
-      var a=JSON.parse(localStorage.getItem('bd_sms_sources_v1')||'null');
-      if(Array.isArray(a)&&a.length){
-        SMS_DEFAULTS.forEach(function(d){
-          var existing=a.find(function(x){return x.id===d.id});
-          if(!existing){
-            a.push(Object.assign({},d,{active:false,manual:false}));
-          } else {
-            if(d.tickets) existing.tickets=d.tickets;
-            if(d.keywords) existing.keywords=d.keywords;
-            if(d.info) existing.info=d.info;
-            if(d.number) existing.number=d.number;
-            if(d.name) existing.name=d.name;
-          }
-        });
-        return applyOfficialCoverage(a);
-      }
-    }catch(e){}
-    return applyOfficialCoverage(SMS_DEFAULTS.map(function(x){return Object.assign({},x,{active:!!x.auto,manual:false,status:x.auto?'ok':''})}));
-  }
-  var sources=load();
-  function save(){
-    try{localStorage.setItem('bd_sms_sources_v1',JSON.stringify(sources))}catch(e){}
-    window.__bd_sms_sources=sources;
-    window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:sources}));
-    applyHomeSmsFilter();
-  }
-  window.__bd_sms_sources=sources;
-
-  function getActiveCity(){
-    try{
-      // Try React-ish globals / localStorage
-      var id=localStorage.getItem('bd_city')||localStorage.getItem('bd-city')||'';
-      var name='';
-      var cc='';
-      // Scan city button or known markers
-      var btn=document.getElementById('bd-city-btn');
-      if(btn) name=(btn.textContent||'').trim();
-      // From window cities list if available
-      var all=window.__bd_allCities||[];
-      var found=all.find(function(c){return c&&(c.id===id||c.name===name)});
-      if(found) return found;
-      return {id:id,name:name,cc:cc,country:''};
-    }catch(e){return {}}
-  }
-
-  function autoSync(){
-    if(localStorage.getItem('bd_sms_autodetect')==='0') return;
-    var city=getActiveCity();
-    var cc=(city.cc||'').toUpperCase();
-    var cid=(city.id||'').toLowerCase();
-    var cname=(city.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    var country=(city.country||'').toLowerCase();
-    sources.forEach(function(s){
-      if(s.manual) return; // user override — keep current active state
-      var match=false;
-      // Strict: only activate when source lists this city (no country-wide auto)
-      if(s.cities&&s.cities.length && (cid||cname)){
-        match=s.cities.some(function(x){
-          x=String(x).toLowerCase();
-          return x===cid || (cname&&(cname.indexOf(x)>=0||x.indexOf(cname)>=0));
-        });
-      }
-      // Network hint on city object
-      if(!match&&s.network&&city.network&&String(city.network).toUpperCase().indexOf(String(s.network).toUpperCase())>=0) match=true;
-      s.active=!!match;
-      s.status=s.active?'ok':'';
-    });
-    save();
-  }
-
-  function esc(s){return String(s||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
-
-  function renderList(){
-    var box=document.getElementById('bd-v104-sms-list');
-    if(!box) return;
-    var city=getActiveCity();
-    box.innerHTML=sources.map(function(s,i){
-      var st=s.active?'ok':'';
-      var badge=s.manual?(s.active?'manuel':'off'):(s.active?'auto':'');
-      var badgeTxt=s.manual?(s.active?'manuel':'désactivé'):(s.active?'auto':'inactif');
-      var cov=(s.coverageOfficial||(s.tickets&&s.tickets.length>2))?'<span class="bd-v104-sms-badge auto">officiel</span>':'';
-      var nTickets=s.tickets&&s.tickets.length?(' · '+s.tickets.length+' billets'):'';
-      return '<div class="bd-v104-sms-row"><span class="bd-v104-sms-dot '+st+'"></span><div><div class="bd-v104-sms-name">'+esc(s.name)+
-        (badge?'<span class="bd-v104-sms-badge '+(s.active&&!s.manual?'auto':'')+'">'+esc(badgeTxt)+'</span>':'')+
-        cov+
-        '</div><div class="bd-v104-sms-sub">'+esc(s.info||'')+' · '+esc(s.number&&s.number!=='APP'?'SMS '+s.number:'App')+
-        nTickets+
-        '</div></div><button class="bd-v104-sms-toggle '+(s.active?'on':'')+'" data-sms-toggle="'+i+'" aria-label="toggle"><span class="bd-v104-sms-knob"></span></button></div>';
-    }).join('');
-  }
-
-  function openPanel(){
-    var o=document.getElementById('bd-v104-sms-overlay');
-    if(!o) return;
-    o.classList.add('open');
-    document.documentElement.classList.add('modal-open');
-    document.body.classList.add('modal-open');
-    renderList();
-  }
-  function closePanel(){
-    var o=document.getElementById('bd-v104-sms-overlay');
-    if(o) o.classList.remove('open');
-    document.documentElement.classList.remove('modal-open');
-    document.body.classList.remove('modal-open');
-  }
-
-  function build(){
-    if(document.getElementById('bd-v104-sms-overlay')) return;
-    var o=document.createElement('div');
-    o.id='bd-v104-sms-overlay';
-    o.className='bd-v104-sms-overlay';
-    o.innerHTML='<section class="bd-v104-sms-sheet"><div class="bd-v104-sms-head"><div><h2 style="font-size:19px;font-weight:900;margin:0">Tickets SMS</h2><div style="font-size:11px;color:#71717a">Sources SMS transport · auto selon ville / pays</div></div><button class="bd-v104-sms-close" id="bd-v104-sms-close">×</button></div>'+
-      '<button class="bd-auto-detect-btn" id="bd-auto-detect-sms">Activer la détection automatique</button>'+
-      '<div class="bd-v104-sms-note">Les sources s’activent automatiquement selon la ville ou le pays actif. Vous pouvez les désactiver manuellement. Les SMS rapides s’affichent en bas de l’accueil.</div>'+
-      '<div class="bd-v104-sms-actions"><button class="bd-v104-sms-action" id="bd-v104-sms-update">Mettre à jour la liste</button><button class="bd-v104-sms-action" id="bd-v104-sms-autosync">Chercher des sources sur le web</button></div>'+
-      '<div id="bd-v104-sms-list"></div></section>';
-    document.body.appendChild(o);
-    document.getElementById('bd-v104-sms-close').onclick=closePanel;
-    o.addEventListener('click',function(e){if(e.target===o)closePanel()});
-    o.addEventListener('click',function(e){
-      var t=e.target.closest('[data-sms-toggle]');
-      if(!t) return;
-      var i=+t.dataset.smsToggle;
-      sources[i].active=!sources[i].active;
-      sources[i].manual=true;
-      sources[i].status=sources[i].active?'ok':'';
-      save();
-      renderList();
-    });
-    document.getElementById('bd-v104-sms-update').onclick=async function(){
-      var btn=this; var old=btn.textContent; btn.textContent='Scan…';
-      try{
-        var cityBtn=document.getElementById('bd-city-btn');
-        var cityName=(cityBtn&&cityBtn.textContent||'').trim().toLowerCase();
-        var WEB_SMS=[
-          {id:'ch-tl',name:'TL Lausanne',cc:'CH',network:'TL',number:'788',keywords:['TL','TLC','TLJOUR'],info:'Tickets SMS TL au 788',cities:['lausanne'],auto:true},
-          {id:'ch-tpg',name:'TPG Genève',cc:'CH',network:'TPG',number:'788',keywords:['TPG','TPG1','TPG1H'],info:'Tickets SMS TPG au 788',cities:['geneve','geneva'],auto:true},
-          {id:'ch-tpf',name:'TPF Fribourg',cc:'CH',network:'TPF',number:'873',keywords:['TPF'],info:'Tickets SMS TPF au 873',cities:['fribourg'],auto:true},
-          {id:'ch-travys',name:'TRAVYS Yverdon',cc:'CH',network:'TRAVYS',number:'456',keywords:['TRAVYS'],info:'SMS TRAVYS',cities:['yverdon'],auto:true},
-          {id:'ch-zvv',name:'ZVV Zurich',cc:'CH',network:'ZVV',number:'988',keywords:['ZVV'],info:'SMS ZVV Zurich',cities:['zurich'],auto:true},
-          {id:'ch-bern',name:'Bernmobil',cc:'CH',network:'BERNMOBIL',number:'788',keywords:['BERN'],info:'SMS Bernmobil',cities:['berne','bern'],auto:true},
-          {id:'ch-bvb',name:'BVB Bâle',cc:'CH',network:'BVB',number:'788',keywords:['BVB'],info:'SMS BVB Bâle',cities:['bale','basel'],auto:true},
-          {id:'ch-national',name:'SMS Suisse (788/873/988)',cc:'CH',network:'CH',number:'788',keywords:['SMS'],info:'Réseaux SMS suisses encore actifs',cities:[],auto:true},
-          {id:'fr-ratp',name:'RATP / IDFM Paris',cc:'FR',network:'RATP',number:'93100',keywords:['BUS63','RATP'],info:'Historique SMS Paris',cities:['paris'],auto:true},
-          {id:'fr-tcl',name:'TCL Lyon',cc:'FR',network:'TCL',number:'93400',keywords:['TCL'],info:'SMS TCL Lyon',cities:['lyon'],auto:true},
-          {id:'fr-tbm',name:'TBM Bordeaux',cc:'FR',network:'TBM',number:'93129',keywords:['TBM'],info:'SMS TBM Bordeaux',cities:['bordeaux'],auto:true},
-          {id:'fr-rtm',name:'RTM Marseille',cc:'FR',network:'RTM',number:'93142',keywords:['RTM'],info:'SMS RTM Marseille',cities:['marseille'],auto:true},
-          {id:'fr-ilevia',name:'Ilevia Lille',cc:'FR',network:'ILEVIA',number:'93142',keywords:['ILEVIA'],info:'SMS Ilevia Lille',cities:['lille'],auto:true},
-          {id:'fr-cts',name:'CTS Strasbourg',cc:'FR',network:'CTS',number:'93033',keywords:['CTS'],info:'SMS CTS Strasbourg',cities:['strasbourg'],auto:true},
-          {id:'be-stib',name:'STIB Bruxelles',cc:'BE',network:'STIB',number:'4884',keywords:['STIB'],info:'SMS STIB Bruxelles',cities:['bruxelles','brussels'],auto:true},
-          {id:'de-bvg',name:'BVG Berlin',cc:'DE',network:'BVG',number:'APP',keywords:['BVG'],info:'Ticket via app BVG',cities:['berlin'],auto:true},
-          {id:'gb-tfl',name:'TfL Londres',cc:'GB',network:'TFL',number:'87287',keywords:['STOPCODE'],info:'Horaires SMS TfL',cities:['londres','london'],auto:true},
-          {id:'at-wiener',name:'Wiener Linien',cc:'AT',network:'WL',number:'0664',keywords:['WL'],info:'SMS Vienne',cities:['wien','vienne','vienna'],auto:true},
-          {id:'it-atm',name:'ATM Milano',cc:'IT',network:'ATM',number:'48444',keywords:['ATM'],info:'SMS Milano',cities:['milano','milan'],auto:true},
-          {id:'es-emt',name:'EMT Madrid',cc:'ES',network:'EMT',number:'2171',keywords:['EMT'],info:'SMS Madrid',cities:['madrid'],auto:true}
-        ];
-        var added=0;
-        WEB_SMS.forEach(function(d){
-          if(sources.some(function(x){return x.id===d.id})) return;
-          // Prefer relevant to city, but add all discovered from "web catalog"
-          var rel=true;
-          if(cityName&&d.cities&&d.cities.length){
-            rel=d.cities.some(function(x){return cityName.indexOf(x)>=0})||!d.cities.length;
-          }
-          sources.push(Object.assign({},d,{active:!!rel,manual:false,status:rel?'ok':''}));
-          added++;
-        });
-        // Also merge SMS_DEFAULTS
-        SMS_DEFAULTS.forEach(function(d){
-          if(!sources.some(function(x){return x.id===d.id})){
-            sources.push(Object.assign({},d,{active:false,manual:false,status:''}));
-            added++;
-          }
-        });
-        applyOfficialCoverage(sources);
-        sources.forEach(function(s){ if(s.active) s.status='ok'; });
-        save(); renderList();
-        try{window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:sources}));}catch(e){}
-        var nBillets=0;
-        sources.forEach(function(s){ if(s.tickets) nBillets+=s.tickets.length; });
-        var msg=(added?(added+' source(s), '):'')+(nBillets+' billets officiels');
-        btn.textContent=msg;
-        setTimeout(function(){btn.textContent=old},2200);
-      }catch(e){btn.textContent=old}
-    };
-    document.getElementById('bd-v104-sms-autosync').onclick=function(){
-      // Web search for SMS sources (same as update) then auto-sync to city
-      var upd=document.getElementById('bd-v104-sms-update');
-      if(upd) upd.click();
-      setTimeout(function(){
-        sources.forEach(function(s){s.manual=false});
-        autoSync();
-        applyOfficialCoverage(sources);
-        save();
-        renderList();
-      },600);
-    };
-  }
-
-  function wireMenu(){
-    var btn=document.getElementById('bd-v101-sms');
-    if(!btn||btn.dataset.wired) return;
-    btn.dataset.wired='1';
-    btn.addEventListener('click',function(){
-      var m=document.getElementById('bd-v101-menu');
-      if(m) m.classList.remove('open');
-      build();
-      openPanel();
-    });
-  }
-
-  // Filter homepage Ticket SMS cards based on active sources
-  function applyHomeSmsFilter(){
-    var active=sources.filter(function(s){return s.active});
-    var keywords=[];
-    active.forEach(function(s){
-      (s.keywords||[]).forEach(function(k){keywords.push(String(k).toUpperCase())});
-      if(s.network) keywords.push(String(s.network).toUpperCase());
-      if(s.number&&s.number!=='APP') keywords.push(String(s.number));
-    });
-    document.querySelectorAll('section').forEach(function(sec){
-      var h=sec.querySelector('h3');
-      if(!h||!/Ticket SMS|SMS/i.test(h.textContent||'')) return;
-      var cards=sec.querySelectorAll('[class*="rounded"]');
-      cards.forEach(function(card){
-        if(card===sec) return;
-        var tx=(card.textContent||'').toUpperCase();
-        // Don't hide headers
-        if(card.querySelector('h3')) return;
-        if(!keywords.length){ card.style.display=''; return; }
-        var ok=keywords.some(function(k){return k&&tx.indexOf(k)>=0});
-        // Keep empty-state messages
-        if(/Aucun service SMS/i.test(card.textContent||'')) ok=true;
-        card.style.display=ok?'':'none';
-      });
-    });
-  }
-
-  function run(){
-    wireMenu();
-    // Initial auto sync if no manual prefs saved
-    try{
-      var raw=localStorage.getItem('bd_sms_sources_v1');
-      if(!raw) autoSync();
-      else applyHomeSmsFilter();
-    }catch(e){autoSync()}
-  }
-
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
-  else run();
-  setInterval(wireMenu,1500);
-  var mo=new MutationObserver(function(){clearTimeout(window.__bdSmsSrcT);window.__bdSmsSrcT=setTimeout(function(){wireMenu();applyHomeSmsFilter()},50)});
-  setTimeout(function(){if(document.body)mo.observe(document.body,{childList:true,subtree:true})},200);
-  window.addEventListener('bd-sms-sources-change',applyHomeSmsFilter);
-  // Re-sync when city button text changes
-  setInterval(function(){
-    try{
-      var btn=document.getElementById('bd-city-btn');
-      var name=btn?(btn.textContent||'').trim():'';
-      if(window.__bd_lastCityName!==name){
-        window.__bd_lastCityName=name;
-        var anyManual=sources.some(function(s){return s.manual});
-        if(!anyManual) autoSync();
-        else applyHomeSmsFilter();
-      }
-    }catch(e){}
-  },2000);
-})();
-</script>
-
-<style id="bd-v104-unify-sheets">
-/* All external pages / modals look like Gestion des sources */
-.fixed.inset-0.z-\[60\] > div.relative,
-.fixed.inset-0.z-\[60\] > section,
-section.rounded-\[20px\].fixed.inset-0.z-\[80\] > div,
-.bd-manage,
-.bdt-sheet{
-  width:100%!important;
-  max-width:640px!important;
-  max-height:92dvh!important;
-  border-radius:26px!important;
-  box-shadow:0 25px 70px rgba(0,0,0,.3)!important;
-}
-.fixed.inset-0.z-\[60\],
-.fixed.inset-0.z-\[80\],
-section.rounded-\[20px\].fixed.inset-0.z-\[80\]{
-  display:flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  padding:14px!important;
-  background:rgba(0,0,0,.48)!important;
-  backdrop-filter:blur(7px)!important;
-}
-/* Hide original Ticket SMS home section */
-section h3{ }
-</style>
-
-<style id="bd-v104-sms-rapides-style">
-/* Hide original Ticket SMS block on home */
-body.bd-hide-ticket-sms section:has(h3) {
-  /* fallback below via JS */
-}
-.bd-sms-rapides{
-  margin:0;
-  width:100%;
-  padding:0;
-  box-sizing:border-box;
-}
-.bd-sms-more{width:100%;margin-top:10px;height:40px;border-radius:999px;border:1px solid #e7e5e4;background:#fafaf9;font-size:12px;font-weight:800;cursor:pointer}
-html.dark .bd-sms-more{background:#27272a;border-color:rgba(255,255,255,.1);color:#fafafa}
-.bd-sms-rapides-card{
-  border-radius:20px;
-  border:1px solid #e7e5e4;
-  background:#fff;
-  box-shadow:0 1px 3px rgba(0,0,0,.05);
-  padding:16px;
-  box-sizing:border-box;
-}
-html.dark .bd-sms-rapides-card{
-  background:#18181b;
-  border-color:rgba(255,255,255,.1);
-}
-.bd-sms-rapides-title{
-  font-weight:800;
-  font-size:15px;
-  letter-spacing:-.02em;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:12px;
-}
-.bd-sms-rapides-list{display:flex;flex-direction:column;gap:8px}
-.bd-sms-rapides-row{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px;
-  border-radius:14px;
-  border:1px solid #e7e5e4;
-  background:#fafaf9;
-}
-html.dark .bd-sms-rapides-row{
-  background:#27272a;
-  border-color:rgba(255,255,255,.1);
-}
-.bd-sms-rapides-name{font-weight:700;font-size:13px}
-.bd-sms-rapides-desc{font-size:11px;color:#71717a;margin-top:2px}
-html.dark .bd-sms-rapides-desc{color:#a1a1aa}
-.bd-sms-rapides-btn{
-  height:36px;
-  padding:0 14px;
-  border-radius:999px;
-  background:#18181b;
-  color:#fff;
-  font-size:11px;
-  font-weight:800;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  white-space:nowrap;
-  border:0;
-  cursor:pointer;
-}
-html.dark .bd-sms-rapides-btn{background:#fafafa;color:#09090b}
-.bd-sms-rapides-empty{
-  font-size:12px;
-  color:#71717a;
-  text-align:center;
-  padding:14px 8px;
-  border:1px dashed #e7e5e4;
-  border-radius:14px;
-}
-html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa}
-.bd-auto-detect-btn{
-  width:100%;
-  height:46px;
-  border-radius:14px;
-  background:#2563eb;
-  color:#fff;
-  font-size:13px;
-  font-weight:800;
-  border:0;
-  cursor:pointer;
-  margin:0 0 12px;
-}
-.bd-auto-detect-btn.on{background:#16a34a}
-</style>
-<script id="bd-v104-sms-rapides-script">
-(function(){
-  function hideTicketSmsSection(){
-    document.querySelectorAll('section').forEach(function(sec){
-      var h=sec.querySelector('h3');
-      if(!h) return;
-      if(/Ticket SMS|SMS —/i.test(h.textContent||'')){
-        sec.style.display='none';
-        sec.setAttribute('data-bd-hidden-ticket','1');
-      }
-    });
-  }
-
-  function normalizeCity(s){
-    return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
-  }
-  function sourceMatchesCity(s, cityName){
-    var cname=normalizeCity(cityName);
-    if(!cname) return false;
-    if(s.cities&&s.cities.length){
-      return s.cities.some(function(x){
-        x=normalizeCity(x);
-        return x&&(cname.indexOf(x)>=0||x.indexOf(cname)>=0);
-      });
-    }
-    return false;
-  }
-  function activeSmsSources(){
-    var list=window.__bd_sms_sources||[];
-    var city=cityLabel();
-    return list.filter(function(s){
-      if(!s||!s.active||!s.number||s.number==='APP') return false;
-      // Homepage: only services for the current city
-      return sourceMatchesCity(s, city);
-    });
-  }
-
-  function cityLabel(){
-    var b=document.getElementById('bd-city-btn');
-    return b?((b.textContent||'').trim()||''):'';
-  }
-
-  function ticketList(s){
-    // 100% des billets officiels — jamais de troncature
-    if(s.tickets&&s.tickets.length) return s.tickets;
-    var codes=s.keywords||[];
-    if(!codes.length) codes=['SMS'];
-    return codes.map(function(c){return {code:c,label:s.info||('SMS au '+s.number)}});
-  }
-  function renderRapides(){
-    hideTicketSmsSection();
-    var host=document.getElementById('bd-sms-rapides');
-    if(!host){
-      host=document.createElement('div');
-      host.id='bd-sms-rapides';
-      host.className='bd-sms-rapides';
-      var root=document.getElementById('root')||document.body;
-      var sections=root.querySelectorAll('section');
-      var last=sections[sections.length-1];
-      if(last&&last.parentElement){
-        last.parentElement.appendChild(host);
-      } else {
-        root.appendChild(host);
-      }
-    }
-    var srcs=activeSmsSources();
-    var city=cityLabel()||'Ville';
-    // No SMS for this city → hide the whole block (no empty message)
-    if(!srcs.length){
-      host.innerHTML='';
-      host.style.display='none';
-      return;
-    }
-    host.style.display='';
-    var rows=[];
-    srcs.forEach(function(s){
-      ticketList(s).forEach(function(t){
-        var code=t.code||'SMS';
-        var label=t.label||s.info||('SMS au '+s.number);
-        var href='sms:'+s.number+'?body='+encodeURIComponent(code);
-        rows.push('<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+label+'</div>'+
-          '<div class="bd-sms-rapides-desc">Source : '+(s.name||'')+(s.number&&s.number!=='APP'?' · SMS '+s.number:'')+'</div></div>'+
-          '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>');
-      });
-    });
-    var shown=Math.min(rows.length,window.__bd_smsShown||3);
-    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+city+'</span></div>';
-    html+='<div class="bd-sms-rapides-list">'+rows.slice(0,shown).join('')+'</div>';
-    if(shown<rows.length){
-      html+='<button type="button" class="bd-sms-more" data-bd-sms-more="1">Afficher '+Math.min(5,rows.length-shown)+' de plus</button>';
-    }
-    html+='</div>';
-    if(host.__bdHtml===html) return;
-    host.__bdHtml=html;
-    host.innerHTML=html;
-  }
-  document.addEventListener('click',function(ev){
-    var b=ev.target.closest&&ev.target.closest('[data-bd-sms-more]');
-    if(!b) return;
-    window.__bd_smsShown=(window.__bd_smsShown||3)+5;
-    renderRapides();
-  });
-
-  function ensureAutoDetectButtons(){
-    // Sources panel
-    var srcList=document.getElementById('bd-v101-list');
-    if(srcList&&!document.getElementById('bd-auto-detect-sources')){
-      var actions=srcList.parentElement&&srcList.parentElement.querySelector('.bd-v101-actions');
-      var btn=document.createElement('button');
-      btn.id='bd-auto-detect-sources';
-      btn.className='bd-auto-detect-btn';
-      var on=localStorage.getItem('bd_sources_autodetect')!=='0';
-      btn.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
-      btn.classList.toggle('on',on);
-      btn.onclick=function(){
-        var cur=localStorage.getItem('bd_sources_autodetect')!=='0';
-        localStorage.setItem('bd_sources_autodetect',cur?'0':'1');
-        var n=localStorage.getItem('bd_sources_autodetect')!=='0';
-        btn.textContent=n?'✓ Détection automatique active':'Activer la détection automatique';
-        btn.classList.toggle('on',n);
-        if(n) window.dispatchEvent(new CustomEvent('bd-sources-autodetect'));
-      };
-      if(actions) actions.parentElement.insertBefore(btn, actions.nextSibling);
-      else srcList.parentElement.insertBefore(btn, srcList);
-    }
-    // SMS panel
-    var smsList=document.getElementById('bd-v104-sms-list');
-    if(smsList&&!document.getElementById('bd-auto-detect-sms')){
-      var note=smsList.parentElement&&smsList.parentElement.querySelector('.bd-v104-sms-note');
-      var btn2=document.createElement('button');
-      btn2.id='bd-auto-detect-sms';
-      btn2.className='bd-auto-detect-btn';
-      var on2=localStorage.getItem('bd_sms_autodetect')!=='0';
-      btn2.textContent=on2?'✓ Détection automatique active':'Activer la détection automatique';
-      btn2.classList.toggle('on',on2);
-      btn2.onclick=function(){
-        var cur=localStorage.getItem('bd_sms_autodetect')!=='0';
-        localStorage.setItem('bd_sms_autodetect',cur?'0':'1');
-        var n=localStorage.getItem('bd_sms_autodetect')!=='0';
-        btn2.textContent=n?'✓ Détection automatique active':'Activer la détection automatique';
-        btn2.classList.toggle('on',n);
-        if(n){
-          // clear manual flags and sync
-          try{
-            var src=window.__bd_sms_sources||[];
-            src.forEach(function(s){s.manual=false});
-            window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:src}));
-          }catch(e){}
-          var sync=document.getElementById('bd-v104-sms-autosync');
-          if(sync) sync.click();
-        }
-      };
-      if(note) note.parentElement.insertBefore(btn2, note.nextSibling);
-      else smsList.parentElement.insertBefore(btn2, smsList);
-    }
-  }
-
-  function run(){
-    hideTicketSmsSection();
-    renderRapides();
-    ensureAutoDetectButtons();
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,80)});
-  else setTimeout(run,80);
-  var mo=new MutationObserver(function(){
-    clearTimeout(window.__bdRapidesT);
-    window.__bdRapidesT=setTimeout(function(){hideTicketSmsSection();renderRapides();ensureAutoDetectButtons()},60);
-  });
-  setTimeout(function(){if(document.body)mo.observe(document.body,{childList:true,subtree:true})},150);
-  window.addEventListener('bd-sms-sources-change',function(){setTimeout(renderRapides,30)});
-})();
-</script>
-
-<script id="bd-v104-autodetect-wire">
-(function(){
-  function wire(){
-    var s=document.getElementById('bd-auto-detect-sources');
-    if(s && !s.dataset.wired){
-      s.dataset.wired='1';
-      function refresh(){
-        var on=localStorage.getItem('bd_sources_autodetect')!=='0';
-        s.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
-        s.classList.toggle('on',on);
-      }
-      refresh();
-      s.addEventListener('click',function(){
-        var cur=localStorage.getItem('bd_sources_autodetect')!=='0';
-        localStorage.setItem('bd_sources_autodetect',cur?'0':'1');
-        refresh();
-        if(!cur){ // was off, now on
-          window.dispatchEvent(new CustomEvent('bd-sources-autodetect'));
-        }
-      });
-    }
-    var m=document.getElementById('bd-auto-detect-sms');
-    if(m && !m.dataset.wired){
-      m.dataset.wired='1';
-      function refresh2(){
-        var on=localStorage.getItem('bd_sms_autodetect')!=='0';
-        m.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
-        m.classList.toggle('on',on);
-      }
-      refresh2();
-      m.addEventListener('click',function(){
-        var cur=localStorage.getItem('bd_sms_autodetect')!=='0';
-        localStorage.setItem('bd_sms_autodetect',cur?'0':'1');
-        refresh2();
-        if(!cur){
-          try{
-            var src=window.__bd_sms_sources||[];
-            src.forEach(function(x){x.manual=false});
-          }catch(e){}
-          var sync=document.getElementById('bd-v104-sms-autosync');
-          if(sync) sync.click();
-        }
-      });
-    }
-  }
-  setInterval(wire,800);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
-  else wire();
-})();
-</script>
-<script id="bd-v118-scroll">
-window.__bdScrollDepart=function(n){n=n||0;var i=document.getElementById('bd-depart-input');var box=i&&(i.closest('section')||i.parentElement&&i.parentElement.parentElement);
-if(!box){if(n<10)setTimeout(function(){window.__bdScrollDepart(n+1)},120);return}
-box.style.scrollMarginTop='84px';box.scrollIntoView({behavior:'smooth',block:'start'})};
-</script>
-<style id="bd-v118-hamb-hide">
-html.bd-page-open #bd-v101-hamb{opacity:0!important;pointer-events:none!important;visibility:hidden!important}
-</style>
-<script id="bd-v118-hamb-hide-script">
-(function(){
-  var SEL='.fixed.inset-0, .bd-manage, .bdt-sheet, .bd-v101-overlay.open, .bd-v104-sms-overlay.open';
-  var raf=0;
-  function check(){
-    raf=0;
-    var open=false;
-    try{open=!!document.querySelector(SEL)}catch(e){}
-    document.documentElement.classList.toggle('bd-page-open',open);
-  }
-  function sched(){ if(!raf) raf=requestAnimationFrame(check); }
-  function start(){
-    check();
-    new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
-  }
-  if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
-})();
-</script>
-<style id="bd-v149-datetime-manager">
-#bd-dateheure-rubrique{display:none!important}
-#bd-v148-date-btn{width:100%;min-height:50px;border-radius:18px;border:1px solid #d6d3d1;background:#fff;color:#18181b;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px;box-shadow:0 1px 2px rgba(0,0,0,.07),0 8px 18px -10px rgba(0,0,0,.18)}
-html.dark #bd-v148-date-btn{background:#18181b;color:#fafafa;border-color:rgba(255,255,255,.1);box-shadow:none}
-#bd-v149-date-under-routes{margin:7px 0 12px;padding:11px 13px;border-radius:15px;background:#f4f4f5;color:#18181b;border:1px solid #e7e5e4;font-size:12px;font-weight:800;line-height:1.35}
-html.dark #bd-v149-date-under-routes{background:#27272a;color:#fafafa;border-color:rgba(255,255,255,.10)}
-#bd-v149-date-under-routes .bd-v149-cap{display:block;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#71717a;margin-bottom:3px}
-#bd-v148-dt-bg{position:fixed;inset:0;z-index:100050;background:rgba(0,0,0,.52);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px}
-#bd-v148-dt{width:100%;max-width:480px;max-height:92dvh;overflow:auto;border-radius:28px;background:#fff;color:#18181b;border:1px solid #e7e5e4;box-shadow:0 24px 70px rgba(0,0,0,.3);padding:20px}
-html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255,255,.1)}
-#bd-v148-dt .head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-#bd-v148-dt .title{font-size:19px;font-weight:900;letter-spacing:-.03em}.bd-v148-x{width:38px;height:38px;border-radius:50%;background:#f4f4f5;font-size:20px;font-weight:800}html.dark .bd-v148-x{background:#27272a}
-#bd-v148-dt .sub{font-size:12px;color:#71717a;margin-top:3px}html.dark #bd-v148-dt .sub{color:#a1a1aa}
-#bd-v148-dt .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}#bd-v148-dt label{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#71717a;margin:0 0 5px 2px}
-#bd-v148-dt input{width:100%;height:50px;border-radius:15px;border:1px solid #d6d3d1;background:#fafaf9;color:#18181b;padding:0 12px;font-size:15px!important;font-weight:750;box-sizing:border-box;color-scheme:light}html.dark #bd-v148-dt input{background:#27272a;color:#fafafa;border-color:rgba(255,255,255,.1);color-scheme:dark}
-#bd-v148-dt .quick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}#bd-v148-dt .quick button{min-height:40px;border-radius:13px;background:#f4f4f5;font-size:11px;font-weight:800;padding:6px}html.dark #bd-v148-dt .quick button{background:#27272a}
-#bd-v148-dt .preview{margin-top:14px;border-radius:16px;background:#f4f4f5;padding:12px;text-align:center}html.dark #bd-v148-dt .preview{background:#27272a}#bd-v148-dt .preview strong{display:block;font-size:16px}#bd-v148-dt .preview span{display:block;font-size:11px;color:#71717a;margin-top:3px}html.dark #bd-v148-dt .preview span{color:#a1a1aa}
-#bd-v148-dt .actions{display:grid;grid-template-columns:1fr 1.35fr;gap:10px;margin-top:16px}#bd-v148-dt .actions button{height:50px;border-radius:999px;font-size:13px;font-weight:900;border:1px solid #d6d3d1}#bd-v148-dt .ok{background:#18181b;color:#fff;border-color:#18181b!important}html.dark #bd-v148-dt .ok{background:#fafafa;color:#09090b;border-color:#fafafa!important}
-.bd-v148-result-date{font-size:10px!important;font-weight:800!important;color:#71717a!important;margin-bottom:2px!important}html.dark .bd-v148-result-date{color:#a1a1aa!important}
-@media(max-width:370px){#bd-v148-dt .grid{grid-template-columns:1fr}#bd-v148-dt .quick{grid-template-columns:1fr 1fr}}
-.bd-v149-result-date{font-size:10px!important;font-weight:850!important;color:#52525b!important;margin:1px 0 4px!important}html.dark .bd-v149-result-date{color:#d4d4d8!important}
-</style>
-<script id="bd-v149-datetime-manager-script">
-(function(){
- window.__bd_dtValidated=false;window.__bd_tripDate=null;window.__bd_tripTime=null;
- function pad(n){return String(n).padStart(2,'0')} function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())} function hm(d){return pad(d.getHours())+':'+pad(d.getMinutes())}
- function parse(d,t){var x=new Date((d||ymd(new Date()))+'T'+(t||hm(new Date()))+':00');return isNaN(x)?new Date():x}
- function fmt(x){try{return x.toLocaleString('fr-CH',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'})}catch(e){return ymd(x)+' '+hm(x)}}
- function clearButton(){return Array.from(document.querySelectorAll('button')).find(function(b){return (b.textContent||'').trim().includes('Effacer la recherche')})||null}
- function title(){return Array.from(document.querySelectorAll('h1,h2,h3,h4,div,span')).find(function(e){return e.children.length===0&&(e.textContent||'').trim()==='Prochains parcours'})||null}
- function selected(){return window.__bd_dtValidated&&window.__bd_tripDate&&window.__bd_tripTime?parse(window.__bd_tripDate,window.__bd_tripTime):null}
- function refresh(){try{if(typeof window.__bd_refreshDateRoutes==='function')window.__bd_refreshDateRoutes()}catch(e){}}
- function apply(d,t){window.__bd_dtValidated=true;window.__bd_tripDate=d;window.__bd_tripTime=t;window.dispatchEvent(new CustomEvent('bd-trip-datetime-change',{detail:{date:d,time:t,validated:true}}));setTimeout(refresh,60);setTimeout(refresh,500);setTimeout(sync,650)}
- function reset(){window.__bd_dtValidated=false;window.__bd_tripDate=null;window.__bd_tripTime=null;var q=document.getElementById('bd-v149-date-under-routes');if(q)q.remove();document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});window.dispatchEvent(new CustomEvent('bd-trip-datetime-change',{detail:{date:null,time:null,validated:false}}))}
- function open(){if(document.getElementById('bd-v148-dt-bg'))return;var cur=selected()||new Date(),bg=document.createElement('div');bg.id='bd-v148-dt-bg';bg.innerHTML='<div id="bd-v148-dt" role="dialog" aria-modal="true"><div class="head"><div><div class="title">Choisir une date et heure</div><div class="sub">Rechercher les horaires à une date et une heure précises</div></div><button class="bd-v148-x" type="button">×</button></div><div class="grid"><div><label>Date de départ</label><input id="bd-v148-date" type="date"></div><div><label>Heure de départ</label><input id="bd-v148-time" type="time"></div></div><div class="quick"><button data-min="-60">− 1 h</button><button data-min="-15">− 15 min</button><button data-now="1">Maintenant</button><button data-min="15">+ 15 min</button><button data-min="60">+ 1 h</button><button data-day="1">+ 1 jour</button></div><div class="preview"><strong id="bd-v148-preview"></strong></div><div class="actions"><button id="bd-v148-cancel">Annuler</button><button class="ok" id="bd-v148-ok">Valider la date et l’heure</button></div></div>';document.body.appendChild(bg);document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');var di=bg.querySelector('#bd-v148-date'),ti=bg.querySelector('#bd-v148-time');di.value=ymd(cur);ti.value=hm(cur);var prev=ti.value;function up(){bg.querySelector('#bd-v148-preview').textContent=fmt(parse(di.value,ti.value))}function sh(m,d){var x=parse(di.value,ti.value);if(m)x.setMinutes(x.getMinutes()+m);if(d)x.setDate(x.getDate()+d);di.value=ymd(x);ti.value=hm(x);prev=ti.value;up()}ti.onchange=function(){var pm=+prev.slice(0,2)*60 + +prev.slice(3,5),nm=+ti.value.slice(0,2)*60 + +ti.value.slice(3,5),de=nm-pm;if(prev&&ti.value&&(de<-720||de>720)){var x=parse(di.value,ti.value);x.setDate(x.getDate()+(de<-720?1:-1));di.value=ymd(x)}prev=ti.value;up()};di.onchange=up;bg.querySelectorAll('[data-min]').forEach(function(b){b.onclick=function(){sh(+b.dataset.min,0)}});bg.querySelector('[data-day]').onclick=function(){sh(0,1)};bg.querySelector('[data-now]').onclick=function(){var n=new Date();di.value=ymd(n);ti.value=hm(n);prev=ti.value;up()};function close(){bg.remove();document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')}bg.querySelector('.bd-v148-x').onclick=close;bg.querySelector('#bd-v148-cancel').onclick=close;bg.onclick=function(e){if(e.target===bg)close()};bg.querySelector('#bd-v148-ok').onclick=function(){apply(di.value,ti.value);close()};up()}
- function info(){var old=document.getElementById('bd-v149-date-under-routes');if(!window.__bd_dtValidated){if(old)old.remove();return}var t=title();if(!t)return;if(!old){old=document.createElement('div');old.id='bd-v149-date-under-routes'}old.innerHTML='<span class="bd-v149-cap">Date et heure sélectionnées</span>'+fmt(selected());if(t.parentNode&&t.nextSibling!==old)t.parentNode.insertBefore(old,t.nextSibling)}
- function decorate(){document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});if(!window.__bd_dtValidated)return;var x=selected(),lab=x.toLocaleDateString('fr-CH',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelectorAll('div').forEach(function(el){if(el.children.length>5)return;var tx=(el.textContent||'').trim(),m=tx.match(/départ\s+(\d{1,2}:\d{2})\s+•\s+arrivée\s+(\d{1,2}:\d{2})/i);if(m&&!el.querySelector('.bd-v149-result-date')){var d=document.createElement('div');d.className='bd-v149-result-date';d.textContent='🗓️ '+lab+' · départ '+m[1];el.insertBefore(d,el.firstChild)}})}
- function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
- var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
-})();
-</script>
-
-
-<script id="bd-v151-datetime-live">
-/* V151 : date/heure validée, remplacement des comptes a rebours, infos sous les titres,
-   position actuelle avant Votre arret, navigation Google Maps interne */
-(function(){
- var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
- var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
- function pad(n){return (n<10?'0':'')+n}
- function dt(){
-  if(!window.__bd_dtValidated||!window.__bd_tripDate||!window.__bd_tripTime)return null;
-  var d=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00');
-  return isNaN(d)?null:d;
- }
- function dayTime(d){
-  if(!d)return '';
-  return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' à '+d.getHours()+' h '+pad(d.getMinutes());
- }
- function sameTime(base,hm){
-  var m=/^(\d{1,2}):(\d{2})$/.exec(String(hm||'').trim());
-  if(!m)return null;
-  var d=new Date(base.getTime());
-  d.setHours(+m[1],+m[2],0,0);
-  return d;
- }
- function infoText(){var d=dt();return d?('Date et heure sélectionnées : '+dayTime(d)):''}
- function ensureInfo(titleText,id){
-  var h=Array.from(document.querySelectorAll('h1,h2,h3,h4,div,span')).find(function(e){
-   return e.children.length===0&&(e.textContent||'').trim()===titleText;
-  });
-  if(!h)return;
-  var host=h.closest('div,section')||h.parentElement;
-  if(!host)return;
-  var el=document.getElementById(id);
-  if(!window.__bd_dtValidated){if(el)el.remove();return}
-  if(!el){
-   el=document.createElement('div');
-   el.id=id;
-   el.className='bd-v151-dt-info';
-   el.style.cssText='margin:-6px 0 10px 0;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:700;color:#18181b;background:#f4f4f5;border:1px solid #e7e5e4';
-   host.insertBefore(el,h.nextSibling);
-  }
-  el.textContent=infoText();
+ function ensureBandeau(){
+   var base=getBaseDate();
+   var candidates=[].slice.call(document.querySelectorAll('h1,h2,h3,div,span')).filter(function(e){return e.children.length===0 && (e.textContent||'').trim()==='Prochains parcours'});
+   var h=candidates[0] || [].slice.call(document.querySelectorAll('*')).find(function(e){return (e.textContent||'').trim()==='Prochains parcours' && e.children.length<3});
+   if(!h) return;
+   var host = h.closest('div,section') || h.parentElement;
+   if(!host) return;
+   var el=document.getElementById('bd-v155-banner');
+   var inputs=getSearchInputs();
+   var emptyInputs = inputs.length>=2 && inputs[0].value.trim()==='' && inputs[1].value.trim()==='';
+   if(!base || emptyInputs){
+     if(el) el.remove();
+     return;
+   }
+   if(!el){
+     el=document.createElement('div');
+     el.id='bd-v155-banner';
+     host.insertAdjacentElement('afterend', el);
+   }
+   var dark=isDark();
+   el.style.cssText='margin:10px 0 14px 0;padding:14px 16px;border-radius:16px;display:flex;align-items:center;gap:12px;border:1px solid '+(dark?'rgba(255,255,255,.12)':'#e7e5e4')+';background:'+(dark?'#1C1917':'#FFFFFF')+';box-shadow:0 4px 20px rgba(0,0,0,.06)';
+   el.innerHTML='<div style="width:44px;height:44px;border-radius:12px;background:'+(dark?'#fafafa':'#18181b')+';color:'+(dark?'#18181b':'#fafafa')+';display:flex;align-items:center;justify-content:center;font-size:20px">\uD83D\uDCC5</div><div style="flex:1"><div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;opacity:.6;color:'+(dark?'#a1a1aa':'#71717a')+'">Date et heure selectionnees</div><div style="font-size:18px;font-weight:800;letter-spacing:-.02em;line-height:1.2;color:'+(dark?'#fafafa':'#18181b')+'">'+fmtBanner(base)+'</div></div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+';color:'+(dark?'#fafafa':'#18181b')+'">Personnalise</div>';
  }
  function cardOf(el){
-  var n=el;
-  while(n&&n!==document.body){
-   if(n.tagName==='BUTTON'&&/rounded-\[16px\]/.test(n.className||''))return n;
-   n=n.parentElement;
-  }
-  return null;
+   var n=el;
+   while(n && n!==document.body){
+     if(n.tagName==='BUTTON' && /rounded-\[16px\]/.test(n.className||'')) return n;
+     if(n.classList && n.classList.contains('bdt-card')) return n;
+     n=n.parentElement;
+   }
+   return null;
  }
  function timesFromCard(card){
-  if(!card)return[null,null];
-  var big=card.querySelectorAll('.text-\\[22px\\]');
-  return [big[0]?big[0].textContent.trim():null,big[1]?big[1].textContent.trim():null];
+   if(!card) return [null,null];
+   var matches=[].slice.call((card.textContent||'').matchAll(/(\d{1,2}:\d{2})/g)).map(function(m){return m[1]});
+   return [matches[0]||null, matches[1]||null];
  }
  function replaceCountdowns(){
-  var base=dt();
-  var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
-  var nodes=[];
-  while(walker.nextNode())nodes.push(walker.currentNode);
-  nodes.forEach(function(node){
-   var t=(node.textContent||'').trim();
-   var dep=/^Départ dans\s+\d+\s*(min|min\.|h)\b/i.test(t);
-   var arr=/^Arrive dans\s+(?:(\d+)\s*min\s*)?(\d+)\s*s$/i.test(t);
-   if(!base||(!dep&&!arr))return;
-   var card=cardOf(node.parentElement);
-   var times=timesFromCard(card);
-   var when=sameTime(base,times[0])||base;
-   node.textContent='Départ le '+dayTime(when);
-   node.__bdV151=1;
-  });
+   var base=getBaseDate();
+   if(!base) return;
+   var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
+   var nodes=[];
+   while(walker.nextNode()) nodes.push(walker.currentNode);
+   nodes.forEach(function(node){
+     var t=(node.textContent||'').trim();
+     if(!t) return;
+     var isDep=/^Depart dans\s+/i.test(t);
+     var isArr=/^Arrive dans\s+/i.test(t);
+     if(!isDep && !isArr) return;
+     if(node.__bdV155) return;
+     var card=cardOf(node.parentElement);
+     var when=base;
+     if(card){
+       var times=timesFromCard(card);
+       var candidate=sameTime(base, times[0]);
+       if(candidate) when=candidate;
+     }
+     node.textContent='Depart le '+fmtDayTime(when);
+     node.__bdV155=1;
+   });
  }
- function decorateMyStop(){
-  document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
-   if((tag.textContent||'').trim()!=='Votre arrêt')return;
-   var row=tag.closest('.bdt-row');
-   if(!row||row.querySelector('.bd-v151-pos'))return;
-   var chips=tag.parentElement;
-   if(!chips)return;
-   var pos=document.createElement('span');
-   pos.className='bdt-tag bdt-tag-me bd-v151-pos';
-   pos.style.cssText='background:#f59e0b;color:#fff';
-   pos.textContent='📍 Position actuelle';
-   chips.insertBefore(pos,tag);
-   var loc=window.__bd_loc;
-   var nameEl=row.querySelector('.bdt-name');
-   var stop=window.__bd_v151_stopCoords&&nameEl&&window.__bd_v151_stopCoords[nameEl.textContent];
-   if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
-    var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-    var meters=2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-    var mins=Math.max(1,Math.round(meters/80));
-    var link=document.createElement('a');
-    link.className='bdt-tag bd-v151-walk';
-    link.style.cssText='background:#f59e0b;color:#fff;text-decoration:none';
-    link.href='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-    link.target='_blank';
-    link.rel='noopener noreferrer';
-    link.textContent='🚶 '+mins+' min ↗';
-    chips.insertBefore(link,tag);
+ function toEmbedUrl(href){
+   try{
+     if(href.indexOf('output=embed')!==-1) return href;
+     var embed=href;
+     if(embed.indexOf('/dir/?')!==-1) embed=embed.replace('/dir/?','/maps?');
+     if(embed.indexOf('/dir/')!==-1 && embed.indexOf('/dir/?')===-1) embed=embed.replace('/dir/','/maps/');
+     var sep = embed.indexOf('?')!==-1 ? '&' : '?';
+     embed = embed + sep + 'output=embed&z=16';
+     return embed;
+   }catch(e){ return href; }
+ }
+ function openGMapsPopup(href, forceWalking){
+   var finalHref=href;
+   if(forceWalking){
+     try{
+       var u=new URL(finalHref);
+       u.searchParams.set('travelmode','walking');
+       finalHref=u.toString();
+     }catch(e){
+       if(finalHref.indexOf('travelmode=walking')===-1) finalHref += (finalHref.indexOf('?')!==-1?'&':'?') + 'travelmode=walking';
+     }
    }
-  });
+   var dark=isDark();
+   var old=document.getElementById('bd-v155-gmaps');
+   if(old) old.remove();
+   var overlay=document.createElement('div');
+   overlay.id='bd-v155-gmaps';
+   overlay.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:Inter,system-ui,-apple-system,sans-serif';
+   var embedUrl=toEmbedUrl(finalHref);
+   overlay.innerHTML='<div style="width:100%;max-width:980px;height:min(88dvh,820px);background:'+(dark?'#18181b':'#FFFFFF')+';color:'+(dark?'#fafafa':'#18181b')+';border-radius:28px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.35);border:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+'"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+';background:'+(dark?'#1C1917':'#FAFAF9')+'"><div style="width:40px;height:40px;border-radius:12px;background:'+(dark?'#fafafa':'#18181b')+';color:'+(dark?'#09090b':'#fff')+';display:flex;align-items:center;justify-content:center;font-weight:800">G</div><div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px">Google Maps <span style="font-size:10px;padding:3px 7px;border-radius:99px;background:'+(forceWalking?'#22c55e':'#f59e0b')+';color:#fff">'+(forceWalking?'A PIED':'Navigation')+'</span></div><div style="font-size:11px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Theme '+(dark?'sombre':'clair')+' - BusDirect - '+(forceWalking?'Itineraire pieton':'')+'</div></div><a href="'+finalHref+'" target="_blank" rel="noopener noreferrer" style="text-decoration:none;font-size:12px;font-weight:700;padding:9px 14px;border-radius:99px;background:'+(dark?'#27272a':'#18181b')+';color:'+(dark?'#fafafa':'#fff')+'">Ouvrir dans Maps \u2197</a><button id="bd-v155-gmaps-close" style="border:0;cursor:pointer;width:36px;height:36px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+';color:inherit;font-weight:800;font-size:16px">\u2715</button></div><div style="flex:1;position:relative;background:'+(dark?'#09090b':'#e7e5e4')+'"><iframe src="'+embedUrl+'" style="position:absolute;inset:0;width:100%;height:100%;border:0;filter:'+(dark?'invert(90%) hue-rotate(180deg) contrast(92%) brightness(105%)':'none')+'" allow="geolocation" loading="lazy"></iframe><div id="bd-v155-gmaps-fallback" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:'+(dark?'#09090b':'#fff')+';padding:20px;text-align:center"><div><div style="font-size:18px;font-weight:800;margin-bottom:8px">Apercu indisponible</div><div style="font-size:13px;opacity:.7;margin-bottom:12px">Google bloque parfois les liens courts.</div><a href="'+finalHref+'" target="_blank" style="display:inline-block;padding:10px 16px;border-radius:99px;background:#18181b;color:#fff;text-decoration:none;font-weight:700">Ouvrir dans Google Maps</a></div></div></div><div style="padding:10px 16px;display:flex;gap:8px;align-items:center;background:'+(dark?'#1C1917':'#fff')+';border-top:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+'"><div style="font-size:11px;opacity:.6">BusDirect - carte integree - theme synchronise</div></div></div>';
+   document.body.appendChild(overlay);
+   overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+   overlay.querySelector('#bd-v155-gmaps-close').onclick=function(){overlay.remove();};
+   var iframe=overlay.querySelector('iframe');
+   var loaded=false;
+   iframe.onload=function(){ loaded=true; };
+   setTimeout(function(){ if(!loaded){ var fb=overlay.querySelector('#bd-v155-gmaps-fallback'); if(fb) fb.style.display='flex'; } }, 4000);
+   var esc=function(ev){ if(ev.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown', esc); } };
+   document.addEventListener('keydown', esc);
  }
- function openMaps(href){
-  var dark=document.documentElement.classList.contains('dark')||document.documentElement.dataset.theme==='dark';
-  var old=document.getElementById('bd-v151-maps');
-  if(old)old.remove();
-  var page=document.createElement('div');
-  page.id='bd-v151-maps';
-  page.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:'+(dark?'#09090b':'#FAFAF9')+';color:'+(dark?'#fafafa':'#18181b')+';font-family:Inter,system-ui,sans-serif';
-  page.innerHTML=
-   '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+';background:'+(dark?'#18181b':'#fff')+'">'+
-   '<strong style="font-size:15px">Navigation à pied</strong>'+
-   '<span style="font-size:11px;opacity:.7">Google Maps · thème '+(dark?'sombre':'clair')+'</span>'+
-   '<a href="'+href+'" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px;font-weight:700;color:'+(dark?'#fafafa':'#18181b')+';text-decoration:none;padding:8px 12px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+'">Ouvrir dans Google Maps ↗</a>'+
-   '<button id="bd-v151-maps-close" style="border:0;cursor:pointer;font-size:16px;font-weight:800;padding:8px 12px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+';color:inherit">Fermer</button>'+
-   '</div>'+
-   '<iframe src="'+href.replace('/dir/?api=1&','/maps?')+'&output=embed" style="flex:1;border:0;width:100%;filter:'+(dark?'invert(90%) hue-rotate(180deg) contrast(90%)':'none')+'"></iframe>';
-  document.body.appendChild(page);
-  page.querySelector('#bd-v151-maps-close').onclick=function(){page.remove()};
+ document.addEventListener('click', function(e){
+   var a=e.target.closest && e.target.closest('a[href]');
+   if(!a) return;
+   var href=a.getAttribute('href')||'';
+   var isGMap = /google\.(com|fr|ch)\/maps|maps\.app\.goo\.gl|goo\.gl\/maps|maps\.google/i.test(href);
+   if(!isGMap) return;
+   var inLive = !!(a.closest && a.closest('.bdt-live, [data-live]')) || (document.body.innerText.indexOf('Suivi en direct')!==-1 && a.closest('.bdt-row'));
+   var isWalk = /travelmode=walking/.test(href) || (a.textContent||'').indexOf('\uD83D\uDEB6')!==-1 || a.classList.contains('bd-v155-walk');
+   var forceWalking = inLive || isWalk;
+   e.preventDefault();
+   e.stopPropagation();
+   openGMapsPopup(href, forceWalking || /walking/.test(href));
+ }, true);
+ function decorateVousEtesIci(){
+   var liveTags=[].slice.call(document.querySelectorAll('.bdt-tag-me')).filter(function(t){return (t.textContent||'').trim()==='Votre arrêt'});
+   liveTags.forEach(function(tag){
+     var row=tag.closest('.bdt-row, div');
+     if(!row) return;
+     if(row.previousElementSibling && row.previousElementSibling.classList && row.previousElementSibling.classList.contains('bd-v155-here-row')) return;
+     var parent=row.parentElement;
+     if(!parent) return;
+     var loc=window.__bd_loc;
+     var nameEl=row.querySelector('.bdt-name, strong, [class*="font-bold"]');
+     var stopName=nameEl? nameEl.textContent.trim() : '';
+     var stop=window.__bd_v151_stopCoords && stopName && window.__bd_v151_stopCoords[stopName];
+     var hasPos = loc && loc.lat!=null;
+     var hereRow=document.createElement('div');
+     hereRow.className='bdt-row bd-v155-here-row';
+     var dark=isDark();
+     hereRow.style.cssText='display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin-bottom:8px;background:'+(dark?'#27272a':'#fffbeb')+';border:1px dashed #f59e0b;';
+     hereRow.innerHTML='<div style="width:36px;height:36px;border-radius:10px;background:#f59e0b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px">\uD83D\uDCCC</div><div style="flex:1"><div style="font-size:13px;font-weight:800;color:'+(dark?'#fafafa':'#18181b')+'">Vous etes ici</div><div style="font-size:11px;opacity:.6">Position actuelle</div></div><span class="bdt-tag" style="background:#f59e0b;color:#fff;font-size:10px;padding:4px 8px;border-radius:99px;font-weight:700">\uD83D\uDCCC VOUS</span>';
+     var walkConnector=null;
+     if(hasPos && stop && stop.lat!=null){
+       var R=6371000, toRad=Math.PI/180;
+       var dLat=(stop.lat-loc.lat)*toRad;
+       var dLon=(stop.lon-loc.lon)*toRad;
+       var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*toRad)*Math.cos(stop.lat*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
+       var dist=2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+       var mins=Math.max(1,Math.round(dist/80));
+       var gHref='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+       walkConnector=document.createElement('div');
+       walkConnector.className='bd-v155-walk-connector';
+       walkConnector.style.cssText='display:flex;align-items:center;gap:8px;margin:0 0 8px 18px;padding:8px 12px;border-left:2px dashed #f59e0b;';
+       walkConnector.innerHTML='<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:6px 10px;border-radius:99px;background:'+(dark?'#1C1917':'#fff')+';border:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+';color:'+(dark?'#fafafa':'#18181b')+'">\uD83D\uDEB6 '+mins+' min a pied</span><span style="font-size:11px;opacity:.5">\u2192 '+(stopName||'arret')+'</span><a href="'+gHref+'" class="bd-v155-walk" style="margin-left:auto;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:99px;background:#f59e0b;color:#fff;text-decoration:none;font-size:14px" title="Lancer navigation a pied">\u2197</a>';
+     }
+     parent.insertBefore(hereRow, row);
+     if(walkConnector) parent.insertBefore(walkConnector, row);
+   });
  }
- document.addEventListener('click',function(e){
-  var a=e.target.closest&&e.target.closest('a[href*="google.com/maps/dir/"][href*="travelmode=walking"]');
-  if(!a)return;
-  e.preventDefault();
-  openMaps(a.href);
- },true);
  function sync(){
-  ensureInfo('Prochains parcours','bd-v151-info-routes');
-  ensureInfo('Suivi en direct','bd-v151-info-live');
-  replaceCountdowns();
-  decorateMyStop();
+   ensureBandeau();
+   replaceCountdowns();
+   decorateVousEtesIci();
  }
  var raf=0;
- function schedule(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}
+ function schedule(){ if(!raf) raf=requestAnimationFrame(function(){raf=0;sync()}); }
  new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,characterData:true});
- window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)});
- setInterval(sync,1000);
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
+ window.addEventListener('bd-trip-datetime-change', function(){setTimeout(sync,50);});
+ document.addEventListener('input', function(e){
+   var inputs=getSearchInputs();
+   if(inputs.indexOf(e.target)!==-1) setTimeout(ensureBandeau,10);
+ }, true);
+ setInterval(sync,1200);
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', sync); else sync();
+ window.__bd_openGMaps=openGMapsPopup;
 })();
 </script>
 
-</body>
+
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
