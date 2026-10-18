@@ -1292,7 +1292,7 @@ it:{city:'Città',language:'Lingue',theme:'Chiaro/scuro',settings:'Fonti',smsTic
 pt:{city:'Cidades',language:'Idiomas',theme:'Claro/escuro',settings:'Fontes',smsTickets:'Tickets SMS',sources:'Gestão de fontes',update:'Atualizar estados',web:'Procurar fontes na web',add:'Adicionar',url:'URL GTFS / API de transporte',enabled:'ativa',disabled:'desativada',catalog:'Catálogo mundial',close:'Fechar'}
 };
 function lang(){try{return localStorage.getItem('bd_lang')||'fr'}catch(e){return'fr'}} function tr(k){var l=lang();return (I18N[l]||I18N.fr)[k]||I18N.fr[k]||k}
-function load(){try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)){DEFAULTS.forEach(function(d){if(!a.some(function(x){return x.id===d.id}))a.push(d)});return a}}catch(e){}return DEFAULTS.map(function(x){return Object.assign({},x)})}
+function load(){try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)&&a.length){var byId={};a.forEach(function(x){if(x&&x.id)byId[x.id]=x});var out=DEFAULTS.map(function(d){var p=byId[d.id];if(p)return Object.assign({},d,{active:!!p.active,status:p.status||d.status||'',checkedAt:p.checkedAt||null});return Object.assign({},d)});a.forEach(function(x){if(x&&x.id&&!out.some(function(o){return o.id===x.id}))out.push(Object.assign({},x,{active:!!x.active}));});return out}}catch(e){}return DEFAULTS.map(function(x){return Object.assign({},x)})}
 var sources=load(); function save(){try{localStorage.setItem('bd_sources_v1',JSON.stringify(sources))}catch(e){}window.__bd_sources=sources;window.dispatchEvent(new CustomEvent('bd-sources-change',{detail:sources}));}
 window.__bd_sources=sources;
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -1627,20 +1627,44 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
 
   function getActiveCity(){
     try{
-      // Try React-ish globals / localStorage
       var id=localStorage.getItem('bd_city')||localStorage.getItem('bd-city')||'';
       var name='';
-      var cc='';
-      // Scan city button or known markers
       var btn=document.getElementById('bd-city-btn');
       if(btn) name=(btn.textContent||'').trim();
-      // From window cities list if available
-      var all=window.__bd_allCities||[];
-      var found=all.find(function(c){return c&&(c.id===id||c.name===name)});
-      if(found) return found;
-      return {id:id,name:name,cc:cc,country:''};
+      var all=window.__bd_allCities||window.__bd_cities||[];
+      var found=all.find(function(c){return c&&(c.id===id||(c.name&&name&&c.name.toLowerCase()===name.toLowerCase()))});
+      if(found){ window.__bd_activeCity=found; return found; }
+      var n=(name||'').toLowerCase();
+      var map={
+        lausanne:{id:'lausanne',name:'Lausanne',cc:'CH',country:'Suisse',network:'TL'},
+        geneve:{id:'geneve',name:'Geneve',cc:'CH',country:'Suisse',network:'TPG'},
+        geneva:{id:'geneve',name:'Geneve',cc:'CH',country:'Suisse',network:'TPG'},
+        fribourg:{id:'fribourg',name:'Fribourg',cc:'CH',country:'Suisse',network:'TPF'},
+        zurich:{id:'zurich',name:'Zurich',cc:'CH',country:'Suisse',network:'ZVV'},
+        berne:{id:'berne',name:'Berne',cc:'CH',country:'Suisse',network:'BERNMOBIL'},
+        bern:{id:'berne',name:'Berne',cc:'CH',country:'Suisse',network:'BERNMOBIL'},
+        bale:{id:'bale',name:'Bale',cc:'CH',country:'Suisse',network:'BVB'},
+        basel:{id:'bale',name:'Bale',cc:'CH',country:'Suisse',network:'BVB'},
+        yverdon:{id:'yverdon',name:'Yverdon',cc:'CH',country:'Suisse',network:'TRAVYS'},
+        paris:{id:'paris',name:'Paris',cc:'FR',country:'France',network:'RATP'},
+        lyon:{id:'lyon',name:'Lyon',cc:'FR',country:'France',network:'TCL'},
+        marseille:{id:'marseille',name:'Marseille',cc:'FR',country:'France',network:'RTM'},
+        bordeaux:{id:'bordeaux',name:'Bordeaux',cc:'FR',country:'France',network:'TBM'},
+        lille:{id:'lille',name:'Lille',cc:'FR',country:'France',network:'ILEVIA'},
+        bruxelles:{id:'bruxelles',name:'Bruxelles',cc:'BE',country:'Belgique',network:'STIB'},
+        brussels:{id:'bruxelles',name:'Bruxelles',cc:'BE',country:'Belgique',network:'STIB'},
+        berlin:{id:'berlin',name:'Berlin',cc:'DE',country:'Allemagne',network:'BVG'},
+        london:{id:'london',name:'London',cc:'GB',country:'United Kingdom',network:'TFL'},
+        londres:{id:'london',name:'London',cc:'GB',country:'United Kingdom',network:'TFL'}
+      };
+      for(var k in map){ if(n.indexOf(k)>=0){ window.__bd_activeCity=map[k]; return map[k]; } }
+      var fallback={id:id||n,name:name||n,cc:'',country:'',network:''};
+      window.__bd_activeCity=fallback;
+      return fallback;
     }catch(e){return {}}
   }
+  window.getActiveCity=getActiveCity;
+
 
   function autoSync(){
     if(localStorage.getItem('bd_sms_autodetect')==='0') return;
@@ -1649,13 +1673,26 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
     var cid=(city.id||'').toLowerCase();
     var cname=(city.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     var country=(city.country||'').toLowerCase();
+    var net=(city.network||'').toUpperCase();
+    // Prefer city-level matches; country-level only for national sources (no cities list)
+    var cityHits=0;
     sources.forEach(function(s){
-      if(s.manual) return; // user override
+      if(s.manual) return;
+      var cityMatch=false;
+      if(s.cities&&s.cities.length){
+        cityMatch=s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||(cid&&x.indexOf(cid)>=0)});
+      }
+      if(cityMatch) cityHits++;
+    });
+    sources.forEach(function(s){
+      if(s.manual) return;
       var match=false;
       if(s.cities&&s.cities.length){
-        match=s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||x.indexOf(cid)>=0});
-      }
-      if(!match&&s.cc){
+        match=s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||(cid&&x.indexOf(cid)>=0)});
+      } else if(s.network&&net&&String(s.network).toUpperCase()===net){
+        match=true;
+      } else if((!s.cities||!s.cities.length)&&s.cc){
+        // national / country source
         if(cc&&s.cc===cc) match=true;
         if(!match&&country){
           if(s.cc==='CH'&&(country.indexOf('suisse')>=0||country.indexOf('switzerland')>=0)) match=true;
@@ -1665,8 +1702,6 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
           if(s.cc==='GB'&&(country.indexOf('united')>=0||country.indexOf('royaume')>=0)) match=true;
         }
       }
-      // Also match by network on page text
-      if(!match&&s.network&&city.network&&String(city.network).toUpperCase().indexOf(String(s.network).toUpperCase())>=0) match=true;
       s.active=!!match;
       s.status=s.active?'ok':'';
     });
@@ -2009,30 +2044,53 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
       host=document.createElement('div');
       host.id='bd-sms-rapides';
       host.className='bd-sms-rapides';
-      // Insert near end of main scroll content
       var root=document.getElementById('root')||document.body;
       var sections=root.querySelectorAll('section');
       var last=sections[sections.length-1];
-      if(last&&last.parentElement){
-        last.parentElement.appendChild(host);
-      } else {
-        root.appendChild(host);
-      }
+      if(last&&last.parentElement) last.parentElement.appendChild(host);
+      else root.appendChild(host);
     }
-    var srcs=activeSmsSources();
-    var city=cityLabel();
-    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+city+'</span></div>';
+    var city=(window.getActiveCity&&window.getActiveCity())||window.__bd_activeCity||{};
+    var cityName=city.name||(document.getElementById('bd-city-btn')&&document.getElementById('bd-city-btn').textContent||'').trim()||'';
+    var cid=(city.id||'').toLowerCase();
+    var cname=(cityName||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var cc=(city.cc||'').toUpperCase();
+    var net=(city.network||'').toUpperCase();
+    // Only active sources from Tickets SMS page, filtered by localisation
+    var allActive=(window.__bd_sms_sources||[]).filter(function(s){return s&&s.active});
+    var srcs=allActive.filter(function(s){
+      if(s.cities&&s.cities.length){
+        return s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||(cid&&x.indexOf(cid)>=0)});
+      }
+      if(s.network&&net&&String(s.network).toUpperCase()===net) return true;
+      if((!s.cities||!s.cities.length)&&s.cc&&cc&&s.cc===cc) return true;
+      return false;
+    });
+    // If nothing city-specific, fall back to all active for country
+    if(!srcs.length&&cc){
+      srcs=allActive.filter(function(s){return s.cc===cc||!s.cc});
+    }
+    if(!srcs.length) srcs=allActive;
+    var esc=function(t){return String(t||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})};
+    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+esc(cityName||'Localisation')+'</span></div>';
     if(!srcs.length){
       html+='<div class="bd-sms-rapides-empty">Aucun service SMS actif pour cette localisation. Activez des sources dans le menu 💬 Tickets SMS.</div>';
     } else {
       html+='<div class="bd-sms-rapides-list">';
       srcs.forEach(function(s){
-        var codes=(s.keywords||[]).slice(0,4);
-        if(!codes.length) codes=['SMS'];
-        codes.forEach(function(code){
-          var href='sms:'+s.number+'?body='+encodeURIComponent(code);
-          html+='<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+(s.name||'')+'</div><div class="bd-sms-rapides-desc">'+(s.info||('SMS au '+s.number))+'</div></div>'+
-            '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>';
+        var codes=(s.keywords||[]).filter(Boolean);
+        if(!codes.length) codes=[s.network||'SMS'];
+        codes.slice(0,6).forEach(function(code){
+          var num=s.number&&s.number!=='APP'?s.number:'';
+          var href=num?('sms:'+num+'?body='+encodeURIComponent(code)):'#';
+          html+='<div class="bd-sms-rapides-row"><div style="min-width:0;flex:1">'
+            +'<div class="bd-sms-rapides-name">'+esc(code)+'</div>'
+            +'<div class="bd-sms-rapides-desc">'+esc(s.info||('SMS'+(num?' au '+num:'')))+'</div>'
+            +'<div class="bd-sms-rapides-desc" style="margin-top:3px;font-weight:600">Source : '+esc(s.name||s.network||'—')
+            +(num?' · '+esc(num):'')+'</div>'
+            +'</div>'
+            +(num?('<a class="bd-sms-rapides-btn" href="'+href+'">'+esc(code)+'</a>'):'<span class="bd-sms-rapides-btn" style="opacity:.5">App</span>')
+            +'</div>';
         });
       });
       html+='</div>';
@@ -2159,6 +2217,70 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
   setInterval(wire,800);
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
   else wire();
+})();
+</script>
+
+<style id="bd-v104-hamb-home-only">
+/* Hamburger: home page only — hide when any external page / modal is open */
+html.modal-open #bd-v101-hamb,
+html.modal-open #bd-v101-menu,
+body.modal-open #bd-v101-hamb,
+body.modal-open #bd-v101-menu,
+#bd-v101-overlay.open ~ #bd-v101-hamb,
+.bd-v101-overlay.open ~ #bd-v101-hamb,
+#bd-v104-sms-overlay.open ~ #bd-v101-hamb,
+.bd-v104-sms-overlay.open ~ #bd-v101-hamb,
+body.bd-page-open #bd-v101-hamb,
+body.bd-page-open #bd-v101-menu{
+  display:none!important;
+  pointer-events:none!important;
+  opacity:0!important;
+}
+</style>
+<script id="bd-v104-hamb-home-only-script">
+(function(){
+  function anyExternalPageOpen(){
+    // Sources overlay
+    var o=document.getElementById('bd-v101-overlay');
+    if(o && o.classList.contains('open')) return true;
+    // SMS tickets overlay
+    var s=document.getElementById('bd-v104-sms-overlay');
+    if(s && s.classList.contains('open')) return true;
+    // React modals (lang, city, etc.)
+    var fixed=document.querySelectorAll('.fixed.inset-0');
+    for(var i=0;i<fixed.length;i++){
+      var el=fixed[i];
+      if(el.id==='bd-v101-overlay'||el.id==='bd-v104-sms-overlay') continue;
+      var st=window.getComputedStyle(el);
+      if(st.display!=='none' && st.visibility!=='hidden' && st.opacity!=='0'){
+        // z-index high enough to be a page overlay
+        var z=parseInt(st.zIndex,10)||0;
+        if(z>=50) return true;
+      }
+    }
+    if(document.documentElement.classList.contains('modal-open')) return true;
+    if(document.body.classList.contains('modal-open')) return true;
+    return false;
+  }
+  function sync(){
+    var open=anyExternalPageOpen();
+    document.body.classList.toggle('bd-page-open', open);
+    var hamb=document.getElementById('bd-v101-hamb');
+    var menu=document.getElementById('bd-v101-menu');
+    if(hamb){
+      if(open){
+        hamb.style.display='none';
+        if(menu) menu.classList.remove('open');
+      } else {
+        hamb.style.display='';
+      }
+    }
+  }
+  setInterval(sync, 250);
+  var mo=new MutationObserver(function(){ clearTimeout(window.__bdHambT); window.__bdHambT=setTimeout(sync, 40); });
+  setTimeout(function(){ if(document.body) mo.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['class','style']}); }, 200);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', sync);
+  else sync();
 })();
 </script>
 </body>
