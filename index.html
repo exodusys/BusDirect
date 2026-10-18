@@ -1597,11 +1597,47 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
       keywords:['TL','TLC','TLJOUR'],info:'Tickets SMS TL au 788',cities:['lausanne'],auto:true},
     {id:'ch-tpg',name:'TPG Genève',cc:'CH',network:'TPG',number:'788',
       tickets:[
-        {code:'TPG1',label:'Tout Genève 60′'},
-        {code:'TPG1H',label:'Tout Genève 1 h'},
-        {code:'TPG',label:'Billet TPG'}
+        {code:'tpg1',label:'Tout Genève 60′ · plein tarif · 3.00 CHF'},
+        {code:'tpg2',label:'Tout Genève 60′ · 1/2 tarif (6-15 ans) · 2.00 CHF'},
+        {code:'tpg3',label:'Tout Genève 60′ · réduit AVS/AI · 2.00 CHF'},
+        {code:'cj1',label:'Carte journalière Tout Genève · plein tarif · 10.00 CHF'},
+        {code:'cj2',label:'Carte journalière Tout Genève · 1/2 tarif · 7.30 CHF'},
+        {code:'cj3',label:'Carte journalière Tout Genève · AVS/AI · 7.30 CHF'},
+        {code:'cj91',label:'Carte journalière dès 9h · plein tarif · 8.00 CHF'},
+        {code:'cj92',label:'Carte journalière dès 9h · 1/2 tarif · 5.60 CHF'},
+        {code:'cj93',label:'Carte journalière dès 9h · AVS/AI · 5.60 CHF'},
+        {code:'10200',label:'Multizones 10+200 · adulte 90′ · 4.60 CHF'},
+        {code:'10200r',label:'Multizones 10+200 · jeune 90′ · 3.30 CHF'},
+        {code:'10210',label:'Multizones 10+210 · adulte 90′ · 4.60 CHF'},
+        {code:'10210r',label:'Multizones 10+210 · jeune 90′ · 3.60 CHF'},
+        {code:'10230',label:'Multizones 10+230 · adulte 90′ · 4.60 CHF'},
+        {code:'10230r',label:'Multizones 10+230 · jeune 90′ · 3.30 CHF'},
+        {code:'10240',label:'Multizones 10+240 · adulte 90′ · 4.60 CHF'},
+        {code:'10240r',label:'Multizones 10+240 · jeune 90′ · 3.30 CHF'},
+        {code:'10250',label:'Multizones 10+250 · adulte 90′ · 4.60 CHF'},
+        {code:'10250r',label:'Multizones 10+250 · jeune 90′ · 3.30 CHF'},
+        {code:'c10',label:'Complémentaire zone 10 · adulte 90′ · 3.00 CHF'},
+        {code:'c10r',label:'Complémentaire zone 10 · jeune 90′ · 2.00 CHF'},
+        {code:'c200',label:'Complémentaire zone 200 · adulte · 1.60 CHF'},
+        {code:'c200r',label:'Complémentaire zone 200 · jeune · 1.30 CHF'},
+        {code:'c210',label:'Complémentaire zone 210 · adulte · 1.60 CHF'},
+        {code:'c210r',label:'Complémentaire zone 210 · jeune · 1.60 CHF'},
+        {code:'c230',label:'Complémentaire zone 230 · adulte · 1.60 CHF'},
+        {code:'c230r',label:'Complémentaire zone 230 · jeune · 1.30 CHF'},
+        {code:'c240',label:'Complémentaire zone 240 · adulte · 1.60 CHF'},
+        {code:'c240r',label:'Complémentaire zone 240 · jeune · 1.30 CHF'},
+        {code:'c250',label:'Complémentaire zone 250 · adulte · 1.60 CHF'},
+        {code:'c250r',label:'Complémentaire zone 250 · jeune · 1.30 CHF'},
+        {code:'200',label:'Zone FR 200 locale 60′ · adulte · 1.60 CHF'},
+        {code:'200r',label:'Zone FR 200 locale 60′ · jeune · 1.30 CHF'},
+        {code:'230',label:'Zone FR 230 locale 60′ · adulte · 1.60 CHF'},
+        {code:'230r',label:'Zone FR 230 locale 60′ · jeune · 1.30 CHF'},
+        {code:'240',label:'Zone FR 240 locale 60′ · adulte · 1.60 CHF'},
+        {code:'240r',label:'Zone FR 240 locale 60′ · jeune · 1.30 CHF'},
+        {code:'250',label:'Zone FR 250 locale 60′ · adulte · 1.60 CHF'},
+        {code:'250r',label:'Zone FR 250 locale 60′ · jeune · 1.30 CHF'}
       ],
-      keywords:['TPG1','TPG1H','TPG'],info:'Tickets SMS TPG au 788',cities:['geneve','geneva'],auto:true},
+      keywords:['tpg1','tpg2','tpg3','cj1','cj2','cj3','cj91','cj92','cj93'],info:'Tickets SMS TPG / unireso au 788 — catalogue complet',cities:['geneve','geneva','genève'],auto:true},
     {id:'ch-tpf',name:'TPF Fribourg',cc:'CH',network:'TPF',number:'873',
       tickets:[{code:'TPF',label:'Billet TPF Fribourg'}],
       keywords:['TPF'],info:'Tickets SMS TPF au 873',cities:['fribourg'],auto:true},
@@ -1645,6 +1681,113 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
       keywords:['STOPCODE'],info:'Horaires SMS / Oyster app',cities:['londres','london'],auto:true}
   ];
 
+
+  // Catalogues officiels — rechargés à chaque mise à jour des sources SMS
+  var OFFICIAL_SMS_COVERAGE = {
+    'ch-tpg': {
+      name:'TPG Genève', number:'788',
+      tickets:[
+        {code:'tpg1',label:'Tout Genève 60′ · plein tarif · 3.00 CHF'},
+        {code:'tpg2',label:'Tout Genève 60′ · 1/2 tarif (6-15 ans) · 2.00 CHF'},
+        {code:'tpg3',label:'Tout Genève 60′ · réduit AVS/AI · 2.00 CHF'},
+        {code:'cj1',label:'Carte journalière Tout Genève · plein tarif · 10.00 CHF'},
+        {code:'cj2',label:'Carte journalière Tout Genève · 1/2 tarif · 7.30 CHF'},
+        {code:'cj3',label:'Carte journalière Tout Genève · AVS/AI · 7.30 CHF'},
+        {code:'cj91',label:'Carte journalière dès 9h · plein tarif · 8.00 CHF'},
+        {code:'cj92',label:'Carte journalière dès 9h · 1/2 tarif · 5.60 CHF'},
+        {code:'cj93',label:'Carte journalière dès 9h · AVS/AI · 5.60 CHF'},
+        {code:'10200',label:'Multizones 10+200 · adulte 90′ · 4.60 CHF'},
+        {code:'10200r',label:'Multizones 10+200 · jeune 90′ · 3.30 CHF'},
+        {code:'10210',label:'Multizones 10+210 · adulte 90′ · 4.60 CHF'},
+        {code:'10210r',label:'Multizones 10+210 · jeune 90′ · 3.60 CHF'},
+        {code:'10230',label:'Multizones 10+230 · adulte 90′ · 4.60 CHF'},
+        {code:'10230r',label:'Multizones 10+230 · jeune 90′ · 3.30 CHF'},
+        {code:'10240',label:'Multizones 10+240 · adulte 90′ · 4.60 CHF'},
+        {code:'10240r',label:'Multizones 10+240 · jeune 90′ · 3.30 CHF'},
+        {code:'10250',label:'Multizones 10+250 · adulte 90′ · 4.60 CHF'},
+        {code:'10250r',label:'Multizones 10+250 · jeune 90′ · 3.30 CHF'},
+        {code:'c10',label:'Complémentaire zone 10 · adulte 90′ · 3.00 CHF'},
+        {code:'c10r',label:'Complémentaire zone 10 · jeune 90′ · 2.00 CHF'},
+        {code:'c200',label:'Complémentaire zone 200 · adulte · 1.60 CHF'},
+        {code:'c200r',label:'Complémentaire zone 200 · jeune · 1.30 CHF'},
+        {code:'c210',label:'Complémentaire zone 210 · adulte · 1.60 CHF'},
+        {code:'c210r',label:'Complémentaire zone 210 · jeune · 1.60 CHF'},
+        {code:'c230',label:'Complémentaire zone 230 · adulte · 1.60 CHF'},
+        {code:'c230r',label:'Complémentaire zone 230 · jeune · 1.30 CHF'},
+        {code:'c240',label:'Complémentaire zone 240 · adulte · 1.60 CHF'},
+        {code:'c240r',label:'Complémentaire zone 240 · jeune · 1.30 CHF'},
+        {code:'c250',label:'Complémentaire zone 250 · adulte · 1.60 CHF'},
+        {code:'c250r',label:'Complémentaire zone 250 · jeune · 1.30 CHF'},
+        {code:'200',label:'Zone FR 200 locale 60′ · adulte · 1.60 CHF'},
+        {code:'200r',label:'Zone FR 200 locale 60′ · jeune · 1.30 CHF'},
+        {code:'230',label:'Zone FR 230 locale 60′ · adulte · 1.60 CHF'},
+        {code:'230r',label:'Zone FR 230 locale 60′ · jeune · 1.30 CHF'},
+        {code:'240',label:'Zone FR 240 locale 60′ · adulte · 1.60 CHF'},
+        {code:'240r',label:'Zone FR 240 locale 60′ · jeune · 1.30 CHF'},
+        {code:'250',label:'Zone FR 250 locale 60′ · adulte · 1.60 CHF'},
+        {code:'250r',label:'Zone FR 250 locale 60′ · jeune · 1.30 CHF'}
+      ],
+      keywords:['tpg1','tpg2','tpg3','cj1','cj2','cj3','cj91','cj92','cj93'],
+      info:'Tickets SMS TPG / unireso au 788 — catalogue officiel'
+    },
+    'ch-tl': {
+      name:'TL Lausanne', number:'788',
+      tickets:[
+        {code:'TL',label:'Billet simple TL'},
+        {code:'TLC',label:'Billet journée TL'},
+        {code:'TLJOUR',label:'Billet jour TL'}
+      ],
+      keywords:['TL','TLC','TLJOUR'],
+      info:'Tickets SMS TL au 788 — catalogue officiel'
+    },
+    'ch-tpf': {
+      name:'TPF Fribourg', number:'873',
+      tickets:[{code:'TPF',label:'Billet TPF Fribourg'}],
+      keywords:['TPF'],
+      info:'Tickets SMS TPF au 873 — catalogue officiel'
+    },
+    'ch-zvv': {
+      name:'ZVV Zurich', number:'988',
+      tickets:[{code:'ZVV',label:'Billet ZVV Zurich'}],
+      keywords:['ZVV'],
+      info:'SMS ZVV Zurich — catalogue officiel'
+    },
+    'ch-bern': {
+      name:'Bernmobil', number:'788',
+      tickets:[{code:'BERN',label:'Billet Bernmobil'}],
+      keywords:['BERN'],
+      info:'SMS Bernmobil — catalogue officiel'
+    },
+    'ch-bvb': {
+      name:'BVB Bâle', number:'788',
+      tickets:[{code:'BVB',label:'Billet BVB Bâle'}],
+      keywords:['BVB'],
+      info:'SMS BVB Bâle — catalogue officiel'
+    },
+    'ch-travys': {
+      name:'TRAVYS Yverdon', number:'456',
+      tickets:[{code:'TRAVYS',label:'Billet TRAVYS'}],
+      keywords:['TRAVYS'],
+      info:'SMS TRAVYS — catalogue officiel'
+    }
+  };
+
+  function applyOfficialCoverage(list){
+    if(!Array.isArray(list)) return list;
+    list.forEach(function(s){
+      var off=OFFICIAL_SMS_COVERAGE[s.id];
+      if(!off) return;
+      if(off.tickets) s.tickets=off.tickets.slice();
+      if(off.keywords) s.keywords=off.keywords.slice();
+      if(off.info) s.info=off.info;
+      if(off.number) s.number=off.number;
+      if(off.name) s.name=off.name;
+      s.coverageUpdatedAt=Date.now();
+      s.coverageOfficial=true;
+    });
+    return list;
+  }
+
   function load(){
     try{
       var a=JSON.parse(localStorage.getItem('bd_sms_sources_v1')||'null');
@@ -1661,10 +1804,10 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
             if(d.name) existing.name=d.name;
           }
         });
-        return a;
+        return applyOfficialCoverage(a);
       }
     }catch(e){}
-    return SMS_DEFAULTS.map(function(x){return Object.assign({},x,{active:!!x.auto,manual:false,status:x.auto?'ok':''})});
+    return applyOfficialCoverage(SMS_DEFAULTS.map(function(x){return Object.assign({},x,{active:!!x.auto,manual:false,status:x.auto?'ok':''})}));
   }
   var sources=load();
   function save(){
@@ -1700,22 +1843,16 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
     var cname=(city.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     var country=(city.country||'').toLowerCase();
     sources.forEach(function(s){
-      if(s.manual) return; // user override
+      if(s.manual) return; // user override — keep current active state
       var match=false;
-      if(s.cities&&s.cities.length){
-        match=s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||x.indexOf(cid)>=0});
+      // Strict: only activate when source lists this city (no country-wide auto)
+      if(s.cities&&s.cities.length && (cid||cname)){
+        match=s.cities.some(function(x){
+          x=String(x).toLowerCase();
+          return x===cid || (cname&&(cname.indexOf(x)>=0||x.indexOf(cname)>=0));
+        });
       }
-      if(!match&&s.cc){
-        if(cc&&s.cc===cc) match=true;
-        if(!match&&country){
-          if(s.cc==='CH'&&(country.indexOf('suisse')>=0||country.indexOf('switzerland')>=0)) match=true;
-          if(s.cc==='FR'&&country.indexOf('france')>=0) match=true;
-          if(s.cc==='BE'&&country.indexOf('belgi')>=0) match=true;
-          if(s.cc==='DE'&&(country.indexOf('deutsch')>=0||country.indexOf('allemagne')>=0)) match=true;
-          if(s.cc==='GB'&&(country.indexOf('united')>=0||country.indexOf('royaume')>=0)) match=true;
-        }
-      }
-      // Also match by network on page text
+      // Network hint on city object
       if(!match&&s.network&&city.network&&String(city.network).toUpperCase().indexOf(String(s.network).toUpperCase())>=0) match=true;
       s.active=!!match;
       s.status=s.active?'ok':'';
@@ -1733,10 +1870,13 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
       var st=s.active?'ok':'';
       var badge=s.manual?(s.active?'manuel':'off'):(s.active?'auto':'');
       var badgeTxt=s.manual?(s.active?'manuel':'désactivé'):(s.active?'auto':'inactif');
+      var cov=(s.coverageOfficial||(s.tickets&&s.tickets.length>2))?'<span class="bd-v104-sms-badge auto">officiel</span>':'';
+      var nTickets=s.tickets&&s.tickets.length?(' · '+s.tickets.length+' billets'):'';
       return '<div class="bd-v104-sms-row"><span class="bd-v104-sms-dot '+st+'"></span><div><div class="bd-v104-sms-name">'+esc(s.name)+
         (badge?'<span class="bd-v104-sms-badge '+(s.active&&!s.manual?'auto':'')+'">'+esc(badgeTxt)+'</span>':'')+
+        cov+
         '</div><div class="bd-v104-sms-sub">'+esc(s.info||'')+' · '+esc(s.number&&s.number!=='APP'?'SMS '+s.number:'App')+
-        (s.keywords&&s.keywords.length?' · '+esc(s.keywords.slice(0,3).join(', ')):'')+
+        nTickets+
         '</div></div><button class="bd-v104-sms-toggle '+(s.active?'on':'')+'" data-sms-toggle="'+i+'" aria-label="toggle"><span class="bd-v104-sms-knob"></span></button></div>';
     }).join('');
   }
@@ -1824,19 +1964,15 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
             added++;
           }
         });
-        SMS_DEFAULTS.forEach(function(d){
-          var ex=sources.find(function(x){return x.id===d.id});
-          if(ex){
-            if(d.tickets) ex.tickets=d.tickets;
-            if(d.keywords) ex.keywords=d.keywords;
-            if(d.info) ex.info=d.info;
-          }
-        });
+        applyOfficialCoverage(sources);
         sources.forEach(function(s){ if(s.active) s.status='ok'; });
         save(); renderList();
         try{window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:sources}));}catch(e){}
-        btn.textContent=added?(added+' ajoutée(s)'):('À jour');
-        setTimeout(function(){btn.textContent=old},1800);
+        var nBillets=0;
+        sources.forEach(function(s){ if(s.tickets) nBillets+=s.tickets.length; });
+        var msg=(added?(added+' source(s), '):'')+(nBillets+' billets officiels');
+        btn.textContent=msg;
+        setTimeout(function(){btn.textContent=old},2200);
       }catch(e){btn.textContent=old}
     };
     document.getElementById('bd-v104-sms-autosync').onclick=function(){
@@ -1846,6 +1982,8 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
       setTimeout(function(){
         sources.forEach(function(s){s.manual=false});
         autoSync();
+        applyOfficialCoverage(sources);
+        save();
         renderList();
       },600);
     };
@@ -1981,7 +2119,7 @@ html.dark .bd-sms-rapides-card{
   gap:8px;
   margin-bottom:12px;
 }
-.bd-sms-rapides-list{display:flex;flex-direction:column;gap:8px}
+.bd-sms-rapides-list{display:flex;flex-direction:column;gap:8px;max-height:70dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .bd-sms-rapides-row{
   display:flex;
   align-items:center;
@@ -2051,19 +2189,39 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
     });
   }
 
+  function normalizeCity(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  }
+  function sourceMatchesCity(s, cityName){
+    var cname=normalizeCity(cityName);
+    if(!cname) return false;
+    if(s.cities&&s.cities.length){
+      return s.cities.some(function(x){
+        x=normalizeCity(x);
+        return x&&(cname.indexOf(x)>=0||x.indexOf(cname)>=0);
+      });
+    }
+    return false;
+  }
   function activeSmsSources(){
     var list=window.__bd_sms_sources||[];
-    return list.filter(function(s){return s&&s.active&&s.number&&s.number!=='APP'});
+    var city=cityLabel();
+    return list.filter(function(s){
+      if(!s||!s.active||!s.number||s.number==='APP') return false;
+      // Homepage: only services for the current city
+      return sourceMatchesCity(s, city);
+    });
   }
 
   function cityLabel(){
     var b=document.getElementById('bd-city-btn');
-    return b?((b.textContent||'').trim()||'Ville'):'Ville';
+    return b?((b.textContent||'').trim()||''):'';
   }
 
   function ticketList(s){
+    // 100% des billets officiels — jamais de troncature
     if(s.tickets&&s.tickets.length) return s.tickets;
-    var codes=(s.keywords||[]).slice(0,4);
+    var codes=s.keywords||[];
     if(!codes.length) codes=['SMS'];
     return codes.map(function(c){return {code:c,label:s.info||('SMS au '+s.number)}});
   }
@@ -2084,25 +2242,27 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
       }
     }
     var srcs=activeSmsSources();
-    var city=cityLabel();
-    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+city+'</span></div>';
+    var city=cityLabel()||'Ville';
+    // No SMS for this city → hide the whole block (no empty message)
     if(!srcs.length){
-      html+='<div class="bd-sms-rapides-empty">Aucun service SMS actif pour cette localisation. Activez des sources dans le menu 💬 Tickets SMS.</div>';
-    } else {
-      html+='<div class="bd-sms-rapides-list">';
-      srcs.forEach(function(s){
-        ticketList(s).forEach(function(t){
-          var code=t.code||'SMS';
-          var label=t.label||s.info||('SMS au '+s.number);
-          var href='sms:'+s.number+'?body='+encodeURIComponent(code);
-          html+='<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+label+'</div>'+
-            '<div class="bd-sms-rapides-desc">Source : '+(s.name||'')+(s.number&&s.number!=='APP'?' · SMS '+s.number:'')+'</div></div>'+
-            '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>';
-        });
-      });
-      html+='</div>';
+      host.innerHTML='';
+      host.style.display='none';
+      return;
     }
-    html+='</div>';
+    host.style.display='';
+    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+city+'</span></div>';
+    html+='<div class="bd-sms-rapides-list">';
+    srcs.forEach(function(s){
+      ticketList(s).forEach(function(t){
+        var code=t.code||'SMS';
+        var label=t.label||s.info||('SMS au '+s.number);
+        var href='sms:'+s.number+'?body='+encodeURIComponent(code);
+        html+='<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+label+'</div>'+
+          '<div class="bd-sms-rapides-desc">Source : '+(s.name||'')+(s.number&&s.number!=='APP'?' · SMS '+s.number:'')+'</div></div>'+
+          '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>';
+      });
+    });
+    html+='</div></div>';
     host.innerHTML=html;
   }
 
