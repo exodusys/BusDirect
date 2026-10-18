@@ -314,6 +314,12 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
 html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15px + env(safe-area-inset-top,0px))!important}
 .bd-head-in{padding-right:56px}
 </style>
+
+<style id="bd-v130-xfer">
+/* V130 – correspondance : texte jusqu'au bord droit + pastilles sous l'attente */
+.bdt-xfer{padding-right:12px!important;}
+.bdt-xfer>span:last-child{flex:1 1 auto;min-width:0;}
+</style>
 </head>
 <body>
   <div id="root"></div>
@@ -1158,7 +1164,10 @@ var rows=visibleStops.map(function(obj,vi){
  var walkMinBefore = walkBetween[i-1];
  var trInfo = transferBetween[i-1];
  var isChange = !!trInfo && prevLineRaw && curLineRaw && prevLineRaw!==curLineRaw;
- var dotBg = isChange?getLineColor(prevLineRaw):((isFirst||isLast)?lc:null);
+ /* V129 : l’arrêt du haut d’une correspondance est l’arrêt d’arrivée de la ligne courante.
+    Son point reprend donc la couleur de la ligne qui y arrive. */
+ var hasTransferAfter = !!transferBetween[i];
+ var dotBg = hasTransferAfter?lc:(isChange?getLineColor(prevLineRaw):((isFirst||isLast)?lc:null));
  var dotStyle = {};
  if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
  var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
@@ -1170,6 +1179,7 @@ var rows=visibleStops.map(function(obj,vi){
     /* DEPART tag supprimé sur demande jaune */null,
     null,
     isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag",style:{background:lc,color:"#fff"},children:"Arrivée"})]}):null,
+    /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
     mine&&!isFirst&&!isLast&&!isChange?c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"}):null,
     x.platform&&bdIsTrain(x.category||x.line)&&c("span",{className:"bdt-plat",children:"Voie "+x.platform}),
     null
@@ -1187,7 +1197,8 @@ var rows=visibleStops.map(function(obj,vi){
   if(_tr){
    var _aMs=ms(x,!0),_dMs=_nx?ms(_nx,!1):null;
    var _wait=(_aMs!=null&&_dMs!=null&&_dMs>_aMs)?Math.round((_dMs-_aMs)/60000):null;
-   _xf.push(p("div",{className:"bdt-xfer",style:{alignItems:"flex-start"},children:[c("span",{className:"bdt-xi",children:"🔄"}),p("span",{style:{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"5px",minWidth:0},children:[p("span",{style:{display:"inline-flex",alignItems:"center",gap:"5px",flexWrap:"wrap"},children:[c("span",{children:"Correspondance"}),_tr.at?c("span",{children:"à "+_tr.at}):null]}),c("span",{style:{display:"inline-flex",alignItems:"center",gap:"5px",padding:"2px 7px",borderRadius:"99px",background:"rgba(24,24,27,.16)"},children:[chipEl(getLineForStop(x)),c("span",{style:{fontWeight:800},children:"→"}),_tr.line?chipEl(_tr.line):chipEl(_nx?getLineForStop(_nx):"")]}),c("span",{children:_wait!=null?"· "+_wait+" min d'attente":(_tr.departure?"· départ "+fm(_tr.departure):"")})]})]},"x"+i));
+   var _nextLineRaw=_nx?getLineForStop(_nx):(_tr.line||_tr.category||"");
+   _xf.push(p("div",{className:"bdt-xfer",style:{alignItems:"flex-start",marginRight:0},children:[c("span",{className:"bdt-xi",children:"🔄"}),p("span",{style:{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"6px",minWidth:0,flex:"1 1 auto",width:"100%"},children:[p("span",{style:{display:"inline",width:"100%",whiteSpace:"normal",overflowWrap:"anywhere"},children:[c("span",{children:"Correspondance"}),_tr.at?c("span",{children:" à "+_tr.at}):null]}),c("span",{children:_wait!=null?"· "+_wait+" min d'attente":(_tr.departure?"· départ "+fm(_tr.departure):"")}),p("span",{style:{display:"inline-flex",alignItems:"center",gap:"7px",padding:"3px 8px",borderRadius:"99px",background:"rgba(63,63,70,.55)",maxWidth:"100%"},children:[chipEl(curLineRaw),c("span",{style:{fontWeight:800,fontSize:"14px"},children:"→"}),chipEl(_nextLineRaw)]})]})]},"x"+i));
   }
   if(_wk!=null&&_wk>0){
    _xf.push(p("div",{className:"bdt-xfer bdt-walk",children:[c("span",{className:"bdt-xi",children:"🚶"}),c("span",{children:"Marche à pied · "+_wk+" min"})]},"w"+i));
