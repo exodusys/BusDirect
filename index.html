@@ -1300,8 +1300,73 @@ function renderSources(){var box=document.getElementById('bd-v101-list');if(!box
 function syncLabels(){var q=function(id,k){var e=document.getElementById(id);if(e)e.textContent=tr(k)};q('bd-v101-city-l','city');q('bd-v101-lang-l','language');q('bd-v101-theme-l','theme');q('bd-v101-settings-l','settings');q('bd-v101-sms-l','smsTickets');q('bd-v101-title','sources');q('bd-v101-update','update');q('bd-v101-web','web');var inp=document.getElementById('bd-v101-url');if(inp)inp.placeholder=tr('url');q('bd-v101-addbtn','add');}
 function clickExisting(words){var btn=[].slice.call(document.querySelectorAll('button')).find(function(b){var t=(b.textContent||'').toLowerCase();return words.some(function(w){return t.indexOf(w)>=0})&& !b.closest('#bd-v101-menu')});if(btn)btn.click();}
 function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button><button class="bd-v101-item" id="bd-v101-sms"><span>💬</span><span id="bd-v101-sms-l">SMS</span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
-var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><button class="bd-auto-detect-btn" id="bd-auto-detect-sources">Activer la détection automatique</button><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
-b.onclick=function(){m.classList.toggle('open')};document.getElementById('bd-v101-city').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-city-btn');if(b)b.click();else clickExisting(['ville','city','stadt','ciudad','città','cidade']);})()};document.getElementById('bd-v101-lang').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-lang-btn');if(b)b.click();else clickExisting(['langue','language','sprache','idioma','lingua']);})()};document.getElementById('bd-v101-theme').onclick=function(){var cur=localStorage.getItem('bd-theme')||'auto',n=cur==='light'?'dark':cur==='dark'?'auto':'light';localStorage.setItem('bd-theme',n);var dark=n==='dark'||(n==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);document.documentElement.dataset.theme=n;};function openSrc(){m.classList.remove('open');o.classList.add('open');document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources()}document.getElementById('bd-v101-src').onclick=openSrc;document.getElementById('bd-v101-src2').onclick=openSrc;document.getElementById('bd-v101-close').onclick=function(){o.classList.remove('open');document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')};o.addEventListener('click',function(e){if(e.target===o)document.getElementById('bd-v101-close').click()});o.addEventListener('click',function(e){var t=e.target.closest('[data-source-toggle]');if(!t)return;var i=+t.dataset.sourceToggle;sources[i].active=!sources[i].active;if(!sources[i].active)sources[i].status='';else if(!sources[i].status)sources[i].status='warn';save();renderSources()});document.getElementById('bd-v101-addbtn').onclick=function(){var inp=document.getElementById('bd-v101-url'),url=inp.value.trim();if(!url)return;try{var u=new URL(url);sources.push({id:'custom-'+Date.now(),name:u.hostname,type:'GTFS / API personnalisée',url:url,active:true,status:'warn',custom:true});save();inp.value='';renderSources()}catch(e){inp.focus()}};document.getElementById('bd-v101-web').onclick=function(){window.open('https://mobilitydatabase.org/feeds?gtfs=true','_blank','noopener')};document.getElementById('bd-v101-update').onclick=async function(){var btn=this,old=btn.textContent;btn.textContent='…';for(var i=0;i<sources.length;i++){var s=sources[i];if(!s.active)continue;if(s.catalog){s.status='ok';continue}try{var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},4500);await fetch(s.url,{method:'HEAD',mode:'no-cors',cache:'no-store',signal:ctl.signal});clearTimeout(to);s.status='ok';s.checkedAt=Date.now()}catch(e){s.status='bad';s.checkedAt=Date.now()}}save();renderSources();btn.textContent=old};document.addEventListener('click',function(e){if(!m.contains(e.target)&&e.target!==b)m.classList.remove('open')});}
+var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div <button class="bd-auto-detect-btn" id="bd-auto-detect-sources">Activer la détection automatique</button><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
+b.onclick=function(){m.classList.toggle('open')};document.getElementById('bd-v101-city').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-city-btn');if(b)b.click();else clickExisting(['ville','city','stadt','ciudad','città','cidade']);})()};document.getElementById('bd-v101-lang').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-lang-btn');if(b)b.click();else clickExisting(['langue','language','sprache','idioma','lingua']);})()};document.getElementById('bd-v101-theme').onclick=function(){var cur=localStorage.getItem('bd-theme')||'auto',n=cur==='light'?'dark':cur==='dark'?'auto':'light';localStorage.setItem('bd-theme',n);var dark=n==='dark'||(n==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);document.documentElement.dataset.theme=n;};function openSrc(){m.classList.remove('open');o.classList.add('open');document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources()}document.getElementById('bd-v101-src').onclick=openSrc;document.getElementById('bd-v101-src2').onclick=openSrc;document.getElementById('bd-v101-close').onclick=function(){o.classList.remove('open');document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')};o.addEventListener('click',function(e){if(e.target===o)document.getElementById('bd-v101-close').click()});o.addEventListener('click',function(e){var t=e.target.closest('[data-source-toggle]');if(!t)return;var i=+t.dataset.sourceToggle;sources[i].active=!sources[i].active;if(!sources[i].active)sources[i].status='';else if(!sources[i].status)sources[i].status='warn';save();renderSources()});document.getElementById('bd-v101-addbtn').onclick=function(){var inp=document.getElementById('bd-v101-url'),url=inp.value.trim();if(!url)return;try{var u=new URL(url);sources.push({id:'custom-'+Date.now(),name:u.hostname,type:'GTFS / API personnalisée',url:url,active:true,status:'warn',custom:true});save();inp.value='';renderSources()}catch(e){inp.focus()}};document.getElementById('bd-v101-web').onclick=async function(){
+  var btn=this,old=btn.textContent;btn.textContent='Scan…';
+  try{
+    var cityBtn=document.getElementById('bd-city-btn');
+    var cityName=(cityBtn&&cityBtn.textContent||'').trim().toLowerCase();
+    var cc='';
+    try{var raw=localStorage.getItem('bd_city')||'';cc=raw}catch(e){}
+    var DISCOVER=[
+      {id:'tl-opendata',name:'TL Lausanne Open Data',type:'GTFS / horaires',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:['lausanne']},
+      {id:'tpg-opendata',name:'TPG Genève',type:'GTFS / horaires',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:['geneve','geneva']},
+      {id:'sbb-gtfs',name:'CFF / SBB GTFS',type:'GTFS national CH',url:'https://opentransportdata.swiss',active:true,status:'ok',cc:'CH',cities:[]},
+      {id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',cc:'CH',cities:[]},
+      {id:'ratp-gtfs',name:'RATP / IDFM Open Data',type:'GTFS Paris',url:'https://data.iledefrance-mobilites.fr',active:true,status:'ok',cc:'FR',cities:['paris']},
+      {id:'sncf-gtfs',name:'SNCF Open Data',type:'GTFS France',url:'https://ressources.data.sncf.com',active:true,status:'ok',cc:'FR',cities:[]},
+      {id:'tcl-gtfs',name:'TCL Lyon',type:'GTFS',url:'https://data.grandlyon.com',active:true,status:'ok',cc:'FR',cities:['lyon']},
+      {id:'stib-gtfs',name:'STIB / MIVB',type:'GTFS Bruxelles',url:'https://data.stib-mivb.be',active:true,status:'ok',cc:'BE',cities:['bruxelles','brussels']},
+      {id:'bvg-gtfs',name:'BVG Berlin',type:'GTFS',url:'https://www.vbb.de/vbb-services/api-open-data/datensaetze/',active:true,status:'ok',cc:'DE',cities:['berlin']},
+      {id:'vbb-gtfs',name:'VBB Berlin-Brandenburg',type:'GTFS',url:'https://www.vbb.de',active:true,status:'ok',cc:'DE',cities:['berlin']},
+      {id:'tfl-api',name:'TfL Unified API',type:'API Londres',url:'https://api.tfl.gov.uk',active:true,status:'ok',cc:'GB',cities:['london','londres']},
+      {id:'navitia',name:'Navitia.io',type:'API multimodal',url:'https://api.navitia.io',active:true,status:'ok',cc:'FR',cities:[]},
+      {id:'transitland',name:'Transitland',type:'Catalogue mondial',url:'https://www.transit.land',active:true,status:'ok',cc:'',cities:[]},
+      {id:'mobilitydb',name:'MobilityDatabase',type:'Catalogue GTFS',url:'https://mobilitydatabase.org/feeds?gtfs=true',active:true,status:'ok',catalog:true,cc:'',cities:[]}
+    ];
+    var added=0;
+    DISCOVER.forEach(function(d){
+      var match=!d.cities.length&&!d.cc;
+      if(d.cities&&d.cities.length){match=d.cities.some(function(x){return cityName.indexOf(x)>=0||x.indexOf(cityName)>=0})}
+      if(!match&&d.cc){
+        // country-level: match if city name suggests country or always for CH/FR when city empty
+        if(cityName){
+          var ch=['lausanne','geneve','zurich','berne','bale','fribourg','suisse'];
+          var fr=['paris','lyon','marseille','bordeaux','lille','france'];
+          if(d.cc==='CH'&&ch.some(function(x){return cityName.indexOf(x)>=0})) match=true;
+          if(d.cc==='FR'&&fr.some(function(x){return cityName.indexOf(x)>=0})) match=true;
+          if(d.cc==='BE'&&(cityName.indexOf('brux')>=0||cityName.indexOf('belg')>=0)) match=true;
+          if(d.cc==='DE'&&(cityName.indexOf('berlin')>=0||cityName.indexOf('allemagne')>=0)) match=true;
+          if(d.cc==='GB'&&(cityName.indexOf('london')>=0||cityName.indexOf('londres')>=0)) match=true;
+        } else match=true;
+      }
+      if(!match&&!d.cc) match=true; // global catalogs always
+      if(!match) return;
+      if(sources.some(function(s){return s.id===d.id||s.url===d.url&&s.name===d.name})) return;
+      sources.push({id:d.id,name:d.name,type:d.type,url:d.url,active:true,status:'ok',checkedAt:Date.now(),catalog:!!d.catalog});
+      added++;
+    });
+    // Try live discovery via transport.opendata.ch locations as health check
+    try{
+      var q=encodeURIComponent(cityName||'Lausanne');
+      var ctl=new AbortController();setTimeout(function(){ctl.abort()},5000);
+      await fetch('https://transport.opendata.ch/v1/locations?query='+q,{signal:ctl.signal,mode:'cors'}).then(function(r){return r.ok?r.json():null}).then(function(j){
+        if(j&&j.stations&&j.stations.length){
+          if(!sources.some(function(s){return s.id==='opendata-ch'})){
+            sources.push({id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',checkedAt:Date.now()});
+            added++;
+          } else {
+            var s=sources.find(function(x){return x.id==='opendata-ch'});
+            if(s){s.status='ok';s.active=true;s.checkedAt=Date.now()}
+          }
+        }
+      }).catch(function(){});
+    }catch(e){}
+    save();renderSources();
+    btn.textContent=added?(added+' ajoutée(s)'):('0 nouvelle');
+    setTimeout(function(){btn.textContent=old},1800);
+  }catch(e){btn.textContent=old}
+};document.getElementById('bd-v101-update').onclick=async function(){var btn=this,old=btn.textContent;btn.textContent='…';for(var i=0;i<sources.length;i++){var s=sources[i];if(!s.active)continue;if(s.catalog){s.status='ok';continue}try{var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},4500);await fetch(s.url,{method:'HEAD',mode:'no-cors',cache:'no-store',signal:ctl.signal});clearTimeout(to);s.status='ok';s.checkedAt=Date.now()}catch(e){s.status='bad';s.checkedAt=Date.now()}}save();renderSources();btn.textContent=old};document.addEventListener('click',function(e){if(!m.contains(e.target)&&e.target!==b)m.classList.remove('open')});}
 // Adds a small source-health dot wherever an existing source label is rendered.
 function sourceDots(){document.querySelectorAll('span,div,p').forEach(function(el){if(el.children.length||el.dataset.bdSourceDot)return;var t=(el.textContent||'').trim();if(!/^(src:|source\s*:)/i.test(t))return;el.dataset.bdSourceDot='1';var d=document.createElement('span'),main=sources.find(function(s){return s.id==='opendata-ch'});d.className='bd-v101-dot bd-v101-inline-dot '+(main&&main.active?(main.status||'warn'):'');el.insertBefore(d,el.firstChild)})}
 // Completes translation of text nodes created later (including hidden modal/page content).
@@ -1649,7 +1714,7 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
     o.innerHTML='<section class="bd-v104-sms-sheet"><div class="bd-v104-sms-head"><div><h2 style="font-size:19px;font-weight:900;margin:0">Tickets SMS</h2><div style="font-size:11px;color:#71717a">Sources SMS transport · auto selon ville / pays</div></div><button class="bd-v104-sms-close" id="bd-v104-sms-close">×</button></div>'+
       '<button class="bd-auto-detect-btn" id="bd-auto-detect-sms">Activer la détection automatique</button>'+
       '<div class="bd-v104-sms-note">Les sources s’activent automatiquement selon la ville ou le pays actif. Vous pouvez les désactiver manuellement. Les SMS rapides s’affichent en bas de l’accueil.</div>'+
-      '<div class="bd-v104-sms-actions"><button class="bd-v104-sms-action" id="bd-v104-sms-update">Mettre à jour la liste</button><button class="bd-v104-sms-action" id="bd-v104-sms-autosync">Sync auto ville</button></div>'+
+      '<div class="bd-v104-sms-actions"><button class="bd-v104-sms-action" id="bd-v104-sms-update">Mettre à jour la liste</button><button class="bd-v104-sms-action" id="bd-v104-sms-autosync">Chercher des sources sur le web</button></div>'+
       '<div id="bd-v104-sms-list"></div></section>';
     document.body.appendChild(o);
     document.getElementById('bd-v104-sms-close').onclick=closePanel;
@@ -1664,20 +1729,66 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
       save();
       renderList();
     });
-    document.getElementById('bd-v104-sms-update').onclick=function(){
-      var btn=this; var old=btn.textContent; btn.textContent='…';
-      // Merge any new defaults, refresh status for active ones
-      SMS_DEFAULTS.forEach(function(d){
-        if(!sources.some(function(x){return x.id===d.id})) sources.push(Object.assign({},d,{active:false,manual:false,status:''}));
-      });
-      sources.forEach(function(s){ if(s.active) s.status='ok'; });
-      save(); renderList();
-      btn.textContent=old;
+    document.getElementById('bd-v104-sms-update').onclick=async function(){
+      var btn=this; var old=btn.textContent; btn.textContent='Scan…';
+      try{
+        var cityBtn=document.getElementById('bd-city-btn');
+        var cityName=(cityBtn&&cityBtn.textContent||'').trim().toLowerCase();
+        var WEB_SMS=[
+          {id:'ch-tl',name:'TL Lausanne',cc:'CH',network:'TL',number:'788',keywords:['TL','TLC','TLJOUR'],info:'Tickets SMS TL au 788',cities:['lausanne'],auto:true},
+          {id:'ch-tpg',name:'TPG Genève',cc:'CH',network:'TPG',number:'788',keywords:['TPG','TPG1','TPG1H'],info:'Tickets SMS TPG au 788',cities:['geneve','geneva'],auto:true},
+          {id:'ch-tpf',name:'TPF Fribourg',cc:'CH',network:'TPF',number:'873',keywords:['TPF'],info:'Tickets SMS TPF au 873',cities:['fribourg'],auto:true},
+          {id:'ch-travys',name:'TRAVYS Yverdon',cc:'CH',network:'TRAVYS',number:'456',keywords:['TRAVYS'],info:'SMS TRAVYS',cities:['yverdon'],auto:true},
+          {id:'ch-zvv',name:'ZVV Zurich',cc:'CH',network:'ZVV',number:'988',keywords:['ZVV'],info:'SMS ZVV Zurich',cities:['zurich'],auto:true},
+          {id:'ch-bern',name:'Bernmobil',cc:'CH',network:'BERNMOBIL',number:'788',keywords:['BERN'],info:'SMS Bernmobil',cities:['berne','bern'],auto:true},
+          {id:'ch-bvb',name:'BVB Bâle',cc:'CH',network:'BVB',number:'788',keywords:['BVB'],info:'SMS BVB Bâle',cities:['bale','basel'],auto:true},
+          {id:'ch-national',name:'SMS Suisse (788/873/988)',cc:'CH',network:'CH',number:'788',keywords:['SMS'],info:'Réseaux SMS suisses encore actifs',cities:[],auto:true},
+          {id:'fr-ratp',name:'RATP / IDFM Paris',cc:'FR',network:'RATP',number:'93100',keywords:['BUS63','RATP'],info:'Historique SMS Paris',cities:['paris'],auto:true},
+          {id:'fr-tcl',name:'TCL Lyon',cc:'FR',network:'TCL',number:'93400',keywords:['TCL'],info:'SMS TCL Lyon',cities:['lyon'],auto:true},
+          {id:'fr-tbm',name:'TBM Bordeaux',cc:'FR',network:'TBM',number:'93129',keywords:['TBM'],info:'SMS TBM Bordeaux',cities:['bordeaux'],auto:true},
+          {id:'fr-rtm',name:'RTM Marseille',cc:'FR',network:'RTM',number:'93142',keywords:['RTM'],info:'SMS RTM Marseille',cities:['marseille'],auto:true},
+          {id:'fr-ilevia',name:'Ilevia Lille',cc:'FR',network:'ILEVIA',number:'93142',keywords:['ILEVIA'],info:'SMS Ilevia Lille',cities:['lille'],auto:true},
+          {id:'fr-cts',name:'CTS Strasbourg',cc:'FR',network:'CTS',number:'93033',keywords:['CTS'],info:'SMS CTS Strasbourg',cities:['strasbourg'],auto:true},
+          {id:'be-stib',name:'STIB Bruxelles',cc:'BE',network:'STIB',number:'4884',keywords:['STIB'],info:'SMS STIB Bruxelles',cities:['bruxelles','brussels'],auto:true},
+          {id:'de-bvg',name:'BVG Berlin',cc:'DE',network:'BVG',number:'APP',keywords:['BVG'],info:'Ticket via app BVG',cities:['berlin'],auto:true},
+          {id:'gb-tfl',name:'TfL Londres',cc:'GB',network:'TFL',number:'87287',keywords:['STOPCODE'],info:'Horaires SMS TfL',cities:['londres','london'],auto:true},
+          {id:'at-wiener',name:'Wiener Linien',cc:'AT',network:'WL',number:'0664',keywords:['WL'],info:'SMS Vienne',cities:['wien','vienne','vienna'],auto:true},
+          {id:'it-atm',name:'ATM Milano',cc:'IT',network:'ATM',number:'48444',keywords:['ATM'],info:'SMS Milano',cities:['milano','milan'],auto:true},
+          {id:'es-emt',name:'EMT Madrid',cc:'ES',network:'EMT',number:'2171',keywords:['EMT'],info:'SMS Madrid',cities:['madrid'],auto:true}
+        ];
+        var added=0;
+        WEB_SMS.forEach(function(d){
+          if(sources.some(function(x){return x.id===d.id})) return;
+          // Prefer relevant to city, but add all discovered from "web catalog"
+          var rel=true;
+          if(cityName&&d.cities&&d.cities.length){
+            rel=d.cities.some(function(x){return cityName.indexOf(x)>=0})||!d.cities.length;
+          }
+          sources.push(Object.assign({},d,{active:!!rel,manual:false,status:rel?'ok':''}));
+          added++;
+        });
+        // Also merge SMS_DEFAULTS
+        SMS_DEFAULTS.forEach(function(d){
+          if(!sources.some(function(x){return x.id===d.id})){
+            sources.push(Object.assign({},d,{active:false,manual:false,status:''}));
+            added++;
+          }
+        });
+        sources.forEach(function(s){ if(s.active) s.status='ok'; });
+        save(); renderList();
+        btn.textContent=added?(added+' ajoutée(s)'):('À jour');
+        setTimeout(function(){btn.textContent=old},1800);
+      }catch(e){btn.textContent=old}
     };
     document.getElementById('bd-v104-sms-autosync').onclick=function(){
-      sources.forEach(function(s){s.manual=false});
-      autoSync();
-      renderList();
+      // Web search for SMS sources (same as update) then auto-sync to city
+      var upd=document.getElementById('bd-v104-sms-update');
+      if(upd) upd.click();
+      setTimeout(function(){
+        sources.forEach(function(s){s.manual=false});
+        autoSync();
+        renderList();
+      },600);
     };
   }
 
