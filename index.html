@@ -1366,7 +1366,7 @@ var rows=visibleStops.map(function(obj,vi){
     null,
     isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Arrivée"})]}):null,
     /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
-    mine&&!isLast&&!isChange?p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"})]}):null,
+    mine&&!isLast&&!isChange?(function(){var _wl=null,_wm=null;if(window.__bd_loc&&window.__bd_loc.lat!=null&&x.lat!=null&&x.lon!=null){var _R=6371000,_r=Math.PI/180,_dLat=(x.lat-window.__bd_loc.lat)*_r,_dLon=(x.lon-window.__bd_loc.lon)*_r,_a=Math.sin(_dLat/2)*Math.sin(_dLat/2)+Math.cos(window.__bd_loc.lat*_r)*Math.cos(x.lat*_r)*Math.sin(_dLon/2)*Math.sin(_dLon/2),_m=2*_R*Math.atan2(Math.sqrt(_a),Math.sqrt(1-_a));_wm=Math.max(1,Math.round(_m/80));_wl="https://www.google.com/maps/dir/?api=1&origin="+encodeURIComponent(window.__bd_loc.lat+","+window.__bd_loc.lon)+"&destination="+encodeURIComponent(x.lat+","+x.lon)+"&travelmode=walking"}return p(Vl,{children:[_wl?p("a",{href:_wl,target:"_blank",rel:"noopener noreferrer",className:"bdt-tag bdt-tag-me",style:{background:"#f59e0b",color:"#fff",textDecoration:"none"},children:"📍 Position actuelle · 🚶 "+_wm+" min ↗"}):p("span",{className:"bdt-tag bdt-tag-me",style:{background:"#f59e0b",color:"#fff"},children:"📍 Position actuelle"}),chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"})]})})():null,
     x.platform&&bdIsTrain(x.category||x.line)&&c("span",{className:"bdt-plat",children:"Voie "+x.platform}),
     null
    ]})
@@ -2717,6 +2717,161 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function decorate(){document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});if(!window.__bd_dtValidated)return;var x=selected(),lab=x.toLocaleDateString('fr-CH',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelectorAll('div').forEach(function(el){if(el.children.length>5)return;var tx=(el.textContent||'').trim(),m=tx.match(/départ\s+(\d{1,2}:\d{2})\s+•\s+arrivée\s+(\d{1,2}:\d{2})/i);if(m&&!el.querySelector('.bd-v149-result-date')){var d=document.createElement('div');d.className='bd-v149-result-date';d.textContent='🗓️ '+lab+' · départ '+m[1];el.insertBefore(d,el.firstChild)}})}
  function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
  var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
+})();
+</script>
+
+
+<script id="bd-v151-datetime-live">
+/* V151 : date/heure validée, textes de départ/arrivée, info sous les titres,
+   position actuelle avant Votre arrêt, navigation Google Maps interne */
+(function(){
+ var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+ var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+ function pad(n){return (n<10?'0':'')+n}
+ function dt(){
+  if(!window.__bd_dtValidated||!window.__bd_tripDate||!window.__bd_tripTime)return null;
+  var d=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00');
+  return isNaN(d)?null:d;
+ }
+ function dayTime(d){
+  if(!d)return '';
+  return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' à '+d.getHours()+' h '+pad(d.getMinutes());
+ }
+ function sameTime(base,hm){
+  var m=/^(\d{1,2}):(\d{2})$/.exec(String(hm||'').trim());
+  if(!m)return null;
+  var d=new Date(base.getTime());
+  d.setHours(+m[1],+m[2],0,0);
+  return d;
+ }
+ function infoText(){var d=dt();return d?('Date et heure sélectionnées : '+dayTime(d)):''}
+ function ensureInfo(titleText,id){
+  var h=Array.from(document.querySelectorAll('h1,h2,h3,h4,div,span')).find(function(e){
+   return e.children.length===0&&(e.textContent||'').trim()===titleText;
+  });
+  if(!h)return;
+  var host=h.closest('div,section')||h.parentElement;
+  if(!host)return;
+  var el=document.getElementById(id);
+  if(!window.__bd_dtValidated){if(el)el.remove();return}
+  if(!el){
+   el=document.createElement('div');
+   el.id=id;
+   el.className='bd-v151-dt-info';
+   el.style.cssText='margin:-6px 0 10px 0;padding:8px 12px;border-radius:12px;font-size:12px;font-weight:700;color:#18181b;background:#f4f4f5;border:1px solid #e7e5e4';
+   host.insertBefore(el,h.nextSibling);
+  }
+  el.textContent=infoText();
+ }
+ function cardOf(el){
+  var n=el;
+  while(n&&n!==document.body){
+   if(n.tagName==='BUTTON'&&/rounded-\[16px\]/.test(n.className||''))return n;
+   n=n.parentElement;
+  }
+  return null;
+ }
+ function timesFromCard(card){
+  if(!card)return[null,null];
+  var big=card.querySelectorAll('.text-\\[22px\\]');
+  return [big[0]?big[0].textContent.trim():null,big[1]?big[1].textContent.trim():null];
+ }
+ function replaceCountdowns(){
+  var base=dt();
+  var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
+  var nodes=[];
+  while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(function(node){
+   var t=(node.textContent||'').trim();
+   var dep=/^Départ dans\s+\d+\s*(min|min\.|h)\b/i.test(t);
+   var arr=/^Arrive dans\s+(?:(\d+)\s*min\s*)?(\d+)\s*s$/i.test(t);
+   if(!base||(!dep&&!arr))return;
+   var card=cardOf(node.parentElement);
+   var times=timesFromCard(card);
+   var when;
+   if(dep){
+    when=sameTime(base,times[0])||base;
+    node.textContent='Départ le '+dayTime(when);
+   }else{
+    when=sameTime(base,times[1])||base;
+    if(times[0]&&times[1]){
+     var d0=sameTime(base,times[0]),d1=sameTime(base,times[1]);
+     if(d0&&d1&&d1<d0)d1.setDate(d1.getDate()+1);
+     when=d1||when;
+    }
+    node.textContent='Arrive le '+dayTime(when);
+   }
+   node.__bdV151=1;
+  });
+ }
+ /* Position actuelle + marche avant Votre arrêt, dans Suivi en direct */
+ function decorateMyStop(){
+  document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
+   if((tag.textContent||'').trim()!=='Votre arrêt')return;
+   var row=tag.closest('.bdt-row');
+   if(!row||row.querySelector('.bd-v151-pos'))return;
+   var chips=tag.parentElement;
+   if(!chips)return;
+   var pos=document.createElement('span');
+   pos.className='bdt-tag bdt-tag-me bd-v151-pos';
+   pos.style.cssText='background:#f59e0b;color:#fff';
+   pos.textContent='Position actuelle';
+   chips.insertBefore(pos,tag);
+   var loc=window.__bd_loc;
+   var stop=window.__bd_v151_stopCoords&&window.__bd_v151_stopCoords[(tag.closest('.bdt-row').querySelector('.bdt-name')||{}).textContent];
+   if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
+    var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+    var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    var meters=2*R*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+    var mins=Math.max(1,Math.round(meters/80));
+    var link=document.createElement('a');
+    link.className='bdt-tag bd-v151-walk';
+    link.style.cssText='background:#f59e0b;color:#fff;text-decoration:none';
+    link.href='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+    link.target='_blank';
+    link.rel='noopener noreferrer';
+    link.textContent='🚶 '+mins+' min ↗';
+    chips.insertBefore(link,tag);
+   }
+  });
+ }
+ /* Page Google Maps interne, avec thème clair/sombre du site */
+ function openMaps(href){
+  var dark=document.documentElement.classList.contains('dark')||document.documentElement.dataset.theme==='dark';
+  var old=document.getElementById('bd-v151-maps');
+  if(old)old.remove();
+  var page=document.createElement('div');
+  page.id='bd-v151-maps';
+  page.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;background:'+(dark?'#09090b':'#FAFAF9')+';color:'+(dark?'#fafafa':'#18181b')+';font-family:Inter,system-ui,sans-serif';
+  page.innerHTML=
+   '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid '+(dark?'rgba(255,255,255,.1)':'#e7e5e4')+';background:'+(dark?'#18181b':'#fff')+'">'+
+   '<strong style="font-size:15px">Navigation à pied</strong>'+
+   '<span style="font-size:11px;opacity:.7">Google Maps · thème '+(dark?'sombre':'clair')+'</span>'+
+   '<a href="'+href+'" target="_blank" rel="noopener noreferrer" style="margin-left:auto;font-size:12px;font-weight:700;color:'+(dark?'#fafafa':'#18181b')+';text-decoration:none;padding:8px 12px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+'">Ouvrir dans Google Maps ↗</a>'+
+   '<button id="bd-v151-maps-close" style="border:0;cursor:pointer;font-size:16px;font-weight:800;padding:8px 12px;border-radius:99px;background:'+(dark?'#27272a':'#f4f4f5')+';color:inherit">Fermer</button>'+
+   '</div>'+
+   '<iframe src="'+href.replace('/dir/?api=1&','/maps?')+'&output=embed" style="flex:1;border:0;width:100%;filter:'+(dark?'invert(90%) hue-rotate(180deg) contrast(90%)':'none')+'"></iframe>';
+  document.body.appendChild(page);
+  page.querySelector('#bd-v151-maps-close').onclick=function(){page.remove()};
+ }
+ document.addEventListener('click',function(e){
+  var a=e.target.closest&&e.target.closest('a[href*="google.com/maps/dir/"][href*="travelmode=walking"]');
+  if(!a)return;
+  e.preventDefault();
+  openMaps(a.href);
+ },true);
+ function sync(){
+  ensureInfo('Prochains parcours','bd-v151-info-routes');
+  ensureInfo('Suivi en direct','bd-v151-info-live');
+  replaceCountdowns();
+  decorateMyStop();
+ }
+ var raf=0;
+ function schedule(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}
+ new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true,characterData:true});
+ window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)});
+ setInterval(sync,1000);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
 })();
 </script>
 
