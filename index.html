@@ -2743,8 +2743,9 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
 
 
+
 <script id="bd-v155-google-maps">
-/* V155 - Popup Google Maps évoluée + bandeau date + vous êtes ici + navigation à pied */
+/* V155 - Popup Google Maps évoluée + bandeau date + vous êtes ici + navigation à pied - FIXED */
 (function(){
  var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
  var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
@@ -2800,16 +2801,41 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   #bd155-banner small{font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px}
   #bd155-banner .ic{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
   html.dark #bd155-banner .ic{background:rgba(0,0,0,.08)}
-  .bd155-here{position:relative}
-  .bd155-walk{display:flex;align-items:center;gap:10px;padding:10px 0 10px 30px;position:relative}
-  .bd155-walk:before{content:'';position:absolute;left:12px;top:-8px;bottom:-8px;width:2px;background:repeating-linear-gradient(to bottom,#d6d3d1 0 6px,transparent 6px 12px)}
-  html.dark .bd155-walk:before{background:repeating-linear-gradient(to bottom,#44403c 0 6px,transparent 6px 12px)}
-  .bd155-walk-badge{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:99px;background:#fef3c7;color:#92400e;font-size:12px;font-weight:800;border:1px solid #fde68a;box-shadow:0 1px 0 rgba(0,0,0,.04)}
-  html.dark .bd155-walk-badge{background:#451a03;color:#fcd34d;border-color:rgba(252,211,77,.2)}
-  .bd155-walk-link{margin-left:auto;width:32px;height:32px;border-radius:99px;background:#18181b;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;text-decoration:none;flex-shrink:0}
-  html.dark .bd155-walk-link{background:#fafafa;color:#09090b}
+  /* cache le doublon bleu sur VOTRE ARRÊT */
+  .bdt-row.bd155-votre-row .bdt-tag-me-position {display:none !important}
+  .bdt-row.bd155-votre-row .bd155-hide-blue {display:none !important}
   `;
   document.head.appendChild(st);
+ }
+
+ function buildEmbedUrl(href){
+  try{
+   var u=new URL(href, location.origin);
+   var origin=u.searchParams.get('origin')||'';
+   var dest=u.searchParams.get('destination')||u.searchParams.get('query')||'';
+   var mode=u.searchParams.get('travelmode')||'';
+   // FIX: use maps.google.com embed compatible format
+   // https://maps.google.com/maps?saddr=...&daddr=...&dirflg=w&output=embed
+   if(origin && dest){
+    var dirflg = mode==='walking' ? 'w' : (mode==='transit' ? 'r' : '');
+    return 'https://maps.google.com/maps?saddr='+encodeURIComponent(origin)+'&daddr='+encodeURIComponent(dest)+'&dirflg='+dirflg+'&output=embed&hl=fr&z=16';
+   } else if(dest){
+    return 'https://maps.google.com/maps?q='+encodeURIComponent(dest)+'&output=embed&hl=fr&z=16';
+   } else if(origin){
+    return 'https://maps.google.com/maps?q='+encodeURIComponent(origin)+'&output=embed&hl=fr&z=16';
+   }
+  }catch(e){}
+  // fallback: use original href but ensure NOT /maps/maps
+  var embed=href;
+  // remove double /maps/maps
+  embed = embed.replace(/\/maps\/maps\//g,'/maps/');
+  embed = embed.replace(/\/maps\/maps\?/g,'/maps?');
+  if(!embed.includes('output=embed')){
+   embed += (embed.includes('?')?'&':'?')+'output=embed';
+  }
+  // use maps.google.com for embed to avoid /maps/maps 404
+  embed = embed.replace('https://www.google.com/maps','https://maps.google.com/maps');
+  return embed;
  }
 
  function openMaps(href, forceWalk){
@@ -2817,13 +2843,8 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   var dark=document.documentElement.classList.contains('dark')||document.documentElement.dataset.theme==='dark';
   var old=document.getElementById('bd-v155-maps');
   if(old) old.remove();
-  var embed=href;
-  if(embed.includes('/dir/?api=1')){
-   embed=embed.replace('/dir/?api=1','/maps?') + (embed.includes('?')?'&':'?') + 'output=embed&z=17';
-  } else {
-   if(!embed.includes('output=embed')) embed += (embed.includes('?')?'&':'?')+'output=embed';
-  }
-  var isWalk = forceWalk || /travelmode=walking/i.test(href);
+  var embed = buildEmbedUrl(href);
+  var isWalk = forceWalk || /travelmode=walking/i.test(href) || /dirflg=w/.test(embed);
   var title = isWalk ? 'Navigation à pied' : 'Google Maps';
   var div=document.createElement('div');
   div.id='bd-v155-maps';
@@ -2831,13 +2852,13 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    '<div class="bd155-sheet" role="dialog" aria-modal="true">'+
    '<div class="bd155-head">'+
    '<div class="bd155-logo">BD</div>'+
-   '<div class="bd155-titles"><div class="bd155-t1">'+title+' · BusDirect</div><div class="bd155-t2">Thème '+(dark?'sombre':'clair')+' • carte intégrée • même style que BusDirect</div></div>'+
+   '<div class="bd155-titles"><div class="bd155-t1">'+title+' · BusDirect</div><div class="bd155-t2">Thème '+(dark?'sombre':'clair')+' • carte intégrée BusDirect</div></div>'+
    '<div class="bd155-actions">'+
    '<a href="'+href.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener noreferrer" class="bd155-btn bd155-btn-main">Ouvrir Google Maps ↗</a>'+
    '<button id="bd155-close" class="bd155-btn">Fermer ✕</button>'+
    '</div></div>'+
    '<div class="bd155-mapwrap '+(dark?'dark':'')+'"><iframe src="'+embed.replace(/"/g,'&quot;')+'" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>'+
-   '<div class="bd155-foot"><span>🗺️</span><span>'+(isWalk?'Itinéraire piéton calculé à pied':'Itinéraire BusDirect dans Google Maps')+'</span><span style="margin-left:auto">BusDirect · '+(dark?'sombre':'clair')+'</span></div>'+
+   '<div class="bd155-foot"><span>🗺️</span><span>'+(isWalk?'Itinéraire piéton':'Itinéraire BusDirect')+'</span><span style="margin-left:auto">BusDirect · '+(dark?'sombre':'clair')+'</span></div>'+
    '</div>';
   document.body.appendChild(div);
   div.addEventListener('click',function(e){ if(e.target===div) div.remove(); });
@@ -2851,7 +2872,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   if(!a) return;
   if(a.closest('#bd-v155-maps')) return;
   e.preventDefault();
-  var isWalk = /travelmode=walking/i.test(a.href) || a.classList.contains('bdt-walk') || a.classList.contains('bd155-walk-link') || a.classList.contains('bdt-xfer');
+  var isWalk = /travelmode=walking/i.test(a.href) || a.classList.contains('bdt-walk') || a.classList.contains('bd155-walk-link') || a.classList.contains('bdt-xfer') || /dirflg=w/.test(a.href);
   openMaps(a.href, isWalk);
  },true);
 
@@ -2866,14 +2887,9 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   });
   var h=all[0];
   if(!h) return;
-  var hostParent=h.parentElement ? h.parentElement.parentElement : null;
-  var insertionPoint = h;
-  // try to find wrapper
   var existing=document.getElementById('bd155-banner');
-  // detect if search inputs have values
   var hasValue=false;
   document.querySelectorAll('input').forEach(function(i){ if((i.value||'').trim().length>0) hasValue=true; });
-  // also localStorage from app
   try{
    var f=localStorage.getItem('bd-from')||window.__bd_from;
    var t=localStorage.getItem('bd-to')||window.__bd_to;
@@ -2931,31 +2947,52 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  }
 
  function decorateLive(){
-  document.querySelectorAll('.bdt-tag-me, .bdt-tag').forEach(function(tag){
+  document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
    var txt=(tag.textContent||'').trim().toLowerCase();
    if(txt!=='votre arrêt' && txt!=='votre arret') return;
    var row=tag.closest('.bdt-row');
    if(!row) return;
    if(row.__bd155Done) return;
    row.__bd155Done=1;
+
+   // --- 1) SUPPRIME CE QUI EST ENTOURÉ EN BLEU ---
+   // Sur la ligne VOTRE ARRÊT, il y a un badge orange "POSITION ACTUELLE" + RE33
+   // On supprime uniquement ce badge orange et on garde la ligne, mais on cache les tags orange
+   row.classList.add('bd155-votre-row');
+   // Trouve tous les tags dans cette row
+   var tagsContainer=row.querySelector('.bdt-tags');
+   if(tagsContainer){
+     Array.from(tagsContainer.children).forEach(function(ch){
+       var tt=(ch.textContent||'').toLowerCase();
+       if(tt.includes('position actuelle')){
+         ch.classList.add('bd155-hide-blue');
+         ch.style.display='none';
+       }
+     });
+   }
+   // Si RE33 aussi dans le bleu, l'utilisateur veut peut-être garder RE33? Sur photo bleue, RE33 est entouré aussi.
+   // Pour respecter photo, on cache aussi les tags RExx sur cette ligne spécifique
+   // -> On les cache visuellement mais on ne supprime pas la ligne
+   // Décommente si tu veux cacher RE33 aussi:
+   // Array.from(tagsContainer.children).forEach(function(ch){ if(/RE\d+|^[A-Z]{1,3}\d+$/.test(ch.textContent.trim())) ch.classList.add('bd155-hide-blue'); });
+
    var list=row.parentElement;
    if(!list) return;
 
-   // Create Vous êtes ici row
+   // --- 2) VOUS ÊTES ICI ---
    var here=document.createElement('div');
    here.className='bdt-row bd155-here';
-   var acc=row.style.getPropertyValue('--acc')||'#18181b';
+   var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
    here.style.setProperty('--acc', acc);
-   here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">Position actuelle</span></div></div>';
+   here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
    list.insertBefore(here, row);
 
-   // Walk line between here and Votre arrêt
+   // --- 3) MODIFIE CE QUI EST EN JAUNE -> comme photo rouge ---
+   // Style identique à .bdt-xfer bdt-walk
    var loc=window.__bd_loc;
    var stop=null;
-   // try to get destination from nearby walk link or from row's context
-   // Search for any google maps link in list that contains destination
-   var walkLinks=list.querySelectorAll('a[href*="google.com/maps"]');
    var destLat=null,destLon=null;
+   var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
    walkLinks.forEach(function(a){
     try{
      var u=new URL(a.href);
@@ -2967,18 +3004,21 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
     }catch(e){}
    });
    if(destLat!=null) stop={lat:destLat, lon:destLon};
-
-   // If we have __bd_stopCoords (fallback from other scripts)
    try{
     var nameEl=row.querySelector('.bdt-name');
     if(!stop && nameEl){
-     var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords;
+     var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
      if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
     }
    }catch(e){}
 
-   var walk=document.createElement('div');
-   walk.className='bd155-walk';
+   var walk=document.createElement('a');
+   // Reprend exactement le même graphisme que la 2e photo entourée en rouge
+   walk.className='bdt-xfer bdt-walk';
+   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin:6px 0 8px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
+   walk.setAttribute('href','#');
+   walk.setAttribute('target','_blank');
+   walk.setAttribute('rel','noopener noreferrer');
    var mins=2;
    var dist='';
    if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
@@ -2991,8 +3031,9 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
    if(loc&&stop) hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
    else if(stop) hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   walk.href=hrefWalk;
 
-   walk.innerHTML='<span class="bd155-walk-badge">🚶 '+mins+' min à pied '+(dist?'· '+dist:'')+'</span><a href="'+hrefWalk+'" class="bd155-walk-link" title="Lancer navigation à pied">↗</a>';
+   walk.innerHTML='<span class="bdt-xi" style="font-size:18px">🚶</span><span style="flex:1 1 auto;font-weight:800;font-size:14px;color:#fcd34d">Marche à pied · '+mins+' min'+(dist?' · '+dist:'')+'</span><span title="Ouvrir Google Maps à pied" style="font-size:17px;font-weight:800;background:#3f2f18;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px">↗</span>';
    list.insertBefore(walk, row);
   });
  }
@@ -3008,7 +3049,6 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true});
  window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,60)});
  setInterval(function(){
-  // auto remove banner if inputs cleared
   var inputs=document.querySelectorAll('input[placeholder*="Départ"], input[placeholder*="Destination"], input');
   var empty=true;
   var hasAny=false;
