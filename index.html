@@ -1586,29 +1586,3 @@ body.bd-v104-popup-open #bd-v101-hamb,body.bd-v104-popup-open #bd-v101-menu{disp
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
-
-<style id="bd-v108-auto-detection-style">
-.bd-v108-auto{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border-radius:14px;border:1px solid #d4d4d8;background:#fff;color:#18181b;font-size:12px;font-weight:900;padding:9px 12px}.dark .bd-v108-auto{background:#18181b;color:#fafafa;border-color:#3f3f46}.bd-v108-auto.on{background:#16a34a;color:#fff;border-color:#16a34a}.bd-v108-auto-dot{width:9px;height:9px;border-radius:50%;background:#ef4444}.bd-v108-auto.on .bd-v108-auto-dot{background:#dcfce7}
-</style>
-<script id="bd-v108-auto-detection-script">
-(function(){
- var SRC_AUTO='bd_sources_auto_detection_v1', SMS_AUTO='bd_sms_auto_detection_v1';
- function getBool(k){var v=localStorage.getItem(k);return v===null?true:v==='1'}
- function setBool(k,v){localStorage.setItem(k,v?'1':'0')}
- function city(){return String(localStorage.getItem('bd_city')||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')}
- function country(){var c=city();var FR=['paris','paris2','lyon','marseille','lille','bordeaux','toulouse','nice','nantes','strasbourg','antibes','cannes','montpellier','rennes','rouen','dijon','grenoble'];var DE=['berlin','hamburg','munich','munchen','frankfurt','cologne','koln','stuttgart','dusseldorf','dortmund','leipzig','dresden'];var IT=['rome','roma','milano','milan','torino','turin','napoli','naples','firenze','florence','bologna','genova'];var ES=['madrid','barcelona','valencia','sevilla','seville','bilbao','malaga','zaragoza'];var PT=['lisbon','lisboa','porto','braga','coimbra'];var AT=['vienna','wien','salzburg','graz','innsbruck'];if(FR.includes(c))return'FR';if(DE.includes(c))return'DE';if(IT.includes(c))return'IT';if(ES.includes(c))return'ES';if(PT.includes(c))return'PT';if(AT.includes(c))return'AT';return c?'CH':''}
- function txt(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
- function sourceMatch(s,c,co){if(s.id==='photon'||s.id==='nominatim'||s.id==='mobilitydb')return true;if(s.id==='opendata-ch')return co==='CH';var sc=String(s.country||s.countryCode||s.country_code||'').toUpperCase();if(sc)return sc===co;var cities=(s.cities||s.city||[]);if(typeof cities==='string')cities=[cities];if(cities.length&&cities.map(txt).some(function(x){return x.indexOf(c.replace(/-/g,' '))>=0||c.indexOf(x.replace(/\s+/g,'-'))>=0}))return true;var blob=txt((s.name||'')+' '+(s.url||''));if(c&&blob.indexOf(c.replace(/-/g,' '))>=0)return true;var hints={CH:['swiss','suisse','schweiz','.ch/','sbb','cff','ffs','tpg','lausanne','geneve','zurich','bern','basel'],FR:['france','.fr/','ratp','sncf','ile-de-france'],DE:['germany','deutschland','.de/','db','vbb'],IT:['italy','italia','.it/','trenitalia'],ES:['spain','espana','.es/'],PT:['portugal','.pt/'],AT:['austria','osterreich','.at/']};return (hints[co]||[]).some(function(h){return blob.indexOf(h)>=0})}
- function reconcileSources(){if(!getBool(SRC_AUTO))return;var a=window.__bd_sources;if(!Array.isArray(a)){try{a=JSON.parse(localStorage.getItem('bd_sources_v1')||'[]')}catch(e){a=[]}}var c=city(),co=country();a.forEach(function(s){s.active=sourceMatch(s,c,co);if(!s.active)s.status='';else if(!s.status)s.status='warn'});localStorage.setItem('bd_sources_v1',JSON.stringify(a));window.__bd_sources=a;window.dispatchEvent(new CustomEvent('bd-sources-change',{detail:a}));document.querySelectorAll('[data-source-toggle]').forEach(function(b){var i=+b.dataset.sourceToggle;if(a[i])b.classList.toggle('on',!!a[i].active)});}
- function reconcileSms(){if(!getBool(SMS_AUTO))return;var a;try{a=JSON.parse(localStorage.getItem('bd_sms_services_v1')||'[]')}catch(e){a=[]}var c=city(),co=country();a.forEach(function(s){var cs=(s.cities||[]).map(function(x){return txt(x).replace(/\s+/g,'-')});s.active=cs.includes(c)||(!cs.length&&String(s.country||'').toUpperCase()===co);s.manual=false});localStorage.setItem('bd_sms_services_manual_v1','{}');localStorage.setItem('bd_sms_services_v1',JSON.stringify(a));window.__bd_sms_services=a;window.dispatchEvent(new CustomEvent('bd-sms-services-change',{detail:a}));}
- function label(btn,on){if(!btn)return;btn.classList.toggle('on',on);btn.innerHTML='<span class="bd-v108-auto-dot"></span><span>'+(on?'Détection automatique activée':'Activer la détection automatique')+'</span>'}
- function install(){
-  var sa=document.querySelector('#bd-v101-overlay .bd-v101-actions');if(sa&&!document.getElementById('bd-v108-src-auto')){var b=document.createElement('button');b.id='bd-v108-src-auto';b.className='bd-v108-auto';sa.appendChild(b);label(b,getBool(SRC_AUTO));b.onclick=function(){var v=!getBool(SRC_AUTO);setBool(SRC_AUTO,v);label(b,v);if(v)reconcileSources()}}
-  var ma=document.querySelector('#bd-v107-overlay .bd-v107-actions');if(ma&&!document.getElementById('bd-v108-sms-auto')){var b=document.createElement('button');b.id='bd-v108-sms-auto';b.className='bd-v108-auto';ma.appendChild(b);label(b,getBool(SMS_AUTO));b.onclick=function(){var v=!getBool(SMS_AUTO);setBool(SMS_AUTO,v);label(b,v);if(v)reconcileSms()}}
- }
- var last='';function sync(){install();var now=city()+'|'+country();if(now!==last){last=now;reconcileSources();reconcileSms()}label(document.getElementById('bd-v108-src-auto'),getBool(SRC_AUTO));label(document.getElementById('bd-v108-sms-auto'),getBool(SMS_AUTO))}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
- new MutationObserver(function(){clearTimeout(window.__bdv108);window.__bdv108=setTimeout(sync,80)}).observe(document.documentElement,{childList:true,subtree:true});
- window.addEventListener('storage',sync);setInterval(sync,900);
-})();
-</script>
