@@ -1195,7 +1195,7 @@ var rows=visibleStops.map(function(obj,vi){
  }
  return c(Vl,{children:[_row].concat(_xf)},"f"+i);
 });
-var arriveBanner = showArriveBanner? p("div",{className:"bdt-arrive",style:{margin:"0 0 8px 34px",padding:"8px 12px",borderRadius:"12px",background:"rgba(239,68,68,.10)",border:"1px solid rgba(239,68,68,.20)",fontSize:"12px",fontWeight:700,color:"#dc2626",display:"flex",alignItems:"center",gap:"8px"},children:[
+var arriveBanner = showArriveBanner? p("div",{className:"bdt-arrive",style:{margin:"0 0 14px 0",padding:"12px 16px",borderRadius:"12px",background:"rgba(239,68,68,.10)",border:"1px solid rgba(239,68,68,.20)",fontSize:"12px",fontWeight:700,color:"#dc2626",display:"flex",alignItems:"center",gap:"8px"},children:[
   c("span",{style:{width:"8px",height:"8px",borderRadius:"50%",background:"#ef4444",display:"inline-block"}}),
   c("span",{children:"ARRIVE DANS "+(arriveText||"0 s")})
 ]}):null;
@@ -1220,9 +1220,10 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
      p("div",{className:"bdt-mid",children:[c("div",{className:"bdt-dur",children:cur.duration||""}),c("div",{className:"bdt-line"}),c("div",{className:"bdt-sub",children:cur.transfers>0?cur.transfers+" chang.":"Direct"})]}),
      p("div",{className:"bdt-end bdt-right",children:[c("div",{className:"bdt-big",children:cur.to.time}),c("div",{className:"bdt-st",children:cur.to.station})]})
     ]}),
-    status&&p("div",{className:"bdt-status bdt-"+status.k,children:[c("span",{className:"bdt-sdot"}),p("div",{style:{flex:1,minWidth:0},children:[c("div",{className:"bdt-s1",children:status.t}),showArriveBanner?arriveBanner:null,c("div",{className:"bdt-s2",children:status.s})]})]})
+    status&&p("div",{className:"bdt-status bdt-"+status.k,children:[c("span",{className:"bdt-sdot"}),p("div",{style:{flex:1,minWidth:0},children:[c("div",{className:"bdt-s1",children:status.t}),c("div",{className:"bdt-s2",children:status.s})]})]})
    ]}),
    p("div",{className:"bdt-card",children:[
+    showArriveBanner?arriveBanner:null,
     p("div",{className:"bdt-sec",children:[c("span",{children:"Arrêts"+(stops.length?" ("+stops.length+")":"")}),p("span",{className:"bdt-leg",children:[c("i",{className:"bdt-lg bdt-lg-past"})," passé ",c("i",{className:"bdt-lg bdt-lg-live"})," véhicule ",c("i",{className:"bdt-lg bdt-lg-next"})," à venir"]})]}),
     rows.length?c("div",{className:"bdt-list",ref:function(el){if(!el)return;var lv=el.querySelector(".is-live .bdt-name");var k=lv?lv.textContent:"";if(el.__lk!==k){el.__lk=k;var row=el.querySelector(".is-live");if(row)setTimeout(function(){try{row.scrollIntoView({block:"nearest",behavior:"smooth"})}catch(e){}},60)}},children:rowsEls}):c("div",{className:"bdt-empty",children:"Le détail des arrêts n’est pas disponible pour ce trajet."}),(Array.isArray(pv)&&pc===0&&stops.length>0)?c("div",{className:"bdt-note",children:"Arrêts précédents indisponibles pour cette ligne."}):(pv==="loading"?c("div",{className:"bdt-note",children:"Recherche des arrêts précédents…"}):null)
    ]}),
