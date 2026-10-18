@@ -1273,7 +1273,7 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
   });
 })();</script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><style id="bd-v101-source-menu">
-.bd-v101-hamb{position:fixed;right:14px;top:max(14px,env(safe-area-inset-top));z-index:120;width:42px;height:42px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.18);font-size:22px}html.dark .bd-v101-hamb{background:#fafafa;color:#09090b}.bd-v101-menu{position:fixed;right:14px;top:64px;z-index:119;width:min(310px,calc(100vw - 28px));padding:10px;border:1px solid #e7e5e4;border-radius:20px;background:#fff;box-shadow:0 18px 48px rgba(0,0,0,.22);display:none}html.dark .bd-v101-menu{background:#18181b;border-color:rgba(255,255,255,.12);color:#fafafa}.bd-v101-menu.open{display:block}.bd-v101-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bd-v101-item{min-height:62px;border-radius:15px;background:#f4f4f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:700}.bd-v101-item span:first-child{font-size:21px}html.dark .bd-v101-item{background:#27272a}.bd-v101-settings{margin-top:8px;width:100%;height:44px;border-radius:14px;background:#18181b;color:#fff;font-weight:700;font-size:13px}html.dark .bd-v101-settings{background:#fafafa;color:#09090b}.bd-v101-overlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:14px}.bd-v101-overlay.open{display:flex}.bd-v101-sheet{width:100%;max-width:640px;max-height:92dvh;overflow:auto;border-radius:26px;background:#fafaf9;color:#18181b;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}html.dark .bd-v101-sheet{background:#09090b;color:#fafafa}.bd-v101-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:inherit;padding:18px 0 12px;z-index:2}.bd-v101-close{width:36px;height:36px;border-radius:50%;background:#e4e4e7;font-size:20px}html.dark .bd-v101-close{background:#27272a}.bd-v101-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}.bd-v101-action{height:46px;border-radius:14px;background:#18181b;color:#fff;font-size:12px;font-weight:700;padding:0 10px}html.dark .bd-v101-action{background:#fafafa;color:#09090b}.bd-v101-source{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 2px;border-bottom:1px solid #e7e5e4}.dark .bd-v101-source{border-color:rgba(255,255,255,.1)}.bd-v101-dot{width:10px;height:10px;border-radius:50%;background:#a1a1aa;box-shadow:0 0 0 3px rgba(161,161,170,.13);display:inline-block;flex:none}.bd-v101-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}.bd-v101-dot.warn{background:#f59e0b}.bd-v101-dot.bad{background:#ef4444}.bd-v101-name{font-size:13px;font-weight:800}.bd-v101-sub{font-size:10px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}.dark .bd-v101-sub{color:#a1a1aa}.bd-v101-toggle{width:45px;height:26px;border-radius:99px;background:#d4d4d8;padding:3px}.bd-v101-toggle.on{background:#22c55e}.bd-v101-knob{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}.bd-v101-toggle.on .bd-v101-knob{transform:translateX(19px)}.bd-v101-add{display:grid;grid-template-columns:1fr auto;gap:7px;margin:12px 0}.bd-v101-add input{height:42px;border:1px solid #d4d4d8;border-radius:12px;padding:0 11px;background:#fff;color:#18181b;font-size:12px}.dark .bd-v101-add input{background:#18181b;color:#fafafa;border-color:#3f3f46}.bd-v101-add button{padding:0 14px;border-radius:12px;background:#2563eb;color:#fff;font-weight:800}.bd-v101-inline-dot{margin-right:6px;vertical-align:1px}
+.bd-v101-hamb{position:fixed!important;right:12px;top:max(10px,env(safe-area-inset-top))!important;z-index:200!important;width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.22);font-size:22px;flex:none}html.dark .bd-v101-hamb{background:#fafafa;color:#09090b}.bd-v101-menu{position:fixed;right:12px;top:max(60px,calc(env(safe-area-inset-top) + 50px));z-index:199;width:min(310px,calc(100vw - 28px));padding:10px;border:1px solid #e7e5e4;border-radius:20px;background:#fff;box-shadow:0 18px 48px rgba(0,0,0,.22);display:none}html.dark .bd-v101-menu{background:#18181b;border-color:rgba(255,255,255,.12);color:#fafafa}.bd-v101-menu.open{display:block}.bd-v101-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.bd-v101-item{min-height:62px;border-radius:15px;background:#f4f4f5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:10px;font-weight:700}.bd-v101-item span:first-child{font-size:21px}html.dark .bd-v101-item{background:#27272a}.bd-v101-settings{margin-top:8px;width:100%;height:44px;border-radius:14px;background:#18181b;color:#fff;font-weight:700;font-size:13px}html.dark .bd-v101-settings{background:#fafafa;color:#09090b}.bd-v101-overlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:14px}.bd-v101-overlay.open{display:flex}.bd-v101-sheet{width:100%;max-width:640px;max-height:92dvh;overflow:auto;border-radius:26px;background:#fafaf9;color:#18181b;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}html.dark .bd-v101-sheet{background:#09090b;color:#fafafa}.bd-v101-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:inherit;padding:18px 0 12px;z-index:2}.bd-v101-close{width:36px;height:36px;border-radius:50%;background:#e4e4e7;font-size:20px}html.dark .bd-v101-close{background:#27272a}.bd-v101-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}.bd-v101-action{height:46px;border-radius:14px;background:#18181b;color:#fff;font-size:12px;font-weight:700;padding:0 10px}html.dark .bd-v101-action{background:#fafafa;color:#09090b}.bd-v101-source{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 2px;border-bottom:1px solid #e7e5e4}.dark .bd-v101-source{border-color:rgba(255,255,255,.1)}.bd-v101-dot{width:10px;height:10px;border-radius:50%;background:#a1a1aa;box-shadow:0 0 0 3px rgba(161,161,170,.13);display:inline-block;flex:none}.bd-v101-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}.bd-v101-dot.warn{background:#f59e0b}.bd-v101-dot.bad{background:#ef4444}.bd-v101-name{font-size:13px;font-weight:800}.bd-v101-sub{font-size:10px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}.dark .bd-v101-sub{color:#a1a1aa}.bd-v101-toggle{width:45px;height:26px;border-radius:99px;background:#d4d4d8;padding:3px}.bd-v101-toggle.on{background:#22c55e}.bd-v101-knob{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}.bd-v101-toggle.on .bd-v101-knob{transform:translateX(19px)}.bd-v101-add{display:grid;grid-template-columns:1fr auto;gap:7px;margin:12px 0}.bd-v101-add input{height:42px;border:1px solid #d4d4d8;border-radius:12px;padding:0 11px;background:#fff;color:#18181b;font-size:12px}.dark .bd-v101-add input{background:#18181b;color:#fafafa;border-color:#3f3f46}.bd-v101-add button{padding:0 14px;border-radius:12px;background:#2563eb;color:#fff;font-weight:800}.bd-v101-inline-dot{margin-right:6px;vertical-align:1px}
 </style>
 <script id="bd-v101-source-menu-script">
 (function(){
@@ -1284,12 +1284,12 @@ var DEFAULTS=[
 {id:'mobilitydb',name:'MobilityDatabase',type:'Catalogue mondial GTFS / GTFS-RT',url:'https://mobilitydatabase.org/feeds?gtfs=true',active:true,status:'ok',catalog:true}
 ];
 var I18N={
-fr:{city:'Villes',language:'Langues',theme:'Clair/sombre',settings:'Sources',sources:'Gestion des sources',update:'Mettre à jour les états',web:'Chercher des sources sur le web',add:'Ajouter',url:'URL GTFS / API de transport',enabled:'active',disabled:'désactivée',catalog:'Catalogue mondial',close:'Fermer'},
-en:{city:'Cities',language:'Languages',theme:'Light/dark',settings:'Sources',sources:'Data sources',update:'Refresh source status',web:'Find sources on the web',add:'Add',url:'GTFS / transit API URL',enabled:'enabled',disabled:'disabled',catalog:'Global catalog',close:'Close'},
-de:{city:'Städte',language:'Sprachen',theme:'Hell/dunkel',settings:'Quellen',sources:'Datenquellen',update:'Quellenstatus aktualisieren',web:'Quellen im Web suchen',add:'Hinzufügen',url:'GTFS-/Verkehrs-API-URL',enabled:'aktiv',disabled:'deaktiviert',catalog:'Weltweiter Katalog',close:'Schließen'},
-es:{city:'Ciudades',language:'Idiomas',theme:'Claro/oscuro',settings:'Fuentes',sources:'Gestión de fuentes',update:'Actualizar estados',web:'Buscar fuentes en la web',add:'Añadir',url:'URL GTFS / API de transporte',enabled:'activa',disabled:'desactivada',catalog:'Catálogo mundial',close:'Cerrar'},
-it:{city:'Città',language:'Lingue',theme:'Chiaro/scuro',settings:'Fonti',sources:'Gestione fonti',update:'Aggiorna stato fonti',web:'Cerca fonti sul web',add:'Aggiungi',url:'URL GTFS / API trasporto',enabled:'attiva',disabled:'disattivata',catalog:'Catalogo mondiale',close:'Chiudi'},
-pt:{city:'Cidades',language:'Idiomas',theme:'Claro/escuro',settings:'Fontes',sources:'Gestão de fontes',update:'Atualizar estados',web:'Procurar fontes na web',add:'Adicionar',url:'URL GTFS / API de transporte',enabled:'ativa',disabled:'desativada',catalog:'Catálogo mundial',close:'Fechar'}
+fr:{city:'Villes',language:'Langues',theme:'Clair/sombre',settings:'Sources',smsTickets:'Tickets SMS',sources:'Gestion des sources',update:'Mettre à jour les états',web:'Chercher des sources sur le web',add:'Ajouter',url:'URL GTFS / API de transport',enabled:'active',disabled:'désactivée',catalog:'Catalogue mondial',close:'Fermer'},
+en:{city:'Cities',language:'Languages',theme:'Light/dark',settings:'Sources',smsTickets:'SMS tickets',sources:'Data sources',update:'Refresh source status',web:'Find sources on the web',add:'Add',url:'GTFS / transit API URL',enabled:'enabled',disabled:'disabled',catalog:'Global catalog',close:'Close'},
+de:{city:'Städte',language:'Sprachen',theme:'Hell/dunkel',settings:'Quellen',smsTickets:'SMS-Tickets',sources:'Datenquellen',update:'Quellenstatus aktualisieren',web:'Quellen im Web suchen',add:'Hinzufügen',url:'GTFS-/Verkehrs-API-URL',enabled:'aktiv',disabled:'deaktiviert',catalog:'Weltweiter Katalog',close:'Schließen'},
+es:{city:'Ciudades',language:'Idiomas',theme:'Claro/oscuro',settings:'Fuentes',smsTickets:'Tickets SMS',sources:'Gestión de fuentes',update:'Actualizar estados',web:'Buscar fuentes en la web',add:'Añadir',url:'URL GTFS / API de transporte',enabled:'activa',disabled:'desactivada',catalog:'Catálogo mundial',close:'Cerrar'},
+it:{city:'Città',language:'Lingue',theme:'Chiaro/scuro',settings:'Fonti',smsTickets:'Ticket SMS',sources:'Gestione fonti',update:'Aggiorna stato fonti',web:'Cerca fonti sul web',add:'Aggiungi',url:'URL GTFS / API trasporto',enabled:'attiva',disabled:'disattivata',catalog:'Catalogo mondiale',close:'Chiudi'},
+pt:{city:'Cidades',language:'Idiomas',theme:'Claro/escuro',settings:'Fontes',smsTickets:'Tickets SMS',sources:'Gestão de fontes',update:'Atualizar estados',web:'Procurar fontes na web',add:'Adicionar',url:'URL GTFS / API de transporte',enabled:'ativa',disabled:'desativada',catalog:'Catálogo mundial',close:'Fechar'}
 };
 function lang(){try{return localStorage.getItem('bd_lang')||'fr'}catch(e){return'fr'}} function tr(k){var l=lang();return (I18N[l]||I18N.fr)[k]||I18N.fr[k]||k}
 function load(){try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)){DEFAULTS.forEach(function(d){if(!a.some(function(x){return x.id===d.id}))a.push(d)});return a}}catch(e){}return DEFAULTS.map(function(x){return Object.assign({},x)})}
@@ -1297,10 +1297,10 @@ var sources=load(); function save(){try{localStorage.setItem('bd_sources_v1',JSO
 window.__bd_sources=sources;
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');return '<div class="bd-v101-source"><span class="bd-v101-dot '+st+'"></span><div><div class="bd-v101-name">'+esc(s.name)+'</div><div class="bd-v101-sub">'+esc(s.type||'Source transport')+' · '+esc(s.url||'')+'</div></div><button class="bd-v101-toggle '+(s.active?'on':'')+'" data-source-toggle="'+i+'" aria-label="'+(s.active?tr('enabled'):tr('disabled'))+'"><div class="bd-v101-knob"></div></button></div>'}).join('');}
-function syncLabels(){var q=function(id,k){var e=document.getElementById(id);if(e)e.textContent=tr(k)};q('bd-v101-city-l','city');q('bd-v101-lang-l','language');q('bd-v101-theme-l','theme');q('bd-v101-settings-l','settings');q('bd-v101-title','sources');q('bd-v101-update','update');q('bd-v101-web','web');var inp=document.getElementById('bd-v101-url');if(inp)inp.placeholder=tr('url');q('bd-v101-addbtn','add');}
+function syncLabels(){var q=function(id,k){var e=document.getElementById(id);if(e)e.textContent=tr(k)};q('bd-v101-city-l','city');q('bd-v101-lang-l','language');q('bd-v101-theme-l','theme');q('bd-v101-settings-l','settings');q('bd-v101-sms-l','smsTickets');q('bd-v101-title','sources');q('bd-v101-update','update');q('bd-v101-web','web');var inp=document.getElementById('bd-v101-url');if(inp)inp.placeholder=tr('url');q('bd-v101-addbtn','add');}
 function clickExisting(words){var btn=[].slice.call(document.querySelectorAll('button')).find(function(b){var t=(b.textContent||'').toLowerCase();return words.some(function(w){return t.indexOf(w)>=0})&& !b.closest('#bd-v101-menu')});if(btn)btn.click();}
-function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
-var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
+function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button><button class="bd-v101-item" id="bd-v101-sms"><span>💬</span><span id="bd-v101-sms-l">SMS</span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
+var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><button class="bd-auto-detect-btn" id="bd-auto-detect-sources">Activer la détection automatique</button><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
 b.onclick=function(){m.classList.toggle('open')};document.getElementById('bd-v101-city').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-city-btn');if(b)b.click();else clickExisting(['ville','city','stadt','ciudad','città','cidade']);})()};document.getElementById('bd-v101-lang').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-lang-btn');if(b)b.click();else clickExisting(['langue','language','sprache','idioma','lingua']);})()};document.getElementById('bd-v101-theme').onclick=function(){var cur=localStorage.getItem('bd-theme')||'auto',n=cur==='light'?'dark':cur==='dark'?'auto':'light';localStorage.setItem('bd-theme',n);var dark=n==='dark'||(n==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',dark);document.documentElement.dataset.theme=n;};function openSrc(){m.classList.remove('open');o.classList.add('open');document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources()}document.getElementById('bd-v101-src').onclick=openSrc;document.getElementById('bd-v101-src2').onclick=openSrc;document.getElementById('bd-v101-close').onclick=function(){o.classList.remove('open');document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')};o.addEventListener('click',function(e){if(e.target===o)document.getElementById('bd-v101-close').click()});o.addEventListener('click',function(e){var t=e.target.closest('[data-source-toggle]');if(!t)return;var i=+t.dataset.sourceToggle;sources[i].active=!sources[i].active;if(!sources[i].active)sources[i].status='';else if(!sources[i].status)sources[i].status='warn';save();renderSources()});document.getElementById('bd-v101-addbtn').onclick=function(){var inp=document.getElementById('bd-v101-url'),url=inp.value.trim();if(!url)return;try{var u=new URL(url);sources.push({id:'custom-'+Date.now(),name:u.hostname,type:'GTFS / API personnalisée',url:url,active:true,status:'warn',custom:true});save();inp.value='';renderSources()}catch(e){inp.focus()}};document.getElementById('bd-v101-web').onclick=function(){window.open('https://mobilitydatabase.org/feeds?gtfs=true','_blank','noopener')};document.getElementById('bd-v101-update').onclick=async function(){var btn=this,old=btn.textContent;btn.textContent='…';for(var i=0;i<sources.length;i++){var s=sources[i];if(!s.active)continue;if(s.catalog){s.status='ok';continue}try{var ctl=new AbortController(),to=setTimeout(function(){ctl.abort()},4500);await fetch(s.url,{method:'HEAD',mode:'no-cors',cache:'no-store',signal:ctl.signal});clearTimeout(to);s.status='ok';s.checkedAt=Date.now()}catch(e){s.status='bad';s.checkedAt=Date.now()}}save();renderSources();btn.textContent=old};document.addEventListener('click',function(e){if(!m.contains(e.target)&&e.target!==b)m.classList.remove('open')});}
 // Adds a small source-health dot wherever an existing source label is rendered.
 function sourceDots(){document.querySelectorAll('span,div,p').forEach(function(el){if(el.children.length||el.dataset.bdSourceDot)return;var t=(el.textContent||'').trim();if(!/^(src:|source\s*:)/i.test(t))return;el.dataset.bdSourceDot='1';var d=document.createElement('span'),main=sources.find(function(s){return s.id==='opendata-ch'});d.className='bd-v101-dot bd-v101-inline-dot '+(main&&main.active?(main.status||'warn'):'');el.insertBefore(d,el.firstChild)})}
@@ -1488,6 +1488,566 @@ function run(){build();sourceDots();translateDom()} if(document.readyState==='lo
   else setTimeout(hideSmsExtras, 50);
   var mo = new MutationObserver(function(){ clearTimeout(window.__bdSmsHideT); window.__bdSmsHideT = setTimeout(hideSmsExtras, 40); });
   setTimeout(function(){ if(document.body) mo.observe(document.body, {childList:true, subtree:true}); }, 100);
+})();
+</script>
+
+<style id="bd-v104-sms-src-style">
+.bd-v104-sms-overlay{position:fixed;inset:0;z-index:130;background:rgba(0,0,0,.48);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:14px}
+.bd-v104-sms-overlay.open{display:flex}
+.bd-v104-sms-sheet{width:100%;max-width:640px;max-height:92dvh;overflow:auto;border-radius:26px;background:#fafaf9;color:#18181b;padding:18px;box-shadow:0 25px 70px rgba(0,0,0,.3)}
+html.dark .bd-v104-sms-sheet{background:#09090b;color:#fafafa}
+.bd-v104-sms-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:-18px;background:inherit;padding:18px 0 12px;z-index:2}
+.bd-v104-sms-close{width:36px;height:36px;border-radius:50%;background:#e4e4e7;font-size:20px;border:0;cursor:pointer}
+html.dark .bd-v104-sms-close{background:#27272a;color:#fafafa}
+.bd-v104-sms-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
+.bd-v104-sms-action{height:46px;border-radius:14px;background:#18181b;color:#fff;font-size:12px;font-weight:700;padding:0 10px;border:0;cursor:pointer}
+html.dark .bd-v104-sms-action{background:#fafafa;color:#09090b}
+.bd-v104-sms-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 2px;border-bottom:1px solid #e7e5e4}
+html.dark .bd-v104-sms-row{border-color:rgba(255,255,255,.1)}
+.bd-v104-sms-dot{width:10px;height:10px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.14);flex:none}
+.bd-v104-sms-dot.ok{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.15)}
+.bd-v104-sms-name{font-size:13px;font-weight:800}
+.bd-v104-sms-sub{font-size:10px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}
+html.dark .bd-v104-sms-sub{color:#a1a1aa}
+.bd-v104-sms-toggle{width:45px;height:26px;border-radius:99px;background:#d4d4d8;padding:3px;border:0;cursor:pointer}
+.bd-v104-sms-toggle.on{background:#22c55e}
+.bd-v104-sms-knob{width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s;display:block}
+.bd-v104-sms-toggle.on .bd-v104-sms-knob{transform:translateX(19px)}
+.bd-v104-sms-note{font-size:11px;color:#71717a;margin:8px 0 4px;line-height:1.4}
+html.dark .bd-v104-sms-note{color:#a1a1aa}
+.bd-v104-sms-badge{font-size:9px;font-weight:700;padding:2px 6px;border-radius:6px;background:#f4f4f5;color:#52525b;margin-left:6px}
+html.dark .bd-v104-sms-badge{background:#27272a;color:#a1a1aa}
+.bd-v104-sms-badge.auto{background:#dbeafe;color:#1d4ed8}
+html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
+</style>
+<script id="bd-v104-sms-src-script">
+(function(){
+  var SMS_DEFAULTS = [
+    {id:'ch-tl',name:'TL Lausanne',cc:'CH',network:'TL',number:'788',keywords:['TL','TLC','TLJOUR'],info:'Tickets SMS TL au 788',cities:['lausanne'],auto:true},
+    {id:'ch-tpg',name:'TPG Genève',cc:'CH',network:'TPG',number:'788',keywords:['TPG','TPG1','TPG1H'],info:'Tickets SMS TPG au 788',cities:['geneve','geneva'],auto:true},
+    {id:'ch-tpf',name:'TPF Fribourg',cc:'CH',network:'TPF',number:'873',keywords:['TPF'],info:'Tickets SMS TPF au 873',cities:['fribourg'],auto:true},
+    {id:'ch-travys',name:'TRAVYS Yverdon',cc:'CH',network:'TRAVYS',number:'456',keywords:['TRAVYS'],info:'SMS TRAVYS',cities:['yverdon'],auto:true},
+    {id:'ch-zvv',name:'ZVV Zurich',cc:'CH',network:'ZVV',number:'988',keywords:['ZVV'],info:'SMS ZVV Zurich',cities:['zurich'],auto:true},
+    {id:'ch-bern',name:'Bernmobil',cc:'CH',network:'BERNMOBIL',number:'788',keywords:['BERN'],info:'SMS Bernmobil',cities:['berne','bern'],auto:true},
+    {id:'ch-bvb',name:'BVB Bâle',cc:'CH',network:'BVB',number:'788',keywords:['BVB'],info:'SMS BVB Bâle',cities:['bale','basel'],auto:true},
+    {id:'ch-national',name:'SMS Suisse (788/873/988)',cc:'CH',network:'CH',number:'788',keywords:['SMS'],info:'Réseaux SMS suisses encore actifs',cities:[],auto:true},
+    {id:'fr-ratp',name:'RATP / IDFM Paris',cc:'FR',network:'RATP',number:'93100',keywords:['BUS63','RATP'],info:'Historique SMS Paris (souvent discontinué)',cities:['paris'],auto:true},
+    {id:'fr-tcl',name:'TCL Lyon',cc:'FR',network:'TCL',number:'93400',keywords:['TCL'],info:'SMS TCL Lyon',cities:['lyon'],auto:true},
+    {id:'fr-tbm',name:'TBM Bordeaux',cc:'FR',network:'TBM',number:'93129',keywords:['TBM'],info:'SMS TBM Bordeaux',cities:['bordeaux'],auto:true},
+    {id:'fr-rtm',name:'RTM Marseille',cc:'FR',network:'RTM',number:'93142',keywords:['RTM'],info:'SMS RTM Marseille',cities:['marseille'],auto:true},
+    {id:'fr-ilevia',name:'Ilevia Lille',cc:'FR',network:'ILEVIA',number:'93142',keywords:['ILEVIA'],info:'SMS Ilevia Lille',cities:['lille'],auto:true},
+    {id:'be-stib',name:'STIB Bruxelles',cc:'BE',network:'STIB',number:'4884',keywords:['STIB'],info:'SMS STIB Bruxelles',cities:['bruxelles','brussels'],auto:true},
+    {id:'de-bvg',name:'BVG Berlin',cc:'DE',network:'BVG',number:'APP',keywords:['BVG'],info:'Ticket via app BVG (pas SMS)',cities:['berlin'],auto:true},
+    {id:'gb-tfl',name:'TfL Londres',cc:'GB',network:'TFL',number:'87287',keywords:['STOPCODE'],info:'Horaires SMS / Oyster app',cities:['londres','london'],auto:true}
+  ];
+
+  function load(){
+    try{
+      var a=JSON.parse(localStorage.getItem('bd_sms_sources_v1')||'null');
+      if(Array.isArray(a)&&a.length){
+        SMS_DEFAULTS.forEach(function(d){ if(!a.some(function(x){return x.id===d.id})) a.push(Object.assign({},d,{active:false,manual:false})); });
+        return a;
+      }
+    }catch(e){}
+    return SMS_DEFAULTS.map(function(x){return Object.assign({},x,{active:!!x.auto,manual:false,status:x.auto?'ok':''})});
+  }
+  var sources=load();
+  function save(){
+    try{localStorage.setItem('bd_sms_sources_v1',JSON.stringify(sources))}catch(e){}
+    window.__bd_sms_sources=sources;
+    window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:sources}));
+    applyHomeSmsFilter();
+  }
+  window.__bd_sms_sources=sources;
+
+  function getActiveCity(){
+    try{
+      // Try React-ish globals / localStorage
+      var id=localStorage.getItem('bd_city')||localStorage.getItem('bd-city')||'';
+      var name='';
+      var cc='';
+      // Scan city button or known markers
+      var btn=document.getElementById('bd-city-btn');
+      if(btn) name=(btn.textContent||'').trim();
+      // From window cities list if available
+      var all=window.__bd_allCities||[];
+      var found=all.find(function(c){return c&&(c.id===id||c.name===name)});
+      if(found) return found;
+      return {id:id,name:name,cc:cc,country:''};
+    }catch(e){return {}}
+  }
+
+  function autoSync(){
+    if(localStorage.getItem('bd_sms_autodetect')==='0') return;
+    var city=getActiveCity();
+    var cc=(city.cc||'').toUpperCase();
+    var cid=(city.id||'').toLowerCase();
+    var cname=(city.name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var country=(city.country||'').toLowerCase();
+    sources.forEach(function(s){
+      if(s.manual) return; // user override
+      var match=false;
+      if(s.cities&&s.cities.length){
+        match=s.cities.some(function(x){return x===cid||cname.indexOf(x)>=0||x.indexOf(cid)>=0});
+      }
+      if(!match&&s.cc){
+        if(cc&&s.cc===cc) match=true;
+        if(!match&&country){
+          if(s.cc==='CH'&&(country.indexOf('suisse')>=0||country.indexOf('switzerland')>=0)) match=true;
+          if(s.cc==='FR'&&country.indexOf('france')>=0) match=true;
+          if(s.cc==='BE'&&country.indexOf('belgi')>=0) match=true;
+          if(s.cc==='DE'&&(country.indexOf('deutsch')>=0||country.indexOf('allemagne')>=0)) match=true;
+          if(s.cc==='GB'&&(country.indexOf('united')>=0||country.indexOf('royaume')>=0)) match=true;
+        }
+      }
+      // Also match by network on page text
+      if(!match&&s.network&&city.network&&String(city.network).toUpperCase().indexOf(String(s.network).toUpperCase())>=0) match=true;
+      s.active=!!match;
+      s.status=s.active?'ok':'';
+    });
+    save();
+  }
+
+  function esc(s){return String(s||'').replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
+
+  function renderList(){
+    var box=document.getElementById('bd-v104-sms-list');
+    if(!box) return;
+    var city=getActiveCity();
+    box.innerHTML=sources.map(function(s,i){
+      var st=s.active?'ok':'';
+      var badge=s.manual?(s.active?'manuel':'off'):(s.active?'auto':'');
+      var badgeTxt=s.manual?(s.active?'manuel':'désactivé'):(s.active?'auto':'inactif');
+      return '<div class="bd-v104-sms-row"><span class="bd-v104-sms-dot '+st+'"></span><div><div class="bd-v104-sms-name">'+esc(s.name)+
+        (badge?'<span class="bd-v104-sms-badge '+(s.active&&!s.manual?'auto':'')+'">'+esc(badgeTxt)+'</span>':'')+
+        '</div><div class="bd-v104-sms-sub">'+esc(s.info||'')+' · '+esc(s.number&&s.number!=='APP'?'SMS '+s.number:'App')+
+        (s.keywords&&s.keywords.length?' · '+esc(s.keywords.slice(0,3).join(', ')):'')+
+        '</div></div><button class="bd-v104-sms-toggle '+(s.active?'on':'')+'" data-sms-toggle="'+i+'" aria-label="toggle"><span class="bd-v104-sms-knob"></span></button></div>';
+    }).join('');
+  }
+
+  function openPanel(){
+    var o=document.getElementById('bd-v104-sms-overlay');
+    if(!o) return;
+    o.classList.add('open');
+    document.documentElement.classList.add('modal-open');
+    document.body.classList.add('modal-open');
+    renderList();
+  }
+  function closePanel(){
+    var o=document.getElementById('bd-v104-sms-overlay');
+    if(o) o.classList.remove('open');
+    document.documentElement.classList.remove('modal-open');
+    document.body.classList.remove('modal-open');
+  }
+
+  function build(){
+    if(document.getElementById('bd-v104-sms-overlay')) return;
+    var o=document.createElement('div');
+    o.id='bd-v104-sms-overlay';
+    o.className='bd-v104-sms-overlay';
+    o.innerHTML='<section class="bd-v104-sms-sheet"><div class="bd-v104-sms-head"><div><h2 style="font-size:19px;font-weight:900;margin:0">Tickets SMS</h2><div style="font-size:11px;color:#71717a">Sources SMS transport · auto selon ville / pays</div></div><button class="bd-v104-sms-close" id="bd-v104-sms-close">×</button></div>'+
+      '<button class="bd-auto-detect-btn" id="bd-auto-detect-sms">Activer la détection automatique</button>'+
+      '<div class="bd-v104-sms-note">Les sources s’activent automatiquement selon la ville ou le pays actif. Vous pouvez les désactiver manuellement. Les SMS rapides s’affichent en bas de l’accueil.</div>'+
+      '<div class="bd-v104-sms-actions"><button class="bd-v104-sms-action" id="bd-v104-sms-update">Mettre à jour la liste</button><button class="bd-v104-sms-action" id="bd-v104-sms-autosync">Sync auto ville</button></div>'+
+      '<div id="bd-v104-sms-list"></div></section>';
+    document.body.appendChild(o);
+    document.getElementById('bd-v104-sms-close').onclick=closePanel;
+    o.addEventListener('click',function(e){if(e.target===o)closePanel()});
+    o.addEventListener('click',function(e){
+      var t=e.target.closest('[data-sms-toggle]');
+      if(!t) return;
+      var i=+t.dataset.smsToggle;
+      sources[i].active=!sources[i].active;
+      sources[i].manual=true;
+      sources[i].status=sources[i].active?'ok':'';
+      save();
+      renderList();
+    });
+    document.getElementById('bd-v104-sms-update').onclick=function(){
+      var btn=this; var old=btn.textContent; btn.textContent='…';
+      // Merge any new defaults, refresh status for active ones
+      SMS_DEFAULTS.forEach(function(d){
+        if(!sources.some(function(x){return x.id===d.id})) sources.push(Object.assign({},d,{active:false,manual:false,status:''}));
+      });
+      sources.forEach(function(s){ if(s.active) s.status='ok'; });
+      save(); renderList();
+      btn.textContent=old;
+    };
+    document.getElementById('bd-v104-sms-autosync').onclick=function(){
+      sources.forEach(function(s){s.manual=false});
+      autoSync();
+      renderList();
+    };
+  }
+
+  function wireMenu(){
+    var btn=document.getElementById('bd-v101-sms');
+    if(!btn||btn.dataset.wired) return;
+    btn.dataset.wired='1';
+    btn.addEventListener('click',function(){
+      var m=document.getElementById('bd-v101-menu');
+      if(m) m.classList.remove('open');
+      build();
+      openPanel();
+    });
+  }
+
+  // Filter homepage Ticket SMS cards based on active sources
+  function applyHomeSmsFilter(){
+    var active=sources.filter(function(s){return s.active});
+    var keywords=[];
+    active.forEach(function(s){
+      (s.keywords||[]).forEach(function(k){keywords.push(String(k).toUpperCase())});
+      if(s.network) keywords.push(String(s.network).toUpperCase());
+      if(s.number&&s.number!=='APP') keywords.push(String(s.number));
+    });
+    document.querySelectorAll('section').forEach(function(sec){
+      var h=sec.querySelector('h3');
+      if(!h||!/Ticket SMS|SMS/i.test(h.textContent||'')) return;
+      var cards=sec.querySelectorAll('[class*="rounded"]');
+      cards.forEach(function(card){
+        if(card===sec) return;
+        var tx=(card.textContent||'').toUpperCase();
+        // Don't hide headers
+        if(card.querySelector('h3')) return;
+        if(!keywords.length){ card.style.display=''; return; }
+        var ok=keywords.some(function(k){return k&&tx.indexOf(k)>=0});
+        // Keep empty-state messages
+        if(/Aucun service SMS/i.test(card.textContent||'')) ok=true;
+        card.style.display=ok?'':'none';
+      });
+    });
+  }
+
+  function run(){
+    wireMenu();
+    // Initial auto sync if no manual prefs saved
+    try{
+      var raw=localStorage.getItem('bd_sms_sources_v1');
+      if(!raw) autoSync();
+      else applyHomeSmsFilter();
+    }catch(e){autoSync()}
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',run);
+  else run();
+  setInterval(wireMenu,1500);
+  var mo=new MutationObserver(function(){clearTimeout(window.__bdSmsSrcT);window.__bdSmsSrcT=setTimeout(function(){wireMenu();applyHomeSmsFilter()},50)});
+  setTimeout(function(){if(document.body)mo.observe(document.body,{childList:true,subtree:true})},200);
+  window.addEventListener('bd-sms-sources-change',applyHomeSmsFilter);
+  // Re-sync when city button text changes
+  setInterval(function(){
+    try{
+      var btn=document.getElementById('bd-city-btn');
+      var name=btn?(btn.textContent||'').trim():'';
+      if(window.__bd_lastCityName!==name){
+        window.__bd_lastCityName=name;
+        var anyManual=sources.some(function(s){return s.manual});
+        if(!anyManual) autoSync();
+        else applyHomeSmsFilter();
+      }
+    }catch(e){}
+  },2000);
+})();
+</script>
+
+<style id="bd-v104-unify-sheets">
+/* All external pages / modals look like Gestion des sources */
+.fixed.inset-0.z-\[60\] > div.relative,
+.fixed.inset-0.z-\[60\] > section,
+section.rounded-\[20px\].fixed.inset-0.z-\[80\] > div,
+.bd-manage,
+.bdt-sheet{
+  width:100%!important;
+  max-width:640px!important;
+  max-height:92dvh!important;
+  border-radius:26px!important;
+  box-shadow:0 25px 70px rgba(0,0,0,.3)!important;
+}
+.fixed.inset-0.z-\[60\],
+.fixed.inset-0.z-\[80\],
+section.rounded-\[20px\].fixed.inset-0.z-\[80\]{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:14px!important;
+  background:rgba(0,0,0,.48)!important;
+  backdrop-filter:blur(7px)!important;
+}
+/* Hide original Ticket SMS home section */
+section h3{ }
+</style>
+
+<style id="bd-v104-sms-rapides-style">
+/* Hide original Ticket SMS block on home */
+body.bd-hide-ticket-sms section:has(h3) {
+  /* fallback below via JS */
+}
+.bd-sms-rapides{
+  margin:16px auto 28px;
+  width:100%;
+  max-width:640px;
+  padding:0 16px;
+  box-sizing:border-box;
+}
+.bd-sms-rapides-card{
+  border-radius:20px;
+  border:1px solid #e7e5e4;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.05);
+  padding:16px;
+}
+html.dark .bd-sms-rapides-card{
+  background:#18181b;
+  border-color:rgba(255,255,255,.1);
+}
+.bd-sms-rapides-title{
+  font-weight:800;
+  font-size:15px;
+  letter-spacing:-.02em;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:12px;
+}
+.bd-sms-rapides-list{display:flex;flex-direction:column;gap:8px}
+.bd-sms-rapides-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px;
+  border-radius:14px;
+  border:1px solid #e7e5e4;
+  background:#fafaf9;
+}
+html.dark .bd-sms-rapides-row{
+  background:#27272a;
+  border-color:rgba(255,255,255,.1);
+}
+.bd-sms-rapides-name{font-weight:700;font-size:13px}
+.bd-sms-rapides-desc{font-size:11px;color:#71717a;margin-top:2px}
+html.dark .bd-sms-rapides-desc{color:#a1a1aa}
+.bd-sms-rapides-btn{
+  height:36px;
+  padding:0 14px;
+  border-radius:999px;
+  background:#18181b;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  white-space:nowrap;
+  border:0;
+  cursor:pointer;
+}
+html.dark .bd-sms-rapides-btn{background:#fafafa;color:#09090b}
+.bd-sms-rapides-empty{
+  font-size:12px;
+  color:#71717a;
+  text-align:center;
+  padding:14px 8px;
+  border:1px dashed #e7e5e4;
+  border-radius:14px;
+}
+html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa}
+.bd-auto-detect-btn{
+  width:100%;
+  height:46px;
+  border-radius:14px;
+  background:#2563eb;
+  color:#fff;
+  font-size:13px;
+  font-weight:800;
+  border:0;
+  cursor:pointer;
+  margin:0 0 12px;
+}
+.bd-auto-detect-btn.on{background:#16a34a}
+</style>
+<script id="bd-v104-sms-rapides-script">
+(function(){
+  function hideTicketSmsSection(){
+    document.querySelectorAll('section').forEach(function(sec){
+      var h=sec.querySelector('h3');
+      if(!h) return;
+      if(/Ticket SMS|SMS —/i.test(h.textContent||'')){
+        sec.style.display='none';
+        sec.setAttribute('data-bd-hidden-ticket','1');
+      }
+    });
+  }
+
+  function activeSmsSources(){
+    var list=window.__bd_sms_sources||[];
+    return list.filter(function(s){return s&&s.active&&s.number&&s.number!=='APP'});
+  }
+
+  function cityLabel(){
+    var b=document.getElementById('bd-city-btn');
+    return b?((b.textContent||'').trim()||'Ville'):'Ville';
+  }
+
+  function renderRapides(){
+    hideTicketSmsSection();
+    var host=document.getElementById('bd-sms-rapides');
+    if(!host){
+      host=document.createElement('div');
+      host.id='bd-sms-rapides';
+      host.className='bd-sms-rapides';
+      // Insert near end of main scroll content
+      var root=document.getElementById('root')||document.body;
+      var sections=root.querySelectorAll('section');
+      var last=sections[sections.length-1];
+      if(last&&last.parentElement){
+        last.parentElement.appendChild(host);
+      } else {
+        root.appendChild(host);
+      }
+    }
+    var srcs=activeSmsSources();
+    var city=cityLabel();
+    var html='<div class="bd-sms-rapides-card"><div class="bd-sms-rapides-title">⚡ SMS rapides <span style="font-weight:500;font-size:11px;color:#71717a">· '+city+'</span></div>';
+    if(!srcs.length){
+      html+='<div class="bd-sms-rapides-empty">Aucun service SMS actif pour cette localisation. Activez des sources dans le menu 💬 Tickets SMS.</div>';
+    } else {
+      html+='<div class="bd-sms-rapides-list">';
+      srcs.forEach(function(s){
+        var codes=(s.keywords||[]).slice(0,4);
+        if(!codes.length) codes=['SMS'];
+        codes.forEach(function(code){
+          var href='sms:'+s.number+'?body='+encodeURIComponent(code);
+          html+='<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+(s.name||'')+'</div><div class="bd-sms-rapides-desc">'+(s.info||('SMS au '+s.number))+'</div></div>'+
+            '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>';
+        });
+      });
+      html+='</div>';
+    }
+    html+='</div>';
+    host.innerHTML=html;
+  }
+
+  function ensureAutoDetectButtons(){
+    // Sources panel
+    var srcList=document.getElementById('bd-v101-list');
+    if(srcList&&!document.getElementById('bd-auto-detect-sources')){
+      var actions=srcList.parentElement&&srcList.parentElement.querySelector('.bd-v101-actions');
+      var btn=document.createElement('button');
+      btn.id='bd-auto-detect-sources';
+      btn.className='bd-auto-detect-btn';
+      var on=localStorage.getItem('bd_sources_autodetect')!=='0';
+      btn.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
+      btn.classList.toggle('on',on);
+      btn.onclick=function(){
+        var cur=localStorage.getItem('bd_sources_autodetect')!=='0';
+        localStorage.setItem('bd_sources_autodetect',cur?'0':'1');
+        var n=localStorage.getItem('bd_sources_autodetect')!=='0';
+        btn.textContent=n?'✓ Détection automatique active':'Activer la détection automatique';
+        btn.classList.toggle('on',n);
+        if(n) window.dispatchEvent(new CustomEvent('bd-sources-autodetect'));
+      };
+      if(actions) actions.parentElement.insertBefore(btn, actions.nextSibling);
+      else srcList.parentElement.insertBefore(btn, srcList);
+    }
+    // SMS panel
+    var smsList=document.getElementById('bd-v104-sms-list');
+    if(smsList&&!document.getElementById('bd-auto-detect-sms')){
+      var note=smsList.parentElement&&smsList.parentElement.querySelector('.bd-v104-sms-note');
+      var btn2=document.createElement('button');
+      btn2.id='bd-auto-detect-sms';
+      btn2.className='bd-auto-detect-btn';
+      var on2=localStorage.getItem('bd_sms_autodetect')!=='0';
+      btn2.textContent=on2?'✓ Détection automatique active':'Activer la détection automatique';
+      btn2.classList.toggle('on',on2);
+      btn2.onclick=function(){
+        var cur=localStorage.getItem('bd_sms_autodetect')!=='0';
+        localStorage.setItem('bd_sms_autodetect',cur?'0':'1');
+        var n=localStorage.getItem('bd_sms_autodetect')!=='0';
+        btn2.textContent=n?'✓ Détection automatique active':'Activer la détection automatique';
+        btn2.classList.toggle('on',n);
+        if(n){
+          // clear manual flags and sync
+          try{
+            var src=window.__bd_sms_sources||[];
+            src.forEach(function(s){s.manual=false});
+            window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:src}));
+          }catch(e){}
+          var sync=document.getElementById('bd-v104-sms-autosync');
+          if(sync) sync.click();
+        }
+      };
+      if(note) note.parentElement.insertBefore(btn2, note.nextSibling);
+      else smsList.parentElement.insertBefore(btn2, smsList);
+    }
+  }
+
+  function run(){
+    hideTicketSmsSection();
+    renderRapides();
+    ensureAutoDetectButtons();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(run,80)});
+  else setTimeout(run,80);
+  var mo=new MutationObserver(function(){
+    clearTimeout(window.__bdRapidesT);
+    window.__bdRapidesT=setTimeout(function(){hideTicketSmsSection();renderRapides();ensureAutoDetectButtons()},60);
+  });
+  setTimeout(function(){if(document.body)mo.observe(document.body,{childList:true,subtree:true})},150);
+  window.addEventListener('bd-sms-sources-change',function(){setTimeout(renderRapides,30)});
+})();
+</script>
+
+<script id="bd-v104-autodetect-wire">
+(function(){
+  function wire(){
+    var s=document.getElementById('bd-auto-detect-sources');
+    if(s && !s.dataset.wired){
+      s.dataset.wired='1';
+      function refresh(){
+        var on=localStorage.getItem('bd_sources_autodetect')!=='0';
+        s.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
+        s.classList.toggle('on',on);
+      }
+      refresh();
+      s.addEventListener('click',function(){
+        var cur=localStorage.getItem('bd_sources_autodetect')!=='0';
+        localStorage.setItem('bd_sources_autodetect',cur?'0':'1');
+        refresh();
+        if(!cur){ // was off, now on
+          window.dispatchEvent(new CustomEvent('bd-sources-autodetect'));
+        }
+      });
+    }
+    var m=document.getElementById('bd-auto-detect-sms');
+    if(m && !m.dataset.wired){
+      m.dataset.wired='1';
+      function refresh2(){
+        var on=localStorage.getItem('bd_sms_autodetect')!=='0';
+        m.textContent=on?'✓ Détection automatique active':'Activer la détection automatique';
+        m.classList.toggle('on',on);
+      }
+      refresh2();
+      m.addEventListener('click',function(){
+        var cur=localStorage.getItem('bd_sms_autodetect')!=='0';
+        localStorage.setItem('bd_sms_autodetect',cur?'0':'1');
+        refresh2();
+        if(!cur){
+          try{
+            var src=window.__bd_sms_sources||[];
+            src.forEach(function(x){x.manual=false});
+          }catch(e){}
+          var sync=document.getElementById('bd-v104-sms-autosync');
+          if(sync) sync.click();
+        }
+      });
+    }
+  }
+  setInterval(wire,800);
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',wire);
+  else wire();
 })();
 </script>
 </body>
