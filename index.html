@@ -1086,20 +1086,8 @@ var pkey=(cur._fromStop||"")+"|"+cur.from.departure+"|"+(cur.products||[]).join(
 var stops=list.filter(function(x){return x.type==="stop"||!x.type});/* V125: les prochains arrêts restent issus du passList réel fourni par les sources actives. */
 var nm=function(x){return typeof x.station==="string"?x.station:(x.station&&x.station.name?x.station.name:"")};
 var ms=function(x,end){var t=end?(x.arrival||x.departure):(x.departure||x.arrival);return t?new Date(t).getTime()+(x.delay||0)*60000:null};
-/* V132 : position live déduite exclusivement des horaires réels du passList de la source.
-   Entre deux arrêts, le véhicule est considéré entre le départ réel/retardé du précédent
-   et l’arrivée réelle/retardée du suivant. */
 var liveIdx=-1;
-for(var _li=0;_li<stops.length;_li++){
-  var _arr=ms(stops[_li],_li===stops.length-1);
-  var _dep=ms(stops[_li],false);
-  if(_arr!=null&&_dep!=null&&now>=_arr&&now<=_dep){liveIdx=_li;break}
-  if(_li<stops.length-1){
-    var _nextArr=ms(stops[_li+1],_li+1===stops.length-1);
-    if(_dep!=null&&_nextArr!=null&&now>=_dep&&now<_nextArr){liveIdx=_li;break}
-  }
-  if(_dep!=null&&_dep<=now)liveIdx=_li;
-}
+stops.forEach(function(x,i){var t=ms(x,i===stops.length-1);if(t!=null&&t<=now)liveIdx=i});
 var arrived=stops.length>0&&liveIdx===stops.length-1;
 var firstMs=stops.length?ms(stops[0],false):null;
 var mins=function(t){return Math.max(0,Math.round((t-now)/60000))};
@@ -1107,7 +1095,7 @@ var status;
 if(!stops.length){status=null}
 else if(arrived){status={k:"done",t:"Trajet terminé",s:"Arrivé à "+nm(stops[stops.length-1])}}
 else if(liveIdx<0){status={k:"wait",t:"Départ "+(firstMs!=null&&mins(firstMs)>0?"dans "+mins(firstMs)+" min":"imminent"),s:"Depuis "+nm(stops[0])}}
-else{var nx=stops[liveIdx+1];var nx2=stops[liveIdx+2]||null;var nt2=ms(nx,liveIdx+1===stops.length-1);status={k:"run",t:"Prochain arrêt : "+nm(nx),s:(nt2!=null?(mins(nt2)>0?"dans "+mins(nt2)+" min":"à l'instant"):"")+(nx2?" · arrêt suivant : "+nm(nx2):"")}}
+else{var nx=stops[liveIdx+1];var nt2=ms(nx,liveIdx+1===stops.length-1);status={k:"run",t:"Prochain arrêt : "+nm(nx),s:(nt2!=null?(mins(nt2)>0?"dans "+mins(nt2)+" min":"à l'instant"):"")+" · après "+nm(stops[liveIdx])}}
 var prods=(cur.products||[]).filter(Boolean);
 var acc=getLineColor(prods[0]||"");
 var myStop=(cur._fromStop||cur.from&&cur.from.station||"").toLowerCase();
