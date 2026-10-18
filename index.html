@@ -1000,8 +1000,8 @@ async function fetchLiveFromNearbyStops(stops, destName, tileOverride, fallbackD
     results.forEach(function(arr){ all=all.concat(arr); });
     all.sort(function(a,b){ return (a._sort||0)-(b._sort||0); });
     /* Uniquement la fenêtre demandée (1 h par défaut, +30 min par clic). */
-    let _hMs=Date.now()+(window.__bd_horizon||60)*60000;
-    all=all.filter(function(c){return c._sort>=Date.now()-60000&&c._sort<=_hMs;});
+    let _baseMs=bdTripDTMs(), _hMs=_baseMs+(window.__bd_horizon||60)*60000;
+    all=all.filter(function(c){return c._sort>=_baseMs-60000&&c._sort<=_hMs;});
     /* Filtre strict : uniquement les lignes (bus/train) sélectionnées dans la ou les dalles reconnues. */
     let _n=function(x){return String(x||"").trim().toLowerCase().replace(/\s+/g," ");};
     let _same=function(a,b){a=_n(a);b=_n(b);if(!a||!b)return false;return a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0));};
@@ -1058,6 +1058,17 @@ async function fetchLiveFromNearbyStops(stops, destName, tileOverride, fallbackD
   }catch(e){ goS([]); }
   finally{ window.__bd_busy=false; ba(false); }
 }
+/* V150: relance proprement Prochains parcours avec les états React déjà sélectionnés,
+   sans modifier ni re-sélectionner le champ Destination. */
+window.__bd_refreshDateRoutes=function(){
+  try{
+    var _dest=String(f||"").trim(), _dep=String(departReload||"").trim();
+    var _st=(nearStops||[]).slice(), _sel=_st.filter(function(x){return x&&x.selected;});
+    if(!_dest||_dest.length<2){go([]);return Promise.resolve([]);}
+    if(_sel.length===0&&_dep.length<2){go([]);return Promise.resolve([]);}
+    return fetchLiveFromNearbyStops(_st,_dest,null,_dep);
+  }catch(e){return Promise.resolve([])}
+};
 const searchDepartAddress = async (q)=>{
   if(!q||q.trim().length<2){ setDepartReloadResults([]); if(!q||!q.trim())setNearStops([]); return; }
   try{
@@ -2698,7 +2709,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function clearButton(){return Array.from(document.querySelectorAll('button')).find(function(b){return (b.textContent||'').trim().includes('Effacer la recherche')})||null}
  function title(){return Array.from(document.querySelectorAll('h1,h2,h3,h4,div,span')).find(function(e){return e.children.length===0&&(e.textContent||'').trim()==='Prochains parcours'})||null}
  function selected(){return window.__bd_dtValidated&&window.__bd_tripDate&&window.__bd_tripTime?parse(window.__bd_tripDate,window.__bd_tripTime):null}
- function refresh(){Array.from(document.querySelectorAll('input')).filter(function(i){return (i.placeholder||'').toLowerCase().indexOf('destination')>=0}).forEach(function(i){if(!i.value)return;var v=i.value,s=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;try{s.call(i,v+' ');i.dispatchEvent(new Event('input',{bubbles:true}));setTimeout(function(){s.call(i,v);i.dispatchEvent(new Event('input',{bubbles:true}));i.dispatchEvent(new Event('change',{bubbles:true}))},30)}catch(e){}})}
+ function refresh(){try{if(typeof window.__bd_refreshDateRoutes==='function')window.__bd_refreshDateRoutes()}catch(e){}}
  function apply(d,t){window.__bd_dtValidated=true;window.__bd_tripDate=d;window.__bd_tripTime=t;window.dispatchEvent(new CustomEvent('bd-trip-datetime-change',{detail:{date:d,time:t,validated:true}}));setTimeout(refresh,60);setTimeout(refresh,500);setTimeout(sync,650)}
  function reset(){window.__bd_dtValidated=false;window.__bd_tripDate=null;window.__bd_tripTime=null;var q=document.getElementById('bd-v149-date-under-routes');if(q)q.remove();document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});window.dispatchEvent(new CustomEvent('bd-trip-datetime-change',{detail:{date:null,time:null,validated:false}}))}
  function open(){if(document.getElementById('bd-v148-dt-bg'))return;var cur=selected()||new Date(),bg=document.createElement('div');bg.id='bd-v148-dt-bg';bg.innerHTML='<div id="bd-v148-dt" role="dialog" aria-modal="true"><div class="head"><div><div class="title">Choisir une date et heure</div><div class="sub">Rechercher les horaires à une date et une heure précises</div></div><button class="bd-v148-x" type="button">×</button></div><div class="grid"><div><label>Date de départ</label><input id="bd-v148-date" type="date"></div><div><label>Heure de départ</label><input id="bd-v148-time" type="time"></div></div><div class="quick"><button data-min="-60">− 1 h</button><button data-min="-15">− 15 min</button><button data-now="1">Maintenant</button><button data-min="15">+ 15 min</button><button data-min="60">+ 1 h</button><button data-day="1">+ 1 jour</button></div><div class="preview"><strong id="bd-v148-preview"></strong></div><div class="actions"><button id="bd-v148-cancel">Annuler</button><button class="ok" id="bd-v148-ok">Valider la date et l’heure</button></div></div>';document.body.appendChild(bg);document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');var di=bg.querySelector('#bd-v148-date'),ti=bg.querySelector('#bd-v148-time');di.value=ymd(cur);ti.value=hm(cur);var prev=ti.value;function up(){bg.querySelector('#bd-v148-preview').textContent=fmt(parse(di.value,ti.value))}function sh(m,d){var x=parse(di.value,ti.value);if(m)x.setMinutes(x.getMinutes()+m);if(d)x.setDate(x.getDate()+d);di.value=ymd(x);ti.value=hm(x);prev=ti.value;up()}ti.onchange=function(){var pm=+prev.slice(0,2)*60 + +prev.slice(3,5),nm=+ti.value.slice(0,2)*60 + +ti.value.slice(3,5),de=nm-pm;if(prev&&ti.value&&(de<-720||de>720)){var x=parse(di.value,ti.value);x.setDate(x.getDate()+(de<-720?1:-1));di.value=ymd(x)}prev=ti.value;up()};di.onchange=up;bg.querySelectorAll('[data-min]').forEach(function(b){b.onclick=function(){sh(+b.dataset.min,0)}});bg.querySelector('[data-day]').onclick=function(){sh(0,1)};bg.querySelector('[data-now]').onclick=function(){var n=new Date();di.value=ymd(n);ti.value=hm(n);prev=ti.value;up()};function close(){bg.remove();document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')}bg.querySelector('.bd-v148-x').onclick=close;bg.querySelector('#bd-v148-cancel').onclick=close;bg.onclick=function(e){if(e.target===bg)close()};bg.querySelector('#bd-v148-ok').onclick=function(){apply(di.value,ti.value);close()};up()}
