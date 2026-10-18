@@ -1158,7 +1158,7 @@ var rows=visibleStops.map(function(obj,vi){
  var walkMinBefore = walkBetween[i-1];
  var trInfo = transferBetween[i-1];
  var isChange = !!trInfo && prevLineRaw && curLineRaw && prevLineRaw!==curLineRaw;
- var dotBg = (isFirst||isChange||isLast)?lc:null;
+ var dotBg = isChange?getLineColor(prevLineRaw):((isFirst||isLast)?lc:null);
  var dotStyle = {};
  if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
  var cls="bdt-row is-first"+(isLast?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
@@ -1187,7 +1187,7 @@ var rows=visibleStops.map(function(obj,vi){
   if(_tr){
    var _aMs=ms(x,!0),_dMs=_nx?ms(_nx,!1):null;
    var _wait=(_aMs!=null&&_dMs!=null&&_dMs>_aMs)?Math.round((_dMs-_aMs)/60000):null;
-   _xf.push(p("div",{className:"bdt-xfer",children:[c("span",{className:"bdt-xi",children:"🔄"}),p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px",flexWrap:"wrap"},children:[c("span",{children:"Correspondance"}),c("span",{style:{display:"inline-flex",alignItems:"center",gap:"4px"},children:[chipEl(getLineForStop(x)),c("span",{style:{fontWeight:800},children:"→"}),_tr.line?chipEl(_tr.line):chipEl(_nx?getLineForStop(_nx):"")]}),_tr.at?c("span",{style:{display:"inline-flex",alignItems:"center",padding:"2px 7px",borderRadius:"99px",background:getLineColor(_tr.line||(_nx?getLineForStop(_nx):"")),color:"#fff",fontWeight:800},children:_tr.at}):null,c("span",{children:_wait!=null?"· "+_wait+" min d'attente":(_tr.departure?"· départ "+fm(_tr.departure):"")})]})]},"x"+i));
+   _xf.push(p("div",{className:"bdt-xfer",style:{alignItems:"flex-start"},children:[c("span",{className:"bdt-xi",children:"🔄"}),p("span",{style:{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:"5px",minWidth:0},children:[p("span",{style:{display:"inline-flex",alignItems:"center",gap:"5px",flexWrap:"wrap"},children:[c("span",{children:"Correspondance"}),_tr.at?c("span",{children:"à "+_tr.at}):null]}),c("span",{style:{display:"inline-flex",alignItems:"center",gap:"5px",padding:"2px 7px",borderRadius:"99px",background:"rgba(24,24,27,.16)"},children:[chipEl(getLineForStop(x)),c("span",{style:{fontWeight:800},children:"→"}),_tr.line?chipEl(_tr.line):chipEl(_nx?getLineForStop(_nx):"")]}),c("span",{children:_wait!=null?"· "+_wait+" min d'attente":(_tr.departure?"· départ "+fm(_tr.departure):"")})]})]},"x"+i));
   }
   if(_wk!=null&&_wk>0){
    _xf.push(p("div",{className:"bdt-xfer bdt-walk",children:[c("span",{className:"bdt-xi",children:"🚶"}),c("span",{children:"Marche à pied · "+_wk+" min"})]},"w"+i));
