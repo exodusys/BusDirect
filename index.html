@@ -1448,33 +1448,4 @@ function run(){build();sourceDots();translateDom()} if(document.readyState==='lo
 </script>
 
 </body>
-</html><style id="bd-v104-home-hamburger">
-/* V104 — hamburger uniquement sur la page d'accueil, fixé en haut */
-.bd-v101-hamb{position:fixed!important;top:max(12px,env(safe-area-inset-top))!important;right:14px!important;z-index:70!important}
-.bd-v101-menu{position:fixed!important;top:max(64px,calc(env(safe-area-inset-top) + 58px))!important;right:14px!important;z-index:69!important}
-body.bd-v104-popup-open #bd-v101-hamb,body.bd-v104-popup-open #bd-v101-menu{display:none!important}
-</style>
-<script id="bd-v104-home-hamburger-script">
-(function(){
- function ownOverlay(el){return !!(el&&el.closest&&el.closest('#bd-v101-overlay'));}
- function popupOpen(){
-   var nodes=document.querySelectorAll('.fixed.inset-0,.fixed.inset-4,.bdt-wrap,section.fixed');
-   for(var i=0;i<nodes.length;i++){
-     var el=nodes[i];
-     if(ownOverlay(el)||el.id==='bd-v101-menu')continue;
-     var cs=getComputedStyle(el);
-     if(cs.display!=='none'&&cs.visibility!=='hidden'&&cs.opacity!=='0')return true;
-   }
-   return false;
- }
- function sync(){
-   var open=popupOpen();
-   document.body.classList.toggle('bd-v104-popup-open',open);
-   var menu=document.getElementById('bd-v101-menu');
-   if(open&&menu)menu.classList.remove('open');
- }
- var mo=new MutationObserver(sync);
- function start(){sync();mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style','hidden']});}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-})();
-</script>
+</html>
