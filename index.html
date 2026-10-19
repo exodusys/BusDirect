@@ -2984,7 +2984,9 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    here.className='bdt-row bd155-here';
    var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
    here.style.setProperty('--acc', acc);
-   here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
+   here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff;cursor:pointer" title="Ouvrir navigation à pied vers VOTRE ARRÊT">POSITION ACTUELLE ↗</span></div></div>';
+   here.style.cursor='pointer';
+   here.addEventListener('click', function(){ if(walk && walk.href) openMaps(walk.href, true); });
    list.insertBefore(here, row);
 
    // --- 3) MODIFIE CE QUI EST EN JAUNE -> comme photo rouge ---
@@ -3013,10 +3015,8 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    }catch(e){}
 
    var walk=document.createElement('a');
-   // Reprend exactement le même graphisme que la 2e photo entourée en rouge
-   walk.className='bdt-xfer bdt-walk';
-   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin:6px 0 8px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
-   walk.setAttribute('href','#');
+   walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
+   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
    walk.setAttribute('target','_blank');
    walk.setAttribute('rel','noopener noreferrer');
    var mins=2;
@@ -3028,12 +3028,25 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
     mins=Math.max(1,Math.round(meters/80));
     dist = meters<1000? Math.round(meters)+' m' : (meters/1000).toFixed(1)+' km';
    }
+   // Lien principal : navigation à pied de Vous êtes ici (position actuelle) vers VOTRE ARRÊT
    var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-   if(loc&&stop) hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-   else if(stop) hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   if(loc&&stop){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   } else if(stop){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   } else if(loc){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
+   }
    walk.href=hrefWalk;
-
-   walk.innerHTML='<span class="bdt-xi" style="font-size:18px">🚶</span><span style="flex:1 1 auto;font-weight:800;font-size:14px;color:#fcd34d">Marche à pied · '+mins+' min'+(dist?' · '+dist:'')+'</span><span title="Ouvrir Google Maps à pied" style="font-size:17px;font-weight:800;background:#3f2f18;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px">↗</span>';
+   walk.dataset.origin = loc ? (loc.lat+','+loc.lon) : '';
+   walk.dataset.dest = stop ? (stop.lat+','+stop.lon) : '';
+   walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
+   // Click direct -> ouvre popup interne avec navigation à pied
+   walk.addEventListener('click', function(ev){
+     ev.preventDefault();
+     // force walk
+     openMaps(this.href, true);
+   });
    list.insertBefore(walk, row);
   });
  }
