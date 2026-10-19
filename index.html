@@ -3211,84 +3211,291 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
 
 
-<script id="bd-v177-keep-only-third-yellow">
-/* V177 - Il y avait 3 cadres jaunes identiques (Vous êtes ici + 2 min à pied). On supprime les 2 premiers, on garde uniquement le 3ème tout en haut */
-(function(){
- function fixThreeYellowFrames(){
-  var containers=document.querySelectorAll('.bdt-sheet, .bdt-wrap');
-  if(containers.length===0) containers=[document.body];
 
-  containers.forEach(function(sheet){
-   var txt=(sheet.textContent||'').toLowerCase();
-   if(!txt.includes('suivi en direct') && !sheet.textContent.includes('Genève, Aubert') && !sheet.textContent.includes('Vous êtes ici')) return;
+
+
+<script id="bd-v178-position-au-dessus-depart">
+/* V178 - Affiche 📍 POSITION ACTUELLE au dessus de l'arrêt de départ du parcours dans Suivi en direct */
+(function(){
+ function injectCSS(){
+  if(document.getElementById('bd-v178-css')) return;
+  var s=document.createElement('style'); s.id='bd-v178-css';
+  s.textContent=`
+  .bd178-position-badge{display:flex;align-items:center;gap:6px;padding:8px 12px;margin:0 0 8px 0;border-radius:12px;background:#FFFBEB;border:1px solid rgba(245,158,11,.28);font-size:11px;font-weight:900;letter-spacing:.04em;color:#92400e;width:fit-content}
+  html.dark .bd178-position-badge{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.28);color:#fcd34d}
+  .bd178-position-badge .ic{font-size:13px}
+  `;
+  document.head.appendChild(s);
+ }
+
+ function placePositionAboveDepart(){
+  injectCSS();
+  var sheets=document.querySelectorAll('.bdt-sheet, .bdt-wrap');
+  if(sheets.length===0) sheets=[document.body];
+
+  sheets.forEach(function(sheet){
+   if(!sheet.textContent.toLowerCase().includes('suivi en direct') && !sheet.textContent.includes('VOTRE ARRÊT') && !sheet.textContent.includes('Genève, Aubert')) return;
 
    var lists = sheet.querySelectorAll('.bdt-list, .bdt-body');
    if(lists.length===0) lists=[sheet];
 
    lists.forEach(function(list){
-     // Trouve tous les Vous êtes ici (même ceux injectés)
-     var vousList = Array.from(list.querySelectorAll('.bdt-row, .bd174-vous-row, .bd175-vous-row, .bd176-vous-row, div')).filter(function(el){
-       var t=(el.textContent||'').trim();
-       // bloc jaune = Vous êtes ici + POSITION ACTUELLE, sans Genève
-       return t.includes('Vous êtes ici') && t.includes('POSITION ACTUELLE') && !t.includes('Genève,') && !t.includes('VOTRE ARRÊT');
-     });
-
-     // Trouve tous les 2 min à pied isolés
-     var walkList = Array.from(list.querySelectorAll('.bdt-xfer, .bdt-walk, .bd174-walk, .bd175-walk, a, div')).filter(function(el){
-       var t=(el.textContent||'').trim();
-       return /^2 min à pied$/.test(t) || (t.includes('min à pied') && t.length < 30 && !t.includes('Google Maps') && !el.closest('button[class*="rounded-"]'));
-     });
-
-     // S'il y a 3 cadres jaunes (ou 2-3), on garde le dernier (3ème)
-     if(vousList.length>1){
-       // Garde le dernier
-       var keeperVous = vousList[vousList.length-1];
-       vousList.forEach(function(el, idx){
-         if(el!==keeperVous){
-           try{ el.remove(); }catch(e){ el.style.display='none'; }
-         }
-       });
-       // Place le keeper tout en haut
-       try{ list.insertBefore(keeperVous, list.firstChild); }catch(e){}
-     }
-
-     if(walkList.length>1){
-       var keeperWalk = walkList[walkList.length-1];
-       walkList.forEach(function(el){
-         if(el!==keeperWalk){
-           try{ el.remove(); }catch(e){ el.style.display='none'; }
-         }
-       });
-       // Place walk juste après Vous êtes ici
-       var vousKeeper = list.querySelector('.bdt-row, .bd174-vous-row');
-       // trouve le Vous gardé
-       var vousEls = Array.from(list.children).filter(function(c){ return (c.textContent||'').includes('Vous êtes ici') && (c.textContent||'').includes('POSITION ACTUELLE'); });
-       var topVous = vousEls[0];
-       if(topVous && keeperWalk){
-         try{ list.insertBefore(keeperWalk, topVous.nextSibling); }catch(e){}
+     // 1) Nettoie les anciens Vous êtes ici isolés (on ne veut plus de carte séparée)
+     Array.from(list.querySelectorAll('.bdt-row, .bd174-vous-row, .bd177-vous-row')).forEach(function(row){
+       var t=(row.textContent||'').trim();
+       if(t.includes('Vous êtes ici') && !t.includes('Genève,') && !t.includes('VOTRE ARRÊT')){
+         // supprime les cartes Vous êtes ici seules - on va mettre le badge au dessus du départ à la place
+         try{ row.remove(); }catch(e){ row.style.display='none'; }
        }
-     }
+     });
+     // nettoie walks en trop (garde 1 max, mais pas nécessaire si on affiche POSITION au dessus départ)
+     // On supprime tous les walks isolés en haut pour éviter doublon, on en recréera si besoin
+     // (on garde la logique mais on les cache pour ce ticket)
+     // Array.from(list.querySelectorAll('.bd174-walk, .bdt-walk')).forEach(function(w){ if((w.textContent||'').includes('min à pied') && !w.closest('button')) { try{w.style.display='none'}catch(e){} } });
 
-     // Si un seul Vous restant, assure qu'il est bien en haut
-     var remainingVous = list.querySelectorAll('.bdt-row, .bd174-vous-row');
-     var realVous = Array.from(remainingVous).find(function(r){ return (r.textContent||'').includes('Vous êtes ici') && (r.textContent||'').includes('POSITION ACTUELLE') && !(r.textContent||'').includes('Genève,'); });
-     if(realVous && list.firstChild!==realVous){
-       try{ list.insertBefore(realVous, list.firstChild); }catch(e){}
+     // 2) Trouve l'arrêt de départ = celui avec VOTRE ARRÊT ou Genève, Aubert ou premier arrêt vert
+     var departRow=null;
+     // priorité : avec VOTRE ARRÊT
+     departRow = list.querySelector('.bdt-row:has(.bdt-tag-me)') || Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return (r.textContent||'').includes('VOTRE ARRÊT'); });
+     if(!departRow){
+       // fallback Genève, Aubert
+       departRow = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return (r.textContent||'').includes('Genève, Aubert'); });
+     }
+     if(!departRow){
+       // fallback premier vert
+       departRow = list.querySelector('.bdt-row');
+     }
+     if(!departRow) return;
+
+     // 3) Vérifie si badge déjà présent juste au dessus
+     var prev = departRow.previousElementSibling;
+     if(prev && prev.classList && prev.classList.contains('bd178-position-badge')) return;
+
+     // 4) Crée le badge 📍 POSITION ACTUELLE
+     var badge=document.createElement('div');
+     badge.className='bd178-position-badge';
+     badge.innerHTML='<span class="ic">📍</span><span>POSITION ACTUELLE</span><span style="margin-left:6px;opacity:.7;font-size:10px">• à proximité</span>';
+     
+     // Insère juste au dessus de l'arrêt de départ
+     try{
+       list.insertBefore(badge, departRow);
+     }catch(e){
+       departRow.parentNode.insertBefore(badge, departRow);
      }
    });
   });
  }
 
- var obs=new MutationObserver(function(){ fixThreeYellowFrames(); });
+ var obs=new MutationObserver(function(){ placePositionAboveDepart(); });
  obs.observe(document.body,{childList:true,subtree:true});
- setInterval(fixThreeYellowFrames, 700);
- setTimeout(fixThreeYellowFrames, 100);
- setTimeout(fixThreeYellowFrames, 400);
- setTimeout(fixThreeYellowFrames, 900);
- setTimeout(fixThreeYellowFrames, 1600);
- if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fixThreeYellowFrames); else fixThreeYellowFrames();
+ setInterval(placePositionAboveDepart, 800);
+ setTimeout(placePositionAboveDepart, 100);
+ setTimeout(placePositionAboveDepart, 500);
+ setTimeout(placePositionAboveDepart, 1200);
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', placePositionAboveDepart); else placePositionAboveDepart();
 
- console.log('V177 keep only 3rd yellow frame loaded');
+ console.log('V178 POSITION ACTUELLE au dessus départ loaded');
+})();
+</script>
+
+
+<script id="bd-v179-distances-settings-v2">
+/* V179.2 - Menu hamburger > Distances de détection (Mes parcours, ARRÊT(S) À PROXIMITÉ, Vous êtes dans ce véhicule) */
+(function(){
+ function getInt(key, def){
+  try{ var v=localStorage.getItem(key); if(v===null) return def; var n=parseInt(v,10); return isNaN(n)?def:n; }catch(e){ return def; }
+ }
+ function injectCSS(){
+  if(document.getElementById('bd-v179-css')) return;
+  var s=document.createElement('style'); s.id='bd-v179-css';
+  s.textContent=`
+  #bd-v179-overlay{position:fixed;inset:0;z-index:350;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.52);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+  #bd-v179-overlay.open{display:flex;animation:bd179Fade .2s ease}
+  @keyframes bd179Fade{from{opacity:0}to{opacity:1}}
+  .bd179-sheet{width:100%;max-width:500px;max-height:92dvh;overflow:auto;background:#fff;border-radius:28px;padding:20px 18px;box-shadow:0 28px 90px rgba(0,0,0,.42),0 0 0 1px rgba(0,0,0,.06);animation:bd179In .32s cubic-bezier(.22,1.25,.3,1)}
+  @keyframes bd179In{from{transform:translateY(20px) scale(.98);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
+  html.dark .bd179-sheet{background:#1C1917;color:#fafafa;border-color:rgba(255,255,255,.1)}
+  .bd179-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .bd179-logo{width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px;flex-shrink:0}
+  html.dark .bd179-logo{background:#fafafa;color:#09090b}
+  .bd179-t{flex:1;min-width:0}
+  .bd179-title{font-size:18px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+  .bd179-sub{font-size:11px;font-weight:600;opacity:.6;margin-top:3px}
+  .bd179-close{width:36px;height:36px;border-radius:99px;border:0;background:#f4f4f5;color:#18181b;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  html.dark .bd179-close{background:#27272a;color:#fafafa}
+  .bd179-sec{border:1px solid #e7e5e4;border-radius:20px;padding:14px;background:#fafaf9;margin-bottom:12px}
+  html.dark .bd179-sec{background:#0C0A09;border-color:rgba(255,255,255,.1)}
+  .bd179-sec h4{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;opacity:.75;margin:0 0 10px 0;display:flex;align-items:center;gap:8px}
+  .bd179-badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:99px;background:#18181b;color:#fff}
+  html.dark .bd179-badge{background:#fafafa;color:#09090b}
+  .bd179-field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+  .bd179-field:last-child{margin-bottom:0}
+  .bd179-field label{font-size:11.5px;font-weight:700;opacity:.85}
+  .bd179-input{height:46px;border-radius:12px;border:1px solid #e7e5e4;background:#fff;padding:0 14px;font-size:14px;font-weight:700;width:100%;outline:none;transition:border-color .15s,box-shadow .15s}
+  html.dark .bd179-input{background:#1C1917;border-color:rgba(255,255,255,.15);color:#fafafa}
+  .bd179-input:focus{border-color:#18181b;box-shadow:0 0 0 4px rgba(24,24,27,.1)}
+  html.dark .bd179-input:focus{border-color:#fafafa;box-shadow:0 0 0 4px rgba(250,250,250,.12)}
+  .bd179-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .bd179-hint{font-size:10px;opacity:.6;line-height:1.35}
+  .bd179-actions{display:flex;gap:10px;margin-top:16px}
+  .bd179-btn{flex:1;height:50px;border-radius:99px;border:0;font-weight:900;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:transform .12s}
+  .bd179-btn:active{transform:scale(.97)}
+  .bd179-cancel{background:#f4f4f5;color:#18181b}
+  html.dark .bd179-cancel{background:#27272a;color:#fafafa}
+  .bd179-save{background:#18181b;color:#fff}
+  html.dark .bd179-save{background:#fafafa;color:#09090b}
+  `;
+  document.head.appendChild(s);
+ }
+
+ function build(){
+  if(document.getElementById('bd-v179-overlay')) return;
+  injectCSS();
+  var o=document.createElement('div');
+  o.id='bd-v179-overlay';
+  o.innerHTML=`
+  <div class="bd179-sheet" role="dialog" aria-modal="true">
+   <div class="bd179-head">
+    <div class="bd179-logo">📏</div>
+    <div class="bd179-t">
+     <div class="bd179-title">Distances de détection</div>
+     <div class="bd179-sub">Hamburger > Paramètres localisation</div>
+    </div>
+    <button class="bd179-close" id="bd179-x">✕</button>
+   </div>
+
+   <div class="bd179-sec">
+    <h4>🗂️ Mes parcours <span class="bd179-badge">dalles</span></h4>
+    <div class="bd179-field">
+     <label>Distance par défaut dans les dalles</label>
+     <input id="bd179-tile" class="bd179-input" type="number" min="50" max="5000" step="50" placeholder="500">
+     <div class="bd179-hint">Défaut 500m • Rayon utilisé pour filtrer les parcours possibles autour de vous. Plage 50m – 5000m.</div>
+    </div>
+   </div>
+
+   <div class="bd179-sec">
+    <h4>📍 ARRÊT(S) À PROXIMITÉ</h4>
+    <div class="bd179-field">
+     <label>Distance de détection</label>
+     <input id="bd179-near" class="bd179-input" type="number" min="50" max="5000" step="50" placeholder="500">
+     <div class="bd179-hint">Défaut 500m • Rayon de recherche des arrêts proches. Sauvé dans bd_nearRadius.</div>
+    </div>
+   </div>
+
+   <div class="bd179-sec">
+    <h4>🚌 Vous êtes dans ce véhicule</h4>
+    <div class="bd179-row">
+     <div class="bd179-field">
+      <label>Distance min</label>
+      <input id="bd179-vmin" class="bd179-input" type="number" min="0" max="2000" step="10" placeholder="0">
+      <div class="bd179-hint">Défaut 0m</div>
+     </div>
+     <div class="bd179-field">
+      <label>Distance max</label>
+      <input id="bd179-vmax" class="bd179-input" type="number" min="0" max="2000" step="10" placeholder="500">
+      <div class="bd179-hint">Défaut 500m</div>
+     </div>
+    </div>
+    <div class="bd179-hint" style="margin-top:8px">Vous êtes considéré dans le véhicule si distance entre vous et le véhicule est entre min et max. Plage 0m – 500m par défaut, 2 champs modifiables.</div>
+   </div>
+
+   <div class="bd179-actions">
+    <button id="bd179-cancel" class="bd179-btn bd179-cancel">Annuler</button>
+    <button id="bd179-save" class="bd179-btn bd179-save">💾 Sauvegarder</button>
+   </div>
+   <div style="margin-top:12px;font-size:10px;opacity:.5;text-align:center">Stockage local • application immédiate • événement bd-distances-change</div>
+  </div>`;
+  document.body.appendChild(o);
+  o.addEventListener('click', function(e){ if(e.target===o) close(); });
+  o.querySelector('#bd179-x').onclick=close;
+  o.querySelector('#bd179-cancel').onclick=close;
+  o.querySelector('#bd179-save').onclick=save;
+ }
+
+ function open(){
+  build();
+  document.getElementById('bd179-tile').value = getInt('bd_tileRadius', getInt('bd_tileDefaultRadius', 500));
+  document.getElementById('bd179-near').value = getInt('bd_nearRadius', 500);
+  document.getElementById('bd179-vmin').value = getInt('bd_vehicleMinRadius', 0);
+  document.getElementById('bd179-vmax').value = getInt('bd_vehicleMaxRadius', 500);
+  document.getElementById('bd-v179-overlay').classList.add('open');
+  document.documentElement.classList.add('modal-open');
+ }
+
+ function close(){
+  var o=document.getElementById('bd-v179-overlay');
+  if(o) o.classList.remove('open');
+  document.documentElement.classList.remove('modal-open');
+ }
+
+ function save(){
+  var tile=Math.max(50,Math.min(5000, parseInt(document.getElementById('bd179-tile').value||'500',10)||500));
+  var near=Math.max(50,Math.min(5000, parseInt(document.getElementById('bd179-near').value||'500',10)||500));
+  var vmin=Math.max(0,Math.min(2000, parseInt(document.getElementById('bd179-vmin').value||'0',10)||0));
+  var vmax=Math.max(0,Math.min(5000, parseInt(document.getElementById('bd179-vmax').value||'500',10)||500));
+  if(vmin>vmax){ var t=vmin; vmin=vmax; vmax=t; }
+  try{
+   localStorage.setItem('bd_tileRadius', String(tile));
+   localStorage.setItem('bd_tileDefaultRadius', String(tile));
+   localStorage.setItem('bd_nearRadius', String(near));
+   localStorage.setItem('bd_vehicleMinRadius', String(vmin));
+   localStorage.setItem('bd_vehicleMaxRadius', String(vmax));
+   window.__bd_tileRadius=tile;
+   window.__bd_nearRadius=near;
+   window.__bd_vehicleMinRadius=vmin;
+   window.__bd_vehicleMaxRadius=vmax;
+   window.dispatchEvent(new CustomEvent('bd-distances-change',{detail:{tile, near, vMin:vmin, vMax:vmax}}));
+   // Patch direct des variables React si présentes
+   try{
+    // force nearStops radius si setter accessible via storage event
+    localStorage.setItem('bd_nearRadius_trigger', Date.now().toString());
+   }catch(e){}
+  }catch(e){}
+  var btn=document.getElementById('bd179-save');
+  var old=btn.textContent;
+  btn.textContent='✅ Sauvegardé';
+  setTimeout(function(){ btn.textContent=old; close(); }, 700);
+ }
+
+ function addToHamburger(){
+  var grid=document.querySelector('.bd-v101-grid');
+  if(!grid) return;
+  if(document.getElementById('bd-v179-item')) return;
+  var b=document.createElement('button');
+  b.className='bd-v101-item';
+  b.id='bd-v179-item';
+  b.innerHTML='<span>📏</span><span>Distances</span>';
+  b.onclick=function(){
+    var m=document.getElementById('bd-v101-menu');
+    if(m) m.classList.remove('open');
+    open();
+  };
+  grid.appendChild(b);
+ }
+
+ // Observer pour menu recréé
+ new MutationObserver(addToHamburger).observe(document.body,{childList:true,subtree:true});
+ setInterval(addToHamburger, 900);
+ addToHamburger();
+
+ // Expose
+ window.__bd_openDistances=open;
+ window.__bd_tileRadius=getInt('bd_tileRadius', getInt('bd_tileDefaultRadius', 500));
+ window.__bd_nearRadius=getInt('bd_nearRadius', 500);
+ window.__bd_vehicleMinRadius=getInt('bd_vehicleMinRadius', 0);
+ window.__bd_vehicleMaxRadius=getInt('bd_vehicleMaxRadius', 500);
+
+ // Patch du filtrage Vous êtes dans ce véhicule si distance dispo
+ setInterval(function(){
+  try{
+   var vMin=window.__bd_vehicleMinRadius||0;
+   var vMax=window.__bd_vehicleMaxRadius||500;
+   // expose pour autre code qui voudrait filtrer
+   window.__bd_vehicleRange={min:vMin,max:vMax};
+  }catch(e){}
+ }, 1000);
+
+ console.log('V179.2 distances menu loaded');
 })();
 </script>
 
