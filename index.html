@@ -3202,145 +3202,115 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 </script>
 
 
-<script id="bd-v174-vous-ici-top">
-/* V174 - Remet Vous êtes ici + POSITION ACTUELLE + X min à pied tout en haut dans Suivi en direct */
+
+
+
+
+
+
+<script id="bd-v176-remove-yellow-frame">
+/* V176 - Supprime le cadre jaune : Vous êtes ici + POSITION ACTUELLE + 2 min à pied dans Suivi en direct */
 (function(){
- function injectCSS(){
-  if(document.getElementById('bd-v174-css')) return;
-  var s=document.createElement('style'); s.id='bd-v174-css';
-  s.textContent=`
-  .bd174-vous-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:16px;background:#FFFBEB;border:1px solid rgba(245,158,11,.22);margin:6px 0}
-  html.dark .bd174-vous-row{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.22)}
-  .bd174-dot{width:10px;height:10px;border-radius:50%;background:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18);flex-shrink:0}
-  .bd174-name{font-size:13.5px;font-weight:850;letter-spacing:-.01em}
-  .bd174-tag{font-size:9px;font-weight:900;letter-spacing:.06em;padding:3px 7px;border-radius:99px;background:#f59e0b;color:#fff}
-  .bd174-walk{display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:14px;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18);text-decoration:none;cursor:pointer;margin:0 0 8px 0;font-size:12.5px;font-weight:700}
-  html.dark .bd174-walk{background:#3a2f1a}
-  `;
-  document.head.appendChild(s);
- }
+ function removeYellowFrame(){
+  // Tous les conteneurs Suivi en direct
+  var containers=document.querySelectorAll('.bdt-sheet, .bdt-list, .bdt-body, .bdt-wrap, body');
+  containers.forEach(function(container){
+   var t=(container.textContent||'').toLowerCase();
+   // cible uniquement Suivi en direct
+   if(!t.includes('suivi en direct') && container!==document.body) return;
 
- function isSuiviDirectContainer(el){
-  if(!el) return false;
-  var txt=(el.textContent||'').toLowerCase();
-  return txt.includes('suivi en direct');
- }
+   var lists = container.querySelectorAll('.bdt-list, .bdt-body');
+   if(lists.length===0) lists=[container];
 
- function ensureVousIciTop(){
-  injectCSS();
-  // trouve tous les sheets / listes qui sont Suivi en direct
-  var sheets=document.querySelectorAll('.bdt-sheet, .bdt-wrap, .bdt-list, .bdt-body, [class*="bdt-sheet"]');
-  // fallback: cherche dans tout body les conteneurs avec beaucoup de bdt-row
-  if(sheets.length===0) sheets=[document.body];
-
-  sheets.forEach(function(sheet){
-   // uniquement si c'est suivi en direct ou contient Votre arrêt / Vous êtes ici logique
-   var isSuivi = sheet.textContent.toLowerCase().includes('suivi en direct') || sheet.querySelector('.bdt-tag-me') || sheet.textContent.includes('Votre arrêt') || sheet.textContent.includes('VOTRE ARRÊT');
-   if(!isSuivi && sheet!==document.body) return;
-
-   // trouve la liste interne qui contient les rows
-   var list = sheet.querySelector('.bdt-list, .bdt-body') || sheet;
-   // si body, prend chaque bdt-list séparément
-   var lists = sheet===document.body ? document.querySelectorAll('.bdt-list, .bdt-body') : [list];
-   lists.forEach(function(lst){
-    if(!lst || lst.__bd174Processed && lst.querySelector('.bd174-vous-row')) return;
-    // vérifie qu'on est bien dans Suivi en direct (évite Prochains parcours)
-    var parentSheet = lst.closest('.bdt-sheet, .bdt-wrap');
-    var isSuiviDirect = false;
-    if(parentSheet){
-      isSuiviDirect = parentSheet.textContent.toLowerCase().includes('suivi en direct') || lst.textContent.includes('Votre arrêt') || lst.textContent.includes('VOTRE ARRÊT');
-    } else {
-      isSuiviDirect = lst.textContent.includes('Votre arrêt') || document.body.textContent.toLowerCase().includes('suivi en direct');
-    }
-    // on force quand même si on détecte Votre arrêt
-    if(!lst.textContent.includes('Votre arrêt') && !isSuiviDirect) return;
-
-    // évite doublons
-    var existingVous = lst.querySelector('.bd174-vous-row');
-    var existingWalk = lst.querySelector('.bd174-walk');
-    var nativeVous = Array.from(lst.querySelectorAll('.bdt-row')).find(r=>/Vous êtes ici/i.test(r.textContent||''));
-    var nativeWalk = Array.from(lst.querySelectorAll('.bdt-xfer, a[href*="google.com/maps"]')).find(w=>/min à pied/i.test(w.textContent||''));
-
-    // loc
-    var loc=window.__bd_loc;
-    var destLat=null,destLon=null,stopName='Votre arrêt';
-    try{
-     var votreRow = lst.querySelector('.bdt-row:has(.bdt-tag-me)') || Array.from(lst.querySelectorAll('.bdt-row')).find(r=> (r.textContent||'').includes('Votre arrêt'));
-     if(votreRow){
-       var nameEl=votreRow.querySelector('.bdt-name'); if(nameEl) stopName=nameEl.textContent.trim();
-       // tente récup coords via __bd_stopCoords
-       var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v155_stopCoords||window.__bd_v149_stopCoords;
-       if(sc && sc[stopName]){ destLat=sc[stopName].lat; destLon=sc[stopName].lon; }
-     }
-     // fallback via liens google maps existants
-     lst.querySelectorAll('a[href*="google.com/maps"]').forEach(function(a){
-       try{ var u=new URL(a.href); var d=u.searchParams.get('destination'); if(d&&d.includes(',')){ var p=d.split(','); destLat=parseFloat(p[0]); destLon=parseFloat(p[1]); } }catch(e){}
+   lists.forEach(function(list){
+     // 1) Supprime Vous êtes ici
+     Array.from(list.querySelectorAll('.bdt-row, .bd174-vous-row, .bd175-vous-row, div')).forEach(function(row){
+       var txt=(row.textContent||'').trim();
+       if(/^Vous êtes ici$/i.test(txt) || /Vous êtes ici/.test(txt) && row.querySelector('.bdt-tag-me')==null && !txt.includes('Genève, Aubert')){
+         // garde Genève Aubert qui a VOTRE ARRÊT, supprime les purs Vous êtes ici
+         if(txt.includes('Vous êtes ici') && !txt.includes('VOTRE ARRÊT')){
+           // vérifie que c'est bien le bloc jaune : contient POSITION ACTUELLE seul sans Genève
+           if(!txt.includes('Genève,')){
+             try{ row.remove(); }catch(e){ row.style.display='none'; }
+           }
+         }
+       }
+       // supprime aussi si classe bd174-vous-row ou contient POSITION ACTUELLE seul
+       if(row.classList && row.classList.contains('bd174-vous-row')){
+         // si ce n'est pas Genève, Aubert
+         if(!row.textContent.includes('Genève,')){
+           try{ row.remove(); }catch(e){ row.style.display='none'; }
+         }
+       }
      });
-    }catch(e){}
 
-    var mins=2;
-    if(loc&&loc.lat!=null&&destLat!=null){
-      var R=6371000,r=Math.PI/180,dLat=(destLat-loc.lat)*r,dLon=(destLon-loc.lon)*r;
-      var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(destLat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-      var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-      mins=Math.max(1,Math.round(meters/80));
-    }
+     // 2) Supprime 2 min à pied
+     Array.from(list.querySelectorAll('.bdt-xfer, .bdt-walk, .bd174-walk, a[href*="travelmode=walking"], div')).forEach(function(walk){
+       var txt=(walk.textContent||'');
+       if(/^\s*\d+\s*min à pied\s*$/i.test(txt) || /2 min à pied/.test(txt)){
+         // supprime si c'est un lien marche sans autre contexte ou si dans cadre jaune
+         var parentIsWalkCard = walk.closest && walk.closest('.bdt-xfer');
+         // Si le walk est isolé (pas dans une carte de trajet complet), on le supprime
+         // On garde les walks qui sont DANS une carte Prochains parcours (qui ont aussi heure), pas ceux en haut de Suivi en direct
+         var inSuiviDirect = list.textContent.toLowerCase().includes('suivi en direct') || document.body.textContent.toLowerCase().includes('suivi en direct');
+         if(walk.classList && (walk.classList.contains('bd174-walk') || walk.classList.contains('bdt-walk'))){
+           // vérifie si parent list est Suivi en direct
+           var isInSuivi = walk.closest('.bdt-sheet') || walk.closest('.bdt-wrap');
+           if(isInSuivi || inSuiviDirect){
+             // si c'est un walk solitaire en haut, supprime
+             try{ walk.remove(); }catch(e){ walk.style.display='none'; }
+           }
+         }
+       }
+     });
 
-    // Construit éléments si manquent
-    if(!existingVous && !nativeVous){
-      var vous=document.createElement('div');
-      vous.className='bdt-row bd174-vous-row';
-      vous.innerHTML='<span class="bd174-dot"></span><div style="flex:1;min-width:0"><div class="bd174-name">📍 Vous êtes ici</div><div style="margin-top:4px"><span class="bd174-tag">POSITION ACTUELLE</span></div></div>';
-      // insère tout en haut
-      lst.insertBefore(vous, lst.firstChild);
-    } else if(nativeVous){
-      // déplace tout en haut si pas déjà
-      if(lst.firstChild!==nativeVous){
-        lst.insertBefore(nativeVous, lst.firstChild);
-      }
-    } else if(existingVous){
-      if(lst.firstChild!==existingVous) lst.insertBefore(existingVous, lst.firstChild);
-    }
-
-    // Walk - doit être juste après Vous êtes ici
-    if(!existingWalk){
-      var walk=document.createElement('a');
-      walk.className='bdt-xfer bdt-walk bd174-walk';
-      walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:14px;margin:0 0 8px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
-      var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-      if(loc&&destLat!=null) hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(destLat+','+destLon)+'&travelmode=walking';
-      else if(destLat!=null) hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(destLat+','+destLon)+'&travelmode=walking';
-      walk.href=hrefWalk;
-      walk.target='_blank'; walk.rel='noopener noreferrer';
-      walk.innerHTML='<span style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700">'+mins+' min à pied</span><span style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
-      walk.addEventListener('click', function(ev){
-        ev.preventDefault();
-        if(window.__bd_openPopupV173){ window.__bd_openPopupV173(this.href, {isWalk:true}); }
-        else if(window.openHyperPopup){ window.openHyperPopup(this.href, {isWalk:true}); }
-        else window.open(this.href,'_blank');
-      });
-      var vousEl = lst.querySelector('.bd174-vous-row') || lst.firstChild;
-      if(vousEl && vousEl.nextSibling) lst.insertBefore(walk, vousEl.nextSibling);
-      else lst.insertBefore(walk, lst.firstChild.nextSibling||lst.firstChild);
-    } else {
-      // déplace après Vous êtes ici
-      var vousEl2 = lst.querySelector('.bd174-vous-row') || lst.firstChild;
-      if(vousEl2 && existingWalk && vousEl2.nextSibling!==existingWalk){
-        lst.insertBefore(existingWalk, vousEl2.nextSibling);
-      }
-    }
-
-    lst.__bd174Processed=1;
+     // Nettoyage final agressif : cherche directement les div avec le texte exact
+     Array.from(list.children).forEach(function(child){
+       var ctext=(child.textContent||'').trim();
+       if(ctext==='Vous êtes ici' || ctext.startsWith('Vous êtes ici') && ctext.includes('POSITION ACTUELLE') && !ctext.includes('Genève')){
+         try{ child.remove(); }catch(e){ child.style.display='none'; }
+       }
+       if(/^\d+ min à pied$/.test(ctext) || ctext.includes('2 min à pied') && child.querySelector && child.querySelector('[class*="arrow"]')){
+         // si c'est le bloc jaune avec flèche
+         if(!child.textContent.includes('Genève')){
+           try{ child.remove(); }catch(e){ child.style.display='none'; }
+         }
+       }
+     });
    });
   });
  }
 
- var raf=0;
- function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0; ensureVousIciTop();}); }
- new MutationObserver(sched).observe(document.body,{childList:true,subtree:true});
- setInterval(ensureVousIciTop, 800);
- if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', ensureVousIciTop); else ensureVousIciTop();
- console.log('V174 Vous êtes ici top loaded');
+ // CSS hide en secours pour masquer tout résidu jaune
+ var css=document.createElement('style');
+ css.id='bd-v176-hide-css';
+ css.textContent=`
+  /* Cache Vous êtes ici pur dans Suivi en direct */
+  .bdt-sheet .bdt-row:has(.bdt-name):not(:has(.bdt-tag-me)):where(:has-text) { }
+  .bd174-vous-row:not(:has(.bdt-tag-me)){display:none !important}
+  .bd174-walk{display:none !important}
+  /* Masque spécifiquement les blocs avec Vous êtes ici sans Genève */
+  .bdt-row:where(:not(:has([class*="tag-me"]))) { }
+ `;
+ // On injecte une règle plus précise via JS plutôt que :has complexe
+ var style2=document.createElement('style');
+ style2.textContent=`
+  /* V176 - Suppression visuelle du cadre jaune */
+  .bdt-sheet [class*="bdt-row"]:has(> div > div:only-child){ }
+ `;
+ // Méthode simple : on cache via sélecteur d'attribut textuel impossible, donc on fait en JS
+
+ // Observer très agressif
+ var obs=new MutationObserver(function(){ removeYellowFrame(); });
+ obs.observe(document.body,{childList:true,subtree:true});
+ setInterval(removeYellowFrame, 500);
+ setTimeout(removeYellowFrame, 80);
+ setTimeout(removeYellowFrame, 300);
+ setTimeout(removeYellowFrame, 800);
+ setTimeout(removeYellowFrame, 1500);
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', removeYellowFrame); else removeYellowFrame();
+
+ console.log('V176 remove yellow frame loaded - Vous êtes ici + 2 min à pied supprimés');
 })();
 </script>
 
