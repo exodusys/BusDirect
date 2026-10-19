@@ -3672,3 +3672,35 @@ html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
 })();
 </script>
+
+<style id="bd-v197-next-departures-cleanup">
+/* V197 — Prochains départs : masque l'icône e-mail et place la navigation piétonne en haut à droite. */
+.bd-envelope{display:none!important;visibility:hidden!important;pointer-events:none!important}
+.bd191-walk-start{position:relative!important;padding-top:10px!important;padding-right:0!important;min-height:36px}
+.bd191-walk-distance{padding-right:150px!important}
+.bd191-walk-nav{position:absolute!important;right:0!important;top:0!important;margin:0!important;z-index:4!important}
+@media (max-width:390px){
+ .bd191-walk-distance{padding-right:132px!important}
+ .bd191-walk-nav{padding-left:9px!important;padding-right:9px!important;font-size:9px!important}
+}
+</style>
+<script id="bd-v197-next-departures-cleanup-script">
+(function(){
+ function clean(){
+  document.querySelectorAll('.bd-envelope').forEach(function(el){
+   el.style.setProperty('display','none','important');
+   el.setAttribute('aria-hidden','true');
+   el.tabIndex=-1;
+  });
+  /* Le bouton NAVIGATION reste indépendant : son clic ne déclenche pas la carte. */
+  document.querySelectorAll('.bd191-walk-nav').forEach(function(btn){
+   if(btn.__bd197)return; btn.__bd197=1;
+   btn.addEventListener('click',function(e){e.stopPropagation()},true);
+  });
+  /* Ne neutralise jamais le clic de la carte : le parcours conserve son ouverture Suivi en direct. */
+ }
+ new MutationObserver(clean).observe(document.body,{childList:true,subtree:true});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean);else clean();
+ setTimeout(clean,100);setTimeout(clean,500);setTimeout(clean,1200);
+})();
+</script>
