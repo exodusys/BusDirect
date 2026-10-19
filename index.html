@@ -2786,361 +2786,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
 
 
-<script id="bd-v155-google-maps">
-/* V155 - Popup Google Maps évoluée + bandeau date + vous êtes ici + navigation à pied - FIXED */
-(function(){
- var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
- var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
- function pad(n){return (n<10?'0':'')+n}
- function getDT(){
-  if(!window.__bd_dtValidated||!window.__bd_tripDate||!window.__bd_tripTime) return null;
-  var d=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00');
-  return isNaN(d)?null:d;
- }
- function dayTime(d){
-  if(!d) return '';
-  return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' à '+d.getHours()+'h'+pad(d.getMinutes());
- }
- function sameTime(base, hm){
-  var m=/^(\d{1,2}):(\d{2})$/.exec(String(hm||'').trim());
-  if(!m) return null;
-  var dd=new Date(base.getTime());
-  dd.setHours(+m[1],+m[2],0,0);
-  return dd;
- }
- function injectCSS(){
-  if(document.getElementById('bd-v155-css')) return;
-  var st=document.createElement('style');
-  st.id='bd-v155-css';
-  st.textContent=`
-  #bd-v155-maps{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.46);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:bd155Fade .22s ease}
-  @keyframes bd155Fade{from{opacity:0}to{opacity:1}}
-  .bd155-sheet{width:100%;max-width:920px;height:min(88dvh,860px);background:#FFFFFF;border-radius:28px;overflow:hidden;box-shadow:0 28px 90px rgba(0,0,0,.38),0 0 0 1px rgba(0,0,0,.06);display:flex;flex-direction:column;animation:bd155In .32s cubic-bezier(.32,1.2,.6,1)}
-  @keyframes bd155In{from{transform:translateY(20px) scale(.97);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-  html.dark .bd155-sheet{background:#1C1917;box-shadow:0 28px 90px rgba(0,0,0,.65),0 0 0 1px rgba(255,255,255,.08)}
-  .bd155-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid #e7e5e4;background:#fff;flex-shrink:0}
-  html.dark .bd155-head{background:#1C1917;border-color:rgba(255,255,255,.1)}
-  .bd155-logo{width:38px;height:38px;border-radius:13px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;letter-spacing:-.04em}
-  html.dark .bd155-logo{background:#fafafa;color:#09090b}
-  .bd155-titles{flex:1;min-width:0;display:flex;flex-direction:column}
-  .bd155-t1{font-size:14px;font-weight:850;letter-spacing:-.02em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .bd155-t2{font-size:11px;opacity:.62;font-weight:600;margin-top:3px}
-  .bd155-actions{display:flex;gap:8px}
-  .bd155-btn{border:0;cursor:pointer;font-size:12.5px;font-weight:750;padding:9px 14px;border-radius:99px;background:#f4f4f5;color:#18181b;display:inline-flex;align-items:center;gap:6px;text-decoration:none;transition:transform .12s}
-  html.dark .bd155-btn{background:#27272a;color:#fafafa}
-  .bd155-btn:hover{transform:translateY(-1px)}
-  .bd155-btn-main{background:#18181b;color:#fff}
-  html.dark .bd155-btn-main{background:#fafafa;color:#09090b}
-  .bd155-mapwrap{flex:1;position:relative;background:#FAFAF9}
-  html.dark .bd155-mapwrap{background:#0C0A09}
-  .bd155-mapwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-  .bd155-mapwrap.dark iframe{filter:invert(89%) hue-rotate(180deg) contrast(92%) brightness(105%)}
-  .bd155-foot{display:flex;align-items:center;gap:8px;padding:10px 16px;font-size:11px;opacity:.65;border-top:1px solid #f4f4f5}
-  html.dark .bd155-foot{border-color:rgba(255,255,255,.08)}
-  #bd155-banner{margin:12px 16px 0 16px;padding:16px 18px;border-radius:20px;background:#18181b;color:#fff;font-weight:900;font-size:20px;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:center;gap:14px;box-shadow:0 12px 28px rgba(0,0,0,.22);animation:bd155Banner .32s ease;position:relative;z-index:5}
-  html.dark #bd155-banner{background:#fafafa;color:#09090b}
-  @keyframes bd155Banner{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
-  #bd155-banner small{font-size:11px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:3px}
-  #bd155-banner .ic{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-  html.dark #bd155-banner .ic{background:rgba(0,0,0,.08)}
-  /* cache le doublon bleu sur VOTRE ARRÊT */
-  .bdt-row.bd155-votre-row .bdt-tag-me-position {display:none !important}
-  .bdt-row.bd155-votre-row .bd155-hide-blue {display:none !important}
-  `;
-  document.head.appendChild(st);
- }
 
- function buildEmbedUrl(href){
-  try{
-   var u=new URL(href, location.origin);
-   var origin=u.searchParams.get('origin')||'';
-   var dest=u.searchParams.get('destination')||u.searchParams.get('query')||'';
-   var mode=u.searchParams.get('travelmode')||'';
-   // FIX: use maps.google.com embed compatible format
-   // https://maps.google.com/maps?saddr=...&daddr=...&dirflg=w&output=embed
-   if(origin && dest){
-    var dirflg = mode==='walking' ? 'w' : (mode==='transit' ? 'r' : '');
-    return 'https://maps.google.com/maps?saddr='+encodeURIComponent(origin)+'&daddr='+encodeURIComponent(dest)+'&dirflg='+dirflg+'&output=embed&hl=fr&z=16';
-   } else if(dest){
-    return 'https://maps.google.com/maps?q='+encodeURIComponent(dest)+'&output=embed&hl=fr&z=16';
-   } else if(origin){
-    return 'https://maps.google.com/maps?q='+encodeURIComponent(origin)+'&output=embed&hl=fr&z=16';
-   }
-  }catch(e){}
-  // fallback: use original href but ensure NOT /maps/maps
-  var embed=href;
-  // remove double /maps/maps
-  embed = embed.replace(/\/maps\/maps\//g,'/maps/');
-  embed = embed.replace(/\/maps\/maps\?/g,'/maps?');
-  if(!embed.includes('output=embed')){
-   embed += (embed.includes('?')?'&':'?')+'output=embed';
-  }
-  // use maps.google.com for embed to avoid /maps/maps 404
-  embed = embed.replace('https://www.google.com/maps','https://maps.google.com/maps');
-  return embed;
- }
-
- function openMaps(href, forceWalk){
-  injectCSS();
-  var dark=document.documentElement.classList.contains('dark')||document.documentElement.dataset.theme==='dark';
-  var old=document.getElementById('bd-v155-maps');
-  if(old) old.remove();
-  var embed = buildEmbedUrl(href);
-  var isWalk = forceWalk || /travelmode=walking/i.test(href) || /dirflg=w/.test(embed);
-  var title = isWalk ? 'Navigation à pied' : 'Google Maps';
-  var div=document.createElement('div');
-  div.id='bd-v155-maps';
-  div.innerHTML=
-   '<div class="bd155-sheet" role="dialog" aria-modal="true">'+
-   '<div class="bd155-head">'+
-   '<div class="bd155-logo">BD</div>'+
-   '<div class="bd155-titles"><div class="bd155-t1">'+title+' · BusDirect</div><div class="bd155-t2">Thème '+(dark?'sombre':'clair')+' • carte intégrée BusDirect</div></div>'+
-   '<div class="bd155-actions">'+
-   '<a href="'+href.replace(/"/g,'&quot;')+'" target="_blank" rel="noopener noreferrer" class="bd155-btn bd155-btn-main">Ouvrir Google Maps ↗</a>'+
-   '<button id="bd155-close" class="bd155-btn">Fermer ✕</button>'+
-   '</div></div>'+
-   '<div class="bd155-mapwrap '+(dark?'dark':'')+'"><iframe src="'+embed.replace(/"/g,'&quot;')+'" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>'+
-   '<div class="bd155-foot"><span>🗺️</span><span>'+(isWalk?'Itinéraire piéton':'Itinéraire BusDirect')+'</span><span style="margin-left:auto">BusDirect · '+(dark?'sombre':'clair')+'</span></div>'+
-   '</div>';
-  document.body.appendChild(div);
-  div.addEventListener('click',function(e){ if(e.target===div) div.remove(); });
-  div.querySelector('#bd155-close').onclick=function(){div.remove()};
-  var onEsc=function(ev){ if(ev.key==='Escape'){ div.remove(); document.removeEventListener('keydown',onEsc);} };
-  document.addEventListener('keydown',onEsc);
- }
-
- document.addEventListener('click',function(e){
-  var a=e.target.closest&&e.target.closest('a[href*="google.com/maps"], a[href*="maps.google.com"], a[href*="goo.gl/maps"]');
-  if(!a) return;
-  if(a.closest('#bd-v155-maps')) return;
-  e.preventDefault();
-  var isWalk = /travelmode=walking/i.test(a.href) || a.classList.contains('bdt-walk') || a.classList.contains('bd155-walk-link') || a.classList.contains('bdt-xfer') || /dirflg=w/.test(a.href);
-  openMaps(a.href, isWalk);
- },true);
-
- function bannerText(){
-  var d=getDT();
-  return d?dayTime(d):'';
- }
-
- function ensureBanner(){
-  var all=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).filter(function(el){
-   return el.children.length===0 && (el.textContent||'').trim().toLowerCase()==='prochains parcours';
-  });
-  var h=all[0];
-  if(!h) return;
-  var existing=document.getElementById('bd155-banner');
-  var hasValue=false;
-  document.querySelectorAll('input').forEach(function(i){ if((i.value||'').trim().length>0) hasValue=true; });
-  try{
-   var f=localStorage.getItem('bd-from')||window.__bd_from;
-   var t=localStorage.getItem('bd-to')||window.__bd_to;
-   if((f&&String(f).trim())||(t&&String(t).trim())) hasValue=true;
-  }catch(e){}
-  if(!window.__bd_dtValidated || !hasValue){
-   if(existing) existing.remove();
-   return;
-  }
-  if(!existing){
-   existing=document.createElement('div');
-   existing.id='bd155-banner';
-   if(h.parentNode) h.parentNode.insertBefore(existing, h.nextSibling);
-  }
-  existing.innerHTML='<div class="ic">📅</div><div><small>Date et heure sélectionnées</small><div style="font-size:20px;font-weight:900">'+bannerText()+'</div></div>';
- }
-
- function cardOf(el){
-  var n=el;
-  while(n&&n!==document.body){
-   if(n.tagName==='BUTTON'&&/rounded-\[16px\]/.test(n.className||'')) return n;
-   n=n.parentElement;
-  }
-  return null;
- }
- function timesFromCard(card){
-  if(!card) return [null,null];
-  var big=card.querySelectorAll('.text-\\[22px\\]');
-  return [big[0]?big[0].textContent.trim():null,big[1]?big[1].textContent.trim():null];
- }
-
- function replaceTexts(){
-  var base=getDT();
-  if(!base) return;
-  var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,null);
-  var nodes=[];
-  while(walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach(function(node){
-   if(node.__bd155) return;
-   var t=(node.textContent||'').trim();
-   var isDep=/^Départ dans\s+/i.test(t);
-   var isArr=/^Arrive dans\s+/i.test(t);
-   if(!isDep && !isArr) return;
-   var card=cardOf(node.parentElement);
-   if(!card) return;
-   var times=timesFromCard(card);
-   var when=sameTime(base,times[0])||base;
-   if(isDep){
-    node.textContent='Départ le '+dayTime(when);
-   }else{
-    node.textContent='Arrivée le '+dayTime(when);
-   }
-   node.__bd155=1;
-  });
- }
-
- function decorateLive(){
-  // DEDUP GLOBAL - supprime tout doublon Vous êtes ici / 2 min à pied avant traitement
-  try{
-    document.querySelectorAll('.bdt-body, .bdt-list, .bdt-sheet').forEach(function(container){
-      var heres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
-        return /Vous êtes ici/i.test(r.textContent||'') && !r.querySelector('.bdt-tag-me');
-      });
-      var bdHeres = Array.from(container.querySelectorAll('.bd155-here'));
-      var allHeres = heres.concat(bdHeres);
-      if(allHeres.length>1){
-        for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} }
-      }
-      var walks = Array.from(container.querySelectorAll('.bdt-xfer.bdt-walk, .bd155-vous-ici-walk, a[href*="travelmode=walking"]')).filter(function(w){
-        return /min à pied/i.test(w.textContent||'');
-      });
-      if(walks.length>1){
-        for(var j=1;j<walks.length;j++){ try{walks[j].remove();}catch(e){} }
-      }
-    });
-  }catch(e){}
-
-  document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
-   var t=(tag.textContent||'').trim().toLowerCase();
-   if(t!=='votre arrêt' && t!=='votre arret') return;
-   var row=tag.closest('.bdt-row');
-   if(!row) return;
-   var list=row.parentElement;
-   if(!list) return;
-   // si déjà traité ou si un Vous êtes ici existe déjà, on nettoie juste le badge bleu et on sort
-   var alreadyHere = list.querySelector('.bd155-here');
-   var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
-   var hasHere = alreadyHere || nativeHere;
-   var hasWalk = list.querySelector('.bd155-vous-ici-walk') || Array.from(list.querySelectorAll('.bdt-xfer')).find(function(w){ return /min à pied/i.test(w.textContent||''); });
-
-   // cache le badge orange POSITION ACTUELLE sur la ligne Votre arrêt
-   row.classList.add('bd155-votre-row');
-   var tagsContainer=row.querySelector('.bdt-tags');
-   if(tagsContainer){
-     Array.from(tagsContainer.children).forEach(function(ch){
-       var tt=(ch.textContent||'').toLowerCase();
-       if(tt.includes('position actuelle')){
-         ch.classList.add('bd155-hide-blue');
-         ch.style.display='none';
-       }
-     });
-   }
-
-   if(row.__bd155Done && hasHere && hasWalk) return;
-   if(hasHere && hasWalk){
-     row.__bd155Done=1;
-     // si on a un natif et pas de bd155-here, convertit le natif
-     if(nativeHere && !alreadyHere){ nativeHere.classList.add('bd155-here'); }
-     return;
-   }
-   row.__bd155Done=1;
-
-   // --- 2) VOUS ÊTES ICI ---
-   if(!hasHere){
-     var here=document.createElement('div');
-     here.className='bdt-row bd155-here';
-     var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
-     here.style.setProperty('--acc', acc);
-     here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
-     list.insertBefore(here, row);
-   }
-
-   // --- 3) WALK ---
-   if(!hasWalk){
-     var loc=window.__bd_loc;
-     var stop=null;
-     var destLat=null,destLon=null;
-     var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
-     walkLinks.forEach(function(a){
-      try{
-       var u=new URL(a.href);
-       var d=u.searchParams.get('destination');
-       if(d&&d.includes(',')){
-        var p=d.split(',');
-        destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
-       }
-      }catch(e){}
-     });
-     if(destLat!=null) stop={lat:destLat, lon:destLon};
-     try{
-      var nameEl=row.querySelector('.bdt-name');
-      if(!stop && nameEl){
-       var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-       if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
-      }
-     }catch(e){}
-
-     var walk=document.createElement('a');
-     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
-     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
-     walk.setAttribute('target','_blank');
-     walk.setAttribute('rel','noopener noreferrer');
-     var mins=2;
-     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
-      var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-      var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-      var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-      mins=Math.max(1,Math.round(meters/80));
-     }
-     var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-     if(loc&&stop){
-       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-     } else if(stop){
-       hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-     } else if(loc){
-       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
-     }
-     walk.href=hrefWalk;
-     walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
-     walk.addEventListener('click', function(ev){
-       ev.preventDefault();
-       openMaps(this.href, true);
-     });
-     list.insertBefore(walk, row);
-   }
-  });
- }
-
-function sync(){
-
-  ensureBanner();
-  replaceTexts();
-  decorateLive();
- }
-
- var raf=0;
- function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0;sync()}) }
- new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true});
- window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,60)});
- setInterval(function(){
-  var inputs=document.querySelectorAll('input[placeholder*="Départ"], input[placeholder*="Destination"], input');
-  var empty=true;
-  var hasAny=false;
-  inputs.forEach(function(i){
-   var pl=(i.getAttribute('placeholder')||'').toLowerCase();
-   if(pl.includes('départ')||pl.includes('destination')){
-    hasAny=true;
-    if((i.value||'').trim().length>0) empty=false;
-   }
-  });
-  if(hasAny && empty){
-   var b=document.getElementById('bd155-banner');
-   if(b) b.remove();
-  }
-  sync();
- },900);
- if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',sync); else sync();
-})();
-</script>
 
 
 <script id="bd-v155-date-guard">
@@ -3262,668 +2908,296 @@ function sync(){
 </script>
 
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
-<script id="bd-v172-hyper-complex">
-/* V172 HYPER COMPLEX - Popup Google Maps walking live + texte date + bandeau + email + Trajet terminé */
-(function(){
- var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
- var MONTHS_SHORT=['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'];
- var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
- var DAYS_SHORT=['dim','lun','mar','mer','jeu','ven','sam'];
- function pad(n){return (n<10?'0':'')+n}
- function getValidatedDT(){
-  try{
-   if(!window.__bd_dtValidated) return null;
-   var dStr=window.__bd_tripDate, tStr=window.__bd_tripTime;
-   if(!dStr||!tStr) {
-     // try localStorage fallback
-     dStr=localStorage.getItem('bd-trip-date')||localStorage.getItem('bd_tripDate');
-     tStr=localStorage.getItem('bd-trip-time')||localStorage.getItem('bd_tripTime');
-   }
-   if(!dStr||!tStr) return null;
-   var dt=new Date(dStr+'T'+tStr+':00');
-   if(isNaN(dt)) return null;
-   return dt;
-  }catch(e){return null;}
- }
- function formatFull(d){
-  if(!d) return '';
-  // Ex: mardi 19 octobre à 14h05
-  return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' à '+d.getHours()+'h'+pad(d.getMinutes());
- }
- function formatShort(d){
-  if(!d) return '';
-  return d.getDate()+' '+MONTHS_SHORT[d.getMonth()]+' à '+d.getHours()+'h'+pad(d.getMinutes());
- }
- function sameTime(base, hm){
-  var m=/^(\d{1,2}):(\d{2})/.exec(String(hm||'').trim());
-  if(!m) return null;
-  var dd=new Date(base.getTime());
-  dd.setHours(+m[1],+m[2],0,0);
-  return dd;
- }
- function isPastDate(dt){
-  if(!dt) return false;
-  return dt.getTime() < (Date.now() - 2*60*1000); // 2 min tolerance
- }
 
- // ---------- CSS HYPER ----------
- function injectHyperCSS(){
-  if(document.getElementById('bd-v172-css')) return;
-  var s=document.createElement('style');
-  s.id='bd-v172-css';
+
+
+
+
+
+<script id="bd-v173-concise-popup">
+/* V173 - Popup navigation concise, graphisme BusDirect */
+(function(){
+ function injectCSS(){
+  if(document.getElementById('bd-v173-css')) return;
+  var s=document.createElement('style'); s.id='bd-v173-css';
   s.textContent=`
-  #bd-v172-popup{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(0,0,0,.52);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);animation:bd172Fade .24s ease}
-  @keyframes bd172Fade{from{opacity:0}to{opacity:1}}
-  .bd172-sheet{width:100%;max-width:980px;height:min(92dvh,900px);background:#fff;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 32px 100px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.07);animation:bd172In .38s cubic-bezier(.22,1.3,.36,1)}
-  @keyframes bd172In{from{transform:translateY(28px) scale(.96);opacity:0}to{transform:translateY(0) scale(1);opacity:1}}
-  html.dark .bd172-sheet{background:#1C1917}
-  .bd172-head{padding:14px 16px 12px 16px;border-bottom:1px solid #e7e5e4;display:flex;flex-direction:column;gap:10px;background:#fff;flex-shrink:0}
-  html.dark .bd172-head{background:#1C1917;border-color:rgba(255,255,255,.12)}
-  .bd172-head-top{display:flex;align-items:center;gap:12px}
-  .bd172-logo{width:42px;height:42px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;flex-shrink:0}
-  html.dark .bd172-logo{background:#fafafa;color:#09090b}
-  .bd172-titles{flex:1;min-width:0}
-  .bd172-t1{font-size:14.5px;font-weight:900;letter-spacing:-.02em;line-height:1.1;display:flex;align-items:center;gap:8px}
-  .bd172-live-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 6px rgba(34,197,94,.18);animation:bd172Pulse 1.6s infinite}
-  @keyframes bd172Pulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,.35)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
-  .bd172-t2{font-size:11px;opacity:.6;font-weight:600;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
-  .bd172-actions{display:flex;gap:8px;flex-shrink:0}
-  .bd172-btn{border:0;cursor:pointer;font-size:12px;font-weight:800;padding:9px 13px;border-radius:99px;background:#f4f4f5;color:#18181b;display:inline-flex;align-items:center;gap:6px;text-decoration:none;transition:transform .12s,background .12s}
-  html.dark .bd172-btn{background:#27272a;color:#fafafa}
-  .bd172-btn:hover{transform:translateY(-1px)}
-  .bd172-btn-main{background:#18181b;color:#fff}
-  html.dark .bd172-btn-main{background:#fafafa;color:#09090b}
-  .bd172-guidance{padding:12px 14px;background:#fafaf9;border-bottom:1px solid #f4f4f5;display:flex;align-items:center;gap:12px}
-  html.dark .bd172-guidance{background:#0C0A09;border-color:rgba(255,255,255,.08)}
-  .bd172-compass{width:64px;height:64px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #fff, #e7e5e4);border:2px solid #18181b;position:relative;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 20px rgba(0,0,0,.12)}
-  html.dark .bd172-compass{background:radial-gradient(circle at 30% 30%, #27272a, #18181b);border-color:#fafafa}
-  .bd172-arrow{width:0;height:0;border-left:9px solid transparent;border-right:9px solid transparent;border-bottom:22px solid #ef4444;transform-origin:50% 70%;transition:transform .25s cubic-bezier(.2,.8,.3,1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
-  .bd172-north{position:absolute;top:-8px;font-size:9px;font-weight:900;background:#18181b;color:#fff;border-radius:99px;padding:2px 5px;line-height:1}
-  .bd172-guide-text{flex:1;min-width:0}
-  .bd172-dist{font-size:22px;font-weight:900;letter-spacing:-.03em;line-height:1}
-  .bd172-instr{font-size:12.5px;font-weight:600;margin-top:4px;opacity:.85;line-height:1.25}
-  .bd172-mapwrap{flex:1;position:relative;background:#e7e5e4;overflow:hidden}
-  .bd172-mapwrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
-  .bd172-mapwrap.dark iframe{filter:invert(88%) hue-rotate(180deg) contrast(92%) brightness(104%)}
-  .bd172-overlay{position:absolute;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-  .bd172-chip{pointer-events:auto;background:rgba(24,24,27,.92);color:#fff;padding:10px 12px;border-radius:14px;font-size:11.5px;font-weight:700;display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  html.dark .bd172-chip{background:rgba(250,250,250,.92);color:#09090b}
-  .bd172-foot{padding:10px 14px;border-top:1px solid #f4f4f5;display:flex;align-items:center;gap:10px;font-size:11px;opacity:.7;flex-shrink:0}
-  html.dark .bd172-foot{border-color:rgba(255,255,255,.08)}
-  .bd172-banner{margin:12px 16px;padding:18px 18px;border-radius:22px;background:#18181b;color:#fff;font-weight:900;font-size:22px;letter-spacing:-.02em;line-height:1.15;display:flex;align-items:center;gap:14px;box-shadow:0 14px 32px rgba(0,0,0,.24);animation:bd172Banner .34s ease;position:relative;z-index:30}
-  html.dark .bd172-banner{background:#fafafa;color:#09090b}
-  @keyframes bd172Banner{from{transform:translateY(-12px);opacity:0}to{transform:translateY(0);opacity:1}}
-  .bd172-banner small{font-size:11px;font-weight:800;opacity:.65;text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px}
-  .bd172-banner .ic{width:52px;height:52px;border-radius:16px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-  html.dark .bd172-banner .ic{background:rgba(0,0,0,.08)}
-  .bd172-date-badge{display:inline-flex;align-items:center;gap:6px;margin-left:10px;padding:4px 9px;border-radius:99px;background:#18181b;color:#fff;font-size:10px;font-weight:800;letter-spacing:.02em;vertical-align:middle}
-  html.dark .bd172-date-badge{background:#fafafa;color:#09090b}
-  .bd172-email-modal{position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px)}
-  .bd172-email-sheet{width:100%;max-width:520px;background:#fff;border-radius:24px;padding:20px;box-shadow:0 24px 80px rgba(0,0,0,.4)}
-  html.dark .bd172-email-sheet{background:#1C1917;color:#fafafa}
+  #bd-v173-popup{position:fixed;inset:0;z-index:999999;display:flex;align-items:flex-end;justify-content:center;padding:0;background:rgba(0,0,0,.42);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);animation:bd173Fade .2s ease}
+  @media(min-width:640px){#bd-v173-popup{align-items:center;padding:18px}}
+  @keyframes bd173Fade{from{opacity:0}to{opacity:1}}
+  .bd173-sheet{width:100%;max-width:520px;height:min(88dvh,760px);max-height:100dvh;background:#fff;border-radius:28px 28px 0 0;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 -20px 80px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.06);animation:bd173In .36s cubic-bezier(.22,1.25,.3,1)}
+  @media(min-width:640px){.bd173-sheet{border-radius:28px;height:min(84dvh,760px)}}
+  @keyframes bd173In{from{transform:translateY(28px)}to{transform:translateY(0)}}
+  html.dark .bd173-sheet{background:#1C1917}
+  .bd173-drag{width:36px;height:5px;border-radius:99px;background:#e7e5e4;margin:10px auto 0 auto;flex-shrink:0}
+  html.dark .bd173-drag{background:#3f3f46}
+  .bd173-head{padding:12px 14px 10px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .bd173-ava{width:36px;height:36px;border-radius:12px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px;flex-shrink:0}
+  html.dark .bd173-ava{background:#fafafa;color:#09090b}
+  .bd173-hmid{flex:1;min-width:0}
+  .bd173-fromto{font-size:13px;font-weight:800;letter-spacing:-.02em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bd173-sub{font-size:10.5px;font-weight:600;opacity:.55;margin-top:2px;display:flex;gap:6px;align-items:center}
+  .bd173-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.18)}
+  .bd173-head-actions{display:flex;gap:6px}
+  .bd173-iconbtn{width:34px;height:34px;border-radius:99px;border:0;background:#f4f4f5;color:#18181b;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:800;transition:transform .12s}
+  html.dark .bd173-iconbtn{background:#27272a;color:#fafafa}
+  .bd173-iconbtn:active{transform:scale(.94)}
+  .bd173-map{flex:1;position:relative;background:#f4f4f5;overflow:hidden}
+  .bd173-map iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+  .bd173-map.dark iframe{filter:invert(88%) hue-rotate(180deg) contrast(92%) brightness(104%)}
+  .bd173-livecard{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(255,255,255,.96);backdrop-filter:blur(12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px;box-shadow:0 12px 32px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.06);border:1px solid rgba(0,0,0,.04)}
+  html.dark .bd173-livecard{background:rgba(28,25,23,.96);border-color:rgba(255,255,255,.08)}
+  .bd173-compass{width:44px;height:44px;border-radius:50%;background:#fff;border:1.5px solid #18181b;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  html.dark .bd173-compass{background:#18181b;border-color:#fafafa}
+  .bd173-arrow{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #ef4444;transform-origin:50% 65%;transition:transform .2s ease}
+  .bd173-live-mid{flex:1;min-width:0}
+  .bd173-dist{font-size:15px;font-weight:900;letter-spacing:-.02em;line-height:1}
+  .bd173-eta{font-size:11px;font-weight:700;opacity:.6;margin-top:2px}
+  .bd173-go{height:36px;padding:0 14px;border-radius:99px;border:0;background:#18181b;color:#fff;font-size:12px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+  html.dark .bd173-go{background:#fafafa;color:#09090b}
+  .bd173-footbar{padding:8px 12px 14px 12px;display:flex;gap:8px;flex-shrink:0;background:#fff;border-top:1px solid #f4f4f5}
+  html.dark .bd173-footbar{background:#1C1917;border-color:rgba(255,255,255,.08)}
+  .bd173-chip{flex:1;height:38px;border-radius:99px;border:0;background:#f4f4f5;color:#18181b;font-size:11.5px;font-weight:750;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;text-decoration:none}
+  html.dark .bd173-chip{background:#27272a;color:#fafafa}
+  .bd173-chip-main{background:#18181b;color:#fff}
+  html.dark .bd173-chip-main{background:#fafafa;color:#09090b}
   `;
   document.head.appendChild(s);
- }
-
- // ---------- POPUP HYPER MAP ----------
- var watchId=null, orientHandler=null, lastPos=null, destPos=null, originPos=null, headingDevice=null, popupEl=null;
-
- function bearingBetween(a,b){
-  if(!a||!b) return 0;
-  var toRad=Math.PI/180, toDeg=180/Math.PI;
-  var lat1=a.lat*toRad, lon1=a.lon*toRad, lat2=b.lat*toRad, lon2=b.lon*toRad;
-  var dLon=lon2-lon1;
-  var y=Math.sin(dLon)*Math.cos(lat2);
-  var x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
-  var br=Math.atan2(y,x)*toDeg;
-  return (br+360)%360;
- }
- function distBetween(a,b){
-  if(!a||!b) return null;
-  var R=6371000, toRad=Math.PI/180;
-  var dLat=(b.lat-a.lat)*toRad, dLon=(b.lon-a.lon)*toRad;
-  var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*toRad)*Math.cos(b.lat*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2);
-  var c=2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-  return R*c;
  }
 
  function buildEmbedUrl(href){
   try{
    var u=new URL(href, location.origin);
-   var origin=u.searchParams.get('origin')||'';
-   var dest=u.searchParams.get('destination')||u.searchParams.get('query')||'';
+   var o=u.searchParams.get('origin')||'', d=u.searchParams.get('destination')||u.searchParams.get('query')||'';
    var mode=u.searchParams.get('travelmode')||'';
-   if(origin && dest){
-    var dirflg = mode==='walking' ? 'w' : (mode==='transit' ? 'r' : '');
-    // Use maps.google.com for embed, more stable
-    return 'https://maps.google.com/maps?saddr='+encodeURIComponent(origin)+'&daddr='+encodeURIComponent(dest)+'&dirflg='+dirflg+'&output=embed&hl=fr&z=18';
-   } else if(dest){
-    return 'https://maps.google.com/maps?q='+encodeURIComponent(dest)+'&output=embed&hl=fr&z=18';
-   } else if(origin){
-    return 'https://maps.google.com/maps?q='+encodeURIComponent(origin)+'&output=embed&hl=fr&z=18';
-   }
+   if(o&&d){ var dirflg=mode==='walking'?'w':''; return 'https://maps.google.com/maps?saddr='+encodeURIComponent(o)+'&daddr='+encodeURIComponent(d)+'&dirflg='+dirflg+'&output=embed&hl=fr&z=18'; }
+   if(d) return 'https://maps.google.com/maps?q='+encodeURIComponent(d)+'&output=embed&hl=fr&z=18';
   }catch(e){}
-  var embed=href;
-  embed=embed.replace(/\/maps\/maps\//g,'/maps/');
-  embed=embed.replace(/\/maps\/maps\?/g,'/maps?');
-  if(!embed.includes('output=embed')){
-   embed += (embed.includes('?')?'&':'?')+'output=embed';
-  }
-  embed=embed.replace('https://www.google.com/maps','https://maps.google.com/maps');
-  return embed;
+  var embed=href.replace(/\\/maps\\/maps\\//g,'/maps/'); if(!embed.includes('output=embed')) embed+=(embed.includes('?')?'&':'?')+'output=embed'; return embed.replace('https://www.google.com/maps','https://maps.google.com/maps');
  }
-
- function parseCoordsFromHref(href){
-  try{
-   var u=new URL(href, location.origin);
-   var o=u.searchParams.get('origin'), d=u.searchParams.get('destination')||u.searchParams.get('query');
-   function parse(s){ if(!s) return null; var parts=s.split(','); if(parts.length>=2){ var la=parseFloat(parts[0]), lo=parseFloat(parts[1]); if(!isNaN(la)&&!isNaN(lo)) return {lat:la,lon:lo}; } return null; }
-   return {origin:parse(o), dest:parse(d)};
-  }catch(e){return {origin:null,dest:null};}
+ function parseCoords(href){
+  try{ var u=new URL(href, location.origin); var o=u.searchParams.get('origin'), dd=u.searchParams.get('destination')||u.searchParams.get('query'); function p(s){ if(!s) return null; var a=s.split(','); if(a.length>=2){ var la=parseFloat(a[0]), lo=parseFloat(a[1]); if(!isNaN(la)&&!isNaN(lo)) return {lat:la,lon:lo}; } return null; } return {origin:p(o),dest:p(dd)}; }catch(e){return {origin:null,dest:null};}
  }
+ function dist(a,b){ if(!a||!b) return null; var R=6371000,toRad=Math.PI/180; var dLat=(b.lat-a.lat)*toRad,dLon=(b.lon-a.lon)*toRad; var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*toRad)*Math.cos(b.lat*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2); return 2*R*Math.asin(Math.sqrt(aa)); }
+ function bearing(a,b){ if(!a||!b) return 0; var toRad=Math.PI/180,toDeg=180/Math.PI; var lat1=a.lat*toRad,lon1=a.lon*toRad,lat2=b.lat*toRad,lon2=b.lon*toRad; var dLon=lon2-lon1; var y=Math.sin(dLon)*Math.cos(lat2); var x=Math.cos(lat1)*Math.sin(lat2)-Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon); return (Math.atan2(y,x)*toDeg+360)%360; }
 
- function openHyperPopup(href, meta){
-  injectHyperCSS();
-  // cleanup old
-  var old=document.getElementById('bd-v172-popup'); if(old) old.remove();
-  var old155=document.getElementById('bd-v155-maps'); if(old155) old155.remove();
-  var coords=parseCoordsFromHref(href);
-  originPos=coords.origin; destPos=coords.dest;
-  if(!destPos && meta && meta.lat) destPos={lat:meta.lat,lon:meta.lon};
-  if(!originPos && window.__bd_loc) originPos={lat:window.__bd_loc.lat, lon:window.__bd_loc.lon};
+ var watchId=null, headingDev=null, lastPos=null, destPos=null;
 
-  var dark=document.documentElement.classList.contains('dark')||document.documentElement.dataset.theme==='dark';
+ function openPopup(href, meta){
+  injectCSS();
+  document.getElementById('bd-v173-popup')?.remove();
+  document.getElementById('bd-v172-popup')?.remove();
+  document.getElementById('bd-v155-maps')?.remove();
+  var coords=parseCoords(href); var origin=coords.origin, dest=coords.dest;
+  if(!dest && meta?.lat) dest={lat:meta.lat,lon:meta.lon};
+  if(!origin && window.__bd_loc) origin={lat:window.__bd_loc.lat,lon:window.__bd_loc.lon};
+  destPos=dest;
+  var dark=document.documentElement.classList.contains('dark');
+  var shortDest = dest ? dest.lat.toFixed(4)+','+dest.lon.toFixed(4) : (meta?.name||'Destination');
+  var shortOrig = origin ? origin.lat.toFixed(4)+','+origin.lon.toFixed(4) : 'Moi';
   var embed=buildEmbedUrl(href);
-  var isWalk = /travelmode=walking/i.test(href) || /dirflg=w/i.test(embed) || (meta&&meta.isWalk);
 
-  var dt=getValidatedDT();
-  var bannerTxt= dt ? formatFull(dt) : '';
-
-  var popup=document.createElement('div');
-  popup.id='bd-v172-popup';
-  popup.innerHTML=`
-  <div class="bd172-sheet" role="dialog" aria-modal="true">
-   <div class="bd172-head">
-    <div class="bd172-head-top">
-     <div class="bd172-logo">BD</div>
-     <div class="bd172-titles">
-      <div class="bd172-t1"><span class="bd172-live-dot"></span>${isWalk?'Navigation à pied · Guidage en direct':'Google Maps · BusDirect'}</div>
-      <div class="bd172-t2"><span>🧭 Boussole active</span><span>📍 ${originPos?originPos.lat.toFixed(5)+','+originPos.lon.toFixed(5):'Origine'} → ${destPos?destPos.lat.toFixed(5)+','+destPos.lon.toFixed(5):'Destination'}</span>${bannerTxt?'<span>📅 '+bannerTxt+'</span>':''}</div>
-     </div>
-     <div class="bd172-actions">
-      <button class="bd172-btn" id="bd172-email-btn">✉️ Envoyer</button>
-      <a href="${href.replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer" class="bd172-btn bd172-btn-main">Google Maps ↗</a>
-      <button class="bd172-btn" id="bd172-close">Fermer ✕</button>
-     </div>
+  var div=document.createElement('div'); div.id='bd-v173-popup';
+  div.innerHTML=`
+  <div class="bd173-sheet" role="dialog" aria-modal="true">
+   <div class="bd173-drag"></div>
+   <div class="bd173-head">
+    <div class="bd173-ava">🚶</div>
+    <div class="bd173-hmid">
+     <div class="bd173-fromto">${shortOrig} → ${shortDest}</div>
+     <div class="bd173-sub"><span class="bd173-dot"></span><span id="bd173-subtxt">À pied · Live</span></div>
     </div>
-    <div class="bd172-guidance" id="bd172-guidance">
-     <div class="bd172-compass" id="bd172-compass"><span class="bd172-north">N</span><div class="bd172-arrow" id="bd172-arrow"></div></div>
-     <div class="bd172-guide-text">
-      <div class="bd172-dist" id="bd172-dist">Calcul en cours...</div>
-      <div class="bd172-instr" id="bd172-instr">Activez la localisation pour le guidage en direct avec sens de la marche. La flèche indique la direction à suivre.</div>
-     </div>
-     <button class="bd172-btn bd172-btn-main" id="bd172-start-live">▶️ Démarrer guidage</button>
-     <button class="bd172-btn" id="bd172-recenter">Recentrer</button>
+    <div class="bd173-head-actions">
+     <button class="bd173-iconbtn" id="bd173-close">✕</button>
     </div>
    </div>
-   <div class="bd172-mapwrap ${dark?'dark':''}" id="bd172-mapwrap"><iframe id="bd172-iframe" src="${embed.replace(/"/g,'&quot;')}" loading="eager" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
-    <div class="bd172-overlay">
-     <div class="bd172-chip" id="bd172-chip-speed">🚶 Vitesse: -- km/h · Précision: -- m</div>
-     <div class="bd172-chip" id="bd172-chip-eta">⏱️ ETA: calcul...</div>
+   <div class="bd173-map ${dark?'dark':''}">
+    <iframe src="${embed}" loading="eager" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe>
+    <div class="bd173-livecard">
+     <div class="bd173-compass"><div class="bd173-arrow" id="bd173-arrow"></div></div>
+     <div class="bd173-live-mid">
+      <div class="bd173-dist" id="bd173-dist">— m</div>
+      <div class="bd173-eta" id="bd173-eta">Boussole · Cap --°</div>
+     </div>
+     <button class="bd173-go" id="bd173-go">▶ Go</button>
     </div>
    </div>
-   <div class="bd172-foot"><span>🗺️ Reprend 100% Google Maps + guidage natif BusDirect</span><span style="margin-left:auto">Thème ${dark?'sombre':'clair'} · Capteur d'orientation actif</span></div>
+   <div class="bd173-footbar">
+    <a href="${href}" target="_blank" rel="noopener noreferrer" class="bd173-chip bd173-chip-main">Google Maps ↗</a>
+    <button class="bd173-chip" id="bd173-email">✉️ E-mail</button>
+    <button class="bd173-chip" id="bd173-recenter">Recentrer</button>
+   </div>
   </div>`;
-  document.body.appendChild(popup);
-  popupEl=popup;
+  document.body.appendChild(div);
 
-  var closeFn=function(){ 
-   if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} watchId=null; }
-   if(orientHandler){ window.removeEventListener('deviceorientation', orientHandler); window.removeEventListener('deviceorientationabsolute', orientHandler); orientHandler=null; }
-   popup.remove(); popupEl=null;
-   document.removeEventListener('keydown', escHandler);
-  };
-  popup.addEventListener('click', function(e){ if(e.target===popup) closeFn(); });
-  popup.querySelector('#bd172-close').onclick=closeFn;
-  var escHandler=function(ev){ if(ev.key==='Escape') closeFn(); };
-  document.addEventListener('keydown', escHandler);
+  var close=()=>{ if(watchId!=null){ try{navigator.geolocation.clearWatch(watchId);}catch(e){} } div.remove(); document.removeEventListener('keydown', esc); };
+  div.addEventListener('click', e=>{ if(e.target===div) close(); });
+  div.querySelector('#bd173-close').onclick=close;
+  var esc=e=>{ if(e.key==='Escape') close(); }; document.addEventListener('keydown', esc);
 
-  // Email
-  popup.querySelector('#bd172-email-btn').onclick=function(){ openEmailModal(href, meta, originPos, destPos); };
+  // email
+  div.querySelector('#bd173-email').onclick=()=>{ if(window.__bd_openEmail) window.__bd_openEmail(href, meta, origin, dest); };
+  div.querySelector('#bd173-recenter').onclick=()=>{ var ifr=div.querySelector('iframe'); if(ifr) ifr.src=buildEmbedUrl(href)+'&t='+Date.now(); };
 
-  // Recenter
-  popup.querySelector('#bd172-recenter').onclick=function(){
-   var iframe=document.getElementById('bd172-iframe');
-   if(iframe){ iframe.src=buildEmbedUrl(href)+'&'+Date.now(); }
-  };
+  var goBtn=div.querySelector('#bd173-go');
+  var distEl=div.querySelector('#bd173-dist');
+  var etaEl=div.querySelector('#bd173-eta');
+  var subEl=div.querySelector('#bd173-subtxt');
+  var arrow=div.querySelector('#bd173-arrow');
 
-  // Live guidance
-  var startBtn=document.getElementById('bd172-start-live');
-  function startLive(){
-   if(!navigator.geolocation){ 
-    document.getElementById('bd172-instr').textContent='Géolocalisation non disponible sur ce navigateur.';
-    return;
-   }
-   startBtn.textContent='⏸️ En pause';
-   startBtn.onclick=stopLive;
-   var opts={enableHighAccuracy:true, maximumAge:0, timeout:15000};
-   watchId=navigator.geolocation.watchPosition(onPos, onPosError, opts);
-   // orientation
-   orientHandler=function(ev){
-    var heading=null;
-    if(typeof ev.webkitCompassHeading==='number'){ heading=ev.webkitCompassHeading; }
-    else if(typeof ev.alpha==='number'){ heading=360-ev.alpha; }
-    if(heading!=null){ headingDevice=heading; updateCompass(); }
-   };
-   window.addEventListener('deviceorientation', orientHandler, true);
-   window.addEventListener('deviceorientationabsolute', orientHandler, true);
-   if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission==='function'){
-    DeviceOrientationEvent.requestPermission().then(function(state){ if(state==='granted'){ /* already listening */ } }).catch(function(){});
-   }
-  }
-  function stopLive(){
-   if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; }
-   startBtn.textContent='▶️ Démarrer guidage';
-   startBtn.onclick=startLive;
-   document.getElementById('bd172-instr').textContent='Guidage en pause. Relancez pour reprendre.';
-  }
-  startBtn.onclick=startLive;
-
-  function onPos(pos){
-   lastPos={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy, speed:pos.coords.speed, heading:pos.coords.heading};
-   updateGuidance();
-  }
-  function onPosError(err){
-   document.getElementById('bd172-instr').textContent='Erreur GPS: '+err.message+' – Vérifiez l’autorisation de localisation.';
-  }
-  function updateGuidance(){
+  function updateLive(){
    if(!lastPos||!destPos) return;
-   var dist=distBetween(lastPos, destPos);
-   var bear=bearingBetween(lastPos, destPos);
-   var walkSpeed= lastPos.speed && lastPos.speed>0 ? lastPos.speed*3.6 : 4.5; // km/h
-   var etaMin = dist ? (dist/1000)/walkSpeed*60 : null;
-
-   var distEl=document.getElementById('bd172-dist');
-   var instrEl=document.getElementById('bd172-instr');
-   var speedEl=document.getElementById('bd172-chip-speed');
-   var etaEl=document.getElementById('bd172-chip-eta');
-
-   if(dist!=null){
-    if(dist<25){
-     distEl.textContent='🎉 Arrivé à destination !';
-     instrEl.textContent='Vous êtes arrivé à moins de 25 mètres. Trajet à pied terminé.';
-     etaEl.textContent='✅ Trajet terminé';
-     try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){}
-    } else if(dist<1000){
-     distEl.textContent=Math.round(dist)+' m restants';
-     var dirText=bear>=337.5||bear<22.5?'Continuez tout droit vers le nord':bear<67.5?'Direction nord-est':bear<112.5?'Direction est':bear<157.5?'Direction sud-est':bear<202.5?'Direction sud':bear<247.5?'Direction sud-ouest':bear<292.5?'Direction ouest':'Direction nord-ouest';
-     instrEl.textContent=dirText+' · Cap '+Math.round(bear)+'° · Suivez la flèche rouge (sens de la marche).';
-     etaEl.textContent='⏱️ ETA: ~'+Math.max(1,Math.round(etaMin))+' min à pied';
-    } else {
-     distEl.textContent=(dist/1000).toFixed(2)+' km restants';
-     instrEl.textContent='Cap '+Math.round(bear)+'° · Distance importante, suivez l’itinéraire Google Maps ci-dessous. La boussole vous guide en direct.';
-     etaEl.textContent='⏱️ ETA: ~'+Math.max(1,Math.round(etaMin))+' min';
-    }
-    speedEl.textContent='🚶 Vitesse: '+walkSpeed.toFixed(1)+' km/h · Précision: ±'+Math.round(lastPos.acc||0)+' m · Cap GPS: '+(lastPos.heading!=null?Math.round(lastPos.heading)+'°':'--');
-   }
-   updateCompass();
-  }
-  function updateCompass(){
-   if(!lastPos||!destPos) return;
-   var targetBear=bearingBetween(lastPos, destPos);
-   var deviceHeading= headingDevice!=null ? headingDevice : (lastPos.heading!=null ? lastPos.heading : 0);
-   var arrowRot= targetBear - deviceHeading;
-   var arrow=document.getElementById('bd172-arrow');
-   if(arrow) arrow.style.transform='rotate('+arrowRot+'deg)';
+   var d=dist(lastPos,destPos);
+   var br=bearing(lastPos,destPos);
+   var speed= lastPos.speed>0 ? lastPos.speed*3.6 : 4.5;
+   var eta = d ? (d/1000)/speed*60 : 0;
+   if(d<30){ distEl.textContent='Arrivé'; etaEl.textContent='✅ 0 m'; subEl.textContent='Terminé'; try{navigator.vibrate?.([120,60,120])}catch(e){} return; }
+   distEl.textContent= d<1000 ? Math.round(d)+' m' : (d/1000).toFixed(1)+' km';
+   etaEl.textContent= Math.max(1,Math.round(eta))+' min · '+Math.round(br)+'°';
+   subEl.textContent= d<1000 ? 'À pied · '+Math.round(br)+'°' : 'À pied';
+   var devHead= headingDev!=null ? headingDev : (lastPos.heading||0);
+   var rot= br - devHead;
+   if(arrow) arrow.style.transform='rotate('+rot+'deg)';
   }
 
-  // Auto start if permission already granted
-  setTimeout(function(){ 
-   try{ navigator.geolocation.getCurrentPosition(function(p){ lastPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy}; updateGuidance(); }, function(){}, {enableHighAccuracy:true, timeout:5000}); }catch(e){}
-  }, 400);
+  function start(){
+   if(!navigator.geolocation){ etaEl.textContent='GPS indisponible'; return; }
+   goBtn.textContent='⏸';
+   goBtn.onclick=stop;
+   watchId=navigator.geolocation.watchPosition(p=>{
+     lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading};
+     updateLive();
+   }, err=>{ etaEl.textContent='GPS: '+err.message; }, {enableHighAccuracy:true,maximumAge:0,timeout:12000});
+   var hdl=e=>{ var hd=null; if(typeof e.webkitCompassHeading==='number') hd=e.webkitCompassHeading; else if(typeof e.alpha==='number') hd=360-e.alpha; if(hd!=null){ headingDev=hd; updateLive(); } };
+   window.addEventListener('deviceorientation', hdl, true);
+   window.addEventListener('deviceorientationabsolute', hdl, true);
+   if(window.DeviceOrientationEvent?.requestPermission) DeviceOrientationEvent.requestPermission().catch(()=>{});
+   try{ navigator.geolocation.getCurrentPosition(p=>{ lastPos={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,speed:p.coords.speed,heading:p.coords.heading}; updateLive(); }, ()=>{}, {enableHighAccuracy:true}); }catch(e){}
+  }
+  function stop(){ if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; } goBtn.textContent='▶ Go'; goBtn.onclick=start; subEl.textContent='Pause'; }
+  goBtn.onclick=start;
  }
 
- // ---------- EMAIL TRAJET ----------
- function collectTripDetails(){
-  var details={};
+ // expose email opener from previous V172
+ window.__bd_openPopupV173 = openPopup;
+
+ // interception walking links concise
+ document.addEventListener('click', function(e){
+  var a=e.target.closest && e.target.closest('a[href*="google.com/maps"], a[href*="maps.google.com"]');
+  if(!a) return;
+  if(a.closest('#bd-v173-popup')||a.closest('.bd172-email-modal')||a.closest('#bd-v172-popup')) return;
+  var txt=(a.textContent||'').toLowerCase()+' '+(a.className||'').toLowerCase()+' '+a.href.toLowerCase();
+  var isWalk = txt.includes('pied')||txt.includes('walk')||txt.includes('bdt-walk')||txt.includes('travelmode=walking')||txt.includes('dirflg=w');
+  if(!isWalk) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  openPopup(a.href, {lat:null,name:a.textContent.trim()});
+ }, true);
+
+ console.log('V173 concise popup loaded');
+})();
+</script>
+
+
+<script id="bd-v172-email-keep">
+/* Email vertical + transit link - kept for V173 */
+(function(){
+ function buildTransitGoogleMapsLink(d, originPos, destPos){
   try{
-   details.from=localStorage.getItem('bd-from')||window.__bd_from||document.querySelector('input[placeholder*="Départ"]')?.value||'Départ non renseigné';
-   details.to=localStorage.getItem('bd-to')||window.__bd_to||document.querySelector('input[placeholder*="Destination"]')?.value||'Destination non renseignée';
-   var dt=getValidatedDT();
-   details.date= dt ? formatFull(dt) : 'Maintenant (direct)';
-   // Parse stops from DOM
-   var stops=[];
-   document.querySelectorAll('.bdt-name').forEach(function(el){ var t=(el.textContent||'').trim(); if(t && t.length>2 && !t.includes('Vous êtes ici')) stops.push(t); });
-   details.stops=stops.slice(0,30);
-   // Correspondances
-   var corres=[];
-   document.querySelectorAll('.bdt-xfer').forEach(function(el){ var t=(el.textContent||'').replace(/\s+/g,' ').trim(); if(t) corres.push(t); });
-   details.corres=corres;
+   var origin = originPos? originPos.lat+','+originPos.lon : (d.from||'');
+   var destination = destPos? destPos.lat+','+destPos.lon : (d.to||'');
+   var base='https://www.google.com/maps/dir/?api=1';
+   var params=[];
+   if(origin) params.push('origin='+encodeURIComponent(origin));
+   if(destination) params.push('destination='+encodeURIComponent(destination));
+   var wps=[];
+   if(d.stops && d.stops.length>2){
+     for(var i=1;i<d.stops.length-1 && wps.length<9;i++){
+       var s=d.stops[i]; var name=s.name||s.full||''; if(name) wps.push(name);
+     }
+   }
+   if(wps.length>0) params.push('waypoints='+encodeURIComponent(wps.join('|')));
+   params.push('travelmode=transit'); params.push('dir_action=navigate');
+   return base+'&'+params.join('&');
+  }catch(e){ return 'https://www.google.com/maps/dir/?api=1&travelmode=transit'; }
+ }
+ function collectFullTripDetails(cardEl){
+  var details={from:'',to:'',date:'',stops:[],correspondances:[],walkSegments:[]};
+  try{
+   details.from=localStorage.getItem('bd-from')||window.__bd_from||document.querySelector('input[placeholder*="Départ"]')?.value||'Départ';
+   details.to=localStorage.getItem('bd-to')||window.__bd_to||document.querySelector('input[placeholder*="Destination"]')?.value||'Destination';
+   var dt=null;
+   try{ if(window.__bd_dtValidated && window.__bd_tripDate && window.__bd_tripTime){ dt=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00'); } }catch(e){}
+   details.date= dt ? dt.toLocaleString('fr-FR') : 'Maintenant';
+   var root = cardEl ? cardEl.closest('button')||cardEl : document;
+   var allRows=[];
+   (root.querySelectorAll ? root.querySelectorAll('.bdt-row, .bdt-xfer') : document.querySelectorAll('.bdt-row, .bdt-xfer')).forEach(function(row){
+     var name=row.querySelector('.bdt-name'); var txt=(row.textContent||'').replace(/\s+/g,' ').trim(); if(!txt) return; if(txt.includes('Vous êtes ici')) return;
+     allRows.push({name:name?name.textContent.trim():txt, full:txt});
+   });
+   if(allRows.length===0){ document.querySelectorAll('.bdt-name').forEach(function(el){ var t=(el.textContent||'').trim(); if(t) allRows.push({name:t, full:t}); }); }
+   allRows.forEach(function(r){ if(/Marche à pied|min à pied/i.test(r.full)) details.walkSegments.push(r.full); else details.stops.push(r); });
+   document.querySelectorAll('.bdt-xfer').forEach(function(el){ var t=(el.textContent||'').replace(/\s+/g,' ').trim(); if(t && !details.correspondances.includes(t)) details.correspondances.push(t); });
   }catch(e){}
   return details;
  }
- function openEmailModal(href, meta, originPos, destPos){
-  var d=collectTripDetails();
-  var body=`Bonjour,
-
-Voici mon trajet BusDirect :
-
-📍 Départ: ${d.from}
-🏁 Arrivée: ${d.to}
-📅 Date: ${d.date}
-
-🗺️ Lien Google Maps à pied:
-${href}
-
-Origine: ${originPos?originPos.lat+','+originPos.lon:'-'}
-Destination: ${destPos?destPos.lat+','+destPos.lon:'-'}
-
-Étapes / Arrêts:
-${d.stops.map(function(s,i){return (i+1)+'. '+s}).join('\n')}
-
-Correspondances / Marche:
-${d.corres.join('\n')}
-
-Envoyé depuis BusDirect – Guidage à pied en direct.
-
-`;
+ function buildEmailBodyVertical(d, href, originPos, destPos){
+  var transitLink = buildTransitGoogleMapsLink(d, originPos, destPos);
+  var lines=[];
+  lines.push('═══════════════════════════════════════');
+  lines.push('   🚌 TRAJET BUSDIRECT');
+  lines.push('═══════════════════════════════════════');
+  lines.push('');
+  lines.push('📍 ITINÉRAIRE');
+  lines.push('De: '+d.from); lines.push('À: '+d.to); lines.push('Date: '+d.date);
+  lines.push('Transit: '+transitLink); lines.push('Marche: '+href); lines.push('');
+  lines.push('🚏 ARRÊTS (vertical)');
+  d.stops.forEach(function(s,i){ lines.push((i+1)+'. '+(s.name||s.full)); });
+  lines.push('');
+  lines.push('🚶 MARCHE'); lines.push(d.walkSegments.join('\n')||'—');
+  lines.push('');
+  lines.push('🔄 CORRESPONDANCES'); lines.push(d.correspondances.join('\n')||'Direct');
+  lines.push('');
+  lines.push('Généré '+new Date().toLocaleString('fr-FR')+' – BusDirect');
+  return lines.join('\n');
+ }
+ window.__bd_openEmail = function(href, meta, originPos, destPos){
+  var card=meta&&meta.cardEl ? meta.cardEl : null;
+  var d=collectFullTripDetails(card);
+  var transitLink=buildTransitGoogleMapsLink(d, originPos, destPos);
+  var body=buildEmailBodyVertical(d, href, originPos, destPos);
   var div=document.createElement('div');
-  div.className='bd172-email-modal';
-  div.innerHTML=`<div class="bd172-email-sheet"><div style="font-size:18px;font-weight:900;margin-bottom:8px">✉️ Envoyer le trajet par e-mail</div><div style="font-size:12.5px;opacity:.7;margin-bottom:12px;line-height:1.4">Envoi via votre client e-mail avec tous les détails du parcours et changements de correspondance.</div><label style="font-size:11px;font-weight:800;text-transform:uppercase;opacity:.6">Destinataire</label><input id="bd172-email-to" type="email" placeholder="nom@exemple.com" style="width:100%;margin:6px 0 12px 0;padding:12px 14px;border-radius:12px;border:1px solid #e7e5e4;font-size:13px"><label style="font-size:11px;font-weight:800;text-transform:uppercase;opacity:.6">Message (pré-rempli)</label><textarea id="bd172-email-body" style="width:100%;height:220px;margin:6px 0 14px 0;padding:12px 14px;border-radius:12px;border:1px solid #e7e5e4;font-size:12px;line-height:1.4;resize:vertical">${body.replace(/</g,'&lt;')}</textarea><div style="display:flex;gap:8px"><button id="bd172-email-send" class="bd172-btn bd172-btn-main" style="flex:1;justify-content:center;height:44px">Envoyer via e-mail</button><button id="bd172-email-cancel" class="bd172-btn" style="flex:1;justify-content:center;height:44px">Fermer</button></div></div>`;
+  div.style.cssText='position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(10px)';
+  div.innerHTML=`<div style="width:100%;max-width:540px;max-height:90dvh;overflow:auto;background:#fff;border-radius:24px;padding:18px;box-shadow:0 24px 80px rgba(0,0,0,.4);font-family:system-ui,sans-serif"><div style="font-size:16px;font-weight:900;margin-bottom:10px">✉️ Trajet – vertical</div><div style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px"><a href="${transitLink}" target="_blank" style="padding:10px 14px;background:#18181b;color:#fff;border-radius:99px;text-decoration:none;font-weight:800;font-size:12px;text-align:center">🚌🚆 Ouvrir Bus+Train dans Google Maps</a><a href="${href}" target="_blank" style="padding:8px 12px;background:#f4f4f5;color:#18181b;border-radius:99px;text-decoration:none;font-weight:700;font-size:11px;text-align:center">🚶 Marche à pied</a></div><label style="font-size:11px;font-weight:800;opacity:.6">DESTINATAIRE</label><input id="bd-email-to" type="email" placeholder="nom@exemple.com" style="width:100%;margin:6px 0 10px 0;padding:11px 12px;border-radius:12px;border:1px solid #e7e5e4"><label style="font-size:11px;font-weight:800;opacity:.6">MESSAGE VERTICAL</label><textarea id="bd-email-body" style="width:100%;height:260px;margin:6px 0 12px 0;padding:12px;border-radius:12px;border:1px solid #e7e5e4;font-size:11px;line-height:1.4;font-family:monospace">${body.replace(/</g,'&lt;')}</textarea><div style="display:flex;gap:8px"><button id="bd-email-send" style="flex:1;height:42px;border-radius:99px;border:0;background:#18181b;color:#fff;font-weight:800">Envoyer</button><button id="bd-email-cancel" style="flex:1;height:42px;border-radius:99px;border:0;background:#f4f4f5;font-weight:800">Fermer</button></div></div>`;
   document.body.appendChild(div);
-  div.addEventListener('click', function(e){ if(e.target===div) div.remove(); });
-  div.querySelector('#bd172-email-cancel').onclick=function(){div.remove()};
-  div.querySelector('#bd172-email-send').onclick=function(){
-   var to=div.querySelector('#bd172-email-to').value.trim();
-   var b=div.querySelector('#bd172-email-body').value;
-   var subject=encodeURIComponent('Trajet BusDirect – '+d.from+' → '+d.to+' – '+d.date);
-   var mailto='mailto:'+encodeURIComponent(to)+'?subject='+subject+'&body='+encodeURIComponent(b);
-   if(!to) mailto='mailto:?subject='+subject+'&body='+encodeURIComponent(b);
-   window.location.href=mailto;
-   setTimeout(function(){ div.remove(); }, 600);
+  div.addEventListener('click', e=>{ if(e.target===div) div.remove(); });
+  div.querySelector('#bd-email-cancel').onclick=()=>div.remove();
+  div.querySelector('#bd-email-send').onclick=()=>{
+    var to=div.querySelector('#bd-email-to').value.trim();
+    var b=div.querySelector('#bd-email-body').value;
+    var subject=encodeURIComponent('Trajet BusDirect – '+d.from+' → '+d.to);
+    var mailto='mailto:'+(to?encodeURIComponent(to):'')+'?subject='+subject+'&body='+encodeURIComponent(b);
+    window.location.href=mailto;
+    setTimeout(()=>div.remove(),500);
   };
- }
-
- // ---------- INTERCEPTION TOUS LIENS GOOGLE MAPS ----------
- document.addEventListener('click', function(e){
-  var a=e.target.closest && e.target.closest('a[href*="google.com/maps"], a[href*="maps.google.com"], a[href*="goo.gl/maps"], a[href*="maps.app.goo.gl"]');
-  if(!a) return;
-  if(a.closest('#bd-v172-popup') || a.closest('#bd-v155-maps') || a.closest('.bd172-email-modal')) return;
-  // Only walking routes? requirement: tous les liens Google map de parcours a pied
-  var isWalk = /travelmode=walking/i.test(a.href) || a.classList.contains('bdt-walk') || a.classList.contains('bd155-vous-ici-walk') || a.classList.contains('bdt-xfer') || /Marche à pied/i.test(a.textContent||'') || /dirflg=w/i.test(a.href);
-  if(!isWalk){
-   // still capture if href contains walking intention via dataset? Check parent text
-   var parentTxt=(a.parentElement&&a.parentElement.textContent||'').toLowerCase();
-   if(!parentTxt.includes('pied') && !parentTxt.includes('walk')) {
-     // if not walk, we still open hyper popup? spec says tous les liens Google map de parcours a pied - so only walk. Skip others.
-     return;
-   }
-  }
-  e.preventDefault();
-  e.stopImmediatePropagation();
-  var meta={isWalk:true};
-  try{
-   var latAttr=a.getAttribute('data-lat'), lonAttr=a.getAttribute('data-lon');
-   if(latAttr) meta.lat=parseFloat(latAttr);
-   if(lonAttr) meta.lon=parseFloat(lonAttr);
-  }catch(err){}
-  openHyperPopup(a.href, meta);
- }, true);
-
- // ---------- REMPLACEMENT TEXTES DEPART / ARRIVEE ----------
- function getCardTimes(card){
-  if(!card) return [null,null];
-  var big=card.querySelectorAll('.text-\\[22px\\], .text-\\[20px\\], [class*=\"text-\"]');
-  // fallback: extract HH:MM via regex from card text
-  var txt=card.textContent||'';
-  var matches=txt.match(/\b\d{1,2}:\d{2}\b/g);
-  if(matches && matches.length>=1) return matches.slice(0,2);
-  return [null,null];
- }
- function cardOf(el){
-  var n=el;
-  while(n && n!==document.body){
-   if(n.tagName==='BUTTON' && /rounded-/.test(n.className||'')) return n;
-   if(n.classList && n.classList.contains('bdt-row')) return n.closest('button')||n;
-   n=n.parentElement;
-  }
-  return null;
- }
-
- function replaceTextsGlobal(){
-  var dt=getValidatedDT();
-  if(!dt) return;
-  var past=isPastDate(dt);
-  var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-  var nodes=[];
-  while(walker.nextNode()) nodes.push(walker.currentNode);
-  nodes.forEach(function(node){
-   if(node.__bd172) return;
-   var t=(node.textContent||'').trim();
-   if(!t) return;
-   var isDep=/^Départ dans\s+/i.test(t);
-   var isArr=/^Arrive dans\s+/i.test(t);
-   if(!isDep && !isArr) return;
-   var parent=node.parentElement;
-   if(!parent) return;
-   // avoid banner
-   if(parent.closest && parent.closest('#bd-v172-popup')) return;
-   if(parent.closest && parent.closest('.bd172-banner')) return;
-
-   if(past){
-    // Si date dans passé: remplace Arrive dans x à par Trajet terminé
-    if(isArr){
-     node.textContent='Trajet terminé';
-     node.__bd172=1;
-     // style
-     if(parent){ parent.style.color='#6b7280'; parent.style.fontStyle='italic'; }
-    } else {
-     // Départ dans -> Trajet terminé aussi?
-     // Spec says remplace Arrive dans x à par Trajet terminé
-     // For Depart, we still show Depart le ...
-     var card=cardOf(parent);
-     var times=getCardTimes(card);
-     var when=sameTime(dt, times[0])||dt;
-     node.textContent='Départ le '+formatFull(when);
-     node.__bd172=1;
-    }
-    return;
-   }
-
-   var card=cardOf(parent);
-   var times=getCardTimes(card);
-   if(isDep){
-    var whenDep=sameTime(dt, times[0])||dt;
-    node.textContent='Départ le '+formatFull(whenDep);
-    // ajoute date à droite de Départ le JOUR MOIS à xhx pour Départ en direct
-    // Check if inside list Depart en direct
-    try{
-     var row=parent.closest('.bdt-row, button, div');
-     var listContainer=document.body;
-     // find if ancestor contains Depart en direct label
-     var containerText=(row&&row.parentElement&&row.parentElement.textContent||'').toLowerCase();
-     if((containerText.includes('départ en direct')||document.body.textContent.toLowerCase().includes('départ en direct')) && !parent.querySelector('.bd172-date-badge')){
-       // append badge to parent after text
-       var badge=document.createElement('span');
-       badge.className='bd172-date-badge';
-       badge.textContent=DAYS_SHORT[whenDep.getDay()]+' '+whenDep.getDate()+' '+MONTHS_SHORT[whenDep.getMonth()];
-       // Avoid duplicate
-       if(!parent.querySelector('.bd172-date-badge')){
-         parent.appendChild(document.createTextNode(' '));
-         parent.appendChild(badge);
-       }
-     }
-    }catch(e){}
-   } else {
-    var whenArr=sameTime(dt, times[1])||sameTime(dt, times[0])||dt;
-    // Requirement says (Arrive dans x min x s) Par (Départ le JOUR MOIS à xhx) – but logically Arrivée le
-    // We implement Arrivée le JOUR MOIS à xhx as more correct, but also support spec literal
-    node.textContent='Arrivée le '+formatFull(whenArr);
-   }
-   node.__bd172=1;
-  });
-
-  // Second pass: for elements that are not pure text nodes but innerHTML contains Depart dans
-  document.querySelectorAll('*').forEach(function(el){
-   if(el.__bd172b) return;
-   if(el.children.length>0) return;
-   var txt=(el.textContent||'').trim();
-   if(/^Départ en direct/i.test(txt)){
-     // ajoute date à droite
-     if(dt && !el.querySelector('.bd172-date-badge')){
-       var when=dt;
-       var badge=document.createElement('span');
-       badge.className='bd172-date-badge';
-       badge.textContent=formatShort(when);
-       el.appendChild(document.createTextNode(' '));
-       el.appendChild(badge);
-       el.__bd172b=1;
-     }
-   }
-  });
- }
-
- // ---------- BANDEAU DATE ----------
- function buildBannerEl(){
-  var dt=getValidatedDT();
-  if(!dt) return null;
-  var div=document.createElement('div');
-  div.className='bd172-banner';
-  div.id='bd172-banner-main';
-  div.innerHTML='<div class="ic">📅</div><div><small>Date et heure sélectionnées</small><div style="font-size:22px;font-weight:900">'+formatFull(dt)+'</div></div><div style="margin-left:auto;display:flex;gap:8px"><button class="bd172-btn" style="background:rgba(255,255,255,.18);color:#fff" onclick="this.closest(\'.bd172-banner\').remove()">✕</button></div>';
-  return div;
- }
- function hasSearchValues(){
-  var has=false;
-  document.querySelectorAll('input').forEach(function(i){
-   var ph=(i.getAttribute('placeholder')||'').toLowerCase();
-   if(ph.includes('départ')||ph.includes('destination')||ph.includes('depart')){
-     if((i.value||'').trim().length>0) has=true;
-   }
-  });
-  try{
-   var f=localStorage.getItem('bd-from')||window.__bd_from;
-   var t=localStorage.getItem('bd-to')||window.__bd_to;
-   if((f&&String(f).trim())||(t&&String(t).trim())) has=true;
-   if(window.__bd_loc && window.__bd_loc.lat!=null) has=true;
-  }catch(e){}
-  return has;
- }
- function ensureBannerProchainsParcours(){
-  var dt=getValidatedDT();
-  var existing=document.getElementById('bd172-banner-main');
-  if(!dt || !hasSearchValues()){
-   if(existing) existing.remove();
-   var other=document.getElementById('bd172-banner-live');
-   if(other) other.remove();
-   return;
-  }
-  // Find Prochains parcours header
-  var headers=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).filter(function(el){
-   return el.children.length===0 && (el.textContent||'').trim().toLowerCase()==='prochains parcours';
-  });
-  var h=headers[0];
-  if(!h) return;
-  if(!existing){
-   existing=buildBannerEl();
-   existing.id='bd172-banner-main';
-   if(h.parentNode) h.parentNode.insertBefore(existing, h.nextSibling);
-  } else {
-   // update text
-   var newEl=buildBannerEl();
-   existing.innerHTML=newEl.innerHTML;
-  }
-  // Also ensure just below live? If live element exists, place after live
-  try{
-   var liveEl=document.querySelector('.bdt-live, [class*="live"]');
-   // If we have banner and liveEl is before, ensure banner is just below live
-   if(liveEl && existing){
-     // if liveEl is in same parent as Prochains parcours? keep simple: insert after liveEl if liveEl is near
-     var liveParent=liveEl.parentElement;
-     if(liveParent && liveParent.contains(h)){
-       // already handled
-     }
-   }
-  }catch(e){}
- }
- function ensureBannerSuiviDirect(){
-  var dt=getValidatedDT();
-  if(!dt || !hasSearchValues()){
-   var b=document.getElementById('bd172-banner-suivi');
-   if(b) b.remove();
-   return;
-  }
-  // Find Suivi en direct sheet
-  var sheets=document.querySelectorAll('.bdt-sheet, .bdt-wrap, [class*="bdt-sheet"]');
-  sheets.forEach(function(sheet){
-   // check if this sheet contains Suivi en direct title
-   if(!sheet.textContent.toLowerCase().includes('suivi en direct')) return;
-   var existing=sheet.querySelector('#bd172-banner-suivi');
-   if(!existing){
-    var banner=buildBannerEl();
-    banner.id='bd172-banner-suivi';
-    banner.style.margin='0 0 12px 0';
-    sheet.insertBefore(banner, sheet.firstChild);
-   } else {
-    var newB=buildBannerEl();
-    existing.innerHTML=newB.innerHTML;
-    existing.id='bd172-banner-suivi';
-   }
-  });
-  // Also top of page Suivi en direct if not in sheet (fallback)
-  var topHeaders=Array.from(document.querySelectorAll('*')).filter(function(el){ return (el.textContent||'').trim().toLowerCase()==='suivi en direct' && el.children.length===0; });
-  topHeaders.forEach(function(th){
-   var parent=th.parentElement;
-   if(!parent) return;
-   if(parent.querySelector('#bd172-banner-suivi')) return;
-   var banner=buildBannerEl();
-   banner.id='bd172-banner-suivi';
-   parent.insertBefore(banner, th.nextSibling);
-  });
- }
-
- function syncAll(){
-  replaceTextsGlobal();
-  ensureBannerProchainsParcours();
-  ensureBannerSuiviDirect();
- }
-
- // Observers
- var raf=0;
- function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0; syncAll();}); }
- new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true});
- window.addEventListener('bd-trip-datetime-change', function(){ setTimeout(syncAll, 80); setTimeout(syncAll, 400); });
- setInterval(syncAll, 900);
- if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', syncAll); else syncAll();
-
- // Also add email button to each itinerary card (Prochains parcours & Suivi)
- function addEmailButtonsToCards(){
-  document.querySelectorAll('button[class*="rounded-\\[16px\\]"], .bdt-row').forEach(function(card){
-   if(card.__bd172Email) return;
-   if(!card.textContent.includes('Départ le') && !card.textContent.includes('Départ dans') && !card.textContent.includes('Arrivée le') && !card.textContent.includes('Arrive dans')) return;
-   // avoid duplicating inside popup
-   if(card.closest('#bd-v172-popup')) return;
+ };
+ // add envelope buttons to cards
+ setInterval(function(){
+  document.querySelectorAll('button[class*="rounded-"]').forEach(function(card){
+   if(card.__bdEmail) return;
+   if(card.closest('#bd-v173-popup')) return;
+   var txt=card.textContent||'';
+   if(!/Départ le|Départ dans|Arrivée le|Arrive dans|Trajet terminé/.test(txt)) return;
+   if(card.querySelector('.bd-envelope')) return;
    var btn=document.createElement('button');
+   btn.className='bd-envelope';
    btn.textContent='✉️';
-   btn.title='Envoyer ce trajet par e-mail';
-   btn.className='bd172-btn';
-   btn.style.cssText='margin-left:auto;padding:6px 10px;font-size:11px';
-   btn.onclick=function(e){
-     e.preventDefault(); e.stopPropagation();
-     var href='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-     // try to find walk href inside card
-     var walkA=card.querySelector('a[href*="google.com/maps"]')||card.parentElement&&card.parentElement.querySelector('a[href*="google.com/maps"]');
-     if(walkA) href=walkA.href;
-     openEmailModal(href, {isWalk:true}, null, null);
-   };
-   // append to card footer if possible
-   var footer=card.querySelector('.mt-2, .flex');
-   if(footer){ footer.appendChild(btn); card.__bd172Email=1; }
+   btn.title='E-mail trajet vertical + lien Bus+Train';
+   btn.style.cssText='position:absolute;right:10px;bottom:8px;width:32px;height:32px;border-radius:99px;border:0;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;z-index:2';
+   card.style.position='relative';
+   btn.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var href=card.querySelector('a[href*="google.com/maps"]')?.href||'https://www.google.com/maps/dir/?api=1&travelmode=walking'; window.__bd_openEmail(href, {cardEl:card}, null, null); };
+   card.appendChild(btn);
+   card.__bdEmail=1;
   });
- }
- setInterval(addEmailButtonsToCards, 1200);
-
- console.log('V172 hyper complex loaded');
+ }, 1000);
 })();
 </script>
 
