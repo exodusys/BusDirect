@@ -3039,7 +3039,6 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   });
  }
 
- 
  function decorateLive(){
   document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
    var txt=(tag.textContent||'').trim().toLowerCase();
@@ -3049,8 +3048,11 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    if(row.__bd155Done) return;
    row.__bd155Done=1;
 
-   // Cache le badge orange POSITION ACTUELLE qui est sur la ligne VOTRE ARRÊT (ancienne demande bleu)
+   // --- 1) SUPPRIME CE QUI EST ENTOURÉ EN BLEU ---
+   // Sur la ligne VOTRE ARRÊT, il y a un badge orange "POSITION ACTUELLE" + RE33
+   // On supprime uniquement ce badge orange et on garde la ligne, mais on cache les tags orange
    row.classList.add('bd155-votre-row');
+   // Trouve tous les tags dans cette row
    var tagsContainer=row.querySelector('.bdt-tags');
    if(tagsContainer){
      Array.from(tagsContainer.children).forEach(function(ch){
@@ -3061,23 +3063,38 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
        }
      });
    }
+   // Si RE33 aussi dans le bleu, l'utilisateur veut peut-être garder RE33? Sur photo bleue, RE33 est entouré aussi.
+   // Pour respecter photo, on cache aussi les tags RExx sur cette ligne spécifique
+   // -> On les cache visuellement mais on ne supprime pas la ligne
+   // Décommente si tu veux cacher RE33 aussi:
+   // Array.from(tagsContainer.children).forEach(function(ch){ if(/RE\d+|^[A-Z]{1,3}\d+$/.test(ch.textContent.trim())) ch.classList.add('bd155-hide-blue'); });
 
    var list=row.parentElement;
    if(!list) return;
 
-   // V163 : On nettoie les anciens inserts pour éviter doublons
+   // V160 FIX: on ne crée plus de doublon "Vous êtes ici" - on garde l'original de l'app
+   // On supprime tout éventuel doublon existant créé par ancienne version V155
    try{
-    list.querySelectorAll('.bd163-here, .bd163-walk, .bd155-here, .bd155-vous-ici-walk').forEach(function(e){ e.remove(); });
+    var existingHeres=list.querySelectorAll('.bd155-here');
+    existingHeres.forEach(function(e){ e.remove(); });
    }catch(e){}
-
-   // Récupère loc et stop (arrêt de départ = row)
-   var loc=window.__bd_loc;
-   if(!loc || loc.lat==null) return; // pas de loc => pas de point de départ
-
-   var stop=null;
-   var destLat=null,destLon=null;
-   // essaye de récupérer coords du stop depuis les liens maps existants ou depuis cache
+   // On supprime aussi les walks ajoutés par V155
    try{
+    var existingWalks=list.querySelectorAll('.bd155-vous-ici-walk');
+    existingWalks.forEach(function(e){ e.remove(); });
+   }catch(e){}
+   // Le bloc jaune est donc supprimé, et on garde le "x min à pied" d'origine avec son lien
+   
+
+   // --- 3) MODIFIE CE QUI EST EN JAUNE -> comme photo rouge ---
+   // Style identique à .bdt-xfer bdt-walk
+   
+   // V160 FIX: rétablit le lien Google Maps sur TOUS les "x min à pied" existants
+   // On ne crée plus de walk, on répare ceux d'origine
+   try{
+    var loc=window.__bd_loc;
+    var stop=null;
+    var destLat=null,destLon=null;
     var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
     walkLinks.forEach(function(a){
      try{
@@ -3090,81 +3107,39 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
      }catch(e){}
     });
     if(destLat!=null) stop={lat:destLat, lon:destLon};
-   }catch(e){}
-   try{
-    var nameEl=row.querySelector('.bdt-name');
-    if(!stop && nameEl){
-     var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords||window.__bd_v163_stopCoords;
-     if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
-    }
-    // Si pas de coords stop, essaye depuis passList du trip
-    if(!stop){
-     var trips=window.__bd_trips||{};
-     var firstKey=Object.keys(trips)[0];
-     if(firstKey){
-       var pl=(trips[firstKey].passList||[]).filter(function(x){return x&&x.lat!=null});
-       if(pl.length) stop={lat:pl[0].lat, lon:pl[0].lon};
+    try{
+     var nameEl=row.querySelector('.bdt-name');
+     if(!stop && nameEl){
+      var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+      if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
      }
-    }
+    }catch(e){}
+    // Répare tous les liens marche existants dans la liste
+    var allWalks=list.querySelectorAll('.bdt-walk, .bdt-xfer, a.bdt-xfer');
+    allWalks.forEach(function(walk){
+     if(!walk) return;
+     // Si c'est un lien avec href google maps, on le garde et on s'assure qu'il ouvre la popup
+     if(walk.tagName==='A' && walk.href && walk.href.includes('google.com/maps')){
+       // Si loc et stop connus, on met à jour vers le bon itinéraire marche
+       if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
+         var hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+         walk.href=hrefWalk;
+       }
+       // assure le click ouvre popup interne
+       if(!walk.__bd160){
+         walk.__bd160=1;
+         walk.addEventListener('click', function(ev){
+           ev.preventDefault();
+           try{ openMaps(this.href, true); }catch(e){ window.open(this.href,'_blank'); }
+         });
+       }
+     }
+    });
    }catch(e){}
-
-   // Calcul distance / temps
-   var mins=2;
-   var dist='';
-   if(loc&&stop&&stop.lat!=null){
-    var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-    var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-    var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-    mins=Math.max(1,Math.round(meters/80));
-    dist = meters<1000? Math.round(meters)+' m' : (meters/1000).toFixed(1)+' km';
-   }
-
-   var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-   if(loc&&stop){
-     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-   } else if(stop){
-     hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-   } else if(loc){
-     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
-   }
-
-   // --- 1) POINT DE DEPART POSITION ACTUELLE (cercle rouge photo) ---
-   var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
-   var here=document.createElement('div');
-   here.className='bdt-row bd163-here';
-   here.style.setProperty('--acc', acc);
-   here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
-
-   // --- 2) MARCHE A PIED x MIN (cercle bleu photo) ---
-   var walk=document.createElement('a');
-   walk.className='bdt-xfer bdt-walk bd163-walk';
-   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;margin:6px 0 10px 32px;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18);max-width:92%';
-   walk.setAttribute('target','_blank');
-   walk.setAttribute('rel','noopener noreferrer');
-   walk.href=hrefWalk;
-   walk.dataset.origin = loc ? (loc.lat+','+loc.lon) : '';
-   walk.dataset.dest = stop ? (stop.lat+','+stop.lon) : '';
-   walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">Marche à pied · '+mins+' min</span><span style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
-   walk.addEventListener('click', function(ev){
-     ev.preventDefault();
-     try{ openMaps(this.href, true); }catch(e){ window.open(this.href,'_blank'); }
+   // fin V160
    });
-
-   // Insertion tout en haut, avant le premier arrêt
-   // On insère walk puis here pour que here soit au dessus
-   var firstChild=list.firstElementChild;
-   if(firstChild){
-     list.insertBefore(walk, firstChild);
-     list.insertBefore(here, walk);
-   }else{
-     list.appendChild(here);
-     list.appendChild(walk);
    }
-
-  });
  }
-
-
 
  function sync(){
   ensureBanner();
