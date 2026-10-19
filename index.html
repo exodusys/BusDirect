@@ -1613,7 +1613,7 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'
 function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');return '<div class="bd-v101-source"><span class="bd-v101-dot '+st+'"></span><div><div class="bd-v101-name">'+esc(s.name)+'</div><div class="bd-v101-sub">'+esc(s.type||'Source transport')+' · '+esc(s.url||'')+'</div></div><button class="bd-v101-toggle '+(s.active?'on':'')+'" data-source-toggle="'+i+'" aria-label="'+(s.active?tr('enabled'):tr('disabled'))+'"><div class="bd-v101-knob"></div></button></div>'}).join('');}
 function syncLabels(){var q=function(id,k){var e=document.getElementById(id);if(e)e.textContent=tr(k)};q('bd-v101-city-l','city');q('bd-v101-lang-l','language');q('bd-v101-theme-l','theme');q('bd-v101-settings-l','settings');q('bd-v101-sms-l','smsTickets');q('bd-v101-title','sources');q('bd-v101-update','update');q('bd-v101-web','web');var inp=document.getElementById('bd-v101-url');if(inp)inp.placeholder=tr('url');q('bd-v101-addbtn','add');}
 function clickExisting(words){var btn=[].slice.call(document.querySelectorAll('button')).find(function(b){var t=(b.textContent||'').toLowerCase();return words.some(function(w){return t.indexOf(w)>=0})&& !b.closest('#bd-v101-menu')});if(btn)btn.click();}
-function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button><button class="bd-v101-item" id="bd-v101-sms"><span>💬</span><span id="bd-v101-sms-l">SMS</span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
+function build(){if(document.getElementById('bd-v101-hamb'))return;var b=document.createElement('button');b.id='bd-v101-hamb';b.className='bd-v101-hamb';b.innerHTML='☰';b.setAttribute('aria-label','Menu');document.body.appendChild(b);var m=document.createElement('div');m.id='bd-v101-menu';m.className='bd-v101-menu';m.innerHTML='<div class="bd-v101-grid"><button class="bd-v101-item" id="bd-v101-city"><span>🏙️</span><span id="bd-v101-city-l"></span></button><button class="bd-v101-item" id="bd-v101-lang"><span>🌐</span><span id="bd-v101-lang-l"></span></button><button class="bd-v101-item" id="bd-v101-theme"><span>◐</span><span id="bd-v101-theme-l"></span></button><button class="bd-v101-item" id="bd-v101-src"><span>⚙️</span><span id="bd-v101-settings-l"></span></button><button class="bd-v101-item" id="bd-v101-sms"><span>💬</span><span id="bd-v101-sms-l">SMS</span></button><button class="bd-v101-item" id="bd-v179-item" style="background:#18181b;color:#fff;border:1.5px solid #18181b"><span>📏</span><span>Distances</span></button></div><button class="bd-v101-settings" id="bd-v101-src2">⚙️ <span id="bd-v101-title"></span></button>';document.body.appendChild(m);
 var o=document.createElement('div');o.id='bd-v101-overlay';o.className='bd-v101-overlay';o.innerHTML='<section class="bd-v101-sheet"><div class="bd-v101-head"><div><h2 id="bd-v101-title2" style="font-size:19px;font-weight:900"></h2><div style="font-size:11px;color:#71717a">GTFS · GTFS-Realtime · API · géocodage</div></div><button class="bd-v101-close" id="bd-v101-close">×</button></div><div class="bd-v101-actions"><button class="bd-v101-action" id="bd-v101-update"></button><button class="bd-v101-action" id="bd-v101-web"></button></div><button class="bd-auto-detect-btn" id="bd-auto-detect-sources">Activer la détection automatique</button><div class="bd-v101-add"><input id="bd-v101-url"><button id="bd-v101-addbtn"></button></div><div id="bd-v101-list"></div></section>';document.body.appendChild(o);document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources();
 b.onclick=function(){m.classList.toggle('open')};document.getElementById('bd-v101-city').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-city-btn');if(b)b.click();else clickExisting(['ville','city','stadt','ciudad','città','cidade']);})()};document.getElementById('bd-v101-lang').onclick=function(){m.classList.remove('open');(function(){var b=document.getElementById('bd-lang-btn');if(b)b.click();else clickExisting(['langue','language','sprache','idioma','lingua']);})()};document.getElementById('bd-v101-theme').onclick=function(){var cur=localStorage.getItem('bd-theme')==='dark'?'dark':'light',n=cur==='dark'?'light':'dark';localStorage.setItem('bd-theme',n);var dark=n==='dark';document.documentElement.classList.toggle('dark',dark);document.documentElement.style.colorScheme=dark?'dark':'light';document.documentElement.dataset.theme=n;};function openSrc(){m.classList.remove('open');o.classList.add('open');document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');document.getElementById('bd-v101-title2').textContent=tr('sources');syncLabels();renderSources()}document.getElementById('bd-v101-src').onclick=openSrc;document.getElementById('bd-v101-src2').onclick=openSrc;document.getElementById('bd-v101-close').onclick=function(){o.classList.remove('open');document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')};o.addEventListener('click',function(e){if(e.target===o)document.getElementById('bd-v101-close').click()});o.addEventListener('click',function(e){var t=e.target.closest('[data-source-toggle]');if(!t)return;var i=+t.dataset.sourceToggle;sources[i].active=!sources[i].active;if(!sources[i].active)sources[i].status='';else if(!sources[i].status)sources[i].status='warn';save();renderSources()});document.getElementById('bd-v101-addbtn').onclick=function(){var inp=document.getElementById('bd-v101-url'),url=inp.value.trim();if(!url)return;try{var u=new URL(url);sources.push({id:'custom-'+Date.now(),name:u.hostname,type:'GTFS / API personnalisée',url:url,active:true,status:'warn',custom:true});save();inp.value='';renderSources()}catch(e){inp.focus()}};document.getElementById('bd-v101-web').onclick=async function(){
   var btn=this,old=btn.textContent;btn.textContent='Scan…';
@@ -3498,6 +3498,79 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  console.log('V179.2 distances menu loaded');
 })();
 </script>
+
+
+<script id="bd-v179-fix-menu-display">
+(function(){
+ function bindDistancesBtn(){
+  var btn=document.getElementById('bd-v179-item');
+  if(!btn) return;
+  // ensure visible
+  btn.style.display='flex';
+  btn.style.background='#18181b';
+  btn.style.color='#fff';
+  // remove old listeners by cloning
+  if(!btn.__bd179Bound){
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      var menu=document.getElementById('bd-v101-menu');
+      if(menu) menu.classList.remove('open');
+      if(window.__bd_openDistances) window.__bd_openDistances();
+      else {
+        var ov=document.getElementById('bd-v179-overlay');
+        if(ov) ov.classList.add('open');
+      }
+    });
+    btn.__bd179Bound=true;
+  }
+ }
+ // also patch the build function to always include Distances
+ var origBuild = null;
+ // observer
+ new MutationObserver(function(){ bindDistancesBtn(); }).observe(document.body,{childList:true,subtree:true});
+ setInterval(bindDistancesBtn, 500);
+ setTimeout(bindDistancesBtn, 200);
+ setTimeout(bindDistancesBtn, 800);
+ setTimeout(bindDistancesBtn, 1500);
+
+ // Also intercept creation of bd-v101-menu to inject if missing
+ var mo2=new MutationObserver(function(muts){
+  muts.forEach(function(mut){
+   mut.addedNodes.forEach(function(node){
+     if(node.id==='bd-v101-menu'){
+       var grid=node.querySelector('.bd-v101-grid');
+       if(grid && !grid.querySelector('#bd-v179-item')){
+         var b=document.createElement('button');
+         b.className='bd-v101-item';
+         b.id='bd-v179-item';
+         b.style.background='#18181b';
+         b.style.color='#fff';
+         b.innerHTML='<span>📏</span><span>Distances</span>';
+         b.onclick=function(){
+           var menu=document.getElementById('bd-v101-menu');
+           if(menu) menu.classList.remove('open');
+           if(window.__bd_openDistances) window.__bd_openDistances();
+         };
+         grid.appendChild(b);
+       }
+     }
+   });
+  });
+ });
+ mo2.observe(document.body,{childList:true,subtree:true});
+
+ console.log('V179 fix menu display loaded');
+})();
+</script>
+
+
+<style id="bd-v179-visibility-fix">
+/* Force Distances visible dans hamburger */
+#bd-v179-item{display:flex !important;background:#18181b !important;color:#fff !important;border:1.5px solid #18181b !important;opacity:1 !important;visibility:visible !important}
+html.dark #bd-v179-item{background:#fafafa !important;color:#09090b !important}
+.bd-v101-grid{display:flex !important;flex-direction:column !important;gap:7px !important}
+.bd-v101-item{display:flex !important}
+</style>
 
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
