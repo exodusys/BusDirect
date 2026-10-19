@@ -3208,109 +3208,87 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
 
 
-<script id="bd-v176-remove-yellow-frame">
-/* V176 - Supprime le cadre jaune : Vous êtes ici + POSITION ACTUELLE + 2 min à pied dans Suivi en direct */
-(function(){
- function removeYellowFrame(){
-  // Tous les conteneurs Suivi en direct
-  var containers=document.querySelectorAll('.bdt-sheet, .bdt-list, .bdt-body, .bdt-wrap, body');
-  containers.forEach(function(container){
-   var t=(container.textContent||'').toLowerCase();
-   // cible uniquement Suivi en direct
-   if(!t.includes('suivi en direct') && container!==document.body) return;
 
-   var lists = container.querySelectorAll('.bdt-list, .bdt-body');
-   if(lists.length===0) lists=[container];
+
+
+<script id="bd-v177-keep-only-third-yellow">
+/* V177 - Il y avait 3 cadres jaunes identiques (Vous êtes ici + 2 min à pied). On supprime les 2 premiers, on garde uniquement le 3ème tout en haut */
+(function(){
+ function fixThreeYellowFrames(){
+  var containers=document.querySelectorAll('.bdt-sheet, .bdt-wrap');
+  if(containers.length===0) containers=[document.body];
+
+  containers.forEach(function(sheet){
+   var txt=(sheet.textContent||'').toLowerCase();
+   if(!txt.includes('suivi en direct') && !sheet.textContent.includes('Genève, Aubert') && !sheet.textContent.includes('Vous êtes ici')) return;
+
+   var lists = sheet.querySelectorAll('.bdt-list, .bdt-body');
+   if(lists.length===0) lists=[sheet];
 
    lists.forEach(function(list){
-     // 1) Supprime Vous êtes ici
-     Array.from(list.querySelectorAll('.bdt-row, .bd174-vous-row, .bd175-vous-row, div')).forEach(function(row){
-       var txt=(row.textContent||'').trim();
-       if(/^Vous êtes ici$/i.test(txt) || /Vous êtes ici/.test(txt) && row.querySelector('.bdt-tag-me')==null && !txt.includes('Genève, Aubert')){
-         // garde Genève Aubert qui a VOTRE ARRÊT, supprime les purs Vous êtes ici
-         if(txt.includes('Vous êtes ici') && !txt.includes('VOTRE ARRÊT')){
-           // vérifie que c'est bien le bloc jaune : contient POSITION ACTUELLE seul sans Genève
-           if(!txt.includes('Genève,')){
-             try{ row.remove(); }catch(e){ row.style.display='none'; }
-           }
-         }
-       }
-       // supprime aussi si classe bd174-vous-row ou contient POSITION ACTUELLE seul
-       if(row.classList && row.classList.contains('bd174-vous-row')){
-         // si ce n'est pas Genève, Aubert
-         if(!row.textContent.includes('Genève,')){
-           try{ row.remove(); }catch(e){ row.style.display='none'; }
-         }
-       }
+     // Trouve tous les Vous êtes ici (même ceux injectés)
+     var vousList = Array.from(list.querySelectorAll('.bdt-row, .bd174-vous-row, .bd175-vous-row, .bd176-vous-row, div')).filter(function(el){
+       var t=(el.textContent||'').trim();
+       // bloc jaune = Vous êtes ici + POSITION ACTUELLE, sans Genève
+       return t.includes('Vous êtes ici') && t.includes('POSITION ACTUELLE') && !t.includes('Genève,') && !t.includes('VOTRE ARRÊT');
      });
 
-     // 2) Supprime 2 min à pied
-     Array.from(list.querySelectorAll('.bdt-xfer, .bdt-walk, .bd174-walk, a[href*="travelmode=walking"], div')).forEach(function(walk){
-       var txt=(walk.textContent||'');
-       if(/^\s*\d+\s*min à pied\s*$/i.test(txt) || /2 min à pied/.test(txt)){
-         // supprime si c'est un lien marche sans autre contexte ou si dans cadre jaune
-         var parentIsWalkCard = walk.closest && walk.closest('.bdt-xfer');
-         // Si le walk est isolé (pas dans une carte de trajet complet), on le supprime
-         // On garde les walks qui sont DANS une carte Prochains parcours (qui ont aussi heure), pas ceux en haut de Suivi en direct
-         var inSuiviDirect = list.textContent.toLowerCase().includes('suivi en direct') || document.body.textContent.toLowerCase().includes('suivi en direct');
-         if(walk.classList && (walk.classList.contains('bd174-walk') || walk.classList.contains('bdt-walk'))){
-           // vérifie si parent list est Suivi en direct
-           var isInSuivi = walk.closest('.bdt-sheet') || walk.closest('.bdt-wrap');
-           if(isInSuivi || inSuiviDirect){
-             // si c'est un walk solitaire en haut, supprime
-             try{ walk.remove(); }catch(e){ walk.style.display='none'; }
-           }
-         }
-       }
+     // Trouve tous les 2 min à pied isolés
+     var walkList = Array.from(list.querySelectorAll('.bdt-xfer, .bdt-walk, .bd174-walk, .bd175-walk, a, div')).filter(function(el){
+       var t=(el.textContent||'').trim();
+       return /^2 min à pied$/.test(t) || (t.includes('min à pied') && t.length < 30 && !t.includes('Google Maps') && !el.closest('button[class*="rounded-"]'));
      });
 
-     // Nettoyage final agressif : cherche directement les div avec le texte exact
-     Array.from(list.children).forEach(function(child){
-       var ctext=(child.textContent||'').trim();
-       if(ctext==='Vous êtes ici' || ctext.startsWith('Vous êtes ici') && ctext.includes('POSITION ACTUELLE') && !ctext.includes('Genève')){
-         try{ child.remove(); }catch(e){ child.style.display='none'; }
-       }
-       if(/^\d+ min à pied$/.test(ctext) || ctext.includes('2 min à pied') && child.querySelector && child.querySelector('[class*="arrow"]')){
-         // si c'est le bloc jaune avec flèche
-         if(!child.textContent.includes('Genève')){
-           try{ child.remove(); }catch(e){ child.style.display='none'; }
+     // S'il y a 3 cadres jaunes (ou 2-3), on garde le dernier (3ème)
+     if(vousList.length>1){
+       // Garde le dernier
+       var keeperVous = vousList[vousList.length-1];
+       vousList.forEach(function(el, idx){
+         if(el!==keeperVous){
+           try{ el.remove(); }catch(e){ el.style.display='none'; }
          }
+       });
+       // Place le keeper tout en haut
+       try{ list.insertBefore(keeperVous, list.firstChild); }catch(e){}
+     }
+
+     if(walkList.length>1){
+       var keeperWalk = walkList[walkList.length-1];
+       walkList.forEach(function(el){
+         if(el!==keeperWalk){
+           try{ el.remove(); }catch(e){ el.style.display='none'; }
+         }
+       });
+       // Place walk juste après Vous êtes ici
+       var vousKeeper = list.querySelector('.bdt-row, .bd174-vous-row');
+       // trouve le Vous gardé
+       var vousEls = Array.from(list.children).filter(function(c){ return (c.textContent||'').includes('Vous êtes ici') && (c.textContent||'').includes('POSITION ACTUELLE'); });
+       var topVous = vousEls[0];
+       if(topVous && keeperWalk){
+         try{ list.insertBefore(keeperWalk, topVous.nextSibling); }catch(e){}
        }
-     });
+     }
+
+     // Si un seul Vous restant, assure qu'il est bien en haut
+     var remainingVous = list.querySelectorAll('.bdt-row, .bd174-vous-row');
+     var realVous = Array.from(remainingVous).find(function(r){ return (r.textContent||'').includes('Vous êtes ici') && (r.textContent||'').includes('POSITION ACTUELLE') && !(r.textContent||'').includes('Genève,'); });
+     if(realVous && list.firstChild!==realVous){
+       try{ list.insertBefore(realVous, list.firstChild); }catch(e){}
+     }
    });
   });
  }
 
- // CSS hide en secours pour masquer tout résidu jaune
- var css=document.createElement('style');
- css.id='bd-v176-hide-css';
- css.textContent=`
-  /* Cache Vous êtes ici pur dans Suivi en direct */
-  .bdt-sheet .bdt-row:has(.bdt-name):not(:has(.bdt-tag-me)):where(:has-text) { }
-  .bd174-vous-row:not(:has(.bdt-tag-me)){display:none !important}
-  .bd174-walk{display:none !important}
-  /* Masque spécifiquement les blocs avec Vous êtes ici sans Genève */
-  .bdt-row:where(:not(:has([class*="tag-me"]))) { }
- `;
- // On injecte une règle plus précise via JS plutôt que :has complexe
- var style2=document.createElement('style');
- style2.textContent=`
-  /* V176 - Suppression visuelle du cadre jaune */
-  .bdt-sheet [class*="bdt-row"]:has(> div > div:only-child){ }
- `;
- // Méthode simple : on cache via sélecteur d'attribut textuel impossible, donc on fait en JS
-
- // Observer très agressif
- var obs=new MutationObserver(function(){ removeYellowFrame(); });
+ var obs=new MutationObserver(function(){ fixThreeYellowFrames(); });
  obs.observe(document.body,{childList:true,subtree:true});
- setInterval(removeYellowFrame, 500);
- setTimeout(removeYellowFrame, 80);
- setTimeout(removeYellowFrame, 300);
- setTimeout(removeYellowFrame, 800);
- setTimeout(removeYellowFrame, 1500);
- if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', removeYellowFrame); else removeYellowFrame();
+ setInterval(fixThreeYellowFrames, 700);
+ setTimeout(fixThreeYellowFrames, 100);
+ setTimeout(fixThreeYellowFrames, 400);
+ setTimeout(fixThreeYellowFrames, 900);
+ setTimeout(fixThreeYellowFrames, 1600);
+ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fixThreeYellowFrames); else fixThreeYellowFrames();
 
- console.log('V176 remove yellow frame loaded - Vous êtes ici + 2 min à pied supprimés');
+ console.log('V177 keep only 3rd yellow frame loaded');
 })();
 </script>
 
