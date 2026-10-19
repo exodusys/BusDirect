@@ -3042,15 +3042,14 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  
  
  function decorateLive(){
+  // V165 : s'applique à TOUS les Suivi en direct, avec ou sans date/heure
+
+  // 1) Nettoie l'ancien badge orange sur VOTRE ARRÊT (si présent)
   document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
    var txt=(tag.textContent||'').trim().toLowerCase();
    if(txt!=='votre arrêt' && txt!=='votre arret') return;
    var row=tag.closest('.bdt-row');
    if(!row) return;
-   if(row.__bd155Done) return;
-   row.__bd155Done=1;
-
-   // Cache le badge orange sur VOTRE ARRÊT
    row.classList.add('bd155-votre-row');
    var tagsContainer=row.querySelector('.bdt-tags');
    if(tagsContainer){
@@ -3062,34 +3061,122 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
        }
      });
    }
+  });
 
-   var list=row.parentElement;
+  // 2) Nettoie tous les anciens inserts V155/V163/V164 partout
+  try{
+   document.querySelectorAll('.bd163-here, .bd163-walk, .bd155-here, .bd155-vous-ici-walk, .bd164-here, .bd165-here, .bd165-walk').forEach(function(e){ e.remove(); });
+  }catch(e){}
+
+  var loc=window.__bd_loc;
+  if(!loc || loc.lat==null) return;
+
+  // 3) Trouve TOUTES les listes de suivi en direct (avec ou sans date)
+  // Un Suivi en direct a un titre "Suivi en direct" et contient des .bdt-row
+  var liveContainers=[];
+  document.querySelectorAll('.bdt-wrap, .bdt-body, [class*="bdt-"]').forEach(function(c){
+    if(c.querySelector && c.querySelector('.bdt-row')) liveContainers.push(c);
+  });
+  // Fallback: tous les parents directs de .bdt-row
+  var rowParents=new Set();
+  document.querySelectorAll('.bdt-row').forEach(function(r){
+    if(r.parentElement) rowParents.add(r.parentElement);
+  });
+  rowParents.forEach(function(p){ if(liveContainers.indexOf(p)===-1) liveContainers.push(p); });
+
+  // Déduplique et filtre : on garde uniquement les containers qui sont dans un modal Suivi en direct OU qui ont au moins 2 rows
+  var seen=new Set();
+  var lists=[];
+  liveContainers.forEach(function(cont){
+    if(!cont || seen.has(cont)) return;
+    seen.add(cont);
+    // Vérifie si c'est bien une liste de suivi (a des rows)
+    var rows=cont.querySelectorAll(':scope > .bdt-row, .bdt-row');
+    if(rows.length===0) return;
+    // Si le container est dans la page principale et pas dans un modal suivi, on le garde aussi si il contient un trajet (pour date/heure)
+    lists.push(cont);
+  });
+
+  if(lists.length===0) return;
+
+  // Récupère stop coords (premier arrêt du trajet)
+  var stop=null;
+  var destLat=null,destLon=null;
+  try{
+   var trips=window.__bd_trips||{};
+   var firstKey=Object.keys(trips)[0];
+   if(firstKey){
+     var pl=(trips[firstKey].passList||[]).filter(function(x){return x&&x.lat!=null});
+     if(pl.length) stop={lat:pl[0].lat, lon:pl[0].lon};
+   }
+   // essaie aussi depuis les liens maps existants
+   var walkLinks=document.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
+   walkLinks.forEach(function(a){
+    try{
+     var u=new URL(a.href);
+     var d=u.searchParams.get('destination');
+     if(d&&d.includes(',')){
+      var p=d.split(',');
+      destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
+     }
+    }catch(e){}
+   });
+   if(destLat!=null && !stop) stop={lat:destLat, lon:destLon};
+  }catch(e){}
+
+  var mins=2;
+  if(loc&&stop&&stop.lat!=null){
+   var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+   var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+   var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+   mins=Math.max(1,Math.round(meters/80));
+  }
+
+  var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
+  if(loc&&stop){
+    hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+  }
+
+  // Pour CHAQUE liste de suivi en direct trouvée, insère le point
+  lists.forEach(function(list){
    if(!list) return;
+   if(list.querySelector('.bd165-here')) return; // déjà fait
+   var rows=list.querySelectorAll('.bdt-row');
+   if(rows.length===0) return;
 
-   // Nettoie anciens inserts
-   try{
-    list.querySelectorAll('.bd163-here, .bd163-walk, .bd155-here, .bd155-vous-ici-walk, .bd164-here').forEach(function(e){ e.remove(); });
-   }catch(e){}
+   var firstRow=rows[0];
+   var acc=firstRow.style.getPropertyValue('--acc')||'#f59e0b';
 
-   var loc=window.__bd_loc;
-   if(!loc || loc.lat==null) return;
-
-   var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
    var here=document.createElement('div');
-   here.className='bdt-row bd164-here';
+   here.className='bdt-row bd165-here bd163-here';
    here.style.setProperty('--acc', acc);
-   // Style identique à la photo cercle rouge
    here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
 
-   // Insertion tout en haut avant le premier arrêt
+   var walk=document.createElement('a');
+   walk.className='bdt-xfer bdt-walk bd165-walk bd163-walk';
+   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;margin:6px 0 10px 32px;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18);max-width:92%';
+   walk.setAttribute('target','_blank');
+   walk.setAttribute('rel','noopener noreferrer');
+   walk.href=hrefWalk;
+   walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">Marche à pied · '+mins+' min</span><span style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
+   walk.addEventListener('click', function(ev){
+     ev.preventDefault();
+     try{ openMaps(this.href, true); }catch(e){ window.open(this.href,'_blank'); }
+   });
+
    var firstChild=list.firstElementChild;
    if(firstChild){
-     list.insertBefore(here, firstChild);
+     list.insertBefore(walk, firstChild);
+     list.insertBefore(here, walk);
    }else{
      list.appendChild(here);
+     list.appendChild(walk);
    }
 
+   // Marque comme fait pour éviter double insertion dans ce tour
+   if(firstRow) firstRow.__bd155Done=1;
   });
+
  }
 
 
