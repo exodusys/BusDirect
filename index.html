@@ -3632,3 +3632,43 @@ html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
  window.__bd_openEmail=function(href,meta){var card=meta&&meta.cardEl?meta.cardEl:null,d=collect(card),transit=transitLink(d),walk=href||'https://www.google.com/maps/dir/?api=1&travelmode=walking',body=textBody(d,transit,walk),ov=document.createElement('div');ov.className='bd193-mail';ov.innerHTML='<div class="bd193-sheet"><div class="bd193-head"><div class="bd193-icon">✉️</div><div><div class="bd193-title">Trajet – vertical</div><div class="bd193-sub">Fiche complète du trajet · PDF professionnel</div></div><button class="bd193-x" aria-label="Fermer">×</button></div><div class="bd193-body"><div class="bd193-card"><div class="bd193-k">Itinéraire</div><div class="bd193-route"><div><div class="bd193-place">'+esc(d.from)+'</div><div class="bd193-meta">Départ</div></div><div class="bd193-arrow">→</div><div><div class="bd193-place r">'+esc(d.to)+'</div><div class="bd193-meta" style="text-align:right">Arrivée</div></div></div><div class="bd193-meta" style="margin-top:10px">'+esc(d.date)+(d.summary?' · '+esc(d.summary):'')+'</div></div><div class="bd193-card"><div class="bd193-k">Suivi en direct & horaires</div><div class="bd193-timeline">'+d.rows.map(function(r){return '<div class="bd193-row"><span class="bd193-dot"></span><div><div class="bd193-n">'+esc(r.name)+'</div>'+(r.detail?'<div class="bd193-d">'+esc(r.detail)+'</div>':'')+'</div><div class="bd193-time">'+esc(r.time)+'</div></div>'}).join('')+(d.changes.map(x=>'<div class="bd193-d" style="padding:7px 0 7px 31px">🔄 '+esc(x)+'</div>').join(''))+(d.walks.map(x=>'<div class="bd193-d" style="padding:7px 0 7px 31px">🚶 '+esc(x)+'</div>').join(''))+'</div></div><div class="bd193-card"><div class="bd193-k">Envoi</div><input class="bd193-field" id="bd193-to" type="email" placeholder="Adresse e-mail du destinataire"><div class="bd193-actions" style="margin-top:10px"><button class="bd193-btn main" id="bd193-send">✉️ Créer et envoyer le PDF</button><button class="bd193-btn" id="bd193-pdf">PDF</button><a class="bd193-btn" href="'+esc(transit)+'" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none">🚌 Google Maps</a><a class="bd193-btn" href="'+esc(walk)+'" target="_blank" style="display:flex;align-items:center;justify-content:center;text-decoration:none">🚶 À pied</a></div><div class="bd193-note" style="margin-top:9px">Sur iPhone/iPad, « Créer et envoyer le PDF » ouvre la feuille de partage avec le PDF joint : choisissez Mail pour l’envoyer. Si le partage de fichiers n’est pas disponible, le PDF est téléchargé puis l’application e-mail est ouverte avec le récapitulatif.</div></div></div></div>';document.body.appendChild(ov);document.documentElement.classList.add('modal-open');function close(){ov.remove();document.documentElement.classList.remove('modal-open')}ov.querySelector('.bd193-x').onclick=close;ov.onclick=function(e){if(e.target===ov)close()};ov.querySelector('#bd193-pdf').onclick=async function(){try{var blob=await makePdf(d,transit,walk),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='BusDirect-trajet.pdf';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)}catch(e){alert('Impossible de créer le PDF. Vérifiez la connexion Internet.')}};ov.querySelector('#bd193-send').onclick=async function(){var btn=this,to=ov.querySelector('#bd193-to').value.trim();btn.disabled=true;btn.textContent='Création du PDF…';try{var blob=await makePdf(d,transit,walk),file=new File([blob],'BusDirect-trajet.pdf',{type:'application/pdf'});if(navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}))){await navigator.share({title:'Trajet BusDirect – '+d.from+' → '+d.to,text:'Fiche complète de trajet BusDirect'+(to?' — destinataire : '+to:''),files:[file]})}else{var u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=file.name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);window.location.href='mailto:'+(to?encodeURIComponent(to):'')+'?subject='+encodeURIComponent('Trajet BusDirect – '+d.from+' → '+d.to)+'&body='+encodeURIComponent(body+'\n\nLe PDF BusDirect a été généré sur cet appareil : ajoutez-le en pièce jointe si nécessaire.')}}catch(e){if(e&&e.name!=='AbortError')alert('Impossible de préparer le PDF. Vérifiez la connexion Internet.')}finally{btn.disabled=false;btn.textContent='✉️ Créer et envoyer le PDF'}}}
 })();
 </script>
+
+<style id="bd-v196-position-move">
+/* V196 : déplace le vrai badge orange POSITION ACTUELLE sous ARRÊTS (x) */
+.bdt-position-under-stops{display:flex;align-items:center;margin:8px 0 14px 34px;width:max-content;max-width:calc(100% - 34px)}
+.bdt-position-under-stops>.bdt-tag{font-size:11px !important;font-weight:800 !important;letter-spacing:.04em;padding:7px 12px !important;border-radius:12px !important;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+</style>
+<script id="bd-v196-position-move-script">
+(function(){
+ function norm(s){return String(s||'').replace(/\s+/g,' ').trim().toUpperCase()}
+ function patch(){
+  document.querySelectorAll('.bdt-sheet').forEach(function(sheet){
+   if(!norm(sheet.textContent).includes('VOTRE ARRÊT'))return;
+
+   /* Supprime l'ancien badge ajouté sous ARRÊTS par V195 (zone bleue). */
+   sheet.querySelectorAll('.bd-v195-position-under-stops').forEach(function(el){el.remove()});
+
+   var sec=Array.from(sheet.querySelectorAll('.bdt-sec')).find(function(el){return /^ARRÊTS(?:\s*\(\d+\))?/.test(norm(el.textContent))});
+   if(!sec)return;
+
+   /* Récupère le badge orange complet de la ligne « Votre arrêt » (zone jaune). */
+   var badge=Array.from(sheet.querySelectorAll('a.bdt-tag,span.bdt-tag')).find(function(el){
+    var t=norm(el.textContent);
+    return t.includes('POSITION ACTUELLE') && (t.includes('MIN') || t.includes('🚶') || el.tagName==='A');
+   });
+   if(!badge)return;
+
+   var holder=sheet.querySelector('.bdt-position-under-stops');
+   if(!holder){
+    holder=document.createElement('div');
+    holder.className='bdt-position-under-stops';
+    sec.insertAdjacentElement('afterend',holder);
+   }
+   if(badge.parentElement!==holder)holder.appendChild(badge);
+  });
+ }
+ new MutationObserver(patch).observe(document.body,{childList:true,subtree:true});
+ [0,80,200,500,1000,1800].forEach(function(ms){setTimeout(patch,ms)});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
+})();
+</script>
