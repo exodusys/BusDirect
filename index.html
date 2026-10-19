@@ -3013,10 +3013,8 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    }catch(e){}
 
    var walk=document.createElement('a');
-   // Reprend exactement le même graphisme que la 2e photo entourée en rouge
-   walk.className='bdt-xfer bdt-walk';
-   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;margin:6px 0 8px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
-   walk.setAttribute('href','#');
+   walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
+   walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
    walk.setAttribute('target','_blank');
    walk.setAttribute('rel','noopener noreferrer');
    var mins=2;
@@ -3028,12 +3026,25 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
     mins=Math.max(1,Math.round(meters/80));
     dist = meters<1000? Math.round(meters)+' m' : (meters/1000).toFixed(1)+' km';
    }
+   // Lien principal : navigation à pied de Vous êtes ici (position actuelle) vers VOTRE ARRÊT
    var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-   if(loc&&stop) hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-   else if(stop) hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   if(loc&&stop){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   } else if(stop){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+   } else if(loc){
+     hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
+   }
    walk.href=hrefWalk;
-
-   walk.innerHTML='<span class="bdt-xi" style="font-size:18px">🚶</span><span style="flex:1 1 auto;font-weight:800;font-size:14px;color:#fcd34d">Marche à pied · '+mins+' min'+(dist?' · '+dist:'')+'</span><span title="Ouvrir Google Maps à pied" style="font-size:17px;font-weight:800;background:#3f2f18;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px">↗</span>';
+   walk.dataset.origin = loc ? (loc.lat+','+loc.lon) : '';
+   walk.dataset.dest = stop ? (stop.lat+','+stop.lon) : '';
+   walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
+   // Click direct -> ouvre popup interne avec navigation à pied
+   walk.addEventListener('click', function(ev){
+     ev.preventDefault();
+     // force walk
+     openMaps(this.href, true);
+   });
    list.insertBefore(walk, row);
   });
  }
@@ -3066,6 +3077,107 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   sync();
  },900);
  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',sync); else sync();
+})();
+</script>
+
+
+<script id="bd-v155-date-guard">
+(function(){
+ function hasDepart(){
+  // 1) champ input Départ non vide
+  var inputs=document.querySelectorAll('input');
+  for(var i=0;i<inputs.length;i++){
+   var inp=inputs[i];
+   var ph=(inp.getAttribute('placeholder')||'').toLowerCase();
+   if(ph.includes('départ')||ph.includes('depart')){
+    if((inp.value||'').trim().length>0) return true;
+   }
+  }
+  // 2) localStorage / window globals
+  try{
+   var f=localStorage.getItem('bd-from')||localStorage.getItem('bd_from')||window.__bd_from;
+   if(f && String(f).trim().length>0) return true;
+   var fls=localStorage.getItem('bd-depart')||localStorage.getItem('bd_depart');
+   if(fls && String(fls).trim().length>0) return true;
+  }catch(e){}
+  // 3) arrêt(s) à proximités = localisation active
+  if(window.__bd_loc && window.__bd_loc.lat!=null) return true;
+  try{
+   if(localStorage.getItem('bd-loc-enabled')==='1') return true;
+   if(document.documentElement.dataset.loc==='on') return true;
+  }catch(e){}
+  // 4) présence du bouton "Arrêts à proximité" actif ou texte "Position actuelle"
+  var prox=document.body.textContent||'';
+  // si on détecte que la ville utilise "Vous êtes ici" ou "Position actuelle" comme départ, on considère comme renseigné seulement si loc existe (déjà check)
+  return false;
+ }
+
+ function showWarn(){
+  var old=document.getElementById('bd155-date-warn');
+  if(old) old.remove();
+  var div=document.createElement('div');
+  div.id='bd155-date-warn';
+  div.style.cssText='position:fixed;inset:0;z-index:100060;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.45);backdrop-filter:blur(8px)';
+  div.innerHTML='<div style="width:100%;max-width:380px;background:#fff;border-radius:24px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3);font-family:Inter,system-ui,sans-serif;color:#18181b"><div style="width:44px;height:44px;border-radius:12px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;margin-bottom:12px">!</div><div style="font-size:17px;font-weight:900;letter-spacing:-.02em;margin-bottom:6px">Départ manquant</div><div style="font-size:13px;line-height:1.4;color:#52525b;margin-bottom:16px">Veuillez d\'abord renseigner votre adresse de départ dans le champ <b>Départ</b> ou activer <b>Arrêt(s) à proximité</b> (position actuelle) avant de choisir une date et heure.</div><button id="bd155-warn-ok" style="width:100%;height:46px;border-radius:99px;border:0;background:#18181b;color:#fff;font-weight:800;font-size:13px;cursor:pointer">Compris</button></div>';
+  document.body.appendChild(div);
+  var close=function(){ div.remove(); document.removeEventListener('keydown', onEsc); };
+  div.addEventListener('click', function(e){ if(e.target===div) close(); });
+  div.querySelector('#bd155-warn-ok').onclick=close;
+  var onEsc=function(ev){ if(ev.key==='Escape') close(); };
+  document.addEventListener('keydown', onEsc);
+  // dark
+  if(document.documentElement.classList.contains('dark')){
+   var sheet=div.querySelector('div');
+   sheet.style.background='#1C1917';
+   sheet.style.color='#fafafa';
+  }
+ }
+
+ function scrollToRoutes(){
+  var h=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).find(function(el){
+   return el.children.length===0 && (el.textContent||'').trim().toLowerCase()==='prochains parcours';
+  });
+  if(!h) return;
+  var target=h.closest('section')||h.parentElement;
+  if(!target) target=h;
+  target.scrollIntoView({behavior:'smooth',block:'start'});
+  // offset for header
+  setTimeout(function(){
+   try{
+    var top=target.getBoundingClientRect().top + window.scrollY - 80;
+    window.scrollTo({top:top, behavior:'smooth'});
+   }catch(e){}
+  },120);
+ }
+
+ // Intercepte le bouton Choisir une date et heure
+ function wire(){
+  var btn=document.getElementById('bd-v148-date-btn');
+  if(!btn || btn.__bd155Guard) return;
+  btn.__bd155Guard=1;
+  btn.addEventListener('click', function(e){
+   if(!hasDepart()){
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    showWarn();
+    return false;
+   }
+  }, true);
+ }
+
+ // Au moment de valider la date, on scroll vers Prochains parcours
+ window.addEventListener('bd-trip-datetime-change', function(ev){
+  var d=ev.detail;
+  if(d && d.validated){
+   setTimeout(scrollToRoutes, 350);
+   setTimeout(scrollToRoutes, 900);
+  }
+ });
+
+ // Observe DOM pour bouton qui est recréé
+ new MutationObserver(wire).observe(document.body,{childList:true,subtree:true});
+ setInterval(wire, 800);
+ wire();
 })();
 </script>
 
