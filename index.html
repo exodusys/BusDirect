@@ -2779,7 +2779,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function info(){var old=document.getElementById('bd-v149-date-under-routes');if(!window.__bd_dtValidated){if(old)old.remove();return}var t=title();if(!t)return;if(!old){old=document.createElement('div');old.id='bd-v149-date-under-routes'}old.innerHTML='<span class="bd-v149-cap">Date et heure sélectionnées</span>'+fmt(selected());if(t.parentNode&&t.nextSibling!==old)t.parentNode.insertBefore(old,t.nextSibling)}
  function decorate(){document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});if(!window.__bd_dtValidated)return;var x=selected(),lab=x.toLocaleDateString('fr-CH',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelectorAll('div').forEach(function(el){if(el.children.length>5)return;var tx=(el.textContent||'').trim(),m=tx.match(/départ\s+(\d{1,2}:\d{2})\s+•\s+arrivée\s+(\d{1,2}:\d{2})/i);if(m&&!el.querySelector('.bd-v149-result-date')){var d=document.createElement('div');d.className='bd-v149-result-date';d.textContent='🗓️ '+lab+' · départ '+m[1];el.insertBefore(d,el.firstChild)}})}
  function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
- var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
+ var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
 })();
 </script>
 
@@ -2884,11 +2884,11 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   btn.addEventListener('click', function(e){
    if(!hasDepart()){
     e.preventDefault();
-    e.stopImmediatePropagation();
+    e.stopPropagation();
     showWarn();
     return false;
    }
-  }, true);
+  }, false);
  }
 
  // Au moment de valider la date, on scroll vers Prochains parcours
@@ -3233,10 +3233,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   if(!isWalkLink) return;
   // Do not block if inside a journey card that opens live tracking – let React handle card clicks
   // Still open our popup for pure walk links
-  e.preventDefault(); e.stopPropagation();
-  var meta={isWalk:true, cardEl:a.closest('button')||a.closest('.bdt-row')||a.closest('[class*="rounded"]')||a};
-  try{ var latAttr=a.getAttribute('data-lat'), lonAttr=a.getAttribute('data-lon'); if(latAttr) meta.lat=parseFloat(latAttr); if(lonAttr) meta.lon=parseFloat(lonAttr); }catch(err){}
-  openHyperPopup(a.href, meta);
+  return; // intercept disabled – never block clicks
  }, true);
 
  // Fix aussi pour les div cliquables avec href data
@@ -3246,8 +3243,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   var href=el.getAttribute('href')||el.dataset.href;
   if(!href) return;
   if(!/travelmode=walking|dirflg=w/i.test(href)) return;
-  e.preventDefault(); e.stopPropagation();
-  openHyperPopup(href, {isWalk:true, cardEl:el});
+  return; // intercept disabled
  }, true);
 
  // ---------- REMPLACEMENT TEXTES ----------
@@ -3277,9 +3273,9 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function ensureBannerProchainsParcours(){ var dt=getValidatedDT(); var existing=document.getElementById('bd172-banner-main'); if(!dt || !hasSearchValues()){ if(existing) existing.remove(); var other=document.getElementById('bd172-banner-live'); if(other) other.remove(); var suivi=document.getElementById('bd172-banner-suivi'); if(suivi) suivi.remove(); return; } var headers=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).filter(function(el){ return el.children.length===0 && (el.textContent||'').trim().toLowerCase()==='prochains parcours'; }); var h=headers[0]; if(!h) return; if(!existing){ existing=buildBannerEl(); existing.id='bd172-banner-main'; if(h.parentNode) h.parentNode.insertBefore(existing, h.nextSibling); } else { var newEl=buildBannerEl(); existing.innerHTML=newEl.innerHTML; } }
  function ensureBannerSuiviDirect(){ var dt=getValidatedDT(); if(!dt || !hasSearchValues()){ var b=document.getElementById('bd172-banner-suivi'); if(b) b.remove(); return; } var sheets=document.querySelectorAll('.bdt-sheet, .bdt-wrap, [class*="bdt-sheet"]'); sheets.forEach(function(sheet){ if(!sheet.textContent.toLowerCase().includes('suivi en direct')) return; var existing=sheet.querySelector('#bd172-banner-suivi'); if(!existing){ var banner=buildBannerEl(); banner.id='bd172-banner-suivi'; banner.style.margin='0 0 12px 0'; sheet.insertBefore(banner, sheet.firstChild); } else { var newB=buildBannerEl(); existing.innerHTML=newB.innerHTML; existing.id='bd172-banner-suivi'; } }); var topHeaders=Array.from(document.querySelectorAll('*')).filter(function(el){ return (el.textContent||'').trim().toLowerCase()==='suivi en direct' && el.children.length===0; }); topHeaders.forEach(function(th){ var parent=th.parentElement; if(!parent) return; if(parent.querySelector('#bd172-banner-suivi')) return; var banner=buildBannerEl(); banner.id='bd172-banner-suivi'; parent.insertBefore(banner, th.nextSibling); }); }
  function syncAll(){ replaceTextsGlobal(); ensureBannerProchainsParcours(); ensureBannerSuiviDirect(); }
- var raf=0; function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0; syncAll();}); } new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true});
+ var raf=0; function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0; syncAll();}); } new MutationObserver(sched).observe(document.body,{childList:true,subtree:true});
  window.addEventListener('bd-trip-datetime-change', function(){ setTimeout(syncAll, 80); setTimeout(syncAll, 400); });
- setInterval(syncAll, 900); if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', syncAll); else syncAll();
+ setInterval(syncAll, 3000); if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', syncAll); else syncAll();
 
  // Boutons enveloppe dans Prochains parcours – FIX vertical
  function addEmailButtonsToCards(){
@@ -3309,410 +3305,182 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    card.__bd172Email=1;
   });
  }
- setInterval(addEmailButtonsToCards, 1000);
+ setInterval(addEmailButtonsToCards, 4000);
  console.log('V172.2 hyper complex loaded – walking popup + email vertical');
 })();
 </script>
 
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
 
+
 <script id="bd-final-bundle">
-/* BusDirect – bundle définitif (FIX suivi en direct)
- * IMPORTANT: never nest <button>/<a> inside journey <button> cards – breaks Tl() live tracking
- */
+/* BusDirect final – SAFE (no click blocking, no full-screen overlays left open) */
 (function(){
   if(window.__bdFinal) return; window.__bdFinal = true;
 
-  var K = {
-    near:'bd_nearRadius', tile:'bd_tile_nearRadius',
-    veh:'bd_vehicle_tol', vehMax:'bd_vehicle_tol_max',
-    ret:'bd_live_retention_hours', lives:'bd_saved_lives_v1'
-  };
-  var DEF = {near:500, tile:500, veh:400, vehMax:1000, ret:3};
-  function getNum(key,def,min,max){try{var v=parseFloat(localStorage.getItem(key));if(!isNaN(v)&&v>=min&&v<=max)return v}catch(e){}return def}
-  function setNum(key,v,min,max,def){v=parseFloat(v);if(isNaN(v)||v<min)v=def;if(v>max)v=max;try{localStorage.setItem(key,String(v))}catch(e){}return v}
+  /* --- Unlock stuck UI on load --- */
+  function unlock(){
+    try{
+      document.documentElement.classList.remove('modal-open','bd-page-open');
+      if(document.body){
+        document.body.classList.remove('modal-open');
+        document.body.style.position='';
+        document.body.style.overflow='';
+        document.body.style.width='';
+      }
+      ['bd-v172-popup','bd-final-params','bd-final-replay','bd-final-toast','bd-geo-bg','bd155-date-warn','bd-v148-dt-bg','bd-v155-maps'].forEach(function(id){
+        var el=document.getElementById(id); if(el) try{el.remove()}catch(e){}
+      });
+      // remove orphan full-screen backdrops that block clicks
+      document.querySelectorAll('.bdt-wrap,.bdt-back').forEach(function(el){
+        // only remove if sheet was closed / empty
+        if(!el.querySelector('.bdt-sheet') || el.id==='bd-final-replay') {
+          // keep React-managed .bdt-wrap if it has live sheet open via React state
+        }
+      });
+    }catch(e){}
+  }
+  unlock();
+  setTimeout(unlock, 300);
+  setTimeout(unlock, 1200);
+
+  var K={near:'bd_nearRadius',tile:'bd_tile_nearRadius',veh:'bd_vehicle_tol',vehMax:'bd_vehicle_tol_max',ret:'bd_live_retention_hours',lives:'bd_saved_lives_v1'};
+  var DEF={near:500,tile:500,veh:400,vehMax:1000,ret:3};
+  function getNum(k,d,min,max){try{var v=parseFloat(localStorage.getItem(k));if(!isNaN(v)&&v>=min&&v<=max)return v}catch(e){}return d}
+  function setNum(k,v,min,max,d){v=parseFloat(v);if(isNaN(v)||v<min)v=d;if(v>max)v=max;try{localStorage.setItem(k,String(v))}catch(e){}return v}
   function getNear(){return getNum(K.near,DEF.near,50,5000)}
   function getTile(){return getNum(K.tile,getNear(),50,5000)}
   function getVeh(){return getNum(K.veh,DEF.veh,50,2000)}
   function getVehMax(){return getNum(K.vehMax,DEF.vehMax,100,5000)}
   function getRet(){return getNum(K.ret,DEF.ret,0.25,168)}
-  window.__bd_getNearRadius=getNear; window.__bd_getTileRadius=getTile; window.__bd_getVehicleTol=getVeh;
-
+  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function toast(msg){
     var o=document.getElementById('bd-final-toast'); if(o)o.remove();
     var d=document.createElement('div'); d.id='bd-final-toast';
-    d.style.cssText='position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100120;background:#18181b;color:#fff;padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;box-shadow:0 12px 40px rgba(0,0,0,.35);max-width:92vw;text-align:center';
-    if(document.documentElement.classList.contains('dark')){d.style.background='#fafafa';d.style.color='#09090b'}
+    d.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:100120;background:#18181b;color:#fff;padding:12px 18px;border-radius:999px;font-size:13px;font-weight:800;pointer-events:none';
     d.textContent=msg; document.body.appendChild(d);
-    setTimeout(function(){try{d.remove()}catch(e){}},2200);
-  }
-  function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-
-  var MONTHS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
-  var MONTHS_SHORT=['janv','févr','mars','avr','mai','juin','juil','août','sept','oct','nov','déc'];
-  var DAYS=['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
-  var DAYS_SHORT=['dim','lun','mar','mer','jeu','ven','sam'];
-  function pad(n){return (n<10?'0':'')+n}
-  function getValidatedDT(){
-    try{
-      if(window.__bd_dtValidated&&window.__bd_tripDate&&window.__bd_tripTime){
-        var dt=new Date(window.__bd_tripDate+'T'+window.__bd_tripTime+':00'); if(!isNaN(dt)) return dt;
-      }
-    }catch(e){}
-    return null;
-  }
-  function isPast(dt){return dt&&dt.getTime()<(Date.now()-2*60*1000)}
-  function formatFull(d){if(!d)return'';return DAYS[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()]+' à '+d.getHours()+'h'+pad(d.getMinutes())}
-  function formatShortDate(d){if(!d)return'';return DAYS_SHORT[d.getDay()]+' '+d.getDate()+' '+MONTHS_SHORT[d.getMonth()]+' à '+d.getHours()+'h'+pad(d.getMinutes())}
-  function formatCountdown(ms){
-    if(ms==null||isNaN(ms))return null; if(ms<=0)return'0 s';
-    var s=Math.floor(ms/1000), days=Math.floor(s/86400); s%=86400;
-    var h=Math.floor(s/3600); s%=3600; var m=Math.floor(s/60); s%=60;
-    var p=[]; if(days>0)p.push(days+' j'); if(h>0||days>0)p.push(h+' h'); if(m>0||h>0||days>0)p.push(m+' min'); p.push(s+' s');
-    return p.join(' ');
-  }
-  function parseMinSec(txt){
-    var m=String(txt||'').match(/(?:Départ|Arrive|Arrivée)\s+dans\s+(.+)/i); if(!m)return null;
-    var rest=m[1], total=0, a;
-    a=rest.match(/(\d+)\s*(?:j|jours?)/i); if(a)total+=+a[1]*86400000;
-    a=rest.match(/(\d+)\s*h/i); if(a)total+=+a[1]*3600000;
-    a=rest.match(/(\d+)\s*min/i); if(a)total+=+a[1]*60000;
-    a=rest.match(/(\d+)\s*s/i); if(a)total+=+a[1]*1000;
-    if(total===0&&/0+\s*s/i.test(rest))return 0;
-    if(total===0&&!/\d/.test(rest))return null;
-    return total;
-  }
-  function detectVehicle(ctx){var t=(ctx||'').toLowerCase(); if(/\b(train|rer|metro|métro|tram)\b/.test(t))return'train'; return'bus'}
-  function cardOf(el){var n=el; while(n&&n!==document.body){if(n.tagName==='BUTTON'&&/rounded/.test(n.className||''))return n; n=n.parentElement} return null}
-  function getCardTimes(card){if(!card)return[null,null]; var m=(card.textContent||'').match(/\b\d{1,2}:\d{2}\b/g); return m&&m.length?m.slice(0,2):[null,null]}
-  function sameTime(base,hm){var m=/^(\d{1,2}):(\d{2})/.exec(String(hm||'')); if(!m||!base)return null; var d=new Date(base.getTime()); d.setHours(+m[1],+m[2],0,0); return d}
-  function haversine(a,b){if(!a||!b||a.lat==null||b.lat==null)return null; var R=6371000,toRad=Math.PI/180; var dLat=(b.lat-a.lat)*toRad,dLon=(b.lon-a.lon)*toRad; var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(a.lat*toRad)*Math.cos(b.lat*toRad)*Math.sin(dLon/2)*Math.sin(dLon/2); return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa))}
-  function getLoc(){try{if(window.__bd_loc&&window.__bd_loc.lat!=null)return{lat:+window.__bd_loc.lat,lon:+(window.__bd_loc.lon||window.__bd_loc.lng)}}catch(e){}return null}
-  function fmtDist(m){if(m==null||isNaN(m))return null; return m<1000?Math.round(m)+' m':(m/1000).toFixed(m<10000?1:0)+' km'}
-  function walkMin(m){return m==null?null:Math.max(1,Math.round(m/83.3))}
-  function collectStopIndex(){
-    var idx={};
-    function add(name,lat,lon){if(!name||lat==null||lon==null)return; var key=String(name).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); if(key)idx[key]={lat:+lat,lon:+lon,name:name}}
-    try{var near=window.__bd_nearStops||[]; if(Array.isArray(near))near.forEach(function(s){if(s)add(s.name||s.stopName,s.lat||s.latitude,s.lon||s.lng||s.longitude)})}catch(e){}
-    return idx;
-  }
-  function resolveStop(card, stopName){
-    var idx=collectStopIndex();
-    if(stopName){var key=String(stopName).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); if(idx[key])return idx[key]; for(var k in idx){if(k.indexOf(key)>=0||key.indexOf(k)>=0)return idx[k]}}
-    return null;
-  }
-  function extractDepartName(card){
-    if(!card)return'';
-    try{var f=localStorage.getItem('bd-from')||window.__bd_from; if(f)return String(f).trim()}catch(e){}
-    var el=card.querySelector('.bdt-name,.bdt-st'); return el?(el.textContent||'').trim():'';
+    setTimeout(function(){try{d.remove()}catch(e){}},2000);
   }
 
-  /* Walk badge: use DIV (never <a> or <button> inside journey button) */
-  function injectWalk(card){
-    if(!card||card.querySelector('.bd-final-walk'))return;
-    var txt=card.textContent||'';
-    if(!/Départ dans|Arrive dans|Départ le|Arrivée le|Trajet terminé|départ\s+\d{1,2}:\d{2}/i.test(txt))return;
-    if(card.classList&&card.classList.contains('bdt-follow'))return;
-    var loc=getLoc(), stopName=extractDepartName(card), coords=resolveStop(card,stopName);
-    var dist=null, mins=null;
-    if(loc&&coords){dist=haversine(loc,coords); mins=walkMin(dist)}
-    var dest=coords?(coords.lat+','+coords.lon):(stopName||''); if(!dest)return;
-    var origin=loc?(loc.lat+','+loc.lon):'';
-    var href='https://www.google.com/maps/dir/?api=1'+(origin?'&origin='+encodeURIComponent(origin):'')+'&destination='+encodeURIComponent(dest)+'&travelmode=walking';
-    var label=dist!=null?('🚶 '+fmtDist(dist)+' · ~'+mins+' min à pied'):('🚶 À pied'+(stopName?(' vers '+stopName.slice(0,24)):'') );
-    var a=document.createElement('div');
-    a.className='bd-final-walk';
-    a.setAttribute('role','link');
-    a.setAttribute('data-href', href);
-    a.style.cssText='display:flex;align-items:center;gap:8px;margin:6px 0 2px;padding:8px 12px;border-radius:14px;font-size:12px;font-weight:700;cursor:pointer;background:#fffbeb;color:#b45309;border:1px solid rgba(217,119,6,.25)';
-    if(document.documentElement.classList.contains('dark')){a.style.background='rgba(217,119,6,.14)';a.style.color='#fcd34d'}
-    a.innerHTML='<span>🚶</span><span style="flex:1">'+label+'</span><span style="font-weight:800">↗</span>';
-    a.addEventListener('click', function(e){
-      e.preventDefault(); e.stopPropagation();
-      // Open maps without blocking live tracking on the card
-      try{ window.open(href, '_blank', 'noopener,noreferrer'); }catch(err){ location.href=href; }
-    });
-    card.appendChild(a);
+  /* Paramètres menu only – minimal */
+  function ensureMenu(){
+    var menu=document.getElementById('bd-v101-menu'); if(!menu) return;
+    var grid=menu.querySelector('.bd-v101-grid'); if(!grid||document.getElementById('bd-v101-dist')) return;
+    var btn=document.createElement('button'); btn.type='button'; btn.className='bd-v101-item'; btn.id='bd-v101-dist';
+    btn.innerHTML='<span>⚙️</span><span>Paramètres</span>';
+    btn.addEventListener('click', function(e){ e.stopPropagation(); menu.classList.remove('open'); openParams(); });
+    grid.appendChild(btn);
   }
-
-  /* Countdown texts */
-  var targetMap = typeof WeakMap!=='undefined' ? new WeakMap() : null;
-  function replaceTexts(){
-    var dt=getValidatedDT(), past=isPast(dt);
-    var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-    var nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function(node){
-      if(node.__bdF) return;
-      var t=(node.textContent||'').trim(); if(!t) return;
-      var isDep=/^Départ dans\s+/i.test(t);
-      var isArr=/^(?:Arrive|Arrivée)\s+dans\s+/i.test(t);
-      var isDone=/^Trajet terminé$/i.test(t);
-      if(!isDep&&!isArr&&!isDone) return;
-      var parent=node.parentElement; if(!parent) return;
-      if(parent.closest&&(parent.closest('#bd-v172-popup')||parent.closest('#bd-final-params'))) return;
-      var card=cardOf(parent), ctx=(card&&card.textContent)||parent.textContent||'';
-      if(isArr && /0+\s*s/i.test(t) && !dt){
-        node.textContent = detectVehicle(ctx)==='train' ? 'Le train arrive' : 'Le bus arrive';
-        node.__bdF=1; return;
-      }
-      if(dt){
-        var times=getCardTimes(card);
-        if(past){
-          if(isArr||isDone){ node.textContent=formatShortDate(sameTime(dt,times[1])||sameTime(dt,times[0])||dt); node.__bdF=1; return; }
-          if(isDep){ node.textContent='Départ le '+formatFull(sameTime(dt,times[0])||dt); node.__bdF=1; return; }
-        } else {
-          if(isDep||isArr){ node.textContent='Départ le '+formatFull(sameTime(dt,times[0])||dt); node.__bdF=1; return; }
-        }
-      } else {
-        if(isDone) return;
-        var ms=null;
-        if(targetMap&&targetMap.has(node)) ms=targetMap.get(node)-Date.now();
-        else { ms=parseMinSec(t); if(ms!=null&&targetMap) targetMap.set(node, Date.now()+ms); }
-        if(ms==null) return;
-        if(ms<0) ms=0;
-        if(isArr && ms<1500){ node.textContent=detectVehicle(ctx)==='train'?'Le train arrive':'Le bus arrive'; node.__bdF=1; return; }
-        var f=formatCountdown(ms); if(!f) return;
-        node.textContent='Départ dans '+f;
-        node.__bdF=0;
-      }
-    });
-  }
-  function clearTextFlags(){
-    var walker=document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-    while(walker.nextNode()){
-      var n=walker.currentNode;
-      if(n.__bdF){
-        var t=(n.textContent||'').trim();
-        if(/^(?:Départ|Arrive|Arrivée)\s+dans\s+\d+\s*min/i.test(t)||t==='Trajet terminé'){ n.__bdF=0; try{if(targetMap)targetMap.delete(n)}catch(e){} }
-      }
+  function openParams(){
+    unlock();
+    var near=getNear(),tile=getTile(),veh=getVeh(),vehMax=getVehMax(),ret=getRet();
+    var bg=document.createElement('div'); bg.id='bd-final-params';
+    bg.style.cssText='position:fixed;inset:0;z-index:100070;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45)';
+    function card(title,id,val,unit,presets){
+      return '<div style="background:#fff;border:1px solid #e7e5e4;border-radius:16px;padding:14px;margin-bottom:10px"><div style="font-weight:800;font-size:13px;margin-bottom:8px">'+title+'</div><div style="display:flex;gap:8px;align-items:center"><input id="'+id+'" type="number" value="'+val+'" style="flex:1;height:44px;border-radius:12px;border:1px solid #d6d3d1;padding:0 12px;font-weight:800"/><span style="font-size:12px;font-weight:700;color:#71717a">'+unit+'</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">'+(presets||[]).map(function(p){return '<button type="button" data-for="'+id+'" data-v="'+p.v+'" style="height:32px;padding:0 10px;border-radius:99px;border:1px solid #e7e5e4;background:#f4f4f5;font-weight:800;font-size:11px">'+p.l+'</button>'}).join('')+'</div></div>';
     }
+    bg.innerHTML='<div style="width:100%;max-width:520px;max-height:90dvh;overflow:auto;background:#fafaf9;border-radius:28px 28px 0 0;padding:16px 18px 28px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="margin:0;font-size:18px;font-weight:900">⚙️ Paramètres</h3><button type="button" id="bdf-x" style="width:36px;height:36px;border-radius:50%;border:0;background:#e7e5e4;font-weight:800">✕</button></div>'+
+      card('🚏 Arrêt(s) à proximité','bdf-near',near,'m',[{v:200,l:'200'},{v:500,l:'500'},{v:1000,l:'1km'}])+
+      card('🧱 Mes parcours','bdf-tile',tile,'m',[{v:200,l:'200'},{v:500,l:'500'},{v:1000,l:'1km'}])+
+      card('🚌 Véhicule min','bdf-veh',veh,'m',[{v:200,l:'200'},{v:400,l:'400'},{v:600,l:'600'}])+
+      card('🚌 Véhicule max','bdf-vehmax',vehMax,'m',[{v:800,l:'800'},{v:1000,l:'1km'},{v:1500,l:'1.5km'}])+
+      card('💾 Conservation suivis','bdf-ret',ret,'h',[{v:1,l:'1h'},{v:3,l:'3h'},{v:6,l:'6h'},{v:24,l:'24h'}])+
+      '<button type="button" id="bdf-save" style="width:100%;height:48px;border-radius:99px;border:0;background:#18181b;color:#fff;font-weight:900">Enregistrer</button></div>';
+    document.body.appendChild(bg);
+    function close(){ try{bg.remove()}catch(e){} unlock(); }
+    bg.addEventListener('click', function(e){ if(e.target===bg) close(); });
+    bg.querySelector('#bdf-x').onclick=close;
+    bg.querySelectorAll('[data-for]').forEach(function(b){ b.onclick=function(){ var i=document.getElementById(b.getAttribute('data-for')); if(i)i.value=b.getAttribute('data-v'); }; });
+    bg.querySelector('#bdf-save').onclick=function(){
+      setNum(K.near,document.getElementById('bdf-near').value,50,5000,DEF.near);
+      setNum(K.tile,document.getElementById('bdf-tile').value,50,5000,DEF.tile);
+      setNum(K.veh,document.getElementById('bdf-veh').value,50,2000,DEF.veh);
+      setNum(K.vehMax,document.getElementById('bdf-vehmax').value,100,5000,DEF.vehMax);
+      setNum(K.ret,document.getElementById('bdf-ret').value,0.25,168,DEF.ret);
+      close(); toast('Paramètres enregistrés');
+    };
   }
 
-  /* Save live – DIV not button when inside card button */
+  /* Save live – only on sheet, DIV, stopPropagation only on our control */
   function loadLives(){
     try{
       var arr=JSON.parse(localStorage.getItem(K.lives)||'[]'); if(!Array.isArray(arr))arr=[];
       var hours=getRet(), now=Date.now();
-      var kept=arr.filter(function(s){return s&&((s.endTs||s.savedAt||0)+hours*3600*1000)>now});
-      if(kept.length!==arr.length) try{localStorage.setItem(K.lives,JSON.stringify(kept))}catch(e){}
-      return kept;
+      return arr.filter(function(s){return s&&((s.endTs||s.savedAt||0)+hours*3600*1000)>now});
     }catch(e){return[]}
   }
-  function saveLives(arr){try{localStorage.setItem(K.lives,JSON.stringify(arr))}catch(e){}}
+  function saveLives(a){try{localStorage.setItem(K.lives,JSON.stringify(a))}catch(e){}}
 
-  function collectTrip(el){
-    if(!el)return null;
-    var txt=(el.textContent||'').replace(/\s+/g,' ').trim();
-    var times=(txt.match(/\b\d{1,2}:\d{2}\b/g)||[]).slice(0,4);
-    var from='',to='';
-    try{from=localStorage.getItem('bd-from')||window.__bd_from||'';to=localStorage.getItem('bd-to')||window.__bd_to||''}catch(e){}
-    var liveBox=document.querySelector('.bd-livebox');
-    if(liveBox){var lt=(liveBox.textContent||'').trim(); var lm=lt.match(/Live\s*:\s*(.+?)\s*(?:→|->)\s*(.+)/i); if(lm){from=from||lm[1].trim(); to=to||lm[2].trim()}}
-    var arrow=txt.match(/([A-Za-zÀ-ÿ0-9 .'\-]{2,40})\s*(?:→|->)\s*([A-Za-zÀ-ÿ0-9 .'\-]{2,40})/);
-    if(arrow){from=from||arrow[1].trim(); to=to||arrow[2].trim()}
-    var stops=[];
-    (document.querySelector('.bdt-sheet')||el).querySelectorAll('.bdt-row .bdt-name').forEach(function(n){var t=(n.textContent||'').trim(); if(t)stops.push({name:t})});
-    if(stops.length){if(!from||from==='Départ')from=stops[0].name; if(!to||to==='Arrivée')to=stops[stops.length-1].name}
-    function parseHM(t){var m=/(\d{1,2}):(\d{2})/.exec(t||''); if(!m)return null; var d=new Date(); d.setHours(+m[1],+m[2],0,0); return d.getTime()}
-    var startTs=Date.now(), endTs=startTs+45*60000;
-    if(times[0]){var s=parseHM(times[0]); if(s)startTs=s}
-    if(times[1]){var e=parseHM(times[1]); if(e)endTs=e}
-    if(endTs<startTs) endTs+=86400000;
-    return{id:'live_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), from:from||'Départ', to:to||'Arrivée', depTime:times[0]||'', arrTime:times[1]||'', stops:stops, startTs:startTs, endTs:endTs, savedAt:Date.now()};
-  }
-
-  function makeSaveEl(onSave, fullWidth){
-    var el=document.createElement('div');
-    el.className='bd-final-save';
-    el.setAttribute('role','button');
-    el.innerHTML='💾 Enregistrer le suivi';
-    el.style.cssText=fullWidth
-      ? 'width:100%;height:44px;border-radius:99px;border:0;background:#18181b;color:#fff;font-weight:800;font-size:13px;margin:8px 0;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px'
-      : 'margin:6px 0 4px;height:36px;padding:0 12px;border-radius:99px;background:#18181b;color:#fff;font-weight:800;font-size:11px;display:inline-flex;align-items:center;gap:6px;cursor:pointer';
-    if(document.documentElement.classList.contains('dark')){el.style.background='#fafafa';el.style.color='#09090b'}
-    el.addEventListener('click', function(e){
-      e.preventDefault();
-      e.stopPropagation(); // don't trigger parent card Tl()
-      onSave();
-    });
-    return el;
-  }
-
-  function injectSaveBtns(){
-    // Inside live sheet – sheet is not a button, real button OK but use div for consistency
+  function injectSheetSave(){
     document.querySelectorAll('.bdt-sheet').forEach(function(sheet){
       if(!/suivi en direct/i.test(sheet.textContent||'')) return;
       if(sheet.querySelector('.bd-final-save')) return;
-      var el=makeSaveEl(function(){
-        var d=collectTrip(sheet); if(!d){toast('Impossible d’extraire');return}
-        var arr=loadLives(); arr.unshift(d); if(arr.length>30)arr=arr.slice(0,30); saveLives(arr); renderSaved();
-        toast('Suivi enregistré · expire dans '+getRet()+' h');
-      }, true);
+      var el=document.createElement('div');
+      el.className='bd-final-save';
+      el.textContent='💾 Enregistrer le suivi';
+      el.style.cssText='width:100%;height:44px;border-radius:99px;background:#18181b;color:#fff;font-weight:800;font-size:13px;margin:8px 0;display:flex;align-items:center;justify-content:center;cursor:pointer';
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
+        var txt=(sheet.textContent||'').replace(/\s+/g,' ');
+        var times=(txt.match(/\b\d{1,2}:\d{2}\b/g)||[]).slice(0,2);
+        var from='Départ', to='Arrivée';
+        try{from=localStorage.getItem('bd-from')||window.__bd_from||from; to=localStorage.getItem('bd-to')||window.__bd_to||to}catch(err){}
+        var item={id:'live_'+Date.now(),from:from,to:to,depTime:times[0]||'',arrTime:times[1]||'',startTs:Date.now(),endTs:Date.now()+45*60000,savedAt:Date.now()};
+        var arr=loadLives(); arr.unshift(item); saveLives(arr.slice(0,30));
+        toast('Suivi enregistré');
+      });
       var actions=sheet.querySelector('.bdt-actions');
       if(actions) actions.parentNode.insertBefore(el, actions); else sheet.appendChild(el);
     });
-    // Journey cards – MUST use div, parent is <button onClick=Tl>
+  }
+
+  /* Walk distance on cards – DIV only, never block card click except on the badge itself */
+  function injectWalkOnce(){
     document.querySelectorAll('button[class*="rounded-"]').forEach(function(card){
-      if(card.closest('#bd-final-saved')||card.closest('#bd-final-params')) return;
-      if(card.classList.contains('bdt-follow')) return; // leave vehicle follow alone
-      var t=card.textContent||'';
-      if(!/Départ dans|Arrive dans|Départ le|Arrivée le|Trajet terminé|départ\s+\d{1,2}:\d{2}/i.test(t)) return;
-      if(card.querySelector('.bd-final-save')) return;
-      var el=makeSaveEl(function(){
-        var d=collectTrip(card); if(!d){toast('Impossible d’extraire');return}
-        var arr=loadLives(); arr.unshift(d); if(arr.length>30)arr=arr.slice(0,30); saveLives(arr); renderSaved();
-        toast('Suivi enregistré · expire dans '+getRet()+' h');
-      }, false);
-      card.appendChild(el);
-    });
-  }
-
-  function openSavedLive(item){
-    var old=document.getElementById('bd-final-replay'); if(old)old.remove();
-    var bg=document.createElement('div'); bg.id='bd-final-replay';
-    bg.style.cssText='position:fixed;inset:0;z-index:100080;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);backdrop-filter:blur(8px)';
-    var stopsHtml=(item.stops||[]).map(function(s,i){
-      var f=i===0,l=i===(item.stops.length-1);
-      return '<div class="bdt-row '+(f?'is-first is-end':'')+(l?' is-last is-end':'')+'" style="--acc:#2563eb"><span class="bdt-dot"></span><div class="bdt-main"><div class="bdt-name">'+esc(s.name||'')+'</div></div></div>';
-    }).join('');
-    bg.innerHTML='<div class="bdt-sheet" style="max-width:640px;width:100%;max-height:92dvh"><div class="bdt-grab"></div><div class="bdt-head"><div class="bdt-title"><span class="bdt-live"></span><h3>Suivi enregistré</h3></div><button type="button" class="bdt-x" id="bd-final-rx">✕</button></div><div class="bdt-body"><div class="bdt-card"><div class="bdt-trip"><div><div class="bdt-big">'+esc(item.depTime||'')+'</div><div class="bdt-st">'+esc(item.from)+'</div></div><div class="bdt-mid"><div class="bdt-line"></div></div><div class="bdt-right"><div class="bdt-big">'+esc(item.arrTime||'')+'</div><div class="bdt-st">'+esc(item.to)+'</div></div></div></div><div class="bdt-sec"><span>Arrêts</span></div><div class="bdt-list">'+(stopsHtml||'<div class="bdt-empty">Aucun arrêt</div>')+'</div><div class="bdt-actions" style="margin-top:12px"><button type="button" class="bdt-btn" id="bd-final-rdel">Supprimer</button><button type="button" class="bdt-btn bdt-btn-main" id="bd-final-rgo">Relancer la recherche</button></div></div></div>';
-    document.body.appendChild(bg);
-    function close(){bg.remove()}
-    bg.querySelector('#bd-final-rx').onclick=close;
-    bg.onclick=function(e){if(e.target===bg)close()};
-    bg.querySelector('#bd-final-rdel').onclick=function(){saveLives(loadLives().filter(function(s){return s.id!==item.id})); renderSaved(); close(); toast('Suivi supprimé')};
-    bg.querySelector('#bd-final-rgo').onclick=function(){
-      close();
-      try{
-        document.querySelectorAll('input').forEach(function(inp){
-          var ph=(inp.getAttribute('placeholder')||'').toLowerCase();
-          var set=Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
-          if(/départ|depart|from/i.test(ph)&&item.from){set.call(inp,item.from);inp.dispatchEvent(new Event('input',{bubbles:true}))}
-          if(/destination|où|ou aller|to/i.test(ph)&&item.to){set.call(inp,item.to);inp.dispatchEvent(new Event('input',{bubbles:true}))}
-        });
-      }catch(e){}
-      toast(item.from+' → '+item.to);
-    };
-  }
-
-  function renderSaved(){
-    var items=loadLives();
-    var host=document.getElementById('bd-final-saved');
-    var mes=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).find(function(el){return el.children.length===0&&/^(Mes parcours|My trips|Mes trajets)$/i.test((el.textContent||'').trim())});
-    if(!items.length){if(host)host.remove(); return}
-    if(!host){host=document.createElement('div'); host.id='bd-final-saved'}
-    var html='<div style="font-size:17px;font-weight:800;letter-spacing:-.02em;margin-bottom:2px">🔴 Suivis enregistrés</div><div style="font-size:11px;color:#71717a;font-weight:600;margin-bottom:10px">Expire '+getRet()+' h après la fin · réglable dans Paramètres</div>';
-    items.forEach(function(it){
-      html+='<div role="button" data-id="'+esc(it.id)+'" class="bd-final-tile" style="width:100%;text-align:left;padding:14px 16px;border-radius:18px;border:1px solid #e7e5e4;background:#fff;margin-bottom:8px;cursor:pointer"><div style="font-weight:800;font-size:14px">'+esc(it.from)+' → '+esc(it.to)+'</div><div style="font-size:12px;color:#71717a;margin-top:2px">'+esc(it.depTime||'')+(it.arrTime?(' → '+esc(it.arrTime)):'')+'</div></div>';
-    });
-    host.innerHTML=html;
-    if(document.documentElement.classList.contains('dark')){
-      host.querySelectorAll('.bd-final-tile').forEach(function(b){b.style.background='#18181b'; b.style.borderColor='rgba(255,255,255,.1)'; b.style.color='#fafafa'});
-    }
-    if(mes){var sec=mes.closest('section')||mes.parentElement; if(sec&&sec.parentElement&&host.nextSibling!==sec) sec.parentElement.insertBefore(host,sec)}
-    else if(!host.parentElement) (document.getElementById('root')||document.body).appendChild(host);
-    host.querySelectorAll('[data-id]').forEach(function(btn){
-      btn.onclick=function(){var it=loadLives().find(function(s){return s.id===btn.getAttribute('data-id')}); if(it) openSavedLive(it)};
-    });
-  }
-
-  function ensureMenu(){
-    var menu=document.getElementById('bd-v101-menu'); if(!menu) return;
-    var grid=menu.querySelector('.bd-v101-grid'); if(!grid) return;
-    if(document.getElementById('bd-v101-dist')) return;
-    var btn=document.createElement('button');
-    btn.className='bd-v101-item'; btn.id='bd-v101-dist'; btn.type='button';
-    btn.innerHTML='<span>⚙️</span><span>Paramètres</span>';
-    grid.appendChild(btn);
-    btn.onclick=function(e){ e.stopPropagation(); menu.classList.remove('open'); openParams(); };
-  }
-
-  function openParams(){
-    var old=document.getElementById('bd-final-params'); if(old)old.remove();
-    var near=getNear(), tile=getTile(), veh=getVeh(), vehMax=getVehMax(), ret=getRet();
-    var bg=document.createElement('div'); bg.id='bd-final-params';
-    bg.style.cssText='position:fixed;inset:0;z-index:100070;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.45);backdrop-filter:blur(8px)';
-    function card(title,hint,id,val,unit,presets){
-      return '<div class="bdf-card"><div class="bdf-label">'+title+'</div><div class="bdf-hint">'+hint+'</div><div class="bdf-row"><input type="number" id="'+id+'" value="'+val+'"/><span class="bdf-unit">'+unit+'</span></div><div class="bdf-presets" data-for="'+id+'">'+presets.map(function(p){return '<button type="button" data-v="'+p.v+'">'+p.l+'</button>'}).join('')+'</div></div>';
-    }
-    bg.innerHTML='<div class="bdf-sheet" role="dialog"><div class="bdf-grab"></div><div class="bdf-head"><h3>⚙️ Paramètres</h3><button type="button" id="bdf-x">✕</button></div><div class="bdf-body">'+
-      card('🚏 Arrêt(s) à proximité','Rayon max pour ARRÊT(S) À PROXIMITÉ.','bdf-near',near,'mètres',[{v:200,l:'200 m'},{v:500,l:'500 m'},{v:800,l:'800 m'},{v:1000,l:'1 km'},{v:1500,l:'1,5 km'}])+
-      card('🧱 Mes parcours (dalles)','Rayon par défaut des dalles.','bdf-tile',tile,'mètres',[{v:200,l:'200 m'},{v:500,l:'500 m'},{v:800,l:'800 m'},{v:1000,l:'1 km'}])+
-      card('🚌 Véhicule (min)','Détection « Vous êtes dans ce véhicule ».','bdf-veh',veh,'m min',[{v:200,l:'200 m'},{v:400,l:'400 m'},{v:600,l:'600 m'},{v:800,l:'800 m'}])+
-      card('🚌 Véhicule (max)','Plafond selon précision GPS.','bdf-vehmax',vehMax,'m max',[{v:800,l:'800 m'},{v:1000,l:'1 km'},{v:1500,l:'1,5 km'},{v:2000,l:'2 km'}])+
-      card('💾 Conservation des suivis','Après la fin du parcours.','bdf-ret',ret,'heures',[{v:1,l:'1 h'},{v:3,l:'3 h'},{v:6,l:'6 h'},{v:12,l:'12 h'},{v:24,l:'24 h'}])+
-      '<button type="button" class="bdf-save" id="bdf-save">Enregistrer les paramètres</button></div></div>';
-    document.body.appendChild(bg);
-    function close(){bg.remove()}
-    bg.querySelector('#bdf-x').onclick=close;
-    bg.onclick=function(e){if(e.target===bg)close()};
-    bg.querySelectorAll('.bdf-presets').forEach(function(g){
-      var id=g.getAttribute('data-for');
-      g.querySelectorAll('button').forEach(function(b){b.onclick=function(){var inp=document.getElementById(id); if(inp)inp.value=b.getAttribute('data-v')}});
-    });
-    bg.querySelector('#bdf-save').onclick=function(){
-      var n=setNum(K.near, document.getElementById('bdf-near').value, 50,5000, DEF.near);
-      var t=setNum(K.tile, document.getElementById('bdf-tile').value, 50,5000, DEF.tile);
-      var v=setNum(K.veh, document.getElementById('bdf-veh').value, 50,2000, DEF.veh);
-      var vm=setNum(K.vehMax, document.getElementById('bdf-vehmax').value, 100,5000, DEF.vehMax);
-      var r=setNum(K.ret, document.getElementById('bdf-ret').value, 0.25,168, DEF.ret);
-      saveLives(loadLives()); renderSaved(); close();
-      toast('Paramètres enregistrés · proximité '+n+' m · dalles '+t+' m · véhicule '+v+'–'+vm+' m');
-    };
-  }
-
-  if(!document.getElementById('bd-final-css')){
-    var st=document.createElement('style'); st.id='bd-final-css';
-    st.textContent=
-'.bdf-sheet{width:100%;max-width:520px;max-height:92dvh;overflow:auto;background:#fafaf9;color:#18181b;border-radius:28px 28px 0 0;padding:12px 18px 28px;box-shadow:0 -8px 40px rgba(0,0,0,.22)}'+
-'html.dark .bdf-sheet{background:#09090b;color:#fafafa;border:1px solid rgba(255,255,255,.08)}'+
-'@media(min-width:640px){.bdf-sheet{border-radius:28px;margin-bottom:16px}}'+
-'.bdf-grab{width:40px;height:5px;border-radius:99px;background:#d4d4d8;margin:4px auto 12px}'+
-'.bdf-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}'+
-'.bdf-head h3{margin:0;font-size:18px;font-weight:900}'+
-'.bdf-head button{width:36px;height:36px;border-radius:50%;border:0;background:#e7e5e4;font-size:16px;font-weight:800;cursor:pointer}html.dark .bdf-head button{background:#27272a;color:#fafafa}'+
-'.bdf-card{background:#fff;border:1px solid #e7e5e4;border-radius:18px;padding:16px;margin-bottom:12px}html.dark .bdf-card{background:#18181b;border-color:rgba(255,255,255,.1)}'+
-'.bdf-label{font-size:13px;font-weight:800;margin-bottom:6px}.bdf-hint{font-size:11px;color:#71717a;line-height:1.4;margin-bottom:12px}'+
-'.bdf-row{display:flex;align-items:center;gap:10px}'+
-'.bdf-row input{flex:1;height:48px;border-radius:14px;border:1px solid #d6d3d1;padding:0 14px;font-size:16px;font-weight:800}'+
-'.bdf-unit{font-size:12px;font-weight:700;color:#71717a;min-width:56px}'+
-'.bdf-presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}'+
-'.bdf-presets button{height:34px;padding:0 12px;border-radius:99px;border:1px solid #e7e5e4;background:#f4f4f5;font-weight:800;font-size:11px;cursor:pointer}'+
-'.bdf-save{width:100%;height:50px;border-radius:99px;border:0;background:#18181b;color:#fff;font-weight:900;font-size:14px;cursor:pointer;margin-top:4px}'+
-/* Never let injected UI block pointer events on follow button */
-'.bdt-follow{position:relative;z-index:2;pointer-events:auto!important}'+
-'.bdt-follow *{pointer-events:none}'+
-'.bdt-follow{pointer-events:auto!important}';
-    document.head.appendChild(st);
-  }
-
-  function enhanceCards(){
-    document.querySelectorAll('button[class*="rounded-"]').forEach(function(card){
-      if(card.closest('#bd-final-saved')||card.closest('#bd-final-params')) return;
+      if(card.dataset.bdWalk) return;
       if(card.classList.contains('bdt-follow')) return;
-      injectWalk(card);
+      var t=card.textContent||'';
+      if(!/Départ dans|Arrive dans|Départ le|départ\s+\d{1,2}:\d{2}/i.test(t)) return;
+      card.dataset.bdWalk='1';
+      var from=''; try{from=localStorage.getItem('bd-from')||window.__bd_from||''}catch(e){}
+      if(!from) return;
+      var loc=window.__bd_loc;
+      var href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(from)+'&travelmode=walking';
+      if(loc&&loc.lat!=null) href+='&origin='+encodeURIComponent(loc.lat+','+(loc.lon||loc.lng));
+      var badge=document.createElement('div');
+      badge.className='bd-final-walk';
+      badge.textContent='🚶 À pied vers '+String(from).slice(0,28)+' ↗';
+      badge.style.cssText='margin-top:8px;padding:8px 12px;border-radius:12px;background:#fffbeb;color:#b45309;font-size:12px;font-weight:700;cursor:pointer';
+      badge.addEventListener('click', function(e){
+        e.stopPropagation();
+        try{window.open(href,'_blank','noopener')}catch(err){}
+      });
+      card.appendChild(badge);
     });
   }
 
+  /* Light tick – NO MutationObserver to avoid freezes */
   function tick(){
     try{
-      clearTextFlags();
-      replaceTexts();
-      enhanceCards();
-      injectSaveBtns();
       ensureMenu();
-      renderSaved();
-    }catch(e){ console.warn('bd-final', e); }
+      injectSheetSave();
+      injectWalkOnce();
+    }catch(e){ console.warn(e); }
   }
-  var raf=0;
-  function sched(){ if(!raf) raf=requestAnimationFrame(function(){raf=0; tick()}); }
-  if(document.body) new MutationObserver(sched).observe(document.body,{childList:true,subtree:true,characterData:true});
-  window.addEventListener('bd-trip-datetime-change', function(){ setTimeout(tick,50); setTimeout(tick,400); });
-  setInterval(tick, 1000);
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', tick); else tick();
-  console.log('BusDirect final bundle loaded (live tracking fixed)');
+  setTimeout(tick, 500);
+  setInterval(tick, 2500);
+  // One observer, childList only, debounced
+  var tmr=0;
+  if(document.body){
+    new MutationObserver(function(){
+      clearTimeout(tmr);
+      tmr=setTimeout(tick, 400);
+    }).observe(document.body,{childList:true,subtree:true});
+  }
+  console.log('BusDirect SAFE bundle active');
 })();
 </script>
+
 
 
 </body>
