@@ -3019,30 +3019,6 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
      row.__bd155Done=1;
      // si on a un natif et pas de bd155-here, convertit le natif
      if(nativeHere && !alreadyHere){ nativeHere.classList.add('bd155-here'); }
-     // force le bon format "Marche à pied · x min" même sur un walk existant
-     try{
-       var wEl = list.querySelector('.bd155-vous-ici-walk') || hasWalk;
-       if(wEl){
-         // calcule mins si possible
-         var minsUp = 2;
-         try{
-           var locU=window.__bd_loc;
-           var sEl=row.querySelector('.bdt-name');
-           var scU=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-           var stU=null;
-           if(sEl && scU && scU[sEl.textContent.trim()]) stU=scU[sEl.textContent.trim()];
-           if(locU&&locU.lat!=null&&stU&&stU.lat!=null){
-             var R=6371000,r=Math.PI/180,dLat=(stU.lat-locU.lat)*r,dLon=(stU.lon-locU.lon)*r;
-             var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(locU.lat*r)*Math.cos(stU.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-             var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-             minsUp=Math.max(1,Math.round(meters/80));
-           }
-         }catch(e){}
-         wEl.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
-         wEl.style.cssText='text-decoration:none;cursor:pointer';
-         wEl.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px">Marche à pied · '+minsUp+' min</span><span title="Ouvrir Google Maps à pied" style="font-size:17px;font-weight:800;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:#6b7fb8;color:#fff">↗</span>';
-       }
-     }catch(e){}
      return;
    }
    row.__bd155Done=1;
@@ -3084,7 +3060,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
      var walk=document.createElement('a');
      walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
-     walk.style.cssText='text-decoration:none;cursor:pointer';
+     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
      walk.setAttribute('target','_blank');
      walk.setAttribute('rel','noopener noreferrer');
      var mins=2;
@@ -3103,15 +3079,58 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
        hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
      }
      walk.href=hrefWalk;
-     walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px">Marche à pied · '+mins+' min</span><span title="Ouvrir Google Maps à pied" style="font-size:17px;font-weight:800;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:#6b7fb8;color:#fff">↗</span>';
+     walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
      walk.addEventListener('click', function(ev){
        ev.preventDefault();
        openMaps(this.href, true);
      });
-     list.insertBefore(walk, row);
+     // Placement garanti: POSITION ACTUELLE -> Marche à pied -> VOTRE ARRÊT
+     var hereEl = list.querySelector('.bd155-here');
+     if(hereEl && hereEl.nextSibling!==row){
+       // insère walk juste après here
+       if(hereEl.nextSibling){
+         list.insertBefore(walk, hereEl.nextSibling);
+       }else{
+         list.appendChild(walk);
+       }
+       // si walk n'est pas juste avant row, on le remet avant row mais après here
+       if(walk.nextSibling!==row){
+         list.insertBefore(walk, row);
+       }
+     }else{
+       list.insertBefore(walk, row);
+     }
    }
   });
  }
+
+ // --- PATCH GLOBAL: tous les liens "Marche à pied" ouvrent la popup interne en mode marche ---
+ (function(){
+   function isWalkLink(a){
+     if(!a) return false;
+     var txt=(a.textContent||'').toLowerCase();
+     return a.classList.contains('bdt-walk') || a.classList.contains('bd155-vous-ici-walk') || a.classList.contains('bdt-xfer') && txt.includes('pied') || /travelmode=walking/i.test(a.href||'') || /Marche à pied/i.test(a.textContent||'');
+   }
+   document.addEventListener('click',function(e){
+     var a=e.target.closest&&e.target.closest('a.bdt-walk, a.bd155-vous-ici-walk, a.bdt-xfer, a[href*="google.com/maps"], a[href*="maps.google.com"]');
+     if(!a) return;
+     if(a.closest('#bd-v155-maps')) return;
+     if(!isWalkLink(a)) return;
+     e.preventDefault();
+     e.stopImmediatePropagation();
+     var href=a.href||'';
+     // force travelmode walking si pas présent
+     try{
+       if(href && !/travelmode=walking/i.test(href) && !/dirflg=w/i.test(href)){
+         var u=new URL(href);
+         if(!u.searchParams.get('travelmode')) u.searchParams.set('travelmode','walking');
+         href=u.toString();
+       }
+     }catch(err){}
+     openMaps(href, true);
+   }, true);
+ })();
+
 
 function sync(){
 
