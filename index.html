@@ -3472,7 +3472,7 @@ html.dark #bd-v179-item{background:#fafafa !important;color:#09090b !important}
    Array.from(sheet.querySelectorAll('*')).forEach(function(el){
     var own=Array.from(el.childNodes).filter(function(n){return n.nodeType===3}).map(function(n){return n.textContent}).join(' ').replace(/\s+/g,' ').trim().toUpperCase();
     var full=(el.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
-    if(own==='📍 POSITION ACTUELLE' || own==='POSITION ACTUELLE' || full==='📍 POSITION ACTUELLE' || full==='POSITION ACTUELLE'){
+    if(own==='__BD_DISABLED_POSITION_BADGE__'){
       /* Ne retire que le badge lui-même : jamais son parent, afin de conserver la pastille du numéro de bus. */
       try{el.remove()}catch(e){el.style.display='none'}
     }
@@ -3514,6 +3514,86 @@ html.dark .bd191-walk-nav{background:#fafafa;color:#09090b}
  function enhance(card){if(card.querySelector('.bd191-walk-start'))return;var t=cardTrip(card),st=t&&firstStop(t),loc=window.__bd_loc;if(!t||!st||!loc||loc.lat==null)return;var box=document.createElement('div');box.className='bd191-walk-start';box.innerHTML='<div class="bd191-walk-distance">🚶 Calcul de la distance à pied…</div><button type="button" class="bd191-walk-nav">↗ NAVIGATION à pied</button>';box.querySelector('.bd191-walk-nav').onclick=function(e){e.preventDefault();e.stopPropagation();openMaps({lat:loc.lat,lon:loc.lon},{lat:st.lat,lon:st.lon})};card.appendChild(box);routeDistance({lat:loc.lat,lon:loc.lon},{lat:st.lat,lon:st.lon},box)}
  function scan(){locate();document.querySelectorAll('button[class*="rounded-"]').forEach(function(card){if(card.closest('#bd-v173-popup')||card.closest('.bd172-email-modal'))return;var tx=card.textContent||'';if(!/Départ le|Départ dans|Arrivée le|Arrive dans|Trajet terminé/.test(tx))return;enhance(card)})}
  new MutationObserver(function(){setTimeout(scan,40)}).observe(document.body,{childList:true,subtree:true});setInterval(scan,1200);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scan);else scan();
+})();
+</script>
+
+<style id="bd-v194-fixes">
+/* V194 : le libellé POSITION ACTUELLE est masqué sans toucher à la pastille de ligne */
+.bdt-position-current,.bd178-position-badge,.bd179-position-badge,[class*="position-badge"]{display:none!important}
+#bd-v179-item{display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+</style>
+<script id="bd-v194-fixes-script">
+(function(){
+ function norm(s){return String(s||'').replace(/\uFE0F/g,'').replace(/\s+/g,' ').trim().toUpperCase()}
+ function removePositionCurrent(){
+   document.querySelectorAll('.bdt-sheet').forEach(function(sheet){
+     if(norm(sheet.textContent).indexOf('VOTRE ARRÊT')<0 && norm(sheet.textContent).indexOf('VOTRE ARRET')<0)return;
+     var els=Array.from(sheet.querySelectorAll('span,div,p,strong,b'));
+     els.forEach(function(el){
+       var own=Array.from(el.childNodes).filter(function(n){return n.nodeType===3}).map(function(n){return n.textContent}).join(' ');
+       var t=norm(own).replace(/^📍\s*/,'');
+       if(t==='__BD_DISABLED_POSITION_BADGE__'){
+         el.classList.add('bdt-position-current');
+         el.style.setProperty('display','none','important');
+       }
+     });
+   });
+ }
+ function intVal(k,d,min,max){var n=parseInt(localStorage.getItem(k)||String(d),10);if(isNaN(n))n=d;return Math.max(min,Math.min(max,n))}
+ function openDistances(){if(typeof window.__bd_openDistances==='function')window.__bd_openDistances()}
+ function wireDistanceMenu(){
+   var b=document.getElementById('bd-v179-item');if(!b)return;
+   b.style.setProperty('display','flex','important');b.disabled=false;
+   if(!b.__v194){b.__v194=true;b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var m=document.getElementById('bd-v101-menu');if(m)m.classList.remove('open');openDistances();},true)}
+ }
+ function applySettings(){
+   var tile=intVal('bd_tileRadius',500,50,5000),near=intVal('bd_nearRadius',500,50,5000),vmin=intVal('bd_vehicleMinRadius',0,0,5000),vmax=intVal('bd_vehicleMaxRadius',500,0,5000);
+   if(vmin>vmax){var x=vmin;vmin=vmax;vmax=x}
+   window.__bd_tileRadius=tile;window.__bd_nextTileRadius=tile;window.__bd_nearRadius=near;window.__bd_vehicleMinRadius=vmin;window.__bd_vehicleMaxRadius=vmax;window.__bd_vehicleRange={min:vmin,max:vmax};
+ }
+ function setReactInput(input,value){
+   if(!input)return;var proto=Object.getPrototypeOf(input),desc=Object.getOwnPropertyDescriptor(proto,'value');if(desc&&desc.set)desc.set.call(input,String(value));else input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));
+ }
+ function applyTileDefaultToCreateDialog(){
+   var labels=Array.from(document.querySelectorAll('div')).filter(function(x){return norm(x.textContent)==='DISTANCE LOCALISATION (M)'});
+   labels.forEach(function(label){var box=label.parentElement;if(!box)return;var input=box.querySelector('input');if(!input)return;var dialog=input.closest('.fixed');if(!dialog)return;var txt=norm(dialog.textContent);if(txt.indexOf('MODIFIER MON PARCOURS')>=0)return;if(input.dataset.bd194Applied)return;input.dataset.bd194Applied='1';setReactInput(input,intVal('bd_tileRadius',500,50,5000));});
+ }
+ /* Sauvegarde des quatre réglages = paramètres persistants du site. Le rayon proximité est repris par React au rechargement. */
+ document.addEventListener('click',function(e){
+   var save=e.target.closest&&e.target.closest('#bd182-save');if(!save)return;
+   setTimeout(function(){applySettings();
+     try{window.dispatchEvent(new CustomEvent('bd-distance-settings-change',{detail:{tile:window.__bd_tileRadius,near:window.__bd_nearRadius,vehicleMin:window.__bd_vehicleMinRadius,vehicleMax:window.__bd_vehicleMaxRadius}}))}catch(_e){}
+     /* recharge pour que tous les états React (notamment ARRÊT(S) À PROXIMITÉ) relisent immédiatement les paramètres */
+     setTimeout(function(){location.reload()},900);
+   },50);
+ },true);
+ applySettings();wireDistanceMenu();removePositionCurrent();applyTileDefaultToCreateDialog();
+ new MutationObserver(function(){wireDistanceMenu();removePositionCurrent();applyTileDefaultToCreateDialog()}).observe(document.body,{childList:true,subtree:true});
+ window.addEventListener('storage',applySettings);
+})();
+</script>
+
+<style id="bd-v195-position-under-stops">
+.bdt-position-under-stops{display:inline-flex!important;align-items:center;gap:6px;width:max-content;max-width:100%;margin:2px 0 8px 34px;padding:5px 10px;border-radius:9px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;line-height:1.2;box-shadow:0 2px 8px rgba(245,158,11,.18)}
+html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
+</style>
+<script id="bd-v195-position-under-stops-script">
+(function(){
+ function norm(s){return String(s||'').replace(/\s+/g,' ').trim().toUpperCase()}
+ function add(){
+  document.querySelectorAll('.bdt-sheet').forEach(function(sheet){
+   if(sheet.querySelector('.bdt-position-under-stops'))return;
+   var sec=Array.from(sheet.querySelectorAll('.bdt-sec')).find(function(el){return /^ARRÊTS(?:\s*\(\d+\))?/.test(norm(el.textContent))});
+   if(!sec)return;
+   var badge=document.createElement('div');
+   badge.className='bdt-position-under-stops';
+   badge.textContent='📍 POSITION ACTUELLE';
+   sec.insertAdjacentElement('afterend',badge);
+  });
+ }
+ new MutationObserver(function(){setTimeout(add,0)}).observe(document.body,{childList:true,subtree:true});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',add);else add();
+ [50,200,600,1200].forEach(function(ms){setTimeout(add,ms)});
 })();
 </script>
 </body>
