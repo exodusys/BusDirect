@@ -3704,3 +3704,41 @@ html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
  setTimeout(clean,100);setTimeout(clean,500);setTimeout(clean,1200);
 })();
 </script>
+
+<style id="bd-v198-nav-replace-arrow">
+/* V198 — Prochains départs : remplace uniquement le bouton flèche par NAVIGATION à pied, sans déplacer le contenu. */
+.bd198-trip-card{position:relative!important}
+.bd198-hidden-arrow{display:none!important;visibility:hidden!important;pointer-events:none!important}
+.bd198-trip-card .bd191-walk-start{position:static!important;margin-top:10px!important;padding-top:10px!important;padding-right:0!important;min-height:0!important}
+.bd198-trip-card .bd191-walk-distance{padding-right:0!important}
+.bd198-trip-card .bd191-walk-nav{position:absolute!important;top:18px!important;right:18px!important;z-index:8!important;margin:0!important;height:38px!important;padding:0 13px!important;border-radius:999px!important;font-size:10px!important;white-space:nowrap!important}
+@media(max-width:390px){.bd198-trip-card .bd191-walk-nav{right:12px!important;top:14px!important;height:36px!important;padding:0 10px!important;font-size:9px!important}}
+</style>
+<script id="bd-v198-nav-replace-arrow-script">
+(function(){
+ function isTripCard(el){var t=(el.textContent||'').replace(/\s+/g,' ');return /A l[’']heure|À l[’']heure|Arrive dans|Départ dans|Départ le|Arrivée le|Direct|correspondance/i.test(t)&&!!el.querySelector('.bd191-walk-nav')}
+ function findArrow(card,nav){
+  var buttons=Array.from(card.querySelectorAll('button')).filter(function(b){return b!==nav&&!b.closest('.bd191-walk-start')});
+  return buttons.find(function(b){
+   var r=b.getBoundingClientRect(),cr=card.getBoundingClientRect(),txt=(b.textContent||'').trim();
+   var nearRight=(cr.right-r.right)<55, nearTop=(r.top-cr.top)<90;
+   var iconOnly=txt.length<=2 || (!!b.querySelector('svg') && txt.length===0);
+   return nearRight&&nearTop&&iconOnly&&r.width>=28&&r.width<=90&&r.height>=28&&r.height<=90;
+  })||null;
+ }
+ function patch(){
+  document.querySelectorAll('.bd191-walk-nav').forEach(function(nav){
+   var card=nav.closest('button[class*="rounded-"]')||nav.closest('[class*="rounded-"]');
+   while(card&&card!==document.body&&!isTripCard(card))card=card.parentElement;
+   if(!card||card===document.body)return;
+   card.classList.add('bd198-trip-card');
+   var arrow=findArrow(card,nav);if(arrow){arrow.classList.add('bd198-hidden-arrow');arrow.setAttribute('aria-hidden','true');arrow.tabIndex=-1}
+   /* Le bouton piéton reste indépendant ; tout le reste de la carte continue d'ouvrir Suivi en direct. */
+   if(!nav.__bd198){nav.__bd198=1;nav.addEventListener('click',function(e){e.preventDefault();e.stopPropagation()},true)}
+  });
+ }
+ new MutationObserver(function(){setTimeout(patch,20)}).observe(document.body,{childList:true,subtree:true});
+ [0,80,250,600,1200].forEach(function(ms){setTimeout(patch,ms)});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
+})();
+</script>
