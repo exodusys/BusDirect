@@ -3596,6 +3596,31 @@ html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
  [50,200,600,1200].forEach(function(ms){setTimeout(add,ms)});
 })();
 </script>
+
+<style id="bd-v199-next-trips-actions">
+/* V199 — Prochains parcours : e-mail en bas à droite, navigation légèrement plus haut/droite. */
+.bd198-trip-card .bd-envelope{display:flex!important;visibility:visible!important;pointer-events:auto!important;right:10px!important;bottom:8px!important;z-index:9!important}
+.bd198-trip-card .bd191-walk-nav{right:10px!important;top:10px!important;z-index:10!important}
+@media(max-width:390px){.bd198-trip-card .bd191-walk-nav{right:7px!important;top:8px!important}}
+</style>
+<script id="bd-v199-next-trips-actions-script">
+(function(){
+ function openWalking(nav){
+  var box=nav.closest('.bd191-walk-start'),card=nav.closest('.bd198-trip-card')||nav.closest('button[class*="rounded-"]');
+  /* Le gestionnaire V191 porte déjà les coordonnées exactes. On le laisse s'exécuter en priorité. */
+  if(nav.__bd199wired)return; nav.__bd199wired=1;
+  nav.addEventListener('click',function(e){ e.stopPropagation(); },false);
+ }
+ function patch(){
+  document.querySelectorAll('.bd198-trip-card .bd-envelope').forEach(function(b){b.style.setProperty('display','flex','important');b.style.setProperty('visibility','visible','important');b.style.setProperty('pointer-events','auto','important');b.removeAttribute('aria-hidden');b.tabIndex=0});
+  document.querySelectorAll('.bd198-trip-card .bd191-walk-nav').forEach(openWalking);
+ }
+ new MutationObserver(function(){setTimeout(patch,20)}).observe(document.body,{childList:true,subtree:true});
+ [0,80,250,600,1200].forEach(function(ms){setTimeout(patch,ms)});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',patch);else patch();
+})();
+</script>
+
 </body>
 </html>
 
@@ -3734,7 +3759,7 @@ html.dark .bdt-position-under-stops{background:#f59e0b;color:#fff}
    card.classList.add('bd198-trip-card');
    var arrow=findArrow(card,nav);if(arrow){arrow.classList.add('bd198-hidden-arrow');arrow.setAttribute('aria-hidden','true');arrow.tabIndex=-1}
    /* Le bouton piéton reste indépendant ; tout le reste de la carte continue d'ouvrir Suivi en direct. */
-   if(!nav.__bd198){nav.__bd198=1;nav.addEventListener('click',function(e){e.preventDefault();e.stopPropagation()},true)}
+   if(!nav.__bd198){nav.__bd198=1;nav.addEventListener('click',function(e){e.stopPropagation()},true)}
   });
  }
  new MutationObserver(function(){setTimeout(patch,20)}).observe(document.body,{childList:true,subtree:true});
