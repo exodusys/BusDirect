@@ -2772,35 +2772,24 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function bd155_extractCoordsFromHref(href){
    try{
      var u=new URL(href, location.origin);
-     var origin=u.searchParams.get('origin');
-     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr')||u.searchParams.get('saddr');
-     // google.com/maps/dir/?api=1&origin=...&destination=...
-     // also check saddr/daddr for embed
-     if(!origin) origin=u.searchParams.get('saddr');
-     if(!dest) dest=u.searchParams.get('daddr');
+     var origin=u.searchParams.get('origin')||u.searchParams.get('saddr');
+     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr');
      var o=bd155_parseLatLon(origin);
      var d=bd155_parseLatLon(dest);
-     // if dest is not latlon but address, try to find latlon elsewhere in href
-     if(!d && dest && dest.includes(',')){
-       d=bd155_parseLatLon(dest);
-     }
-     return {origin:o, dest:d, originStr:origin, destStr:dest};
+     return {origin:o, dest:d};
    }catch(e){ return {origin:null,dest:null}; }
  }
  async function bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon){
    try{
-     // OSRM foot - gratuit, proche temps Google à pied
      var url='https://router.project-osrm.org/route/v1/foot/'+oLon+','+oLat+';'+dLon+','+dLat+'?overview=false';
      var resp=await fetch(url);
      if(!resp.ok) throw new Error('osrm fail');
      var data=await resp.json();
      if(data && data.routes && data.routes[0] && data.routes[0].duration){
        var sec=data.routes[0].duration;
-       var mins=Math.max(1, Math.round(sec/60));
-       return mins;
+       return Math.max(1, Math.round(sec/60));
      }
    }catch(e){}
-   // fallback haversine /80 m/min
    try{
      var R=6371000,r=Math.PI/180,dLat2=(dLat-oLat)*r,dLon2=(dLon-oLon)*r;
      var aa=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(oLat*r)*Math.cos(dLat*r)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
@@ -2822,57 +2811,25 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
      var allWalks=document.querySelectorAll('.bdt-body .bdt-xfer.bdt-walk, .bdt-body .bd155-vous-ici-walk, .bdt-list .bdt-xfer.bdt-walk, .bdt-list .bd155-vous-ici-walk, .bdt-sheet .bdt-xfer.bdt-walk, .bdt-sheet .bd155-vous-ici-walk');
      for(var i=0;i<allWalks.length;i++){
        var el=allWalks[i];
-       if(el.__bdRealTimeDone) continue;
+       if(el.__bdRealTimeDone && el.__bdRealTimeDone>2) continue;
        var href=el.getAttribute('href')||'';
        var coords=bd155_extractCoordsFromHref(href);
        var o=coords.origin;
        var d=coords.dest;
-       // Si pas de origin mais on a loc + destination
-       if(!o && loc && loc.lat!=null && d){
-         o={lat:loc.lat, lon:loc.lon};
-       }
-       // Si pas de dest mais on a un stop coord connu via le row suivant
-       if(!d){
-         try{
-           var row=el.closest('.bdt-list')?.querySelector('.bdt-row.bd155-votre-row') || el.nextElementSibling;
-           if(row){
-             var nameEl=row.querySelector('.bdt-name');
-             if(nameEl){
-               var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-               if(sc && sc[nameEl.textContent.trim()]){
-                 d=sc[nameEl.textContent.trim()];
-               }
-             }
-           }
-         }catch(e){}
-       }
-       // Si on a toujours pas dest, tente via data attribute
-       if(!d && el.dataset && el.dataset.dest){
-         d=bd155_parseLatLon(el.dataset.dest);
-       }
-       if(!o && el.dataset && el.dataset.origin){
-         o=bd155_parseLatLon(el.dataset.origin);
-       }
+       if(!o && loc && loc.lat!=null && d) o={lat:loc.lat, lon:loc.lon};
+       if(!o && el.dataset && el.dataset.origin) o=bd155_parseLatLon(el.dataset.origin);
+       if(!d && el.dataset && el.dataset.dest) d=bd155_parseLatLon(el.dataset.dest);
        if(o && d){
          var mins=await bd155_getCachedWalkMinutes(o.lat,o.lon,d.lat,d.lon);
          if(mins!=null){
-           // Met à jour le texte "Marche à pied · X min"
-           var txtSpan=el.querySelector('span:nth-child(2)') || el;
-           if(txtSpan){
-             // cherche le span qui contient "Marche" ou "min"
-             var spans=el.querySelectorAll('span');
-             for(var s=0;s<spans.length;s++){
-               if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
-                 spans[s].textContent='Marche à pied · '+mins+' min';
-                 break;
-               }
-             }
-             // si pas trouvé, remplace tout le texte qui contient min
-             if(!/Marche à pied/i.test(el.textContent||'')){
-               el.innerHTML=el.innerHTML.replace(/\d+\s*min\s*à\s*pied/i, 'Marche à pied · '+mins+' min').replace(/Marche à pied[^<]*\d+\s*min/i, 'Marche à pied · '+mins+' min');
+           var spans=el.querySelectorAll('span');
+           for(var s=0;s<spans.length;s++){
+             if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
+               spans[s].textContent='Marche à pied · '+mins+' min';
+               break;
              }
            }
-           el.__bdRealTimeDone=1;
+           el.__bdRealTimeDone=(el.__bdRealTimeDone||0)+1;
          }
        }
      }
@@ -3091,22 +3048,24 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
  }
 
  function decorateLive(){
-  // DEDUP GLOBAL - supprime tout doublon Vous êtes ici / 2 min à pied avant traitement
+  // Dedup Vous êtes ici
   try{
-    document.querySelectorAll('.bdt-body, .bdt-list, .bdt-sheet').forEach(function(container){
-      var heres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
+    document.querySelectorAll('.bdt-body, .bdt-list').forEach(function(container){
+      var allHeres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
         return /Vous êtes ici/i.test(r.textContent||'') && !r.querySelector('.bdt-tag-me');
-      });
-      var bdHeres = Array.from(container.querySelectorAll('.bd155-here'));
-      var allHeres = heres.concat(bdHeres);
-      if(allHeres.length>1){
-        for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} }
-      }
-      var walks = Array.from(container.querySelectorAll('.bdt-xfer.bdt-walk, .bd155-vous-ici-walk, a[href*="travelmode=walking"]')).filter(function(w){
-        return /min à pied/i.test(w.textContent||'');
-      });
-      if(walks.length>1){
-        for(var j=1;j<walks.length;j++){ try{walks[j].remove();}catch(e){} }
+      }).concat(Array.from(container.querySelectorAll('.bd155-here')));
+      if(allHeres.length>1){ for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} } }
+      // Nettoie walks en trop entre Vous êtes ici et Votre arrêt
+      var votre = container.querySelector('.bdt-tag-me')?.closest('.bdt-row');
+      var here = container.querySelector('.bd155-here') || allHeres[0];
+      if(here && votre){
+        var cur=here.nextElementSibling;
+        var walks=[];
+        while(cur && cur!==votre){
+          if(/Marche à pied/i.test(cur.textContent||'') || cur.classList.contains('bd155-vous-ici-walk')) walks.push(cur);
+          cur=cur.nextElementSibling;
+        }
+        if(walks.length>1){ for(var k=1;k<walks.length;k++) walks[k].remove(); }
       }
     });
   }catch(e){}
@@ -3118,86 +3077,96 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
    if(!row) return;
    var list=row.parentElement;
    if(!list) return;
-   // si déjà traité ou si un Vous êtes ici existe déjà, on nettoie juste le badge bleu et on sort
-   var alreadyHere = list.querySelector('.bd155-here');
-   var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
-   var hasHere = alreadyHere || nativeHere;
-   var hasWalk = list.querySelector('.bd155-vous-ici-walk') || Array.from(list.querySelectorAll('.bdt-xfer')).find(function(w){ return /min à pied/i.test(w.textContent||''); });
 
-   // cache le badge orange POSITION ACTUELLE sur la ligne Votre arrêt
+   // Cache badge POSITION ACTUELLE doublon
    row.classList.add('bd155-votre-row');
    var tagsContainer=row.querySelector('.bdt-tags');
    if(tagsContainer){
      Array.from(tagsContainer.children).forEach(function(ch){
-       var tt=(ch.textContent||'').toLowerCase();
-       if(tt.includes('position actuelle')){
-         ch.classList.add('bd155-hide-blue');
-         ch.style.display='none';
-       }
+       if((ch.textContent||'').toLowerCase().includes('position actuelle')) ch.style.display='none';
      });
    }
 
-   if(row.__bd155Done && hasHere && hasWalk){
-     // Même si déjà fait, on tente de mettre à jour le temps réel
-     try{ bd155_updateAllWalkTimes(); }catch(e){}
-     return;
-   }
-   if(hasHere && hasWalk){
-     row.__bd155Done=1;
-     if(nativeHere && !alreadyHere){ nativeHere.classList.add('bd155-here'); }
-     // Met à jour temps réel même si walk existe déjà
-     try{ bd155_updateAllWalkTimes(); }catch(e){}
-     return;
-   }
-   row.__bd155Done=1;
-
-   // --- 2) VOUS ÊTES ICI ---
-   if(!hasHere){
-     var here=document.createElement('div');
-     here.className='bdt-row bd155-here';
-     var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
-     here.style.setProperty('--acc', acc);
-     here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
-     list.insertBefore(here, row);
-   }
-
-   // --- 3) WALK ---
-   if(!hasWalk){
-     var loc=window.__bd_loc;
-     var stop=null;
-     var destLat=null,destLon=null;
-     var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
-     walkLinks.forEach(function(a){
-      try{
-       var u=new URL(a.href);
-       var d=u.searchParams.get('destination');
-       if(d&&d.includes(',')){
-        var p=d.split(',');
-        destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
-       }
-      }catch(e){}
-     });
-     if(destLat!=null) stop={lat:destLat, lon:destLon};
-     try{
-      var nameEl=row.querySelector('.bdt-name');
-      if(!stop && nameEl){
-       var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-       if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
-      }
-     }catch(e){}
-
-     var walk=document.createElement('a');
-     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
-     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
-     walk.setAttribute('target','_blank');
-     walk.setAttribute('rel','noopener noreferrer');
-     var mins=2;
-     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
-      var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-      var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-      var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-      mins=Math.max(1,Math.round(meters/80));
+   var here = list.querySelector('.bd155-here');
+   if(!here){
+     var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
+     if(nativeHere){ nativeHere.classList.add('bd155-here'); here=nativeHere; }
+     else{
+       here=document.createElement('div');
+       here.className='bdt-row bd155-here';
+       var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
+       here.style.setProperty('--acc', acc);
+       here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
+       list.insertBefore(here, row);
      }
+   }
+
+   // Trouve 2ème arrêt de la liste
+   var secondStopRow=null;
+   var secondStopCoords=null;
+   try{
+     var allRows=Array.from(list.querySelectorAll('.bdt-row'));
+     var idxVotre=allRows.indexOf(row);
+     if(idxVotre!==-1){
+       for(var r=idxVotre+1;r<allRows.length;r++){
+         var cand=allRows[r];
+         if(cand.classList.contains('bd155-here')) continue;
+         if(cand.classList.contains('bd155-vous-ici-walk')||cand.classList.contains('bd155-vous-ici-walk-between')) continue;
+         if(cand.querySelector('.bdt-name') && !cand.querySelector('.bdt-tag-me')){
+           secondStopRow=cand;
+           break;
+         }
+       }
+     }
+     if(secondStopRow){
+       var nameEl2=secondStopRow.querySelector('.bdt-name');
+       if(nameEl2){
+         var sc2=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+         if(sc2 && sc2[nameEl2.textContent.trim()]) secondStopCoords=sc2[nameEl2.textContent.trim()];
+       }
+     }
+   }catch(e){}
+
+   var existingWalk = list.querySelector('.bd155-vous-ici-walk-between');
+   if(!existingWalk){
+     var loc=window.__bd_loc;
+     var stop=secondStopCoords; // prioritaire: 2ème arrêt
+     var destLat=null,destLon=null;
+     // Si pas de second arrêt, fallback Votre arrêt
+     if(!stop){
+       try{
+         var nameEl=row.querySelector('.bdt-name');
+         if(nameEl){
+           var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+           if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
+         }
+       }catch(e){}
+     }
+     // Tente aussi de récupérer depuis liens Google Maps existants
+     if(!stop){
+       try{
+         list.querySelectorAll('a[href*="google.com/maps"]').forEach(function(a){
+           try{
+             var u=new URL(a.href);
+             var d=u.searchParams.get('destination');
+             if(d&&d.includes(',')){
+               var p=d.split(',');
+               destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
+             }
+           }catch(e){}
+         });
+         if(destLat!=null) stop={lat:destLat, lon:destLon};
+       }catch(e){}
+     }
+
+     var mins=4;
+     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
+       var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+       var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+       var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+       mins=Math.max(1,Math.round(meters/80));
+     }
+
      var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
      if(loc&&stop){
        hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
@@ -3206,14 +3175,40 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
      } else if(loc){
        hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
      }
+
+     var walk=document.createElement('a');
+     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk bd155-vous-ici-walk-between';
+     // Taille réduite comme demandé
+     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;margin:8px 0 10px 34px;background:#2e261b;color:#fde68a;border:1px solid rgba(180,150,90,0.32);';
      walk.href=hrefWalk;
-     walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
-     walk.addEventListener('click', function(ev){
-       ev.preventDefault();
-       openMaps(this.href, true);
-     });
+     walk.dataset.dest = stop ? (stop.lat+','+stop.lon) : '';
+     walk.dataset.origin = loc ? (loc.lat+','+loc.lon) : '';
+     walk.innerHTML='<span style="font-size:18px;line-height:1">🚶</span><span style="flex:1 1 auto;font-weight:650;font-size:13.5px;color:#fde68a;letter-spacing:-0.01em">Marche à pied · '+mins+' min</span><span style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:#6b86b8;color:#fff;font-size:16px;font-weight:800">↗</span>';
+     walk.addEventListener('click', function(ev){ ev.preventDefault(); openMaps(this.href, true); });
+     // Place juste au-dessus de l'arrêt de départ (VOTRE ARRÊT)
      list.insertBefore(walk, row);
+   }else{
+     // Repositionne juste au-dessus de l'arrêt de départ et met à jour destination vers 2ème arrêt si dispo
+     try{
+       list.insertBefore(existingWalk, row);
+       if(secondStopCoords){
+         var loc2=window.__bd_loc;
+         if(loc2 && secondStopCoords){
+           var newHref='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc2.lat+','+loc2.lon)+'&destination='+encodeURIComponent(secondStopCoords.lat+','+secondStopCoords.lon)+'&travelmode=walking';
+           existingWalk.href=newHref;
+           existingWalk.dataset.dest=secondStopCoords.lat+','+secondStopCoords.lon;
+           existingWalk.dataset.origin=loc2.lat+','+loc2.lon;
+         }
+       }
+       // Taille réduite
+       existingWalk.style.padding='10px 14px';
+       existingWalk.style.borderRadius='16px';
+       existingWalk.style.gap='10px';
+       var sp=existingWalk.querySelector('span:nth-child(2)');
+       if(sp){ sp.style.fontSize='13.5px'; sp.style.fontWeight='650'; }
+     }catch(e){}
    }
+   row.__bd155Done=1;
   });
  }
 
@@ -3232,35 +3227,24 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
  function bd155_extractCoordsFromHref(href){
    try{
      var u=new URL(href, location.origin);
-     var origin=u.searchParams.get('origin');
-     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr')||u.searchParams.get('saddr');
-     // google.com/maps/dir/?api=1&origin=...&destination=...
-     // also check saddr/daddr for embed
-     if(!origin) origin=u.searchParams.get('saddr');
-     if(!dest) dest=u.searchParams.get('daddr');
+     var origin=u.searchParams.get('origin')||u.searchParams.get('saddr');
+     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr');
      var o=bd155_parseLatLon(origin);
      var d=bd155_parseLatLon(dest);
-     // if dest is not latlon but address, try to find latlon elsewhere in href
-     if(!d && dest && dest.includes(',')){
-       d=bd155_parseLatLon(dest);
-     }
-     return {origin:o, dest:d, originStr:origin, destStr:dest};
+     return {origin:o, dest:d};
    }catch(e){ return {origin:null,dest:null}; }
  }
  async function bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon){
    try{
-     // OSRM foot - gratuit, proche temps Google à pied
      var url='https://router.project-osrm.org/route/v1/foot/'+oLon+','+oLat+';'+dLon+','+dLat+'?overview=false';
      var resp=await fetch(url);
      if(!resp.ok) throw new Error('osrm fail');
      var data=await resp.json();
      if(data && data.routes && data.routes[0] && data.routes[0].duration){
        var sec=data.routes[0].duration;
-       var mins=Math.max(1, Math.round(sec/60));
-       return mins;
+       return Math.max(1, Math.round(sec/60));
      }
    }catch(e){}
-   // fallback haversine /80 m/min
    try{
      var R=6371000,r=Math.PI/180,dLat2=(dLat-oLat)*r,dLon2=(dLon-oLon)*r;
      var aa=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(oLat*r)*Math.cos(dLat*r)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
@@ -3282,57 +3266,25 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
      var allWalks=document.querySelectorAll('.bdt-body .bdt-xfer.bdt-walk, .bdt-body .bd155-vous-ici-walk, .bdt-list .bdt-xfer.bdt-walk, .bdt-list .bd155-vous-ici-walk, .bdt-sheet .bdt-xfer.bdt-walk, .bdt-sheet .bd155-vous-ici-walk');
      for(var i=0;i<allWalks.length;i++){
        var el=allWalks[i];
-       if(el.__bdRealTimeDone) continue;
+       if(el.__bdRealTimeDone && el.__bdRealTimeDone>2) continue;
        var href=el.getAttribute('href')||'';
        var coords=bd155_extractCoordsFromHref(href);
        var o=coords.origin;
        var d=coords.dest;
-       // Si pas de origin mais on a loc + destination
-       if(!o && loc && loc.lat!=null && d){
-         o={lat:loc.lat, lon:loc.lon};
-       }
-       // Si pas de dest mais on a un stop coord connu via le row suivant
-       if(!d){
-         try{
-           var row=el.closest('.bdt-list')?.querySelector('.bdt-row.bd155-votre-row') || el.nextElementSibling;
-           if(row){
-             var nameEl=row.querySelector('.bdt-name');
-             if(nameEl){
-               var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-               if(sc && sc[nameEl.textContent.trim()]){
-                 d=sc[nameEl.textContent.trim()];
-               }
-             }
-           }
-         }catch(e){}
-       }
-       // Si on a toujours pas dest, tente via data attribute
-       if(!d && el.dataset && el.dataset.dest){
-         d=bd155_parseLatLon(el.dataset.dest);
-       }
-       if(!o && el.dataset && el.dataset.origin){
-         o=bd155_parseLatLon(el.dataset.origin);
-       }
+       if(!o && loc && loc.lat!=null && d) o={lat:loc.lat, lon:loc.lon};
+       if(!o && el.dataset && el.dataset.origin) o=bd155_parseLatLon(el.dataset.origin);
+       if(!d && el.dataset && el.dataset.dest) d=bd155_parseLatLon(el.dataset.dest);
        if(o && d){
          var mins=await bd155_getCachedWalkMinutes(o.lat,o.lon,d.lat,d.lon);
          if(mins!=null){
-           // Met à jour le texte "Marche à pied · X min"
-           var txtSpan=el.querySelector('span:nth-child(2)') || el;
-           if(txtSpan){
-             // cherche le span qui contient "Marche" ou "min"
-             var spans=el.querySelectorAll('span');
-             for(var s=0;s<spans.length;s++){
-               if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
-                 spans[s].textContent='Marche à pied · '+mins+' min';
-                 break;
-               }
-             }
-             // si pas trouvé, remplace tout le texte qui contient min
-             if(!/Marche à pied/i.test(el.textContent||'')){
-               el.innerHTML=el.innerHTML.replace(/\d+\s*min\s*à\s*pied/i, 'Marche à pied · '+mins+' min').replace(/Marche à pied[^<]*\d+\s*min/i, 'Marche à pied · '+mins+' min');
+           var spans=el.querySelectorAll('span');
+           for(var s=0;s<spans.length;s++){
+             if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
+               spans[s].textContent='Marche à pied · '+mins+' min';
+               break;
              }
            }
-           el.__bdRealTimeDone=1;
+           el.__bdRealTimeDone=(el.__bdRealTimeDone||0)+1;
          }
        }
      }
@@ -3341,10 +3293,91 @@ function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-dat
 
 
 function sync(){
+
+ // --- V160 - Temps de marche réel via OSRM (approx Google Maps à pied) ---
+ function bd155_parseLatLon(str){
+   try{
+     if(!str) return null;
+     var parts=String(str).split(',');
+     if(parts.length<2) return null;
+     var lat=parseFloat(parts[0]), lon=parseFloat(parts[1]);
+     if(isNaN(lat)||isNaN(lon)) return null;
+     return {lat:lat, lon:lon};
+   }catch(e){ return null; }
+ }
+ function bd155_extractCoordsFromHref(href){
+   try{
+     var u=new URL(href, location.origin);
+     var origin=u.searchParams.get('origin')||u.searchParams.get('saddr');
+     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr');
+     var o=bd155_parseLatLon(origin);
+     var d=bd155_parseLatLon(dest);
+     return {origin:o, dest:d};
+   }catch(e){ return {origin:null,dest:null}; }
+ }
+ async function bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon){
+   try{
+     var url='https://router.project-osrm.org/route/v1/foot/'+oLon+','+oLat+';'+dLon+','+dLat+'?overview=false';
+     var resp=await fetch(url);
+     if(!resp.ok) throw new Error('osrm fail');
+     var data=await resp.json();
+     if(data && data.routes && data.routes[0] && data.routes[0].duration){
+       var sec=data.routes[0].duration;
+       return Math.max(1, Math.round(sec/60));
+     }
+   }catch(e){}
+   try{
+     var R=6371000,r=Math.PI/180,dLat2=(dLat-oLat)*r,dLon2=(dLon-oLon)*r;
+     var aa=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(oLat*r)*Math.cos(dLat*r)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
+     var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+     return Math.max(1, Math.round(meters/80));
+   }catch(e){ return null; }
+ }
+ var bd155_walkCache=new Map();
+ async function bd155_getCachedWalkMinutes(oLat,oLon,dLat,dLon){
+   var key=oLat.toFixed(5)+','+oLon.toFixed(5)+'_'+dLat.toFixed(5)+','+dLon.toFixed(5);
+   if(bd155_walkCache.has(key)) return bd155_walkCache.get(key);
+   var mins=await bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon);
+   if(mins!=null) bd155_walkCache.set(key, mins);
+   return mins;
+ }
+ async function bd155_updateAllWalkTimes(){
+   try{
+     var loc=window.__bd_loc;
+     var allWalks=document.querySelectorAll('.bdt-body .bdt-xfer.bdt-walk, .bdt-body .bd155-vous-ici-walk, .bdt-list .bdt-xfer.bdt-walk, .bdt-list .bd155-vous-ici-walk, .bdt-sheet .bdt-xfer.bdt-walk, .bdt-sheet .bd155-vous-ici-walk');
+     for(var i=0;i<allWalks.length;i++){
+       var el=allWalks[i];
+       if(el.__bdRealTimeDone && el.__bdRealTimeDone>2) continue;
+       var href=el.getAttribute('href')||'';
+       var coords=bd155_extractCoordsFromHref(href);
+       var o=coords.origin;
+       var d=coords.dest;
+       if(!o && loc && loc.lat!=null && d) o={lat:loc.lat, lon:loc.lon};
+       if(!o && el.dataset && el.dataset.origin) o=bd155_parseLatLon(el.dataset.origin);
+       if(!d && el.dataset && el.dataset.dest) d=bd155_parseLatLon(el.dataset.dest);
+       if(o && d){
+         var mins=await bd155_getCachedWalkMinutes(o.lat,o.lon,d.lat,d.lon);
+         if(mins!=null){
+           var spans=el.querySelectorAll('span');
+           for(var s=0;s<spans.length;s++){
+             if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
+               spans[s].textContent='Marche à pied · '+mins+' min';
+               break;
+             }
+           }
+           el.__bdRealTimeDone=(el.__bdRealTimeDone||0)+1;
+         }
+       }
+     }
+   }catch(e){}
+ }
+
+
+function sync(){
+
   ensureBanner();
   replaceTexts();
   decorateLive();
-  try{ bd155_updateAllWalkTimes(); }catch(e){}
  }
 
  var raf=0;
@@ -3376,7 +3409,7 @@ function sync(){
 <script id="bd-v155-date-guard">
 (function(){
  function hasDepart(){
-  // 1) champ input Départ non vide
+  // 1) Départ non vide
   var inputs=document.querySelectorAll('input');
   for(var i=0;i<inputs.length;i++){
    var inp=inputs[i];
@@ -3385,22 +3418,40 @@ function sync(){
     if((inp.value||'').trim().length>0) return true;
    }
   }
-  // 2) localStorage / window globals
+  // 1bis) Destination non vide -> active aussi le bouton date
+  for(var j=0;j<inputs.length;j++){
+   var inp2=inputs[j];
+   var ph2=(inp2.getAttribute('placeholder')||'').toLowerCase();
+   if(ph2.includes('destination')){
+    if((inp2.value||'').trim().length>0) return true;
+   }
+  }
+  // 2) localStorage / globals
   try{
    var f=localStorage.getItem('bd-from')||localStorage.getItem('bd_from')||window.__bd_from;
    if(f && String(f).trim().length>0) return true;
    var fls=localStorage.getItem('bd-depart')||localStorage.getItem('bd_depart');
    if(fls && String(fls).trim().length>0) return true;
+   var fd=localStorage.getItem('bd-to')||localStorage.getItem('bd_to')||window.__bd_to;
+   if(fd && String(fd).trim().length>0) return true;
   }catch(e){}
-  // 3) arrêt(s) à proximités = localisation active
+  // 3) localisation active
   if(window.__bd_loc && window.__bd_loc.lat!=null) return true;
   try{
    if(localStorage.getItem('bd-loc-enabled')==='1') return true;
    if(document.documentElement.dataset.loc==='on') return true;
   }catch(e){}
-  // 4) présence du bouton "Arrêts à proximité" actif ou texte "Position actuelle"
-  var prox=document.body.textContent||'';
-  // si on détecte que la ville utilise "Vous êtes ici" ou "Position actuelle" comme départ, on considère comme renseigné seulement si loc existe (déjà check)
+  // 4) ARRÊT(S) À PROXIMITÉ coché -> active bouton date
+  try{
+    var checks=document.querySelectorAll('input[type="checkbox"]');
+    for(var c=0;c<checks.length;c++){
+      if(checks[c].checked) return true;
+    }
+    // Texte "X sélectionné(s)" >0
+    var bt=document.body.textContent||'';
+    var m=bt.match(/(\d+)\s*sélectionné/i);
+    if(m && parseInt(m[1],10)>0) return true;
+  }catch(e){}
   return false;
  }
 
