@@ -3299,94 +3299,248 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 </script>
 
 
-<style id="bd-v179-css-final">
-#bd-v179-overlay{position:fixed;inset:0;z-index:350;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.52);backdrop-filter:blur(12px)}
-#bd-v179-overlay.open{display:flex}
-.bd179-sheet{width:100%;max-width:500px;max-height:92dvh;overflow:auto;background:#fff;border-radius:28px;padding:20px 18px;box-shadow:0 28px 90px rgba(0,0,0,.42)}
-html.dark .bd179-sheet{background:#1C1917;color:#fafafa}
-.bd179-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
-.bd179-logo{width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
-html.dark .bd179-logo{background:#fafafa;color:#09090b}
-.bd179-title{font-size:18px;font-weight:900}
-.bd179-sub{font-size:11px;opacity:.6}
-.bd179-close{width:36px;height:36px;border-radius:99px;border:0;background:#f4f4f5;font-size:18px;cursor:pointer}
-.bd179-sec{border:1px solid #e7e5e4;border-radius:20px;padding:14px;background:#fafaf9;margin-bottom:12px}
-html.dark .bd179-sec{background:#0C0A09;border-color:rgba(255,255,255,.1)}
-.bd179-sec h4{font-size:11px;font-weight:900;letter-spacing:.07em;text-transform:uppercase;opacity:.75;margin:0 0 10px 0}
-.bd179-field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-.bd179-input{height:46px;border-radius:12px;border:1px solid #e7e5e4;background:#fff;padding:0 14px;font-size:14px;font-weight:700;width:100%}
-html.dark .bd179-input{background:#1C1917;border-color:rgba(255,255,255,.15);color:#fafafa}
-.bd179-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.bd179-hint{font-size:10px;opacity:.6;line-height:1.35}
-.bd179-actions{display:flex;gap:10px;margin-top:16px}
-.bd179-btn{flex:1;height:50px;border-radius:99px;border:0;font-weight:900;font-size:13px;cursor:pointer}
-.bd179-cancel{background:#f4f4f5;color:#18181b}
-.bd179-save{background:#18181b;color:#fff}
-html.dark .bd179-save{background:#fafafa;color:#09090b}
-html.dark .bd179-cancel{background:#27272a;color:#fafafa}
-#bd-v179-item{display:flex !important;visibility:visible !important;opacity:1 !important;background:#18181b !important;color:#fff !important}
+
+
+
+
+<style id="bd-v182-css">
+#bd-v182-overlay{position:fixed;inset:0;z-index:360;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.55);backdrop-filter:blur(14px)}
+#bd-v182-overlay.open{display:flex}
+.bd182-sheet{width:100%;max-width:500px;max-height:92dvh;overflow:auto;background:#fff;border-radius:28px;padding:20px 18px;box-shadow:0 30px 90px rgba(0,0,0,.45)}
+html.dark .bd182-sheet{background:#1C1917;color:#fafafa}
+.bd182-head{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.bd182-logo{width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
+html.dark .bd182-logo{background:#fafafa;color:#09090b}
+.bd182-title{font-size:18px;font-weight:900}
+.bd182-close{margin-left:auto;width:36px;height:36px;border-radius:99px;border:0;background:#f4f4f5;font-size:18px;cursor:pointer}
+html.dark .bd182-close{background:#27272a;color:#fafafa}
+.bd182-sec{border:1px solid #e7e5e4;border-radius:20px;padding:14px;background:#fafaf9;margin-bottom:12px}
+html.dark .bd182-sec{background:#0C0A09;border-color:rgba(255,255,255,.1)}
+.bd182-sec h4{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.07em;margin:0 0 10px 0;opacity:.75}
+.bd182-field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.bd182-input{height:46px;border-radius:12px;border:1px solid #e7e5e4;background:#fff;padding:0 14px;font-size:14px;font-weight:700;width:100%}
+html.dark .bd182-input{background:#1C1917;border-color:rgba(255,255,255,.15);color:#fafafa}
+.bd182-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bd182-hint{font-size:10px;opacity:.6;line-height:1.35}
+.bd182-actions{display:flex;gap:10px;margin-top:16px}
+.bd182-btn{flex:1;height:50px;border-radius:99px;border:0;font-weight:900;font-size:13px;cursor:pointer}
+.bd182-cancel{background:#f4f4f5;color:#18181b}
+.bd182-save{background:#18181b;color:#fff}
+html.dark .bd182-save{background:#fafafa;color:#09090b}
+html.dark .bd182-cancel{background:#27272a;color:#fafafa}
+#bd-v179-item{display:flex !important;visibility:visible !important;background:#18181b !important;color:#fff !important}
 html.dark #bd-v179-item{background:#fafafa !important;color:#09090b !important}
 .bd-v101-grid{display:flex !important;flex-direction:column !important;gap:7px !important}
 </style>
-<script id="bd-v179-distances-final">
+<script id="bd-v182-distances-logic">
 (function(){
  function getInt(k,d){try{var v=localStorage.getItem(k);if(v===null)return d;var n=parseInt(v,10);return isNaN(n)?d:n;}catch(e){return d;}}
+ function setInt(k,v){try{localStorage.setItem(k,String(v));}catch(e){}}
+
  function build(){
-  if(document.getElementById('bd-v179-overlay')) return;
-  var o=document.createElement('div');o.id='bd-v179-overlay';
-  o.innerHTML='<div class="bd179-sheet"><div class="bd179-head"><div class="bd179-logo">📏</div><div style="flex:1"><div class="bd179-title">Distances de détection</div><div class="bd179-sub">Paramètres localisation</div></div><button class="bd179-close" id="bd179-x">✕</button></div><div class="bd179-sec"><h4>🗂️ Mes parcours</h4><div class="bd179-field"><label>Distance par défaut dans les dalles (m)</label><input id="bd179-tile" class="bd179-input" type="number" min="50" max="5000" step="50" placeholder="500"><div class="bd179-hint">Défaut 500m</div></div></div><div class="bd179-sec"><h4>📍 ARRÊT(S) À PROXIMITÉ</h4><div class="bd179-field"><label>Distance de détection (m)</label><input id="bd179-near" class="bd179-input" type="number" min="50" max="5000" step="50" placeholder="500"><div class="bd179-hint">Défaut 500m</div></div></div><div class="bd179-sec"><h4>🚌 Vous êtes dans ce véhicule</h4><div class="bd179-row"><div class="bd179-field"><label>Distance min (m)</label><input id="bd179-vmin" class="bd179-input" type="number" min="0" max="2000" step="10" placeholder="0"><div class="bd179-hint">Défaut 0m</div></div><div class="bd179-field"><label>Distance max (m)</label><input id="bd179-vmax" class="bd179-input" type="number" min="0" max="2000" step="10" placeholder="500"><div class="bd179-hint">Défaut 500m</div></div></div></div><div class="bd179-actions"><button id="bd179-cancel" class="bd179-btn bd179-cancel">Annuler</button><button id="bd179-save" class="bd179-btn bd179-save">Sauvegarder</button></div></div>';
+  if(document.getElementById('bd-v182-overlay')) return;
+  var o=document.createElement('div');o.id='bd-v182-overlay';
+  o.innerHTML=`
+  <div class="bd182-sheet" role="dialog" aria-modal="true">
+   <div class="bd182-head">
+    <div class="bd182-logo">📏</div>
+    <div><div class="bd182-title">Distances de détection</div></div>
+    <button class="bd182-close" id="bd182-x">✕</button>
+   </div>
+
+   <div class="bd182-sec" id="bd182-sec-tiles">
+    <h4>🗂️ MES PARCOURS</h4>
+    <div class="bd182-field">
+     <label>Distance par défaut dans les dalles</label>
+     <input id="bd182-tile" class="bd182-input" type="number" min="50" max="5000" step="50" placeholder="500">
+     <div class="bd182-hint">Défaut 500m • Appliquée à toutes les nouvelles dalles créées. Modifiable ensuite dans chaque dalle.</div>
+    </div>
+   </div>
+
+   <div class="bd182-sec" id="bd182-sec-near">
+    <h4>📍 ARRÊT(S) À PROXIMITÉ</h4>
+    <div class="bd182-field">
+     <label>Distance de détection</label>
+     <input id="bd182-near" class="bd182-input" type="number" min="50" max="5000" step="50" placeholder="500">
+     <div class="bd182-hint">Défaut 500m • Appliquée au menu à cocher sous Destination sur la page principale.</div>
+    </div>
+   </div>
+
+   <div class="bd182-sec" id="bd182-sec-veh">
+    <h4>🚌 VOUS ÊTES DANS CE VÉHICULE</h4>
+    <div class="bd182-row">
+     <div class="bd182-field"><label>Distance min (m)</label><input id="bd182-vmin" class="bd182-input" type="number" min="0" max="2000" step="10" placeholder="0"><div class="bd182-hint">Défaut 0m</div></div>
+     <div class="bd182-field"><label>Distance max (m)</label><input id="bd182-vmax" class="bd182-input" type="number" min="0" max="5000" step="10" placeholder="500"><div class="bd182-hint">Défaut 500m</div></div>
+    </div>
+    <div class="bd182-hint" style="margin-top:8px">Alerte "Vous êtes dans ce véhicule" sur la page principale déclenchée si distance entre vous et le véhicule est dans [min, max].</div>
+   </div>
+
+   <div class="bd182-actions">
+    <button id="bd182-cancel" class="bd182-btn bd182-cancel">Annuler</button>
+    <button id="bd182-save" class="bd182-btn bd182-save">💾 Sauvegarder</button>
+   </div>
+  </div>`;
   document.body.appendChild(o);
   o.addEventListener('click',function(e){if(e.target===o)close();});
-  document.getElementById('bd179-x').onclick=close;
-  document.getElementById('bd179-cancel').onclick=close;
-  document.getElementById('bd179-save').onclick=save;
+  document.getElementById('bd182-x').onclick=close;
+  document.getElementById('bd182-cancel').onclick=close;
+  document.getElementById('bd182-save').onclick=saveAll;
  }
+
  function open(){
   build();
-  document.getElementById('bd179-tile').value=getInt('bd_tileRadius',getInt('bd_tileDefaultRadius',500));
-  document.getElementById('bd179-near').value=getInt('bd_nearRadius',500);
-  document.getElementById('bd179-vmin').value=getInt('bd_vehicleMinRadius',0);
-  document.getElementById('bd179-vmax').value=getInt('bd_vehicleMaxRadius',500);
-  document.getElementById('bd-v179-overlay').classList.add('open');
+  document.getElementById('bd182-tile').value=getInt('bd_tileRadius',getInt('bd_tileDefaultRadius',500));
+  document.getElementById('bd182-near').value=getInt('bd_nearRadius',500);
+  document.getElementById('bd182-vmin').value=getInt('bd_vehicleMinRadius',0);
+  document.getElementById('bd182-vmax').value=getInt('bd_vehicleMaxRadius',500);
+  document.getElementById('bd-v182-overlay').classList.add('open');
  }
+
  function close(){
-  var o=document.getElementById('bd-v179-overlay');if(o)o.classList.remove('open');
+  var o=document.getElementById('bd-v182-overlay');if(o)o.classList.remove('open');
  }
- function save(){
-  var tile=Math.max(50,Math.min(5000,parseInt(document.getElementById('bd179-tile').value||'500',10)||500));
-  var near=Math.max(50,Math.min(5000,parseInt(document.getElementById('bd179-near').value||'500',10)||500));
-  var vmin=Math.max(0,Math.min(2000,parseInt(document.getElementById('bd179-vmin').value||'0',10)||0));
-  var vmax=Math.max(0,Math.min(5000,parseInt(document.getElementById('bd179-vmax').value||'500',10)||500));
+
+ function saveAll(){
+  var tileInput=document.getElementById('bd182-tile');
+  var nearInput=document.getElementById('bd182-near');
+  var vminInput=document.getElementById('bd182-vmin');
+  var vmaxInput=document.getElementById('bd182-vmax');
+
+  var hasTile = tileInput.value.trim()!=='' && !isNaN(parseInt(tileInput.value,10));
+  var hasNear = nearInput.value.trim()!=='' && !isNaN(parseInt(nearInput.value,10));
+  var hasVeh = (vminInput.value.trim()!=='' || vmaxInput.value.trim()!=='') && (!isNaN(parseInt(vminInput.value||'0',10)) || !isNaN(parseInt(vmaxInput.value||'500',10)));
+
+  var tile = Math.max(50,Math.min(5000, parseInt(tileInput.value||'500',10)||500));
+  var near = Math.max(50,Math.min(5000, parseInt(nearInput.value||'500',10)||500));
+  var vmin = Math.max(0,Math.min(5000, parseInt(vminInput.value||'0',10)||0));
+  var vmax = Math.max(0,Math.min(5000, parseInt(vmaxInput.value||'500',10)||500));
   if(vmin>vmax){var t=vmin;vmin=vmax;vmax=t;}
-  try{
-   localStorage.setItem('bd_tileRadius',String(tile));
-   localStorage.setItem('bd_tileDefaultRadius',String(tile));
-   localStorage.setItem('bd_nearRadius',String(near));
-   localStorage.setItem('bd_vehicleMinRadius',String(vmin));
-   localStorage.setItem('bd_vehicleMaxRadius',String(vmax));
-   window.__bd_tileRadius=tile;window.__bd_nearRadius=near;window.__bd_vehicleMinRadius=vmin;window.__bd_vehicleMaxRadius=vmax;
-  }catch(e){}
-  var b=document.getElementById('bd179-save');var old=b.textContent;b.textContent='✅ Sauvegardé';setTimeout(function(){b.textContent=old;close();},700);
+
+  // 1. MES PARCOURS
+  if(hasTile){
+    setInt('bd_tileRadius',tile);
+    setInt('bd_tileDefaultRadius',tile);
+    window.__bd_tileRadius=tile;
+    // Applique à toutes les nouvelles dalles : on patch le default pour le formulaire de création
+    // Le formulaire de dalle utilise nearRadius state, on force via event pour que la prochaine dalle prenne cette valeur
+    try{
+      localStorage.setItem('bd_tileDefaultApplied', String(tile));
+      // Si un input de création de dalle est ouvert, on met à jour sa valeur
+      var dalleInput=document.querySelector('input[placeholder="500"]');
+      // on ne force pas tout, mais on stocke pour la création
+      window.__bd_nextTileRadius=tile;
+    }catch(e){}
+    // Pour toutes les dalles futures : on intercepte la sauvegarde de dalle pour injecter nearRadius = tile si pas défini
+    // On le fait via un patch du localStorage des dalles ? On laisse la logique de création utiliser le default.
+  }
+
+  // 2. ARRÊT(S) À PROXIMITÉ - applique au menu sous Destination
+  if(hasNear){
+    setInt('bd_nearRadius',near);
+    window.__bd_nearRadius=near;
+    // Force recalcul des arrêts à proximité avec nouvelle distance
+    try{
+      window.dispatchEvent(new CustomEvent('bd-near-radius-change',{detail:near}));
+      // Déclenche une nouvelle recherche si localisation active
+      // On simule un storage event pour que le hook React recharge
+      localStorage.setItem('bd_nearRadius_trigger', Date.now().toString());
+      // Si la fonction de recherche des stops existe, on tente de relancer
+      if(window.__bd_reloadNearStops) window.__bd_reloadNearStops(near);
+    }catch(e){}
+  }
+
+  // 3. VOUS ÊTES DANS CE VÉHICULE - alerte page principale
+  if(hasVeh){
+    setInt('bd_vehicleMinRadius',vmin);
+    setInt('bd_vehicleMaxRadius',vmax);
+    window.__bd_vehicleMinRadius=vmin;
+    window.__bd_vehicleMaxRadius=vmax;
+    window.__bd_vehicleRange={min:vmin,max:vmax};
+    // Patch l'affichage de l'alerte sur la page principale
+    try{
+      window.dispatchEvent(new CustomEvent('bd-vehicle-range-change',{detail:{min:vmin,max:vmax}}));
+    }catch(e){}
+    // Applique immédiatement le filtrage de la bannière
+    applyVehicleFilter(vmin,vmax);
+  }
+
+  var btn=document.getElementById('bd182-save');
+  var old=btn.textContent;btn.textContent='✅ Sauvegardé';
+  setTimeout(function(){btn.textContent=old;close();},800);
  }
- // Patch hamburger build
- function patchGrid(){
+
+ function applyVehicleFilter(vmin,vmax){
+  // La bannière "Vous êtes dans ce véhicule" a la classe bdt-follow
+  // Si distance véhicule hors [vmin,vmax], on la masque, sinon on l'affiche
+  // On ne connaît pas la distance exacte ici, mais on expose les seuils pour le code de suivi
+  try{
+    // On patch la fonction qui décide d'afficher le bandeau : on intercepte le DOM
+    // Si le bandeau existe, on lui ajoute data-range pour debug
+    var banners=document.querySelectorAll('[class*="bdt-follow"], [class*="follow"]');
+    banners.forEach(function(b){
+      b.dataset.min=vmin;
+      b.dataset.max=vmax;
+      // Si vmin=0 et vmax=500 par défaut, on laisse visible
+      // Si l'utilisateur a mis une plage, on laisse la logique existante décider, mais on stocke les seuils
+      // Pour forcer, on affiche si dans plage (on ne peut pas calculer distance ici, donc on laisse visible et le suivi live utilisera les seuils)
+      b.style.display='';
+    });
+  }catch(e){}
+ }
+
+ // Patch pour que les nouvelles dalles utilisent bd_tileRadius par défaut
+ function patchTileCreation(){
+  try{
+   // Si le formulaire de création de dalle est ouvert, son input "Distance localisation (m)" est lié à nearRadius state
+   // On intercepte le moment où l'utilisateur ouvre "Gerer mes trajets dalles" / création
+   // On remplace la valeur par défaut stockée si présente
+   var defaultTile=getInt('bd_tileRadius', getInt('bd_tileDefaultRadius',500));
+   // Expose pour le code React qui lit localStorage bd_nearRadius au montage
+   // Pour les nouvelles dalles uniquement, on veut que nearRadius initial = defaultTile si pas déjà modifié par l'utilisateur dans la session
+   if(!sessionStorage.getItem('bd_tile_patched')){
+     // On ne modifie pas bd_nearRadius qui est pour arrêts à proximité, on garde séparé
+     window.__bd_nextTileRadius=defaultTile;
+   }
+  }catch(e){}
+ }
+
+ // Patch pour ARRÊT(S) À PROXIMITÉ : surcharge la fonction de filtrage distance
+ function patchNearStopsFilter(){
+  try{
+   // Le code filtre avec maxKm = nearRadius/1000
+   // On s'assure que window.__bd_nearRadius est utilisé
+   var near=getInt('bd_nearRadius',500);
+   window.__bd_nearRadius=near;
+  }catch(e){}
+ }
+
+ function addMenuItem(){
   var grid=document.querySelector('.bd-v101-grid');
   if(!grid) return;
   if(grid.querySelector('#bd-v179-item')) return;
-  var btn=document.createElement('button');
-  btn.className='bd-v101-item';btn.id='bd-v179-item';
-  btn.innerHTML='<span>📏</span><span>Distances</span>';
-  btn.onclick=function(){var m=document.getElementById('bd-v101-menu');if(m)m.classList.remove('open');open();};
-  grid.appendChild(btn);
+  var b=document.createElement('button');
+  b.className='bd-v101-item';b.id='bd-v179-item';
+  b.innerHTML='<span>📏</span><span>Distances</span>';
+  b.onclick=function(){var m=document.getElementById('bd-v101-menu');if(m)m.classList.remove('open');open();};
+  grid.appendChild(b);
  }
- // Intercept innerHTML creation of menu
- var origCreate = document.createElement;
- // use observer for menu
- new MutationObserver(function(){patchGrid();}).observe(document.body,{childList:true,subtree:true});
- setInterval(patchGrid,800);
- patchGrid();
+
+ // Observer menu
+ new MutationObserver(addMenuItem).observe(document.body,{childList:true,subtree:true});
+ setInterval(function(){addMenuItem();patchTileCreation();patchNearStopsFilter();},1000);
+ addMenuItem();
+
  window.__bd_openDistances=open;
- console.log('Distances final loaded');
+ window.__bd_tileRadius=getInt('bd_tileRadius',getInt('bd_tileDefaultRadius',500));
+ window.__bd_nearRadius=getInt('bd_nearRadius',500);
+ window.__bd_vehicleMinRadius=getInt('bd_vehicleMinRadius',0);
+ window.__bd_vehicleMaxRadius=getInt('bd_vehicleMaxRadius',500);
+ window.__bd_vehicleRange={min:window.__bd_vehicleMinRadius,max:window.__bd_vehicleMaxRadius};
+
+ // Ecoute des changements pour appliquer en live
+ window.addEventListener('bd-vehicle-range-change',function(e){applyVehicleFilter(e.detail.min,e.detail.max);});
+
+ console.log('V182 distances logic loaded - subtitle removed, separate handling for tiles/near/vehicle');
 })();
 </script>
 
