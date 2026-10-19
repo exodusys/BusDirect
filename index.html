@@ -2757,7 +2757,130 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function open(){if(document.getElementById('bd-v148-dt-bg'))return;var cur=selected()||new Date(),bg=document.createElement('div');bg.id='bd-v148-dt-bg';bg.innerHTML='<div id="bd-v148-dt" role="dialog" aria-modal="true"><div class="head"><div><div class="title">Choisir une date et heure</div><div class="sub">Rechercher les horaires à une date et une heure précises</div></div><button class="bd-v148-x" type="button">×</button></div><div class="grid"><div><label>Date de départ</label><input id="bd-v148-date" type="date"></div><div><label>Heure de départ</label><input id="bd-v148-time" type="time"></div></div><div class="quick"><button data-min="-60">− 1 h</button><button data-min="-15">− 15 min</button><button data-now="1">Maintenant</button><button data-min="15">+ 15 min</button><button data-min="60">+ 1 h</button><button data-day="1">+ 1 jour</button></div><div class="preview"><strong id="bd-v148-preview"></strong></div><div class="actions"><button id="bd-v148-cancel">Annuler</button><button class="ok" id="bd-v148-ok">Valider la date et l’heure</button></div></div>';document.body.appendChild(bg);document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');var di=bg.querySelector('#bd-v148-date'),ti=bg.querySelector('#bd-v148-time');di.value=ymd(cur);ti.value=hm(cur);var prev=ti.value;function up(){bg.querySelector('#bd-v148-preview').textContent=fmt(parse(di.value,ti.value))}function sh(m,d){var x=parse(di.value,ti.value);if(m)x.setMinutes(x.getMinutes()+m);if(d)x.setDate(x.getDate()+d);di.value=ymd(x);ti.value=hm(x);prev=ti.value;up()}ti.onchange=function(){var pm=+prev.slice(0,2)*60 + +prev.slice(3,5),nm=+ti.value.slice(0,2)*60 + +ti.value.slice(3,5),de=nm-pm;if(prev&&ti.value&&(de<-720||de>720)){var x=parse(di.value,ti.value);x.setDate(x.getDate()+(de<-720?1:-1));di.value=ymd(x)}prev=ti.value;up()};di.onchange=up;bg.querySelectorAll('[data-min]').forEach(function(b){b.onclick=function(){sh(+b.dataset.min,0)}});bg.querySelector('[data-day]').onclick=function(){sh(0,1)};bg.querySelector('[data-now]').onclick=function(){var n=new Date();di.value=ymd(n);ti.value=hm(n);prev=ti.value;up()};function close(){bg.remove();document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')}bg.querySelector('.bd-v148-x').onclick=close;bg.querySelector('#bd-v148-cancel').onclick=close;bg.onclick=function(e){if(e.target===bg)close()};bg.querySelector('#bd-v148-ok').onclick=function(){apply(di.value,ti.value);close()};up()}
  function info(){var old=document.getElementById('bd-v149-date-under-routes');if(!window.__bd_dtValidated){if(old)old.remove();return}var t=title();if(!t)return;if(!old){old=document.createElement('div');old.id='bd-v149-date-under-routes'}old.innerHTML='<span class="bd-v149-cap">Date et heure sélectionnées</span>'+fmt(selected());if(t.parentNode&&t.nextSibling!==old)t.parentNode.insertBefore(old,t.nextSibling)}
  function decorate(){document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});if(!window.__bd_dtValidated)return;var x=selected(),lab=x.toLocaleDateString('fr-CH',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelectorAll('div').forEach(function(el){if(el.children.length>5)return;var tx=(el.textContent||'').trim(),m=tx.match(/départ\s+(\d{1,2}:\d{2})\s+•\s+arrivée\s+(\d{1,2}:\d{2})/i);if(m&&!el.querySelector('.bd-v149-result-date')){var d=document.createElement('div');d.className='bd-v149-result-date';d.textContent='🗓️ '+lab+' · départ '+m[1];el.insertBefore(d,el.firstChild)}})}
- function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
+ 
+ // --- V160 - Temps de marche réel via OSRM (approx Google Maps à pied) ---
+ function bd155_parseLatLon(str){
+   try{
+     if(!str) return null;
+     var parts=String(str).split(',');
+     if(parts.length<2) return null;
+     var lat=parseFloat(parts[0]), lon=parseFloat(parts[1]);
+     if(isNaN(lat)||isNaN(lon)) return null;
+     return {lat:lat, lon:lon};
+   }catch(e){ return null; }
+ }
+ function bd155_extractCoordsFromHref(href){
+   try{
+     var u=new URL(href, location.origin);
+     var origin=u.searchParams.get('origin');
+     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr')||u.searchParams.get('saddr');
+     // google.com/maps/dir/?api=1&origin=...&destination=...
+     // also check saddr/daddr for embed
+     if(!origin) origin=u.searchParams.get('saddr');
+     if(!dest) dest=u.searchParams.get('daddr');
+     var o=bd155_parseLatLon(origin);
+     var d=bd155_parseLatLon(dest);
+     // if dest is not latlon but address, try to find latlon elsewhere in href
+     if(!d && dest && dest.includes(',')){
+       d=bd155_parseLatLon(dest);
+     }
+     return {origin:o, dest:d, originStr:origin, destStr:dest};
+   }catch(e){ return {origin:null,dest:null}; }
+ }
+ async function bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon){
+   try{
+     // OSRM foot - gratuit, proche temps Google à pied
+     var url='https://router.project-osrm.org/route/v1/foot/'+oLon+','+oLat+';'+dLon+','+dLat+'?overview=false';
+     var resp=await fetch(url);
+     if(!resp.ok) throw new Error('osrm fail');
+     var data=await resp.json();
+     if(data && data.routes && data.routes[0] && data.routes[0].duration){
+       var sec=data.routes[0].duration;
+       var mins=Math.max(1, Math.round(sec/60));
+       return mins;
+     }
+   }catch(e){}
+   // fallback haversine /80 m/min
+   try{
+     var R=6371000,r=Math.PI/180,dLat2=(dLat-oLat)*r,dLon2=(dLon-oLon)*r;
+     var aa=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(oLat*r)*Math.cos(dLat*r)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
+     var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+     return Math.max(1, Math.round(meters/80));
+   }catch(e){ return null; }
+ }
+ var bd155_walkCache=new Map();
+ async function bd155_getCachedWalkMinutes(oLat,oLon,dLat,dLon){
+   var key=oLat.toFixed(5)+','+oLon.toFixed(5)+'_'+dLat.toFixed(5)+','+dLon.toFixed(5);
+   if(bd155_walkCache.has(key)) return bd155_walkCache.get(key);
+   var mins=await bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon);
+   if(mins!=null) bd155_walkCache.set(key, mins);
+   return mins;
+ }
+ async function bd155_updateAllWalkTimes(){
+   try{
+     var loc=window.__bd_loc;
+     var allWalks=document.querySelectorAll('.bdt-body .bdt-xfer.bdt-walk, .bdt-body .bd155-vous-ici-walk, .bdt-list .bdt-xfer.bdt-walk, .bdt-list .bd155-vous-ici-walk, .bdt-sheet .bdt-xfer.bdt-walk, .bdt-sheet .bd155-vous-ici-walk');
+     for(var i=0;i<allWalks.length;i++){
+       var el=allWalks[i];
+       if(el.__bdRealTimeDone) continue;
+       var href=el.getAttribute('href')||'';
+       var coords=bd155_extractCoordsFromHref(href);
+       var o=coords.origin;
+       var d=coords.dest;
+       // Si pas de origin mais on a loc + destination
+       if(!o && loc && loc.lat!=null && d){
+         o={lat:loc.lat, lon:loc.lon};
+       }
+       // Si pas de dest mais on a un stop coord connu via le row suivant
+       if(!d){
+         try{
+           var row=el.closest('.bdt-list')?.querySelector('.bdt-row.bd155-votre-row') || el.nextElementSibling;
+           if(row){
+             var nameEl=row.querySelector('.bdt-name');
+             if(nameEl){
+               var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+               if(sc && sc[nameEl.textContent.trim()]){
+                 d=sc[nameEl.textContent.trim()];
+               }
+             }
+           }
+         }catch(e){}
+       }
+       // Si on a toujours pas dest, tente via data attribute
+       if(!d && el.dataset && el.dataset.dest){
+         d=bd155_parseLatLon(el.dataset.dest);
+       }
+       if(!o && el.dataset && el.dataset.origin){
+         o=bd155_parseLatLon(el.dataset.origin);
+       }
+       if(o && d){
+         var mins=await bd155_getCachedWalkMinutes(o.lat,o.lon,d.lat,d.lon);
+         if(mins!=null){
+           // Met à jour le texte "Marche à pied · X min"
+           var txtSpan=el.querySelector('span:nth-child(2)') || el;
+           if(txtSpan){
+             // cherche le span qui contient "Marche" ou "min"
+             var spans=el.querySelectorAll('span');
+             for(var s=0;s<spans.length;s++){
+               if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
+                 spans[s].textContent='Marche à pied · '+mins+' min';
+                 break;
+               }
+             }
+             // si pas trouvé, remplace tout le texte qui contient min
+             if(!/Marche à pied/i.test(el.textContent||'')){
+               el.innerHTML=el.innerHTML.replace(/\d+\s*min\s*à\s*pied/i, 'Marche à pied · '+mins+' min').replace(/Marche à pied[^<]*\d+\s*min/i, 'Marche à pied · '+mins+' min');
+             }
+           }
+           el.__bdRealTimeDone=1;
+         }
+       }
+     }
+   }catch(e){}
+ }
+
+
+function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
  var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
 })();
 </script>
@@ -2968,12 +3091,23 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  }
 
  function decorateLive(){
+  // DEDUP GLOBAL - supprime tout doublon Vous êtes ici / 2 min à pied avant traitement
   try{
-    document.querySelectorAll('.bdt-body, .bdt-list').forEach(function(container){
-      var allHeres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
+    document.querySelectorAll('.bdt-body, .bdt-list, .bdt-sheet').forEach(function(container){
+      var heres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
         return /Vous êtes ici/i.test(r.textContent||'') && !r.querySelector('.bdt-tag-me');
-      }).concat(Array.from(container.querySelectorAll('.bd155-here')));
-      if(allHeres.length>1){ for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} } }
+      });
+      var bdHeres = Array.from(container.querySelectorAll('.bd155-here'));
+      var allHeres = heres.concat(bdHeres);
+      if(allHeres.length>1){
+        for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} }
+      }
+      var walks = Array.from(container.querySelectorAll('.bdt-xfer.bdt-walk, .bd155-vous-ici-walk, a[href*="travelmode=walking"]')).filter(function(w){
+        return /min à pied/i.test(w.textContent||'');
+      });
+      if(walks.length>1){
+        for(var j=1;j<walks.length;j++){ try{walks[j].remove();}catch(e){} }
+      }
     });
   }catch(e){}
 
@@ -2984,106 +3118,233 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    if(!row) return;
    var list=row.parentElement;
    if(!list) return;
+   // si déjà traité ou si un Vous êtes ici existe déjà, on nettoie juste le badge bleu et on sort
+   var alreadyHere = list.querySelector('.bd155-here');
+   var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
+   var hasHere = alreadyHere || nativeHere;
+   var hasWalk = list.querySelector('.bd155-vous-ici-walk') || Array.from(list.querySelectorAll('.bdt-xfer')).find(function(w){ return /min à pied/i.test(w.textContent||''); });
 
+   // cache le badge orange POSITION ACTUELLE sur la ligne Votre arrêt
    row.classList.add('bd155-votre-row');
    var tagsContainer=row.querySelector('.bdt-tags');
    if(tagsContainer){
      Array.from(tagsContainer.children).forEach(function(ch){
-       if((ch.textContent||'').toLowerCase().includes('position actuelle')) ch.style.display='none';
+       var tt=(ch.textContent||'').toLowerCase();
+       if(tt.includes('position actuelle')){
+         ch.classList.add('bd155-hide-blue');
+         ch.style.display='none';
+       }
      });
    }
 
-   var here = list.querySelector('.bd155-here');
-   if(!here){
-     var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
-     if(nativeHere){ nativeHere.classList.add('bd155-here'); here=nativeHere; }
-     else{
-       here=document.createElement('div');
-       here.className='bdt-row bd155-here';
-       var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
-       here.style.setProperty('--acc', acc);
-       here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
-       list.insertBefore(here, row);
-     }
+   if(row.__bd155Done && hasHere && hasWalk){
+     // Même si déjà fait, on tente de mettre à jour le temps réel
+     try{ bd155_updateAllWalkTimes(); }catch(e){}
+     return;
    }
-
-   // Walk juste au-dessus de l'arrêt de départ - taille réduite
-   try{
-     var cur = here ? here.nextElementSibling : null;
-     var found=[];
-     while(cur && cur!==row){
-       var nx=cur.nextElementSibling;
-       if(/Marche à pied/i.test(cur.textContent||'') || cur.classList.contains('bd155-vous-ici-walk')){
-         found.push(cur);
-       }
-       cur=nx;
-     }
-     if(found.length>1){ for(var k=1;k<found.length;k++) found[k].remove(); }
-   }catch(e){}
-
-   var existing = list.querySelector('.bd155-vous-ici-walk-between');
-   if(!existing){
-     var loc=window.__bd_loc;
-     var stop=null, destLat=null, destLon=null;
-     try{
-       list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]').forEach(function(a){
-         try{ var u=new URL(a.href); var d=u.searchParams.get('destination'); if(d&&d.includes(',')){ var p=d.split(','); destLat=parseFloat(p[0]); destLon=parseFloat(p[1]); } }catch(e){}
-       });
-     }catch(e){}
-     if(destLat!=null) stop={lat:destLat, lon:destLon};
-     try{
-       var nameEl=row.querySelector('.bdt-name');
-       if(!stop && nameEl){
-         var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
-         if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
-       }
-     }catch(e){}
-     var mins=4;
-     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
-       var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-       var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-       var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-       mins=Math.max(1,Math.round(meters/80));
-     }
-     var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-     if(loc&&stop){ hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking'; }
-     else if(stop){ hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking'; }
-     else if(loc){ hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking'; }
-
-     var walk=document.createElement('a');
-     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk bd155-vous-ici-walk-between';
-     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;margin:8px 0 10px 34px;background:#2e261b;color:#fde68a;border:1px solid rgba(180,150,90,0.32);';
-     walk.href=hrefWalk;
-     // Taille réduite: icône 18px, texte 13.5px, flèche 32px
-     walk.innerHTML='<span style="font-size:18px;line-height:1">🚶</span><span style="flex:1 1 auto;font-weight:650;font-size:13.5px;color:#fde68a;letter-spacing:-0.01em">Marche à pied · '+mins+' min</span><span style="width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:10px;background:#6b86b8;color:#fff;font-size:16px;font-weight:800">↗</span>';
-     walk.addEventListener('click', function(ev){ ev.preventDefault(); openMaps(this.href, true); });
-     list.insertBefore(walk, row);
-   }else{
-     // repositionne juste au-dessus de l'arrêt de départ
-     list.insertBefore(existing, row);
-     // réduit taille si ancien format
-     try{
-       var sp = existing.querySelector('span:nth-child(2)');
-       if(sp){ sp.style.fontSize='13.5px'; sp.style.fontWeight='650'; }
-       var ic = existing.querySelector('span:first-child');
-       if(ic){ ic.style.fontSize='18px'; }
-       var arr = existing.querySelector('span:last-child');
-       if(arr){ arr.style.width='32px'; arr.style.height='32px'; arr.style.fontSize='16px'; arr.style.borderRadius='10px'; }
-       existing.style.padding='10px 14px';
-       existing.style.borderRadius='16px';
-       existing.style.gap='10px';
-     }catch(e){}
+   if(hasHere && hasWalk){
+     row.__bd155Done=1;
+     if(nativeHere && !alreadyHere){ nativeHere.classList.add('bd155-here'); }
+     // Met à jour temps réel même si walk existe déjà
+     try{ bd155_updateAllWalkTimes(); }catch(e){}
+     return;
    }
    row.__bd155Done=1;
+
+   // --- 2) VOUS ÊTES ICI ---
+   if(!hasHere){
+     var here=document.createElement('div');
+     here.className='bdt-row bd155-here';
+     var acc=row.style.getPropertyValue('--acc')||'#f59e0b';
+     here.style.setProperty('--acc', acc);
+     here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
+     list.insertBefore(here, row);
+   }
+
+   // --- 3) WALK ---
+   if(!hasWalk){
+     var loc=window.__bd_loc;
+     var stop=null;
+     var destLat=null,destLon=null;
+     var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
+     walkLinks.forEach(function(a){
+      try{
+       var u=new URL(a.href);
+       var d=u.searchParams.get('destination');
+       if(d&&d.includes(',')){
+        var p=d.split(',');
+        destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
+       }
+      }catch(e){}
+     });
+     if(destLat!=null) stop={lat:destLat, lon:destLon};
+     try{
+      var nameEl=row.querySelector('.bdt-name');
+      if(!stop && nameEl){
+       var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+       if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
+      }
+     }catch(e){}
+
+     var walk=document.createElement('a');
+     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk';
+     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:12px;margin:4px 0 6px 0;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18)';
+     walk.setAttribute('target','_blank');
+     walk.setAttribute('rel','noopener noreferrer');
+     var mins=2;
+     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
+      var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+      var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+      var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+      mins=Math.max(1,Math.round(meters/80));
+     }
+     var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
+     if(loc&&stop){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+     } else if(stop){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+     } else if(loc){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
+     }
+     walk.href=hrefWalk;
+     walk.innerHTML='<span class="bdt-xi" style="font-size:16px">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:13px;color:#fcd34d">'+mins+' min à pied</span><span title="Lancer navigation à pied vers VOTRE ARRÊT" style="font-size:14px;font-weight:800;background:#3f2f18;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;border-radius:9px">↗</span>';
+     walk.addEventListener('click', function(ev){
+       ev.preventDefault();
+       openMaps(this.href, true);
+     });
+     list.insertBefore(walk, row);
+   }
   });
  }
 
-function sync(){
-function sync(){
 
+ // --- V160 - Temps de marche réel via OSRM (approx Google Maps à pied) ---
+ function bd155_parseLatLon(str){
+   try{
+     if(!str) return null;
+     var parts=String(str).split(',');
+     if(parts.length<2) return null;
+     var lat=parseFloat(parts[0]), lon=parseFloat(parts[1]);
+     if(isNaN(lat)||isNaN(lon)) return null;
+     return {lat:lat, lon:lon};
+   }catch(e){ return null; }
+ }
+ function bd155_extractCoordsFromHref(href){
+   try{
+     var u=new URL(href, location.origin);
+     var origin=u.searchParams.get('origin');
+     var dest=u.searchParams.get('destination')||u.searchParams.get('daddr')||u.searchParams.get('saddr');
+     // google.com/maps/dir/?api=1&origin=...&destination=...
+     // also check saddr/daddr for embed
+     if(!origin) origin=u.searchParams.get('saddr');
+     if(!dest) dest=u.searchParams.get('daddr');
+     var o=bd155_parseLatLon(origin);
+     var d=bd155_parseLatLon(dest);
+     // if dest is not latlon but address, try to find latlon elsewhere in href
+     if(!d && dest && dest.includes(',')){
+       d=bd155_parseLatLon(dest);
+     }
+     return {origin:o, dest:d, originStr:origin, destStr:dest};
+   }catch(e){ return {origin:null,dest:null}; }
+ }
+ async function bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon){
+   try{
+     // OSRM foot - gratuit, proche temps Google à pied
+     var url='https://router.project-osrm.org/route/v1/foot/'+oLon+','+oLat+';'+dLon+','+dLat+'?overview=false';
+     var resp=await fetch(url);
+     if(!resp.ok) throw new Error('osrm fail');
+     var data=await resp.json();
+     if(data && data.routes && data.routes[0] && data.routes[0].duration){
+       var sec=data.routes[0].duration;
+       var mins=Math.max(1, Math.round(sec/60));
+       return mins;
+     }
+   }catch(e){}
+   // fallback haversine /80 m/min
+   try{
+     var R=6371000,r=Math.PI/180,dLat2=(dLat-oLat)*r,dLon2=(dLon-oLon)*r;
+     var aa=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(oLat*r)*Math.cos(dLat*r)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
+     var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+     return Math.max(1, Math.round(meters/80));
+   }catch(e){ return null; }
+ }
+ var bd155_walkCache=new Map();
+ async function bd155_getCachedWalkMinutes(oLat,oLon,dLat,dLon){
+   var key=oLat.toFixed(5)+','+oLon.toFixed(5)+'_'+dLat.toFixed(5)+','+dLon.toFixed(5);
+   if(bd155_walkCache.has(key)) return bd155_walkCache.get(key);
+   var mins=await bd155_fetchWalkMinutes(oLat,oLon,dLat,dLon);
+   if(mins!=null) bd155_walkCache.set(key, mins);
+   return mins;
+ }
+ async function bd155_updateAllWalkTimes(){
+   try{
+     var loc=window.__bd_loc;
+     var allWalks=document.querySelectorAll('.bdt-body .bdt-xfer.bdt-walk, .bdt-body .bd155-vous-ici-walk, .bdt-list .bdt-xfer.bdt-walk, .bdt-list .bd155-vous-ici-walk, .bdt-sheet .bdt-xfer.bdt-walk, .bdt-sheet .bd155-vous-ici-walk');
+     for(var i=0;i<allWalks.length;i++){
+       var el=allWalks[i];
+       if(el.__bdRealTimeDone) continue;
+       var href=el.getAttribute('href')||'';
+       var coords=bd155_extractCoordsFromHref(href);
+       var o=coords.origin;
+       var d=coords.dest;
+       // Si pas de origin mais on a loc + destination
+       if(!o && loc && loc.lat!=null && d){
+         o={lat:loc.lat, lon:loc.lon};
+       }
+       // Si pas de dest mais on a un stop coord connu via le row suivant
+       if(!d){
+         try{
+           var row=el.closest('.bdt-list')?.querySelector('.bdt-row.bd155-votre-row') || el.nextElementSibling;
+           if(row){
+             var nameEl=row.querySelector('.bdt-name');
+             if(nameEl){
+               var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+               if(sc && sc[nameEl.textContent.trim()]){
+                 d=sc[nameEl.textContent.trim()];
+               }
+             }
+           }
+         }catch(e){}
+       }
+       // Si on a toujours pas dest, tente via data attribute
+       if(!d && el.dataset && el.dataset.dest){
+         d=bd155_parseLatLon(el.dataset.dest);
+       }
+       if(!o && el.dataset && el.dataset.origin){
+         o=bd155_parseLatLon(el.dataset.origin);
+       }
+       if(o && d){
+         var mins=await bd155_getCachedWalkMinutes(o.lat,o.lon,d.lat,d.lon);
+         if(mins!=null){
+           // Met à jour le texte "Marche à pied · X min"
+           var txtSpan=el.querySelector('span:nth-child(2)') || el;
+           if(txtSpan){
+             // cherche le span qui contient "Marche" ou "min"
+             var spans=el.querySelectorAll('span');
+             for(var s=0;s<spans.length;s++){
+               if(/Marche à pied|min à pied/i.test(spans[s].textContent||'')){
+                 spans[s].textContent='Marche à pied · '+mins+' min';
+                 break;
+               }
+             }
+             // si pas trouvé, remplace tout le texte qui contient min
+             if(!/Marche à pied/i.test(el.textContent||'')){
+               el.innerHTML=el.innerHTML.replace(/\d+\s*min\s*à\s*pied/i, 'Marche à pied · '+mins+' min').replace(/Marche à pied[^<]*\d+\s*min/i, 'Marche à pied · '+mins+' min');
+             }
+           }
+           el.__bdRealTimeDone=1;
+         }
+       }
+     }
+   }catch(e){}
+ }
+
+
+function sync(){
   ensureBanner();
   replaceTexts();
   decorateLive();
+  try{ bd155_updateAllWalkTimes(); }catch(e){}
  }
 
  var raf=0;
