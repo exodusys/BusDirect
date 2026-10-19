@@ -2757,7 +2757,35 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  function open(){if(document.getElementById('bd-v148-dt-bg'))return;var cur=selected()||new Date(),bg=document.createElement('div');bg.id='bd-v148-dt-bg';bg.innerHTML='<div id="bd-v148-dt" role="dialog" aria-modal="true"><div class="head"><div><div class="title">Choisir une date et heure</div><div class="sub">Rechercher les horaires à une date et une heure précises</div></div><button class="bd-v148-x" type="button">×</button></div><div class="grid"><div><label>Date de départ</label><input id="bd-v148-date" type="date"></div><div><label>Heure de départ</label><input id="bd-v148-time" type="time"></div></div><div class="quick"><button data-min="-60">− 1 h</button><button data-min="-15">− 15 min</button><button data-now="1">Maintenant</button><button data-min="15">+ 15 min</button><button data-min="60">+ 1 h</button><button data-day="1">+ 1 jour</button></div><div class="preview"><strong id="bd-v148-preview"></strong></div><div class="actions"><button id="bd-v148-cancel">Annuler</button><button class="ok" id="bd-v148-ok">Valider la date et l’heure</button></div></div>';document.body.appendChild(bg);document.documentElement.classList.add('modal-open');document.body.classList.add('modal-open');var di=bg.querySelector('#bd-v148-date'),ti=bg.querySelector('#bd-v148-time');di.value=ymd(cur);ti.value=hm(cur);var prev=ti.value;function up(){bg.querySelector('#bd-v148-preview').textContent=fmt(parse(di.value,ti.value))}function sh(m,d){var x=parse(di.value,ti.value);if(m)x.setMinutes(x.getMinutes()+m);if(d)x.setDate(x.getDate()+d);di.value=ymd(x);ti.value=hm(x);prev=ti.value;up()}ti.onchange=function(){var pm=+prev.slice(0,2)*60 + +prev.slice(3,5),nm=+ti.value.slice(0,2)*60 + +ti.value.slice(3,5),de=nm-pm;if(prev&&ti.value&&(de<-720||de>720)){var x=parse(di.value,ti.value);x.setDate(x.getDate()+(de<-720?1:-1));di.value=ymd(x)}prev=ti.value;up()};di.onchange=up;bg.querySelectorAll('[data-min]').forEach(function(b){b.onclick=function(){sh(+b.dataset.min,0)}});bg.querySelector('[data-day]').onclick=function(){sh(0,1)};bg.querySelector('[data-now]').onclick=function(){var n=new Date();di.value=ymd(n);ti.value=hm(n);prev=ti.value;up()};function close(){bg.remove();document.documentElement.classList.remove('modal-open');document.body.classList.remove('modal-open')}bg.querySelector('.bd-v148-x').onclick=close;bg.querySelector('#bd-v148-cancel').onclick=close;bg.onclick=function(e){if(e.target===bg)close()};bg.querySelector('#bd-v148-ok').onclick=function(){apply(di.value,ti.value);close()};up()}
  function info(){var old=document.getElementById('bd-v149-date-under-routes');if(!window.__bd_dtValidated){if(old)old.remove();return}var t=title();if(!t)return;if(!old){old=document.createElement('div');old.id='bd-v149-date-under-routes'}old.innerHTML='<span class="bd-v149-cap">Date et heure sélectionnées</span>'+fmt(selected());if(t.parentNode&&t.nextSibling!==old)t.parentNode.insertBefore(old,t.nextSibling)}
  function decorate(){document.querySelectorAll('.bd-v149-result-date').forEach(function(x){x.remove()});if(!window.__bd_dtValidated)return;var x=selected(),lab=x.toLocaleDateString('fr-CH',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});document.querySelectorAll('div').forEach(function(el){if(el.children.length>5)return;var tx=(el.textContent||'').trim(),m=tx.match(/départ\s+(\d{1,2}:\d{2})\s+•\s+arrivée\s+(\d{1,2}:\d{2})/i);if(m&&!el.querySelector('.bd-v149-result-date')){var d=document.createElement('div');d.className='bd-v149-result-date';d.textContent='🗓️ '+lab+' · départ '+m[1];el.insertBefore(d,el.firstChild)}})}
- function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
+ 
+ // Force tous les liens marche à pied à ouvrir en interne en mode marche
+ (function(){
+   function isWalkLink(a){
+     if(!a) return false;
+     var t=(a.textContent||'').toLowerCase();
+     return a.classList.contains('bdt-walk') || a.classList.contains('bd155-vous-ici-walk') || (a.classList.contains('bdt-xfer') && t.includes('pied')) || /travelmode=walking/i.test(a.href||'') || /Marche à pied/i.test(a.textContent||'');
+   }
+   document.addEventListener('click',function(e){
+     var a=e.target.closest&&e.target.closest('a.bdt-walk, a.bd155-vous-ici-walk, a.bdt-xfer, a[href*="google.com/maps"], a[href*="maps.google.com"]');
+     if(!a) return;
+     if(a.closest('#bd-v155-maps')) return;
+     if(!isWalkLink(a)) return;
+     e.preventDefault();
+     e.stopImmediatePropagation();
+     var href=a.href||'';
+     try{
+       if(href && !/travelmode=walking/i.test(href) && !/dirflg=w/i.test(href)){
+         var u=new URL(href);
+         u.searchParams.set('travelmode','walking');
+         href=u.toString();
+       }
+     }catch(err){}
+     openMaps(href, true);
+   }, true);
+ })();
+
+
+function sync(){var clear=clearButton(),btn=document.getElementById('bd-v148-date-btn'),sum=document.getElementById('bd-v148-date-summary');if(sum)sum.remove();if(clear){if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bd-v148-date-btn';btn.innerHTML='<span>🗓️</span><span>Choisir une date et heure</span><span style="font-size:18px">›</span>';btn.onclick=open}if(clear.parentNode&&btn.nextSibling!==clear)clear.parentNode.insertBefore(btn,clear);info();decorate()}else{if(btn)btn.remove();if(window.__bd_dtValidated)reset()}}
  var raf=0;function sch(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}function start(){sync();new MutationObserver(sch).observe(document.body,{childList:true,subtree:true,characterData:true});window.addEventListener('bd-trip-datetime-change',function(){setTimeout(sync,30)})}if(document.body)start();else document.addEventListener('DOMContentLoaded',start)
 })();
 </script>
@@ -2888,10 +2916,7 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   document.addEventListener('keydown',onEsc);
  }
 
- /* walk internal handler */
-(function(){function isWalkLink(a){if(!a)return false;var txt=(a.textContent||'').toLowerCase();return a.classList.contains('bdt-walk')||a.classList.contains('bd155-vous-ici-walk')||a.classList.contains('bdt-xfer')&&txt.includes('pied')||/travelmode=walking/i.test(a.href||'')||/Marche à pied/i.test(a.textContent||'');}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a.bdt-walk, a.bd155-vous-ici-walk, a.bdt-xfer, a[href*="google.com/maps"], a[href*="maps.google.com"]');if(!a)return;if(a.closest('#bd-v155-maps'))return;if(!isWalkLink(a))return;e.preventDefault();e.stopImmediatePropagation();var href=a.href||'';try{if(href&&!/travelmode=walking/i.test(href)&&!/dirflg=w/i.test(href)){var u=new URL(href);if(!u.searchParams.get('travelmode'))u.searchParams.set('travelmode','walking');href=u.toString();}}catch(err){}openMaps(href,true);},true);})();
-
-document.addEventListener('click',function(e){
+ document.addEventListener('click',function(e){
   var a=e.target.closest&&e.target.closest('a[href*="google.com/maps"], a[href*="maps.google.com"], a[href*="goo.gl/maps"]');
   if(!a) return;
   if(a.closest('#bd-v155-maps')) return;
@@ -2971,7 +2996,7 @@ document.addEventListener('click',function(e){
  }
 
  function decorateLive(){
-  // DEDUP GLOBAL - supprime tout doublon Vous êtes ici / 2 min à pied avant traitement
+  // DEDUP: garde 1 seul Vous êtes ici et 1 seul walk dans la page
   try{
     document.querySelectorAll('.bdt-body, .bdt-list, .bdt-sheet').forEach(function(container){
       var heres = Array.from(container.querySelectorAll('.bdt-row')).filter(function(r){
@@ -2979,14 +3004,9 @@ document.addEventListener('click',function(e){
       });
       var bdHeres = Array.from(container.querySelectorAll('.bd155-here'));
       var allHeres = heres.concat(bdHeres);
+      // On garde 1 seul Vous êtes ici
       if(allHeres.length>1){
         for(var i=1;i<allHeres.length;i++){ try{allHeres[i].remove();}catch(e){} }
-      }
-      var walks = Array.from(container.querySelectorAll('.bdt-xfer.bdt-walk, .bd155-vous-ici-walk, a[href*="travelmode=walking"]')).filter(function(w){
-        return /min à pied/i.test(w.textContent||'');
-      });
-      if(walks.length>1){
-        for(var j=1;j<walks.length;j++){ try{walks[j].remove();}catch(e){} }
       }
     });
   }catch(e){}
@@ -2998,13 +3018,8 @@ document.addEventListener('click',function(e){
    if(!row) return;
    var list=row.parentElement;
    if(!list) return;
-   // si déjà traité ou si un Vous êtes ici existe déjà, on nettoie juste le badge bleu et on sort
-   var alreadyHere = list.querySelector('.bd155-here');
-   var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
-   var hasHere = alreadyHere || nativeHere;
-   var hasWalk = list.querySelector('.bd155-vous-ici-walk') || Array.from(list.querySelectorAll('.bdt-xfer')).find(function(w){ return /min à pied/i.test(w.textContent||''); });
 
-   // cache le badge orange POSITION ACTUELLE sur la ligne Votre arrêt
+   // Cache badge POSITION ACTUELLE sur Votre arrêt
    row.classList.add('bd155-votre-row');
    var tagsContainer=row.querySelector('.bdt-tags');
    if(tagsContainer){
@@ -3017,16 +3032,11 @@ document.addEventListener('click',function(e){
      });
    }
 
-   if(row.__bd155Done && hasHere && hasWalk) return;
-   if(hasHere && hasWalk){
-     row.__bd155Done=1;
-     // si on a un natif et pas de bd155-here, convertit le natif
-     if(nativeHere && !alreadyHere){ nativeHere.classList.add('bd155-here'); }
-     return;
-   }
-   row.__bd155Done=1;
+   var alreadyHere = list.querySelector('.bd155-here');
+   var nativeHere = Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return r!==row && /Vous êtes ici/i.test(r.textContent||''); });
+   var hasHere = alreadyHere || nativeHere;
 
-   // --- 2) VOUS ÊTES ICI ---
+   // Crée Vous êtes ici si manquant
    if(!hasHere){
      var here=document.createElement('div');
      here.className='bdt-row bd155-here';
@@ -3034,69 +3044,160 @@ document.addEventListener('click',function(e){
      here.style.setProperty('--acc', acc);
      here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
      list.insertBefore(here, row);
+     alreadyHere=here;
+     hasHere=true;
+   } else if(nativeHere && !alreadyHere){
+     nativeHere.classList.add('bd155-here');
+     alreadyHere=nativeHere;
    }
 
-   // --- 3) WALK --- SUPPRIMÉ entre Vous êtes ici et Votre arrêt (demandé par user)
-   // Nettoie tout walk entre POSITION ACTUELLE et VOTRE ARRÊT
+   // --- WALK entre Vous êtes ici et Votre arrêt comme sur photo ---
+   // Supprime ancien walk entre here et row
    try{
-     var hereEl2 = list.querySelector('.bd155-here') || Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return /Vous êtes ici/i.test(r.textContent||'') && !r.querySelector('.bdt-tag-me'); });
-     if(hereEl2){
-       var cur = hereEl2.nextElementSibling;
+     var hereEl = alreadyHere || nativeHere;
+     if(hereEl){
+       var cur = hereEl.nextElementSibling;
        while(cur && cur!==row){
          var nxt = cur.nextElementSibling;
-         if(cur.matches && (cur.matches('.bdt-xfer') || cur.matches('.bdt-walk') || cur.matches('.bd155-vous-ici-walk') || /Marche à pied/i.test(cur.textContent||'') || /min à pied/i.test(cur.textContent||''))){
-           cur.remove();
+         if(cur.matches && (cur.matches('.bd155-vous-ici-walk') || cur.matches('.bd155-vous-ici-walk-between') || /Marche à pied/i.test(cur.textContent||''))){
+           // garde seulement celui avec between, supprime les autres doublons
+           if(!cur.classList.contains('bd155-vous-ici-walk-between')){
+             cur.remove();
+           }else{
+             // si on a déjà un between, on garde le premier
+             if(list.querySelectorAll('.bd155-vous-ici-walk-between').length>1){
+               cur.remove();
+             }
+           }
          }
-         cur = nxt;
+         cur=nxt;
        }
      }
-     // supprime aussi tout bd155-vous-ici-walk résiduel dans cette liste
-     Array.from(list.querySelectorAll('.bd155-vous-ici-walk')).forEach(function(w){
-       var p1=0, pW=-1, pR=-1;
-       var n=list.firstElementChild, i=0;
-       var hPos=-1,wPos=-1,rPos=-1;
-       while(n){
-         if(n===hereEl2) hPos=i;
-         if(n===w) wPos=i;
-         if(n===row) rPos=i;
-         n=n.nextElementSibling; i++;
-       }
-       if(hPos!==-1 && rPos!==-1 && wPos>hPos && wPos<rPos) w.remove();
-       // si le walk est juste avant Votre arrêt et qu'on vient de nettoyer, on le supprime aussi
-       if(w.previousElementSibling===hereEl2 || w.nextElementSibling===row) {
-         // si c'est le seul entre les deux, on le supprime
-         w.remove();
-       }
-     });
    }catch(e){}
-   });
+
+   if(!list.querySelector('.bd155-vous-ici-walk-between')){
+     var loc=window.__bd_loc;
+     var stop=null;
+     var destLat=null,destLon=null;
+     var walkLinks=list.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
+     walkLinks.forEach(function(a){
+      try{
+       var u=new URL(a.href);
+       var d=u.searchParams.get('destination');
+       if(d&&d.includes(',')){
+        var p=d.split(',');
+        destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
+       }
+      }catch(e){}
+     });
+     if(destLat!=null) stop={lat:destLat, lon:destLon};
+     try{
+      var nameEl=row.querySelector('.bdt-name');
+      if(!stop && nameEl){
+       var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+       if(sc && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
+      }
+     }catch(e){}
+
+     var mins=4;
+     if(loc&&loc.lat!=null&&stop&&stop.lat!=null){
+      var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+      var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+      var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+      mins=Math.max(1,Math.round(meters/80));
+     }
+
+     var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
+     if(loc&&stop){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+     } else if(stop){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+     } else if(loc){
+       hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&travelmode=walking';
+     }
+
+     var walk=document.createElement('a');
+     walk.className='bdt-xfer bdt-walk bd155-vous-ici-walk bd155-vous-ici-walk-between';
+     // Style identique à ta photo
+     walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:20px;margin:10px 0 12px 34px;background:#2e261b;color:#fde68a;border:1px solid rgba(180,150,90,0.35);box-shadow:0 2px 10px rgba(0,0,0,0.25);';
+     walk.href=hrefWalk;
+     walk.innerHTML='<span style="font-size:22px;line-height:1">🚶</span><span style="flex:1 1 auto;font-weight:700;font-size:16px;color:#fde68a;letter-spacing:-0.01em">Marche à pied · '+mins+' min</span><span style="width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#6b86b8;color:#fff;font-size:20px;font-weight:900;box-shadow:0 2px 6px rgba(0,0,0,0.3)">↗</span>';
+     walk.addEventListener('click', function(ev){
+       ev.preventDefault();
+       openMaps(this.href, true);
+     });
+
+     // Place entre Vous êtes ici et Votre arrêt
+     var hereEl2 = list.querySelector('.bd155-here');
+     if(hereEl2){
+       list.insertBefore(walk, hereEl2.nextSibling);
+       // Garantit qu'il est avant Votre arrêt
+       if(walk.nextSibling!==row && list.contains(row)){
+         // si walk est après row, on le remet
+         if(Array.prototype.indexOf.call(list.children, walk) > Array.prototype.indexOf.call(list.children, row)){
+           list.insertBefore(walk, row);
+         }
+       }
+     }else{
+       list.insertBefore(walk, row);
+     }
+   }
+
+   // Mise à jour du mins si déjà existant
+   try{
+     var existingWalk = list.querySelector('.bd155-vous-ici-walk-between');
+     if(existingWalk){
+       // recalcule mins si on a loc/stop
+       var loc2=window.__bd_loc;
+       var nameEl2=row.querySelector('.bdt-name');
+       var sc2=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+       var st2=null;
+       if(nameEl2 && sc2 && sc2[nameEl2.textContent.trim()]) st2=sc2[nameEl2.textContent.trim()];
+       if(loc2&&loc2.lat!=null&&st2&&st2.lat!=null){
+         var R2=6371000,r2=Math.PI/180,dLat2=(st2.lat-loc2.lat)*r2,dLon2=(st2.lon-loc2.lon)*r2;
+         var aa2=Math.sin(dLat2/2)*Math.sin(dLat2/2)+Math.cos(loc2.lat*r2)*Math.cos(st2.lat*r2)*Math.sin(dLon2/2)*Math.sin(dLon2/2);
+         var meters2=2*R2*Math.atan2(Math.sqrt(aa2),Math.sqrt(1-aa2));
+         var mins2=Math.max(1,Math.round(meters2/80));
+         var span = existingWalk.querySelector('span:nth-child(2)');
+         if(span) span.textContent='Marche à pied · '+mins2+' min';
+       }
+     }
+   }catch(e){}
+
+   row.__bd155Done=1;
+  });
  }
 
- // Nettoyage global continu: supprime tout walk entre Vous êtes ici et Votre arrêt
+
+ // Force tous les liens marche à pied à ouvrir en interne en mode marche
  (function(){
-   function cleanGap(){
-     try{
-       document.querySelectorAll('.bdt-list, .bdt-body').forEach(function(list){
-         var here = list.querySelector('.bd155-here') || Array.from(list.querySelectorAll('.bdt-row')).find(function(r){ return /Vous êtes ici/i.test(r.textContent||'') && !r.querySelector('.bdt-tag-me'); });
-         var votre = list.querySelector('.bdt-tag-me')?.closest('.bdt-row');
-         if(!here || !votre) return;
-         var cur = here.nextElementSibling;
-         while(cur && cur!==votre){
-           var nxt = cur.nextElementSibling;
-           if(/Marche à pied/i.test(cur.textContent||'') || /min à pied/i.test(cur.textContent||'')){
-             cur.remove();
-           }
-           cur = nxt;
-         }
-       });
-     }catch(e){}
+   function isWalkLink(a){
+     if(!a) return false;
+     var t=(a.textContent||'').toLowerCase();
+     return a.classList.contains('bdt-walk') || a.classList.contains('bd155-vous-ici-walk') || (a.classList.contains('bdt-xfer') && t.includes('pied')) || /travelmode=walking/i.test(a.href||'') || /Marche à pied/i.test(a.textContent||'');
    }
-   setInterval(cleanGap, 800);
-   new MutationObserver(cleanGap).observe(document.body, {childList:true, subtree:true});
+   document.addEventListener('click',function(e){
+     var a=e.target.closest&&e.target.closest('a.bdt-walk, a.bd155-vous-ici-walk, a.bdt-xfer, a[href*="google.com/maps"], a[href*="maps.google.com"]');
+     if(!a) return;
+     if(a.closest('#bd-v155-maps')) return;
+     if(!isWalkLink(a)) return;
+     e.preventDefault();
+     e.stopImmediatePropagation();
+     var href=a.href||'';
+     try{
+       if(href && !/travelmode=walking/i.test(href) && !/dirflg=w/i.test(href)){
+         var u=new URL(href);
+         u.searchParams.set('travelmode','walking');
+         href=u.toString();
+       }
+     }catch(err){}
+     openMaps(href, true);
+   }, true);
  })();
 
 
 function sync(){
+
 
   ensureBanner();
   replaceTexts();
