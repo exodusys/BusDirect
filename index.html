@@ -3042,9 +3042,8 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
  
  
  function decorateLive(){
-  // V165 : s'applique à TOUS les Suivi en direct, avec ou sans date/heure
+  // V166 : tous les Suivi en direct + dalles Mes parcours + distance >50m
 
-  // 1) Nettoie l'ancien badge orange sur VOTRE ARRÊT (si présent)
   document.querySelectorAll('.bdt-tag-me').forEach(function(tag){
    var txt=(tag.textContent||'').trim().toLowerCase();
    if(txt!=='votre arrêt' && txt!=='votre arret') return;
@@ -3063,97 +3062,100 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
    }
   });
 
-  // 2) Nettoie tous les anciens inserts V155/V163/V164 partout
   try{
-   document.querySelectorAll('.bd163-here, .bd163-walk, .bd155-here, .bd155-vous-ici-walk, .bd164-here, .bd165-here, .bd165-walk').forEach(function(e){ e.remove(); });
+   document.querySelectorAll('.bd163-here, .bd163-walk, .bd155-here, .bd155-vous-ici-walk, .bd164-here, .bd165-here, .bd165-walk, .bd166-here, .bd166-walk').forEach(function(e){ e.remove(); });
   }catch(e){}
 
   var loc=window.__bd_loc;
   if(!loc || loc.lat==null) return;
 
-  // 3) Trouve TOUTES les listes de suivi en direct (avec ou sans date)
-  // Un Suivi en direct a un titre "Suivi en direct" et contient des .bdt-row
+  // Trouve toutes les listes de suivi en direct (y compris dalles Mes parcours)
   var liveContainers=[];
-  document.querySelectorAll('.bdt-wrap, .bdt-body, [class*="bdt-"]').forEach(function(c){
+  document.querySelectorAll('.bdt-wrap, .bdt-body, [class*="bdt-"], [class*="live"], [class*="parcours"]').forEach(function(c){
     if(c.querySelector && c.querySelector('.bdt-row')) liveContainers.push(c);
   });
-  // Fallback: tous les parents directs de .bdt-row
   var rowParents=new Set();
   document.querySelectorAll('.bdt-row').forEach(function(r){
     if(r.parentElement) rowParents.add(r.parentElement);
   });
   rowParents.forEach(function(p){ if(liveContainers.indexOf(p)===-1) liveContainers.push(p); });
 
-  // Déduplique et filtre : on garde uniquement les containers qui sont dans un modal Suivi en direct OU qui ont au moins 2 rows
   var seen=new Set();
   var lists=[];
   liveContainers.forEach(function(cont){
     if(!cont || seen.has(cont)) return;
     seen.add(cont);
-    // Vérifie si c'est bien une liste de suivi (a des rows)
     var rows=cont.querySelectorAll(':scope > .bdt-row, .bdt-row');
     if(rows.length===0) return;
-    // Si le container est dans la page principale et pas dans un modal suivi, on le garde aussi si il contient un trajet (pour date/heure)
     lists.push(cont);
   });
 
   if(lists.length===0) return;
 
-  // Récupère stop coords (premier arrêt du trajet)
-  var stop=null;
-  var destLat=null,destLon=null;
-  try{
-   var trips=window.__bd_trips||{};
-   var firstKey=Object.keys(trips)[0];
-   if(firstKey){
-     var pl=(trips[firstKey].passList||[]).filter(function(x){return x&&x.lat!=null});
-     if(pl.length) stop={lat:pl[0].lat, lon:pl[0].lon};
-   }
-   // essaie aussi depuis les liens maps existants
-   var walkLinks=document.querySelectorAll('a[href*="google.com/maps"], a[href*="maps.google.com"]');
-   walkLinks.forEach(function(a){
-    try{
-     var u=new URL(a.href);
-     var d=u.searchParams.get('destination');
-     if(d&&d.includes(',')){
-      var p=d.split(',');
-      destLat=parseFloat(p[0]); destLon=parseFloat(p[1]);
-     }
-    }catch(e){}
-   });
-   if(destLat!=null && !stop) stop={lat:destLat, lon:destLon};
-  }catch(e){}
-
-  var mins=2;
-  if(loc&&stop&&stop.lat!=null){
-   var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
-   var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
-   var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
-   mins=Math.max(1,Math.round(meters/80));
-  }
-
-  var hrefWalk='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-  if(loc&&stop){
-    hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
-  }
-
-  // Pour CHAQUE liste de suivi en direct trouvée, insère le point
+  // Pour chaque liste, calcule distance par rapport à son premier arrêt
   lists.forEach(function(list){
    if(!list) return;
-   if(list.querySelector('.bd165-here')) return; // déjà fait
+   if(list.querySelector('.bd166-here')) return;
    var rows=list.querySelectorAll('.bdt-row');
    if(rows.length===0) return;
 
+   // Récupère stop = premier arrêt de cette liste
+   var stop=null;
    var firstRow=rows[0];
+   try{
+     // Essaie via __bd_trips, ou via coords stockées
+     var sc=window.__bd_stopCoords||window.__bd_v151_stopCoords||window.__bd_v149_stopCoords||window.__bd_v155_stopCoords;
+     var nameEl=firstRow.querySelector('.bdt-name');
+     if(sc && nameEl && sc[nameEl.textContent.trim()]) stop=sc[nameEl.textContent.trim()];
+   }catch(e){}
+   if(!stop){
+     try{
+       // Cherche dans passList du trip correspondant à cette liste
+       var trips=window.__bd_trips||{};
+       // Prend le trip dont le premier arrêt correspond au nom de firstRow si possible
+       var firstName=(firstRow.querySelector('.bdt-name')||{}).textContent||'';
+       firstName=firstName.trim();
+       var found=null;
+       Object.keys(trips).forEach(function(k){
+         var pl=(trips[k].passList||[]).filter(function(x){return x&&x.lat!=null});
+         if(pl.length && !found){
+           // si le nom correspond
+           if(firstName && pl[0].name && firstName.includes(pl[0].name)) found=pl[0];
+         }
+       });
+       if(found) stop={lat:found.lat, lon:found.lon};
+       if(!stop){
+         var firstKey=Object.keys(trips)[0];
+         if(firstKey){
+           var pl=(trips[firstKey].passList||[]).filter(function(x){return x&&x.lat!=null});
+           if(pl.length) stop={lat:pl[0].lat, lon:pl[0].lon};
+         }
+       }
+     }catch(e){}
+   }
+
+   if(!stop || stop.lat==null) return;
+
+   // Calcul distance en mètres
+   var R=6371000,r=Math.PI/180,dLat=(stop.lat-loc.lat)*r,dLon=(stop.lon-loc.lon)*r;
+   var aa=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(loc.lat*r)*Math.cos(stop.lat*r)*Math.sin(dLon/2)*Math.sin(dLon/2);
+   var meters=2*R*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+
+   // V166 : affiche uniquement si distance >50m
+   if(meters <= 50) return;
+
+   var mins=Math.max(1,Math.round(meters/80));
+   var hrefWalk='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(loc.lat+','+loc.lon)+'&destination='+encodeURIComponent(stop.lat+','+stop.lon)+'&travelmode=walking';
+
    var acc=firstRow.style.getPropertyValue('--acc')||'#f59e0b';
 
    var here=document.createElement('div');
-   here.className='bdt-row bd165-here bd163-here';
+   here.className='bdt-row bd166-here bd163-here';
    here.style.setProperty('--acc', acc);
    here.innerHTML='<span class="bdt-dot" style="background:#f59e0b;border-color:#f59e0b;box-shadow:0 0 0 5px rgba(245,158,11,.18)"></span><div class="bdt-main"><div class="bdt-name" style="display:flex;align-items:center;gap:6px">📍 Vous êtes ici</div><div class="bdt-tags"><span class="bdt-tag" style="background:#f59e0b;color:#fff">POSITION ACTUELLE</span></div></div>';
 
    var walk=document.createElement('a');
-   walk.className='bdt-xfer bdt-walk bd165-walk bd163-walk';
+   walk.className='bdt-xfer bdt-walk bd166-walk bd163-walk';
    walk.style.cssText='text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;margin:6px 0 10px 32px;background:#2d2418;color:#fcd34d;border:1px solid rgba(252,211,77,.18);max-width:92%';
    walk.setAttribute('target','_blank');
    walk.setAttribute('rel','noopener noreferrer');
@@ -3172,9 +3174,6 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
      list.appendChild(here);
      list.appendChild(walk);
    }
-
-   // Marque comme fait pour éviter double insertion dans ce tour
-   if(firstRow) firstRow.__bd155Done=1;
   });
 
  }
@@ -3215,34 +3214,70 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 
 <script id="bd-v155-date-guard">
 (function(){
+ 
  function hasDepart(){
-  // 1) champ input Départ non vide
+  // V166 : bouton actif si adresse saisie dans champ Départ OU au moins 1 Arrêt à proximité sélectionné
+  // 1) champ Départ non vide (placeholder Départ)
   var inputs=document.querySelectorAll('input');
   for(var i=0;i<inputs.length;i++){
    var inp=inputs[i];
    var ph=(inp.getAttribute('placeholder')||'').toLowerCase();
+   // Accepte "départ" ou "depart"
    if(ph.includes('départ')||ph.includes('depart')){
     if((inp.value||'').trim().length>0) return true;
    }
   }
-  // 2) localStorage / window globals
+  // 2) departReload state (React state) via window ou localStorage
   try{
-   var f=localStorage.getItem('bd-from')||localStorage.getItem('bd_from')||window.__bd_from;
-   if(f && String(f).trim().length>0) return true;
-   var fls=localStorage.getItem('bd-depart')||localStorage.getItem('bd_depart');
-   if(fls && String(fls).trim().length>0) return true;
+   var dep=window.__bd_departReload||localStorage.getItem('bd-depart')||localStorage.getItem('bd_depart')||localStorage.getItem('bd-from')||window.__bd_from;
+   if(dep && String(dep).trim().length>0) return true;
   }catch(e){}
-  // 3) arrêt(s) à proximités = localisation active
-  if(window.__bd_loc && window.__bd_loc.lat!=null) return true;
+  // 3) au moins 1 arrêt à proximité sélectionné
   try{
-   if(localStorage.getItem('bd-loc-enabled')==='1') return true;
-   if(document.documentElement.dataset.loc==='on') return true;
+   var stops=window.__bd_nearStops||document.querySelectorAll('[data-selected]');
+   // check via window.__bd_nearStops is not accessible, on check DOM
+   var sel=document.querySelectorAll('.bd-near-selected, [data-selected="true"], .selected');
+   // fallback: check if any nearStops selected in React state via DOM text ?
+   // On cherche les boutons arrêts qui ont une classe selected
+   var nearBtns=document.querySelectorAll('button');
+   for(var j=0;j<nearBtns.length;j++){
+     var b=nearBtns[j];
+     if(b.className&&b.className.includes('selected') && b.textContent) {
+       // heuristique : si bouton arrêt sélectionné
+       // On vérifie via localStorage flag
+     }
+   }
   }catch(e){}
-  // 4) présence du bouton "Arrêts à proximité" actif ou texte "Position actuelle"
-  var prox=document.body.textContent||'';
-  // si on détecte que la ville utilise "Vous êtes ici" ou "Position actuelle" comme départ, on considère comme renseigné seulement si loc existe (déjà check)
+  // Vérifie via le state React stocké globalement : window.__bd_selectedNearStops
+  try{
+   // Le composant stocke nearStops dans window via Mutation? On utilise le DOM : si un arrêt a la classe bg-blue ou ring
+   var selectedNear=document.querySelectorAll('[class*="bg-blue-600"], [class*="bd-near-selected"]');
+   if(selectedNear.length>0) return true;
+   // Méthode simple : si isLocDepart ou loc enabled => on a sélectionné proximité
+   if(window.__bd_loc && window.__bd_loc.lat!=null){
+     // si localisation active, on considère qu'on a au moins 1 arrêt à proximité si la liste des arrêts à proximité existe
+     var nearList=document.querySelectorAll('.bd-near, [class*="near"]');
+     // plus fiable : vérifie window.__bd_nearStopsSelected via localStorage
+     if(localStorage.getItem('bd-loc-enabled')==='1') return true;
+   }
+   // Dernière vérif : nearStops sélectionnés dans le state React exposé
+   if(window.__bd_hasSelectedNearStop) return true;
+  }catch(e){}
+
+  // Check directement via variable globale que l'on va exposer depuis React
+  try{
+   if(window.__bd_nearStopsSelected && window.__bd_nearStopsSelected.length>0) return true;
+  }catch(e){}
+
+  // Si on a sélectionné au moins 1 arrêt à proximité (check via les éléments avec attribut data-selected)
+  try{
+   var allStops=window.__bd_nearStopsCache;
+   if(allStops && allStops.some(function(s){return s.selected})) return true;
+  }catch(e){}
+
   return false;
  }
+
 
  function showWarn(){
   var old=document.getElementById('bd155-date-warn');
@@ -3313,5 +3348,31 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
 })();
 </script>
 
-<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script><script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script>
+<script id="bd-v166-expose">
+(function(){
+  // Expose nearStops selection for hasDepart
+  setInterval(function(){
+    try{
+      // Try to find React state via DOM : check if any stop button is selected
+      var sel=0;
+      document.querySelectorAll('button').forEach(function(btn){
+        var cls=btn.className||'';
+        // Les arrêts sélectionnés ont souvent une classe avec bg ou ring bleu
+        if(cls.includes('ring-2') || cls.includes('bg-zinc-900') && btn.textContent && btn.textContent.length<40){
+          // heuristique faible, on compte via __bd_nearStopsCache si dispo
+        }
+      });
+      // On utilise un cache global rempli par l'app si possible
+      if(window.__bd_nearStops){
+        var hasSel=window.__bd_nearStops.some(function(s){return s.selected});
+        window.__bd_hasSelectedNearStop=hasSel;
+        window.__bd_nearStopsSelected=window.__bd_nearStops.filter(function(s){return s.selected});
+      }
+    }catch(e){}
+  },600);
+})();
+</script>
+
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
