@@ -147,10 +147,6 @@ section.rounded-\[20px\].fixed.inset-0.z-\[80\] > div{width:100% !important;max-
 .bd-logo-loc.loc-on{filter:hue-rotate(0deg) brightness(1.1)}
 .bd-logo-loc.loc-off{filter:grayscale(1) opacity(0.6)}
 
-/* V98 FIX - no black screen - V225 force light default */
-html,body,#root{min-height:100vh}
-html:not(.dark){background:#FAFAF9 !important} body:not(.dark){background:#FAFAF9 !important}
-html.dark{color-scheme:dark}
 /* V98 FIX - no black screen */
 html{ background:#FAFAF9; }
 body{ background:#FAFAF9 !important; color:#1C1917 !important; }
@@ -206,7 +202,7 @@ html.dark .bdt-sheet{ background:#1C1917 !important; }
 }
 </style><script>(function(){try{
 var s=localStorage.getItem("bd-theme");
-if(s!=="dark"&&s!=="light"){ s="light"; try{localStorage.setItem("bd-theme","light");}catch(e){} }
+if(s!=="dark"&&s!=="light"){ s="dark"; try{localStorage.setItem("bd-theme","dark");}catch(e){} }
 var isDark = (s==="dark");
 var r=document.documentElement;
 r.classList.toggle("dark", isDark);
@@ -546,7 +542,6 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
    var r=Math.PI/180,y=Math.sin((d-b)*r)*Math.cos(c2*r),x=Math.cos(a*r)*Math.sin(c2*r)-Math.sin(a*r)*Math.cos(c2*r)*Math.cos((d-b)*r);
    return (Math.atan2(y,x)/r+360)%360;
   }
-  var W = typeof window!=='undefined'?window:this;
   /* Boussole V225: affichage flèche uniquement si orientation autorisée */
   var devHeading=null;
   var devHeadingGranted=false;
@@ -620,17 +615,31 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
     } else { devHeadingGranted=true; startOrient(); }
    }catch(e){ devHeadingGranted=false; }
   }
-  // Auto-authorisation au démarrage
+  // Auto-authorisation au démarrage V226 - dark mode + orientation auto
   function autoRequestOrient(){
    if(!isOrientEnabled()){ updateCompassArrowsVisibility(); return; }
    try{
+     // marque premier démarrage
+     try{
+       if(!localStorage.getItem('bd_first_launch')){
+         localStorage.setItem('bd_first_launch','1');
+         // force dark mode au premier démarrage
+         if(!localStorage.getItem('bd-theme')){
+           localStorage.setItem('bd-theme','dark');
+           document.documentElement.classList.add('dark');
+           document.documentElement.style.colorScheme='dark';
+           document.documentElement.dataset.theme='dark';
+         }
+       }
+     }catch(e){}
      if(W.DeviceOrientationEvent&&typeof W.DeviceOrientationEvent.requestPermission==='function'){
-       // tentative automatique (iOS peut exiger geste, on retentera au premier geste)
+       // tentative automatique immédiate (iOS 13+ peut exiger geste, on retentera)
        W.DeviceOrientationEvent.requestPermission().then(function(r){
-         if(r==='granted'){ devHeadingGranted=true; startOrient(); }
-         else { /* attendra geste */ }
+         if(r==='granted'){ devHeadingGranted=true; startOrient(); try{localStorage.setItem('bd_orient_ok','1')}catch(e){} }
          updateCompassArrowsVisibility();
-       }).catch(function(){});
+       }).catch(function(){
+         // pas de geste encore, on attendra le premier touch/click (géré plus bas)
+       });
      } else {
        devHeadingGranted=true;
        startOrient();
@@ -1050,7 +1059,7 @@ function getTicketingForCity(city){
 }
 
 function xa(e){if(ep[e])return ep[e];let n=an.find((t)=>t.id===e);if(!n)return[];return n.sms.keywords.map((t)=>({code:t,label:`${n.network} ${t}`,number:n.sms.number,desc:n.sms.info,type:n.sms.number==="APP"?"app":"sms"}))}function ja(){let[e,n]=V.useState("dark"),[t,r]=V.useState(()=>{try{let v=localStorage.getItem("bd_lang");if(v&&sr[v])return v;let nav=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[nav])return nav;return "fr"}catch{return "fr"}}),[autoLang,setAutoLang]=V.useState(()=>{try{let v=localStorage.getItem("bd_autoLang");return v===null?true:v==="true"}catch{return true}}),[l,u]=V.useState(()=>{try{let _id=localStorage.getItem("bd_city");if(_id){let _c=an.find(x=>x.id===_id);if(_c)return _c}}catch{}return an[0]}),[o,a]=V.useState(null),[f,h]=V.useState(""),[g,k]=V.useState(!1),[v,_]=V.useState(!1),[C,z]=V.useState([]),J=V.useRef(void 0),[s,d]=V.useState(""),[y,E]=V.useState(""),[nearStops,setNearStops]=V.useState([]),[nearRadius,setNearRadius]=V.useState(()=>{try{let v=parseInt(localStorage.getItem("bd_nearRadius")||"500",10);return isNaN(v)?500:Math.min(2000,Math.max(100,v))}catch{return 500}}),[departReload,setDepartReload]=V.useState(""),[departReloadResults,setDepartReloadResults]=V.useState([]),[isLocDepart,setIsLocDepart]=V.useState(!1),[M,D]=V.useState([]),[U,R]=V.useState([]),[j,Q]=V.useState([]),[De,Ul]=V.useState([]),[et,go]=V.useState([]),[bdHorizon,setBdHorizon]=V.useState(60),[bdTL,setBdTL]=V.useState(null),[bdPrev,setBdPrev]=V.useState({}),[sb,gs]=V.useState(null),[Rl,ba]=V.useState(!1),[fn,nt]=V.useState([]),[ef,L]=V.useState(null),[rp,nf]=V.useState(!1),[lp,pr]=V.useState(!1),[up,$l]=V.useState(!1),[ko,Fl]=V.useState(!1),[Fe,tt]=V.useState(""),[He,rt]=V.useState(""),[Hl,yr]=V.useState([]),[Bl,Al]=V.useState([]),[Nt,Eo]=V.useState([]),[Pt,wo]=V.useState([]),[Ll,Ql]=V.useState(""),[Be,Pn]=V.useState(null),[le,Tl]=V.useState(null),[Wl,op]=V.useState(""),[So,ip]=V.useState(!1),[On,tf]=V.useState(null),[cn,dn]=V.useState(""),[hr,Ot]=V.useState([]),[_o,rf]=V.useState(!1),Kl=V.useRef(null),lf=V.useRef(void 0),Yl=V.useRef(0),B=sr[t]||sr.fr;V.useEffect(()=>{if(!o||o.lat==null||o.lon==null)return;var last=window.__bd_lastAddr;if(last&&zt({lat:o.lat,lon:o.lon},last)<0.05){if(!o.addr&&window.__bd_lastAddrTxt)a(function(p){return p&&!p.addr?Object.assign({},p,{addr:window.__bd_lastAddrTxt}):p});return}if(window.__bd_addrBusy)return;window.__bd_addrBusy=!0;var la=o.lat,lo=o.lon;bdReverse(la,lo).then(function(ad){window.__bd_addrBusy=!1;if(!ad)return;window.__bd_lastAddr={lat:la,lon:lo};window.__bd_lastAddrTxt=ad;a(function(p){return p?Object.assign({},p,{addr:ad,street:(p.manual&&p.street)?p.street:ad}):p})}).catch(function(){window.__bd_addrBusy=!1})},[o&&o.lat,o&&o.lon]);V.useEffect(()=>{try{localStorage.setItem("bd_autoLang",String(autoLang))}catch{}},[autoLang]);V.useEffect(()=>{try{localStorage.setItem("bd_lang",t)}catch{}},[t]);V.useEffect(()=>{if(!autoLang)return;try{let N=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[N])r(N)}catch{}if(navigator.geolocation){navigator.geolocation.getCurrentPosition(async e=>{try{let resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.coords.latitude}&lon=${e.coords.longitude}&accept-language=${t||"fr"}`);let data=await resp.json();let H=data?.address?.country_code?.toUpperCase();if(H){let oe=th[H];if(oe&&sr[oe])r(oe)}}catch{}},()=>{}, {enableHighAccuracy:false,timeout:5000})}},[autoLang]);V.useEffect(()=>{try{let _s=localStorage.getItem("bd-theme");var _valid=["light","dark"];if(_s&&_valid.indexOf(_s)>=0){if(_s!==e)n(_s);}else{n("dark");} }catch{}},[]),V.useEffect(()=>{try{let _d=document.documentElement;let _isDark = e==="dark";_d.classList.toggle("dark",_isDark);_d.style.colorScheme=_isDark?"dark":"light";_d.dataset.theme=e;localStorage.setItem("bd-theme",e);}catch{}},[e]),V.useEffect(()=>{try{let _t=localStorage.getItem("bd-tiles-v2");if(_t){let _p=JSON.parse(_t);if(Array.isArray(_p))nt(_p)}}catch{}},[]),V.useEffect(()=>{try{localStorage.setItem("bd-tiles-v2",JSON.stringify(fn))}catch{}},[fn]),V.useEffect(()=>{document.title="BusDirect";let i="viewport",m=document.querySelector(`meta[name="${i}"]`);if(!m)m=document.createElement("meta"),m.name=i,document.head.appendChild(m);m.content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";let S=document.createElement("style");S.textContent="html{ touch-action: manipulation; -webkit-text-size-adjust: 100%; } input, textarea, select{ font-size:16px !important; } *{ -webkit-tap-highlight-color: transparent; }",document.head.appendChild(S);let N=navigator.language.slice(0,2);if(autoLang&&sr[N])r(N);if(navigator.geolocation)navigator.geolocation.getCurrentPosition(async($)=>{let F={lat:$.coords.latitude,lon:$.coords.longitude,acc:$.coords.accuracy};a(F);try{let se=await(await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${F.lat}&lon=${F.lon}&format=json&zoom=10`,{headers:{"Accept-Language":t}})).json(),H=(se.address?.country_code||"").toUpperCase();if(autoLang&&H){let oe=th[H];if(oe&&sr[oe])r(oe)}let te=an[0],Y=1/0;for(let oe of an){let Xe=zt(F,oe);if(Xe<Y)Y=Xe,te=oe}u(te)}catch{let K=an[0],se=1/0;for(let H of an){let te=zt(F,H);if(te<se)se=te,K=H}u(K)}},()=>{},{enableHighAccuracy:!0,timeout:6000});let A="bd-favicon",T=document.getElementById(A);if(!T)T=document.createElement("link"),T.id=A,T.rel="icon",document.head.appendChild(T);T.href="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='4' width='24' height='20' rx='5' fill='#2a2a2a' stroke='#2a2a2a' stroke-width='1.5'/><rect x='6.5' y='7' width='19' height='8.5' rx='2.5' fill='#e5e7eb'/><rect x='6.5' y='18' width='19' height='1.2' rx='0.6' fill='#f5f5f5' opacity='0.9'/><circle cx='10' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/><circle cx='22' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/></svg>")},[]);var __bdCoCache=new Map();
-async function Co(i){if(!i||i.trim().length<2)return[];let key=i.trim().toLowerCase();let cached=__bdCoCache.get(key);if(cached&&Date.now()-cached.t<300000)return cached.v;let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=6`).then((K)=>K.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=8`).then((K)=>K.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]),F=[];(T.stations||[]).slice(0,5).forEach((K,se)=>{let H=o?zt(o,{lat:K.coordinate?.x||m,lon:K.coordinate?.y||S}):void 0;F.push({id:`s_${se}_${K.name}`,kind:"stop",name:K.name,sub:`Arret • ${K.id||""}`.trim(),lat:K.coordinate?.x,lon:K.coordinate?.y,distanceKm:H,raw:K})}),($.features||[]).slice(0,6).forEach((K,se)=>{let H=K.properties||{},te=H.name||H.street||H.city||"";if(!te)return;if(F.some((Po)=>Po.name.toLowerCase()===te.toLowerCase()))return;let Y=K.geometry?.coordinates,oe=Y?.[1],Xe=Y?.[0],mr=o&&oe&&Xe?zt(o,{lat:oe,lon:Xe}):void 0,vr=H.osm_key,Gl=["amenity","shop","tourism","leisure","office"].includes(vr);F.push({id:`p_${se}_${te}`,kind:Gl?"poi":"address",name:(function(){var _street=H.street||H.name||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+(_num?" "+_num:"")).trim(),(_pc+(_city?" "+_city:"")).trim()].filter(Boolean).join(", ");return Gl?(H.name||te):(_addr||te)})(),sub:(function(){var _street=H.street||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+(_num?" "+_num:"")).trim(),(_pc+(_city?" "+_city:"")).trim()].filter(Boolean).join(", ");return Gl?`${H.osm_value||H.type||"POI"}${_addr?" • "+_addr:""}`:(_addr||"Adresse")})(),lat:oe,lon:Xe,distanceKm:mr,raw:K})});let R=F.slice(0,10).map(function(x){bdRegCand(x);return x});try{__bdCoCache.set(key,{v:R,t:Date.now()})}catch(e){}return R}catch{return[]}}
+async function Co(i){if(!i||i.trim().length<2)return[];let key=i.trim().toLowerCase();let cached=__bdCoCache.get(key);if(cached&&Date.now()-cached.t<300000)return cached.v;let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=6`).then((K)=>K.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=8`).then((K)=>K.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]),F=[];(T.stations||[]).slice(0,5).forEach((K,se)=>{let H=o?zt(o,{lat:K.coordinate?.x||m,lon:K.coordinate?.y||S}):void 0;F.push({id:`s_${se}_${K.name}`,kind:"stop",name:K.name,sub:`Arret • ${K.id||""}`.trim(),lat:K.coordinate?.x,lon:K.coordinate?.y,distanceKm:H,raw:K})}),($.features||[]).slice(0,6).forEach((K,se)=>{let H=K.properties||{},te=H.name||H.street||H.city||"";if(!te)return;if(F.some((Po)=>Po.name.toLowerCase()===te.toLowerCase()))return;let Y=K.geometry?.coordinates,oe=Y?.[1],Xe=Y?.[0],mr=o&&oe&&Xe?zt(o,{lat:oe,lon:Xe}):void 0,vr=H.osm_key,Gl=["amenity","shop","tourism","leisure","office"].includes(vr);F.push({id:`p_${se}_${te}`,kind:Gl?"poi":"address",name:(function(){var _street=H.street||H.name||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+( _num?" "+_num:"" )).trim(),(_pc+( _city?" "+_city:"" )).trim()].filter(Boolean).join(", ");return Gl?(H.name||te):(_addr||te)})(),sub:(function(){var _street=H.street||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+( _num?" "+_num:"" )).trim(),(_pc+( _city?" "+_city:"" )).trim()].filter(Boolean).join(", ");return Gl?`${H.osm_value||H.type||"POI"}${_addr?" • "+_addr:""}`:(_addr||"Adresse")})(),lat:oe,lon:Xe,distanceKm:mr,raw:K})}),let R=F.slice(0,10).map(function(x){bdRegCand(x);return x});try{__bdCoCache.set(key,{v:R,t:Date.now()})}catch(e){}return R}catch{return[]}}
 
 async function fetchWithTimeout(url, ms, opts){
   opts=opts||{};
@@ -3757,11 +3766,59 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
      var orEl=document.getElementById('bd-set-orient');
      if(orEl){ var v2=localStorage.getItem('bd_orient_enabled'); orEl.checked = v2===null?true:v2==='1'; }
    }catch(e){}
+ }catch(e){}
+   try{document.getElementById('bd-set-vmax').value=n(K.vmax,1000);}catch(e){}
+   try{
+     var locEl=document.getElementById('bd-set-loc');
+     if(locEl){ var v=localStorage.getItem('bd_loc_enabled'); locEl.checked = v===null?true:v==='1'; }
+     var orEl=document.getElementById('bd-set-orient');
+     if(orEl){ var v2=localStorage.getItem('bd_orient_enabled'); orEl.checked = v2===null?true:v2==='1'; }
+   }catch(e){}
  }
  function open(){buildModal();fill();setModal(true)}
  function save(){
    var near=Math.max(1,parseInt(document.getElementById('bd-set-near').value||'500',10)||500),vmin=Math.max(0,parseInt(document.getElementById('bd-set-vmin').value||'400',10)||0),vmax=Math.max(1,parseInt(document.getElementById('bd-set-vmax').value||'1000',10)||1000);
    if(vmax<vmin){var t=vmin;vmin=vmax;vmax=t}
+   var locChecked=true, orientChecked=true;
+   try{
+     var locEl=document.getElementById('bd-set-loc'); if(locEl) locChecked=!!locEl.checked;
+     var orEl=document.getElementById('bd-set-orient'); if(orEl) orientChecked=!!orEl.checked;
+   }catch(e){}
+   try{
+     localStorage.setItem(K.near,String(near));
+     localStorage.setItem(K.vmin,String(vmin));
+     localStorage.setItem(K.vmax,String(vmax));
+     localStorage.setItem('bd_loc_enabled', locChecked?'1':'0');
+     localStorage.setItem('bd_orient_enabled', orientChecked?'1':'0');
+     if(!locChecked){ localStorage.removeItem('bd-geo-ok'); try{sessionStorage.removeItem('bd-geo-later')}catch(e){} }
+     if(!orientChecked){ localStorage.removeItem('bd_orient_ok'); }
+   }catch(e){}
+   // V226: applique immédiatement sans reload, met à jour la page principale
+   try{
+     if(window.__bdLoc) window.__bdLoc.setEnabled(locChecked);
+     if(!locChecked){
+       // stoppe watches existants
+       try{ window.__bd_stopLoc && window.__bd_stopLoc(); }catch(e){}
+     } else {
+       // relance géoloc si besoin
+       try{
+         if(navigator.geolocation && !localStorage.getItem('bd-geo-ok')){
+           navigator.geolocation.getCurrentPosition(function(){}, function(){}, {enableHighAccuracy:true, timeout:8000});
+         }
+       }catch(e){}
+     }
+     if(window.__bdOrient){
+       if(orientChecked){ window.__bdOrient.auto(); setTimeout(function(){ window.__bdOrient.ask(); }, 300); } else { window.__bdOrient.stop(); }
+     }
+   }catch(e){}
+   window.__bd_nearCache=null;
+   window.dispatchEvent(new CustomEvent('bd-distance-settings-change',{detail:{nearbyRadius:near,vehicleMin:vmin,vehicleMax:vmax,locEnabled:locChecked,orientEnabled:orientChecked}}));
+   window.dispatchEvent(new CustomEvent('bd-loc-settings-change',{detail:{locEnabled:locChecked}}));
+   window.dispatchEvent(new CustomEvent('bd-orient-settings-change',{detail:{orientEnabled:orientChecked}}));
+   setModal(false);
+   // pas de reload, on met à jour l'UI principale via events
+   try{ window.dispatchEvent(new Event('bd-refresh-ui')); try{ if(window.__bd_forceRefresh) window.__bd_forceRefresh(); }catch(e){}  }catch(e){}
+ }
    var locChecked=true, orientChecked=true;
    try{
      var locEl=document.getElementById('bd-set-loc'); if(locEl) locChecked=!!locEl.checked;
