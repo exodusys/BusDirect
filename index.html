@@ -475,7 +475,7 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
   var left=Math.ceil((ms-Date.now())/1000);
   if(!(left>0)) return train?'Le train arrive':'Le bus arrive';
   var d=Math.floor(left/86400),h=Math.floor(left%86400/3600),m=Math.floor(left%3600/60),s=left%60;
-  return 'Départ dans '+d+'j '+h+'h '+m+'m '+s+'s';
+  var parts=[]; if(d) parts.push(d+'j'); if(h) parts.push(h+'h'); if(m) parts.push(m+'m'); if(s) parts.push(s+'s'); return 'Départ dans '+parts.join(' ');
  }
  function build(p){
   var dt=validated();
