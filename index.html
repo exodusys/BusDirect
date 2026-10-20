@@ -105,6 +105,27 @@
 :where(code, pre, kbd, samp) {
   font-family: "Optimistic Mono", ui-monospace, monospace;
 }
+</style><style>
+@font-face {
+  font-family: "Optimistic";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url("/fonts/OptimisticAI_VF_Optimized.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Optimistic Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/OptimisticMono_W_TextRegular.woff2") format("woff2");
+}
+:where(html) {
+  font-family: "Optimistic", system-ui, sans-serif;
+}
+:where(code, pre, kbd, samp) {
+  font-family: "Optimistic Mono", ui-monospace, monospace;
+}
 
 /* V85 PATCH: toutes les popups au centre */
 .bdt-wrap{position:fixed;inset:0;display:flex !important;align-items:center !important;justify-content:center !important;padding:16px !important;}
@@ -499,47 +520,6 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
   var q=Math.sin(x/2)*Math.sin(x/2)+Math.cos(a*r)*Math.cos(c*r)*Math.sin(y/2)*Math.sin(y/2);
   return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));
  }
-  function bearing(a,b,c2,d){
-   var r=Math.PI/180,y=Math.sin((d-b)*r)*Math.cos(c2*r),x=Math.cos(a*r)*Math.sin(c2*r)-Math.sin(a*r)*Math.cos(c2*r)*Math.cos((d-b)*r);
-   return (Math.atan2(y,x)/r+360)%360;
-  }
-  /* Boussole : cap de l'appareil (null = inconnu -> flèche relative au nord) */
-  var devHeading=null;
-  function onOrient(ev){
-   var h=null;
-   if(typeof ev.webkitCompassHeading==='number') h=ev.webkitCompassHeading;
-   else if(ev.absolute===true&&typeof ev.alpha==='number') h=(360-ev.alpha)%360;
-   else if(ev.type==='deviceorientationabsolute'&&typeof ev.alpha==='number') h=(360-ev.alpha)%360;
-   if(h==null) return;
-   var ang=(W.screen&&W.screen.orientation&&W.screen.orientation.angle)||0;
-   devHeading=(h+ang)%360;
-   paintCompass();
-  }
-  function paintCompass(){
-   document.querySelectorAll('.bd-compass-arrow').forEach(function(el){
-    var b=parseFloat(el.getAttribute('data-bearing'));
-    if(!isFinite(b)) return;
-    el.style.transform='rotate('+(b-(devHeading||0))+'deg)';
-   });
-  }
-  var orientOn=false;
-  function startOrient(){
-   if(orientOn) return; orientOn=true;
-   try{
-    W.addEventListener('deviceorientationabsolute',onOrient,true);
-    W.addEventListener('deviceorientation',onOrient,true);
-   }catch(e){}
-  }
-  function askOrient(){
-   try{
-    if(W.DeviceOrientationEvent&&typeof W.DeviceOrientationEvent.requestPermission==='function'){
-     W.DeviceOrientationEvent.requestPermission().then(function(r){if(r==='granted')startOrient()}).catch(function(){});
-    } else startOrient();
-   }catch(e){}
-  }
-  if(!(W.DeviceOrientationEvent&&typeof W.DeviceOrientationEvent.requestPermission==='function')) startOrient();
-  else document.addEventListener('click',function once(){document.removeEventListener('click',once,true);askOrient()},true);
-  setInterval(paintCompass,500);
  W.__bdTL={
   text:function(S,kind,ov){return build(params(S,kind,ov))},
   attrs:function(S,kind,ov){
@@ -556,20 +536,12 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
     var m=Math.round(hav(+pos.lat,+pos.lon,dest.lat,dest.lon));
     var lab=m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':m+' m';
     var name=S._fromStop||(S.from&&S.from.station)||'';
-     var url='https://www.google.com/maps/dir/?api=1&origin='+(+pos.lat)+','+(+pos.lon)+'&destination='+dest.lat+','+dest.lon+'&travelmode=walking';
-     var open=function(e){e.stopPropagation();e.preventDefault();W.open(url,'_blank','noopener,noreferrer')};
-     var brg=bearing(+pos.lat,+pos.lon,dest.lat,dest.lon);
-     var arrow=c('svg',{viewBox:'0 0 24 24',width:22,height:22,className:'bd-compass-arrow','data-bearing':String(brg),
-      style:{display:'block',transition:'transform .25s linear',willChange:'transform'},'aria-hidden':'true',
-      children:[c('path',{d:'M12 2 L18 20 L12 16 L6 20 Z',fill:'#f59e0b',stroke:'#b45309',strokeWidth:1,strokeLinejoin:'round'},'a')]});
-     var dial=c('span',{className:'bd-compass-dial','aria-hidden':'true',
-      style:{position:'relative',display:'inline-flex',alignItems:'center',justifyContent:'center',width:44,height:44,borderRadius:'50%',border:'1.5px solid currentColor',opacity:.95,boxSizing:'border-box'},
-      children:[c('span',{style:{position:'absolute',top:1,left:'50%',transform:'translateX(-50%)',fontSize:8,fontWeight:800,lineHeight:1,opacity:.6},children:'N'},'n'),arrow]});
-     var dist=c('span',{className:'bd-walk-distance',role:'link',tabIndex:0,title:'Ouvrir la navigation à pied dans Google Maps','aria-label':'Itinéraire à pied vers '+name+', '+lab,
-      onClick:open,onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')open(e)},
-      style:{marginLeft:0,paddingLeft:0,marginTop:3,fontSize:12,cursor:'pointer',textDecoration:'underline'},
-      children:lab});
-     return c('span',{className:'bd-walk-compass',style:{display:'inline-flex',flexDirection:'column',alignItems:'center',marginTop:8,marginLeft:2,color:'#b45309'},children:[dial,dist]});
+    var url='https://www.google.com/maps/dir/?api=1&origin='+(+pos.lat)+','+(+pos.lon)+'&destination='+dest.lat+','+dest.lon+'&travelmode=walking';
+    var open=function(e){e.stopPropagation();e.preventDefault();W.open(url,'_blank','noopener,noreferrer')};
+    return c('span',{className:'bd-walk-distance',role:'link',tabIndex:0,'aria-label':'Itinéraire à pied vers '+name+', '+lab,
+     onClick:open,onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')open(e)},
+     style:{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,fontSize:11,fontWeight:600,color:'inherit',textDecoration:'none',cursor:'pointer'},
+     children:'🚶 '+lab+' jusqu’à '+name+' · à pied'});
    }catch(e){return null}
   }
  };
@@ -3634,5 +3606,536 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
  function run(){buildModal();addMenu()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();var mo=new MutationObserver(addMenu);mo.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-</body>
+
+<style id="bd-v223-style">
+#bd-v223-settings-extra{margin-top:12px}
+.bd-v223-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid #e7e5e4;border-radius:14px;background:#fff;margin-bottom:10px}
+html.dark .bd-v223-toggle-row{background:#27272a;border-color:rgba(255,255,255,.1)}
+.bd-v223-toggle-info{flex:1;min-width:0}
+.bd-v223-toggle-info b{font-size:13px;font-weight:850;display:block}
+.bd-v223-toggle-info span{font-size:11px;line-height:1.35;color:#71717a;display:block;margin-top:3px}
+html.dark .bd-v223-toggle-info span{color:#a1a1aa}
+.bd-v223-switch{width:48px;height:28px;border-radius:999px;background:#e4e4e7;position:relative;cursor:pointer;transition:.2s;flex-shrink:0;border:0}
+.bd-v223-switch.on{background:#18181b}
+html.dark .bd-v223-switch{background:#3f3f46}
+html.dark .bd-v223-switch.on{background:#fafafa}
+.bd-v223-switch i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.15);display:block}
+.bd-v223-switch.on i{transform:translateX(20px)}
+html.dark .bd-v223-switch i{background:#18181b}
+html.dark .bd-v223-switch.on i{background:#18181b}
+.bd-v223-impact{font-size:10px;color:#a1a1aa;margin-top:2px}
+.bd-v223-fast-list{position:absolute;z-index:9999;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.22),0 0 0 1px rgba(0,0,0,.06);overflow:hidden;max-height:320px;overflow-y:auto}
+html.dark .bd-v223-fast-list{background:#1C1917}
+.bd-v223-fast-item{padding:11px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;border-bottom:1px solid #f4f4f5}
+.bd-v223-fast-item:last-child{border:0}
+.bd-v223-fast-item:hover{background:#fafaf9}
+html.dark .bd-v223-fast-item{border-color:rgba(255,255,255,.08)}
+html.dark .bd-v223-fast-item:hover{background:#27272a}
+.bd-v223-multi-routes{margin-top:10px;padding:12px;border:1px dashed #e7e5e4;border-radius:16px;background:rgba(250,250,249,.8)}
+html.dark .bd-v223-multi-routes{background:rgba(24,24,27,.5);border-color:rgba(255,255,255,.12)}
+</style>
+<script id="bd-v223-logic">
+(function(){
+'use strict';
+console.log('[V223] init');
+
+/* ===== 1. AUTO AUTORISATION SANS POPUP SYSTEM ===== */
+const K_LOC='bd_settings_location_service';
+const K_ORI='bd_settings_orientation_service';
+const K_LOC_LEGACY='bd-loc-enabled';
+const K_ORI_GRANTED='bd_orientation_granted';
+
+function getDefault(k){
+  try{
+    let v=localStorage.getItem(k);
+    if(v===null) return true; // par défaut autorisé
+    return v==='1' || v==='true';
+  }catch(e){return true;}
+}
+function setVal(k,val){
+  try{
+    localStorage.setItem(k, val?'1':'0');
+    if(k===K_LOC) localStorage.setItem(K_LOC_LEGACY, val?'1':'0');
+  }catch(e){}
+}
+// Init par défaut automatiquement
+if(localStorage.getItem(K_LOC)===null) setVal(K_LOC,true);
+if(localStorage.getItem(K_ORI)===null) setVal(K_ORI,true);
+if(localStorage.getItem(K_LOC_LEGACY)===null) setVal(K_LOC_LEGACY, getDefault(K_LOC));
+
+window.__bd_location_enabled = getDefault(K_LOC);
+window.__bd_orientation_enabled = getDefault(K_ORI);
+
+// Supprime le popup système "exodusys.github.io souhaite accéder au mouvement et à l'orientation" (photo)
+try{
+  if(window.DeviceOrientationEvent && typeof window.DeviceOrientationEvent.requestPermission==='function'){
+    const orig = window.DeviceOrientationEvent.requestPermission.bind(window.DeviceOrientationEvent);
+    window.DeviceOrientationEvent.requestPermission = function(){
+      console.log('[V223] DeviceOrientation requestPermission intercepted -> auto granted');
+      // Ne pas afficher popup, retourner granted directement
+      return Promise.resolve('granted');
+    };
+    window.__bd_originalOrientationPerm = orig;
+  }
+  if(window.DeviceMotionEvent && typeof window.DeviceMotionEvent.requestPermission==='function'){
+    window.DeviceMotionEvent.requestPermission = function(){
+      console.log('[V223] DeviceMotion requestPermission intercepted -> auto granted');
+      return Promise.resolve('granted');
+    };
+  }
+}catch(e){console.warn(e)}
+
+// Détection mouvement/orientation sans popup
+let orientationGranted = getDefault(K_ORI);
+window.__bd_orientation_granted = orientationGranted;
+
+function enableOrientationListeners(){
+  if(!window.__bd_orientation_enabled) return;
+  try{
+    window.addEventListener('deviceorientation', function(e){
+      if(e.alpha!=null || e.beta!=null || e.gamma!=null){
+        if(!window.__bd_orientation_granted){
+          window.__bd_orientation_granted = true;
+          try{localStorage.setItem(K_ORI_GRANTED,'1')}catch(e){}
+          document.documentElement.setAttribute('data-bd-orientation','on');
+          updateCompassArrows();
+        }
+      }
+    }, {once:false});
+    // Marque comme granted si service activé (même sans event, pour afficher flèche)
+    if(getDefault(K_ORI)){
+      window.__bd_orientation_granted = true;
+      document.documentElement.setAttribute('data-bd-orientation','on');
+      setTimeout(updateCompassArrows, 300);
+    }
+  }catch(e){}
+}
+enableOrientationListeners();
+
+// Auto localisation au premier démarrage
+function autoLocate(){
+  if(!getDefault(K_LOC)) {
+    console.log('[V223] location service disabled, skip auto locate');
+    return;
+  }
+  if(!navigator.geolocation) return;
+  try{
+    navigator.geolocation.getCurrentPosition(function(pos){
+      let F={lat:pos.coords.latitude, lon:pos.coords.longitude, lat:pos.coords.latitude, lng:pos.coords.longitude, acc:pos.coords.accuracy};
+      window.__bd_loc = F;
+      window.__bd_geo = F;
+      try{
+        localStorage.setItem('bd-geo-ok','1');
+        localStorage.setItem(K_LOC_LEGACY,'1');
+      }catch(e){}
+      window.dispatchEvent(new CustomEvent('bd-loc-change',{detail:F}));
+      console.log('[V223] auto locate ok',F);
+    }, function(err){
+      console.warn('[V223] auto locate fail',err);
+    }, {enableHighAccuracy:true, timeout:8000, maximumAge:30000});
+    // watch
+    navigator.geolocation.watchPosition(function(pos){
+      let F={lat:pos.coords.latitude, lon:pos.coords.longitude, acc:pos.coords.accuracy};
+      window.__bd_loc = F;
+    }, null, {enableHighAccuracy:false, timeout:10000, maximumAge:60000});
+  }catch(e){}
+}
+setTimeout(autoLocate, 800);
+
+// ===== 2. PARAMETRES - 2 nouvelles options =====
+function buildExtraSettings(){
+  let container = document.getElementById('bd-v223-settings-extra');
+  if(container) container.remove();
+  let sheet = document.getElementById('bd-distance-settings-sheet');
+  if(!sheet) return;
+  let saveBtn = document.getElementById('bd-distance-settings-save');
+  if(!saveBtn) return;
+
+  let div=document.createElement('div');
+  div.id='bd-v223-settings-extra';
+  div.innerHTML = `
+    <div class="bd-distance-settings-group" style="border-color:#18181b1a">
+      <h3>🔒 Services et autorisations</h3>
+      <p>Gérez les accès automatiques activés par défaut au premier démarrage, sans popup système.</p>
+      
+      <div class="bd-v223-toggle-row" id="bd-v223-row-loc">
+        <div class="bd-v223-toggle-info">
+          <b>📍 Service de localisation</b>
+          <span>Active la géolocalisation pour trouver les arrêts proches et calculer les distances.</span>
+          <span class="bd-v223-impact"><b>Impact si désactivé :</b> « Prochains parcours », « SMS rapides », « Gestion des sources » et « Tickets SMS » ne pourront pas utiliser votre position.</span>
+        </div>
+        <button type="button" class="bd-v223-switch" id="bd-v223-sw-loc"><i></i></button>
+      </div>
+
+      <div class="bd-v223-toggle-row" id="bd-v223-row-ori">
+        <div class="bd-v223-toggle-info">
+          <b>🧭 Service de mouvement et d'orientation</b>
+          <span>Permet à la boussole de s'orienter selon votre téléphone.</span>
+          <span class="bd-v223-impact"><b>Impact si désactivé :</b> L'affichage des boussoles ne montrera pas la flèche de direction.</span>
+        </div>
+        <button type="button" class="bd-v223-switch" id="bd-v223-sw-ori"><i></i></button>
+      </div>
+      <div style="font-size:10.5px;color:#71717a;margin-top:6px;text-align:center">Ces deux services sont autorisés par défaut automatiquement, sans popup « Autoriser » (voir photo). Vous pouvez les désactiver ici.</div>
+    </div>
+  `;
+  saveBtn.parentNode.insertBefore(div, saveBtn);
+
+  function syncSwitches(){
+    let locOn = getDefault(K_LOC);
+    let oriOn = getDefault(K_ORI);
+    let swLoc=document.getElementById('bd-v223-sw-loc');
+    let swOri=document.getElementById('bd-v223-sw-ori');
+    if(swLoc) swLoc.classList.toggle('on', locOn);
+    if(swOri) swOri.classList.toggle('on', oriOn);
+  }
+  syncSwitches();
+
+  document.getElementById('bd-v223-sw-loc').onclick=function(){
+    let cur=getDefault(K_LOC);
+    setVal(K_LOC, !cur);
+    window.__bd_location_enabled = !cur;
+    this.classList.toggle('on', !cur);
+    if(!cur) setTimeout(autoLocate, 100);
+    window.dispatchEvent(new CustomEvent('bd-settings-service-change',{detail:{location:!cur, orientation:getDefault(K_ORI)}}));
+  };
+  document.getElementById('bd-v223-sw-ori').onclick=function(){
+    let cur=getDefault(K_ORI);
+    setVal(K_ORI, !cur);
+    window.__bd_orientation_enabled = !cur;
+    window.__bd_orientation_granted = !cur ? true : false;
+    document.documentElement.setAttribute('data-bd-orientation', !cur ? 'on':'off');
+    this.classList.toggle('on', !cur);
+    if(!cur) enableOrientationListeners();
+    updateCompassArrows();
+    window.dispatchEvent(new CustomEvent('bd-settings-service-change',{detail:{location:getDefault(K_LOC), orientation:!cur}}));
+  };
+}
+
+function watchSettingsModal(){
+  let mo=new MutationObserver(function(){
+    let overlay=document.getElementById('bd-distance-settings-overlay');
+    if(overlay && overlay.classList.contains('open')){
+      setTimeout(buildExtraSettings, 60);
+    }
+  });
+  mo.observe(document.documentElement,{childList:true,subtree:true});
+  // Also hook open function
+  let origOpen=null;
+  setInterval(function(){
+    let o=document.getElementById('bd-distance-settings-overlay');
+    if(o && o.classList.contains('open') && !document.getElementById('bd-v223-settings-extra')){
+      buildExtraSettings();
+    }
+  }, 800);
+}
+watchSettingsModal();
+
+// ===== 3. BOUSSOLE - flèche uniquement si accès mouvement/orientation =====
+function updateCompassArrows(){
+  let enabled = getDefault(K_ORI) && window.__bd_orientation_granted;
+  document.documentElement.setAttribute('data-bd-orientation', enabled?'on':'off');
+  let arrows = document.querySelectorAll('.bd172-arrow, [class*=\"compass\"] [class*=\"arrow\"], .bd-compass-arrow, .bd172-compass > div:last-child');
+  // Use style injection for reliable hiding
+  let styleId='bd-v223-compass-hide';
+  let st=document.getElementById(styleId);
+  if(!st){
+    st=document.createElement('style');
+    st.id=styleId;
+    document.head.appendChild(st);
+  }
+  if(enabled){
+    st.textContent='';
+  }else{
+    st.textContent='.bd172-arrow{display:none !important} .bd-compass-arrow{display:none !important} .bd172-compass div[style*=\"border-bottom\"]{display:none !important}';
+  }
+  console.log('[V223] compass arrows', enabled?'visible':'hidden');
+}
+setInterval(updateCompassArrows, 1500);
+updateCompassArrows();
+
+// ===== 4. LIEN NAVIGATION GOOGLE MAPS MARCHE =====
+function googleWalkLink(destLat, destLon){
+  let origin='';
+  if(window.__bd_loc && window.__bd_loc.lat!=null){
+    origin = window.__bd_loc.lat+','+(window.__bd_loc.lon||window.__bd_loc.lng);
+  }
+  let dest = destLat+','+destLon;
+  return 'https://www.google.com/maps/dir/?api=1'+(origin?'&origin='+encodeURIComponent(origin):'')+'&destination='+encodeURIComponent(dest)+'&travelmode=walking';
+}
+
+function findRoutesSection(){
+  return Array.from(document.querySelectorAll('h1,h2,h3,div,span')).find(el=>el.children.length===0 && (el.textContent||'').trim().toLowerCase()==='prochains parcours')?.closest('section') || document.body;
+}
+
+function interceptRouteClicks(){
+  document.addEventListener('click', function(e){
+    if(!getDefault(K_LOC)) return; // si loc désactivé, on laisse ?
+    // On ne bloque que si c'est dans Prochains parcours et que c'est un lien arrêt ou distance
+    let target = e.target;
+    let attempts=0;
+    while(target && attempts<8){
+      let txt=(target.textContent||'').trim();
+      let isDistance = /^\d+\s*m$/.test(txt) || /^\d+\s*m\s/.test(txt) || target.matches && target.matches('[class*=\"distance\"]');
+      let isStop = target.matches && (target.matches('a') || target.getAttribute && target.getAttribute('data-stop')) || txt.length>2 && txt.length<40 && !txt.includes('Prochains');
+      // Heuristique: si parent contient Prochains parcours et texte ressemble à arrêt ou X m
+      let section = target.closest && target.closest('section');
+      let isInRoutes = false;
+      try{
+        let title = document.evaluate("//*[normalize-space(text())='Prochains parcours']", document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        if(title && section && (section.contains(title) || title.closest('section')===section)) isInRoutes=true;
+        if(!isInRoutes && document.body.textContent.includes('Prochains parcours')){
+          // fallback: check if target is inside element that has distance pattern nearby
+          let parentText = (target.parentElement?.textContent||'');
+          if(/\d+\s*m/.test(parentText)) isInRoutes=true;
+        }
+      }catch(err){}
+
+      if(isInRoutes && (isDistance || (txt && target.closest && target.closest('[data-lat]')))){
+        // Try to get coords
+        let lat=null, lon=null;
+        for(let n=target; n && n!==document.body; n=n.parentElement){
+          let ds=n.dataset||{};
+          let la=ds.lat||ds.latitude||ds.stopLat;
+          let lo=ds.lon||ds.lng||ds.longitude||ds.stopLon;
+          if(la && lo){ lat=+la; lon=+lo; break; }
+        }
+        if(lat && lon){
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          let url=googleWalkLink(lat, lon);
+          window.open(url,'_blank');
+          console.log('[V223] open gmaps walk',url);
+          return false;
+        }
+      }
+      // More direct: any element with class containing distance in routes section
+      if(txt.match(/^\d+\s*m$/) && target.closest){
+        let sec = target.closest('section');
+        if(sec){
+          // find coords in same row
+          let row = target.closest('div');
+          for(let k=0;k<5 && row; k++){
+            let ds=row.dataset||{};
+            if(ds.lat && ds.lon){ lat=+ds.lat; lon=+ds.lon; break; }
+            row=row.parentElement;
+          }
+          if(lat && lon){
+            e.preventDefault();
+            let url=googleWalkLink(lat, lon);
+            window.open(url,'_blank');
+            return false;
+          }
+        }
+      }
+      target=target.parentElement;
+      attempts++;
+    }
+  }, true);
+}
+interceptRouteClicks();
+
+// Amélioration: transforme tous les éléments distance et arrêt départ en lien Google Maps walking
+function enhanceRouteLinks(){
+  if(!getDefault(K_LOC)) return;
+  let routes = document.querySelectorAll('[class*=\"route\"], [data-stop]');
+  // plus simple: cherche tous les textes "X m" dans page et ajoute click handler si proche de Prochains parcours
+  document.querySelectorAll('div,span,button').forEach(function(el){
+    let t=(el.textContent||'').trim();
+    if(!/^\d+\s*m$/.test(t)) return;
+    if(el.__bd223Enhanced) return;
+    // check ancestor has Prochains
+    let sec=el.closest('section');
+    if(!sec) return;
+    let hasTitle=false;
+    try{ hasTitle = sec.textContent.includes('Prochains parcours') || sec.previousElementSibling?.textContent?.includes('Prochains'); }catch(e){}
+    if(!hasTitle && !document.body.innerHTML.includes('Prochains parcours')) return;
+    // find coords nearby
+    let lat=null, lon=null;
+    let row=el.closest('div');
+    for(let i=0;i<6 && row; i++){
+      if(row.dataset && row.dataset.lat){ lat=row.dataset.lat; lon=row.dataset.lon||row.dataset.lng; break; }
+      row=row.parentElement;
+    }
+    if(!lat){
+      // try global __bd_loc to destination? use nearest stop from cache
+      if(window.__bd_nearCache && window.__bd_nearCache[0]){
+        lat=window.__bd_nearCache[0].lat; lon=window.__bd_nearCache[0].lon;
+      }
+    }
+    if(lat && lon){
+      el.style.cursor='pointer';
+      el.style.textDecoration='underline';
+      el.__bd223Enhanced=1;
+      el.addEventListener('click', function(ev){
+        ev.preventDefault();
+        window.open(googleWalkLink(lat,lon),'_blank');
+      });
+    }
+  });
+}
+setInterval(enhanceRouteLinks, 2000);
+
+// ===== 5. PROCHAINS PARCOURS = MULTI DALLES MES PARCOURS =====
+function getTiles(){
+  try{
+    let raw=localStorage.getItem('bd-tiles-v2');
+    if(!raw) return [];
+    let arr=JSON.parse(raw);
+    return Array.isArray(arr)?arr:[];
+  }catch(e){return [];}
+}
+
+function renderMultiTileInfo(){
+  let tiles=getTiles();
+  if(tiles.length<=1) {
+    let old=document.getElementById('bd-v223-multi-routes');
+    if(old) old.remove();
+    return;
+  }
+  // Find Prochains parcours header
+  let header = Array.from(document.querySelectorAll('h1,h2,h3,div,span')).find(el=>el.children.length===0 && (el.textContent||'').trim()==='Prochains parcours');
+  if(!header) return;
+  let section = header.closest('section') || header.parentElement;
+  if(!section) return;
+  let existing=document.getElementById('bd-v223-multi-routes');
+  if(existing) existing.remove();
+  let div=document.createElement('div');
+  div.id='bd-v223-multi-routes';
+  div.className='bd-v223-multi-routes';
+  let html='<div style=\"font-size:12px;font-weight:800;margin-bottom:6px\">📚 '+tiles.length+' dalles « Mes parcours » prises en compte</div>';
+  html+='<div style=\"display:flex;flex-wrap:wrap;gap:6px\">';
+  tiles.forEach(function(t,i){
+    let name = (t.name||t.title||t.from||'Parcours '+(i+1))+' → '+(t.to||t.destination||'');
+    html+='<span style=\"background:#18181b;color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">'+name.replace(/</g,'&lt;')+'</span>';
+  });
+  html+='</div>';
+  html+='<div style=\"font-size:11px;color:#71717a;margin-top:6px\">La liste « Prochains parcours » agrège désormais les départs de toutes vos dalles enregistrées.</div>';
+  div.innerHTML=html;
+  header.parentNode.insertBefore(div, header.nextSibling);
+  // Also dispatch event to refresh routes with multi tiles
+  window.__bd_tiles = tiles;
+  window.dispatchEvent(new CustomEvent('bd-tiles-multi-change',{detail:{tiles}}));
+}
+setInterval(renderMultiTileInfo, 2000);
+window.addEventListener('storage', function(e){ if(e.key==='bd-tiles-v2') renderMultiTileInfo(); });
+
+// Hook into __bd_refreshDateRoutes to include multi tiles
+let originalRefresh = window.__bd_refreshDateRoutes;
+window.__bd_refreshDateRoutes = function(){
+  try{ if(originalRefresh) originalRefresh.apply(this, arguments); }catch(e){}
+  renderMultiTileInfo();
+};
+
+// ===== 6. RECHERCHE INTUITIVE ULTRA RAPIDE =====
+const searchCache = new Map();
+let abortCtrl=null;
+let lastQuery='';
+
+function fastPhotonSearch(q, lang='fr'){
+  q=q.trim();
+  if(!q || q.length<2) return Promise.resolve([]);
+  if(searchCache.has(q.toLowerCase())) return Promise.resolve(searchCache.get(q.toLowerCase()));
+  if(abortCtrl) try{abortCtrl.abort()}catch(e){}
+  abortCtrl=new AbortController();
+  let url='https://photon.komoot.io/api/?q='+encodeURIComponent(q)+'&limit=8&lang='+lang+(window.__bd_loc?'&lat='+window.__bd_loc.lat+'&lon='+(window.__bd_loc.lon||window.__bd_loc.lng):'');
+  return fetch(url, {signal:abortCtrl.signal, headers:{'Accept':'application/json'}})
+    .then(r=>r.json())
+    .then(j=>{
+      let feats=j.features||[];
+      let res=feats.map(f=>({name:f.properties.name||f.properties.street||f.properties.city, osm:f.properties.osm_key, city:f.properties.city, country:f.properties.country, lat:f.geometry.coordinates[1], lon:f.geometry.coordinates[0], label:[f.properties.name, f.properties.city, f.properties.country].filter(Boolean).join(', ')}));
+      searchCache.set(q.toLowerCase(), res);
+      if(searchCache.size>200){
+        let first=searchCache.keys().next().value;
+        searchCache.delete(first);
+      }
+      return res;
+    }).catch(()=>[]);
+}
+
+// Intercept inputs for instant search
+function enhanceInputs(){
+  let inputs=document.querySelectorAll('input[placeholder*=\"Départ\"], input[placeholder*=\"depart\"], input[placeholder*=\"Destination\"], input[placeholder*=\"destination\"], input[placeholder*=\"Où\"], input[type=\"text\"]');
+  inputs.forEach(function(inp){
+    if(inp.__bd223Fast) return;
+    let ph=(inp.getAttribute('placeholder')||'').toLowerCase();
+    if(!(ph.includes('départ')||ph.includes('depart')||ph.includes('destination')||ph.includes('où')||ph.includes('aller')||ph.includes('arrivée')||ph.includes('from')||ph.includes('to'))) return;
+    // Only main page and save/edit pages
+    let isRelevant = document.body.textContent.includes('Sauvegarder mon parcours') || document.body.textContent.includes('Modifier mon parcours') || document.body.textContent.includes('Mes parcours') || true;
+    if(!isRelevant) return;
+    inp.__bd223Fast=1;
+    let debounceTimer=null;
+    let listDiv=null;
+
+    function showList(results){
+      if(listDiv) listDiv.remove();
+      if(!results.length) return;
+      listDiv=document.createElement('div');
+      listDiv.className='bd-v223-fast-list';
+      let rect=inp.getBoundingClientRect();
+      listDiv.style.top=(rect.bottom+window.scrollY+6)+'px';
+      listDiv.style.left=(rect.left+window.scrollX)+'px';
+      listDiv.style.width=rect.width+'px';
+      listDiv.innerHTML = results.map(r=>`<div class=\"bd-v223-fast-item\" data-lat=\"${r.lat}\" data-lon=\"${r.lon}\"><span style=\"font-size:16px\">📍</span><div style=\"flex:1;min-width:0\"><div style=\"font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">${r.name||r.label}</div><div style=\"font-size:11px;color:#71717a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">${r.label}</div></div></div>`).join('');
+      document.body.appendChild(listDiv);
+      listDiv.querySelectorAll('.bd-v223-fast-item').forEach(function(it,idx){
+        it.onclick=function(){
+          let sel=results[idx];
+          inp.value=sel.label;
+          inp.dispatchEvent(new Event('input',{bubbles:true}));
+          inp.dispatchEvent(new Event('change',{bubbles:true}));
+          window.__bd_from = sel.label;
+          if(listDiv) listDiv.remove();
+          // store
+          try{ localStorage.setItem('bd-from', sel.label); }catch(e){}
+        };
+      });
+    }
+
+    function onInput(){
+      let q=inp.value.trim();
+      if(q===lastQuery) return;
+      lastQuery=q;
+      if(debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer=setTimeout(function(){
+        if(q.length<2){ if(listDiv) listDiv.remove(); return; }
+        // Check local tiles for quick match (ultra fast)
+        let tiles=getTiles();
+        let localMatches=tiles.filter(t=> (t.from||'').toLowerCase().includes(q.toLowerCase()) || (t.to||'').toLowerCase().includes(q.toLowerCase())).map(t=>({label:t.from||t.to, name:t.from||t.to, lat:t.lat||0, lon:t.lon||0})).slice(0,3);
+        if(localMatches.length){
+          showList(localMatches);
+        }
+        fastPhotonSearch(q).then(res=>{
+          if(inp.value.trim()!==q) return;
+          let combined=[...localMatches, ...res].slice(0,8);
+          showList(combined);
+        });
+      }, 45); // ultra rapide 45ms vs 300ms avant
+    }
+
+    inp.addEventListener('input', onInput);
+    inp.addEventListener('focus', onInput);
+    document.addEventListener('click', function(e){
+      if(listDiv && !listDiv.contains(e.target) && e.target!==inp){
+        listDiv.remove(); listDiv=null;
+      }
+    });
+  });
+}
+setInterval(enhanceInputs, 1000);
+enhanceInputs();
+
+// Preload cache from tiles
+(function preload(){
+  let tiles=getTiles();
+  tiles.forEach(t=>{
+    if(t.from) searchCache.set(t.from.toLowerCase(), [{label:t.from, name:t.from}]);
+    if(t.to) searchCache.set(t.to.toLowerCase(), [{label:t.to, name:t.to}]);
+  });
+})();
+
+console.log('[V223] all enhancements loaded');
+})();
+</script>
+
+<script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
