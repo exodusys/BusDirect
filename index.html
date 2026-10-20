@@ -3586,41 +3586,41 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
 })();
 </script>
 
-
-<!-- BusDirect V175 : boussole + distance vers l'arrêt de départ dans Prochains parcours -->
-<style id="bd-v175-compass-style">
-.bd-stop-compass{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:48px;margin-left:auto;padding:2px 4px;vertical-align:middle;flex:none}
-.bd-stop-compass-face{position:relative;width:34px;height:34px;border-radius:50%;border:1.5px solid #d4d4d8;background:rgba(255,255,255,.82);box-shadow:0 2px 7px rgba(0,0,0,.08);display:flex;align-items:center;justify-content:center}
-html.dark .bd-stop-compass-face{border-color:#52525b;background:rgba(39,39,42,.92)}
-.bd-stop-compass-face:before{content:'N';position:absolute;top:1px;left:50%;transform:translateX(-50%);font-size:6px;line-height:1;font-weight:900;color:#71717a}
-.bd-stop-compass-arrow{width:18px;height:18px;display:block;transform-origin:50% 50%;transition:transform .28s ease-out;will-change:transform}
-.bd-stop-compass-arrow svg{width:100%;height:100%;display:block}
-.bd-stop-compass-distance{font-size:11px!important;font-weight:850!important;line-height:1.15;color:#b45309!important;text-decoration:none!important;margin:0!important;padding:1px 3px!important;white-space:nowrap}
-html.dark .bd-stop-compass-distance{color:#fbbf24!important}
-.bd-stop-compass-distance:active{text-decoration:underline!important;transform:scale(.96)}
-/* l'ancien lien piéton est absorbé dans le nouveau bloc */
-.bd-stop-compass .bd-walk-distance{display:block}
+<style id="bd-compass-cards-style">
+.bd-card-compass{position:absolute;right:16px;top:82px;z-index:8;width:52px;display:flex;flex-direction:column;align-items:center;gap:3px;pointer-events:none}
+.bd-card-compass-dial{width:42px;height:42px;border-radius:50%;border:1.5px solid #d4d4d8;background:rgba(255,255,255,.94);box-shadow:0 3px 10px rgba(0,0,0,.12);display:flex;align-items:center;justify-content:center;position:relative}
+html.dark .bd-card-compass-dial{background:#27272a;border-color:#52525b;box-shadow:0 3px 12px rgba(0,0,0,.32)}
+.bd-card-compass-dial:before{content:'N';position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:7px;font-weight:900;color:#ef4444;line-height:1}
+.bd-card-compass-arrow{width:18px;height:24px;transform-origin:50% 50%;transition:transform .18s linear;filter:drop-shadow(0 1px 1px rgba(0,0,0,.25))}
+.bd-card-compass-arrow:before{content:'';display:block;margin:auto;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:15px solid #ef4444}
+.bd-card-compass-arrow:after{content:'';display:block;margin:-1px auto 0;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:10px solid #18181b}
+html.dark .bd-card-compass-arrow:after{border-top-color:#fafafa}
+.bd-card-compass-distance{pointer-events:auto;font-size:11px;font-weight:850;line-height:1.1;color:#ea580c;text-decoration:none;white-space:nowrap;padding:3px 5px;border-radius:8px;background:rgba(255,255,255,.9)}
+html.dark .bd-card-compass-distance{background:rgba(24,24,27,.92);color:#fb923c}
+.bd-card-compass-distance:active{transform:scale(.95)}
 </style>
-<script id="bd-v175-compass-script">
+<script id="bd-compass-cards-script">
 (function(){
-'use strict';
-var heading=0, lastPos=null;
-function rad(v){return v*Math.PI/180}
-function deg(v){return v*180/Math.PI}
-function hav(a,b,c,d){var R=6371000,dp=rad(c-a),dl=rad(d-b),x=Math.sin(dp/2)*Math.sin(dp/2)+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dl/2)*Math.sin(dl/2);return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
-function bearing(a,b,c,d){var p1=rad(a),p2=rad(c),dl=rad(d-b),y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);return (deg(Math.atan2(y,x))+360)%360}
-function destFromHref(href){try{var u=new URL(href,location.href),v=u.searchParams.get('destination')||u.searchParams.get('daddr');if(!v)return null;var m=decodeURIComponent(v).match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);return m?{lat:+m[1],lon:+m[2]}:null}catch(e){return null}}
-function coordsFrom(el){for(var n=el;n&&n!==document.body;n=n.parentElement){var d=n.dataset||{},lat=d.departureLat||d.stopLat||d.lat||d.latitude,lon=d.departureLon||d.stopLon||d.lon||d.lng||d.longitude;if(lat!=null&&lon!=null&&isFinite(+lat)&&isFinite(+lon))return{lat:+lat,lon:+lon}}return destFromHref(el.href||'')}
-function pos(){var p=window.__bd_loc||lastPos;return p&&isFinite(+p.lat)&&isFinite(+p.lon)?{lat:+p.lat,lon:+p.lon}:null}
-function arrow(){return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.7 17.2 19 12 16.3 6.8 19 12 2.7Z" fill="#ef4444"/><path d="M12 16.3 17.2 19 12 21.3Z" fill="#a1a1aa"/></svg>'}
-function updateOne(box){var p=pos(),d={lat:+box.dataset.lat,lon:+box.dataset.lon};if(!p||!isFinite(d.lat)||!isFinite(d.lon))return;var meters=Math.max(0,Math.round(hav(p.lat,p.lon,d.lat,d.lon))),br=bearing(p.lat,p.lon,d.lat,d.lon),rot=(br-heading+360)%360;var a=box.querySelector('.bd-stop-compass-arrow'),l=box.querySelector('.bd-stop-compass-distance');if(a)a.style.transform='rotate('+rot.toFixed(1)+'deg)';if(l){l.textContent=meters+' m';l.setAttribute('aria-label','Navigation à pied vers l’arrêt de départ, '+meters+' mètres')}box.title='Direction de l’arrêt de départ : '+Math.round(br)+'° · '+meters+' m'}
-function enhance(){document.querySelectorAll('a.bd-walk-distance').forEach(function(link){if(link.closest('.bd-stop-compass'))return;var d=coordsFrom(link);if(!d)return;var box=document.createElement('span');box.className='bd-stop-compass';box.dataset.lat=d.lat;box.dataset.lon=d.lon;var face=document.createElement('span');face.className='bd-stop-compass-face';var ar=document.createElement('span');ar.className='bd-stop-compass-arrow';ar.innerHTML=arrow();face.appendChild(ar);link.classList.add('bd-stop-compass-distance');link.textContent=(link.textContent.match(/\d+\s*m/)||['— m'])[0];link.parentNode.insertBefore(box,link);box.appendChild(face);box.appendChild(link);updateOne(box)});document.querySelectorAll('.bd-stop-compass').forEach(updateOne)}
-function onOrientation(e){var h=null;if(typeof e.webkitCompassHeading==='number')h=e.webkitCompassHeading;else if(e.absolute&&typeof e.alpha==='number')h=(360-e.alpha)%360;if(h!=null&&isFinite(h)){heading=h;document.querySelectorAll('.bd-stop-compass').forEach(updateOne)}}
-window.addEventListener('deviceorientationabsolute',onOrientation,true);window.addEventListener('deviceorientation',onOrientation,true);
-if(navigator.geolocation){try{navigator.geolocation.watchPosition(function(p){lastPos={lat:p.coords.latitude,lon:p.coords.longitude};window.__bd_loc=lastPos;enhance()},function(){},{enableHighAccuracy:true,maximumAge:5000,timeout:10000})}catch(e){}}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance);else enhance();
-new MutationObserver(function(){clearTimeout(window.__bd175t);window.__bd175t=setTimeout(enhance,120)}).observe(document.documentElement,{subtree:true,childList:true});
-setInterval(enhance,1200);
+ 'use strict';
+ var deviceHeading=0,lastPos=null;
+ function rad(x){return x*Math.PI/180}
+ function bearing(a,b){var p1=rad(a.lat),p2=rad(b.lat),dl=rad(b.lon-a.lon),y=Math.sin(dl)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl);return (Math.atan2(y,x)*180/Math.PI+360)%360}
+ function hav(a,b){var R=6371000,dLat=rad(b.lat-a.lat),dLon=rad(b.lon-a.lon),p1=rad(a.lat),p2=rad(b.lat),q=Math.sin(dLat/2)**2+Math.cos(p1)*Math.cos(p2)*Math.sin(dLon/2)**2;return 2*R*Math.asin(Math.sqrt(q))}
+ function coordsFrom(el){
+  var names=[['data-departure-lat','data-departure-lon'],['data-stop-lat','data-stop-lon'],['data-lat','data-lon'],['data-lat','data-lng']];
+  for(var i=0;i<names.length;i++){var la=el.getAttribute(names[i][0]),lo=el.getAttribute(names[i][1]);if(la!=null&&lo!=null&&!isNaN(+la)&&!isNaN(+lo))return{lat:+la,lon:+lo}}
+  var h=el.getAttribute('href')||'';try{var u=new URL(h,location.href),d=u.searchParams.get('destination');if(d){var m=d.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(m)return{lat:+m[1],lon:+m[2]}}}catch(e){}
+  return null;
+ }
+ function current(){var p=window.__bd_loc;if(p&&p.lat!=null&&p.lon!=null)return{lat:+p.lat,lon:+p.lon};return lastPos}
+ function cardFor(el){var c=el.closest('article,[class*="rounded-[20px]"],[class*="rounded-[16px]"],[class*="rounded-[14px]"]');return c||el.closest('[class*="rounded"]')}
+ function candidateLinks(){return Array.from(document.querySelectorAll('a[href*="google.com/maps/dir"],a.bd-walk-distance')).filter(function(a){var t=(a.textContent||'').toLowerCase();return t.indexOf('m')>=0||t.indexOf('pied')>=0||a.classList.contains('bd-walk-distance')})}
+ function updateOne(box,pos,dest,link){var d=Math.round(hav(pos,dest)),br=bearing(pos,dest),arrow=box.querySelector('.bd-card-compass-arrow'),dl=box.querySelector('.bd-card-compass-distance');arrow.style.transform='rotate('+(br-deviceHeading)+'deg)';dl.textContent=d+' m';dl.href=link.href;dl.setAttribute('aria-label','Navigation à pied vers l’arrêt de départ, '+d+' mètres')}
+ function render(){var pos=current();candidateLinks().forEach(function(link){var card=cardFor(link);if(!card)return;var dest=coordsFrom(link)||coordsFrom(card);if(!dest)return;if(getComputedStyle(card).position==='static')card.style.position='relative';var box=card.querySelector('.bd-card-compass');if(!box){box=document.createElement('div');box.className='bd-card-compass';box.innerHTML='<div class="bd-card-compass-dial" aria-hidden="true"><span class="bd-card-compass-arrow"></span></div><a class="bd-card-compass-distance" target="_blank" rel="noopener noreferrer">-- m</a>';card.appendChild(box)}if(pos)updateOne(box,pos,dest,link)})}
+ function orient(e){var h=null;if(typeof e.webkitCompassHeading==='number')h=e.webkitCompassHeading;else if(typeof e.alpha==='number')h=360-e.alpha;if(h!=null){deviceHeading=h;render()}}
+ function startOrientation(){try{if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){document.addEventListener('click',function once(){DeviceOrientationEvent.requestPermission().then(function(r){if(r==='granted')window.addEventListener('deviceorientation',orient,true)}).catch(function(){});document.removeEventListener('click',once)}, {once:true})}else window.addEventListener('deviceorientationabsolute',orient,true),window.addEventListener('deviceorientation',orient,true)}catch(e){}}
+ function startGeo(){if(!navigator.geolocation)return;navigator.geolocation.watchPosition(function(p){lastPos={lat:p.coords.latitude,lon:p.coords.longitude};render()},function(){render()},{enableHighAccuracy:true,maximumAge:5000,timeout:12000})}
+ function run(){render()}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){run();startGeo();startOrientation()});else{run();startGeo();startOrientation()}new MutationObserver(function(){setTimeout(render,60)}).observe(document.documentElement,{childList:true,subtree:true});setInterval(render,1200);
 })();
 </script>
 </body>
