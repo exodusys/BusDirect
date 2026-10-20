@@ -569,7 +569,7 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
       onClick:open,onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')open(e)},
       style:{marginLeft:0,paddingLeft:0,marginTop:3,fontSize:12,cursor:'pointer',textDecoration:'underline'},
       children:lab});
-     return c('span',{className:'bd-walk-compass',style:{display:'inline-flex',flexDirection:'column',alignItems:'center',marginTop:8,marginLeft:2,color:'#b45309'},children:[dial,dist]});
+     return c('span',{className:'bd-walk-compass',style:{position:'absolute',right:12,bottom:38,display:'inline-flex',flexDirection:'column',alignItems:'center',color:'#b45309',zIndex:1},children:[dial,dist]});
    }catch(e){return null}
   }
  };
