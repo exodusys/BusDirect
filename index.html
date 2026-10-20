@@ -3577,5 +3577,54 @@ html.dark .bd-route-compass-ring{background:#27272a;border-color:#52525b}.bd-rou
 })();
 </script>
 
+
+<style id="bd-v202-route-order">
+/* V202: liste unique, stable et fluide des prochains parcours */
+.bd-v202-list{display:flex!important;flex-direction:column!important;gap:10px!important;}
+.bd-v202-list>.bd-v202-route{flex:0 0 auto!important;animation:none!important;transition:none!important;}
+</style>
+<script id="bd-v202-route-order-script">
+(function(){'use strict';
+ var queued=false, running=false, last='';
+ function norm(s){return (s||'').replace(/\s+/g,' ').trim()}
+ function isHeading(t){return /^(Prochains parcours|Next journeys|Nächste Verbindungen|Próximos trayectos|Prossimi percorsi|Próximos percursos|Volgende ritten)$/i.test(norm(t))}
+ function area(){var a=[].slice.call(document.querySelectorAll('h1,h2,h3,h4,div,span'));for(var i=0;i<a.length;i++)if(a[i].children.length<4&&isHeading(a[i].textContent)){var p=a[i].parentElement;return p&&p.parentElement||p}return null}
+ function timeOf(card){
+   var ds=card.dataset||{}, raw=ds.departureTime||ds.departureDatetime||ds.departureDateTime||ds.time||'';
+   if(raw){var d=Date.parse(raw);if(isFinite(d))return d}
+   var txt=norm(card.textContent), now=new Date(), m;
+   /* date explicite éventuelle + heure */
+   m=txt.match(/(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?[^\d]{0,20}(\d{1,2})\s*(?:h|:|\.)\s*(\d{2})/i);
+   if(m){var y=m[3]?+m[3]:now.getFullYear();if(y<100)y+=2000;var z=new Date(y,+m[2]-1,+m[1],+m[4],+m[5]);if(isFinite(+z))return +z}
+   /* priorité aux heures de départ visibles */
+   m=txt.match(/(?:Départ(?: le)?|Departure|Abfahrt|Salida|Partenza|Partida|Vertrek)?[^0-9]{0,25}(\d{1,2})\s*(?:h|:)\s*(\d{2})/i) || txt.match(/\b(\d{1,2})\s*(?:h|:)\s*(\d{2})\b/);
+   if(m){var z2=new Date(now);z2.setHours(+m[1],+m[2],0,0);if(+z2 < +now-6*3600000)z2.setDate(z2.getDate()+1);return +z2}
+   return Number.MAX_SAFE_INTEGER
+ }
+ function candidates(root){
+   var marked=[].slice.call(root.querySelectorAll('[data-departure-time],[data-departure-datetime],[data-departure-date-time],[data-departure-lat],.bd-route-compass-card'));
+   var out=[];
+   marked.forEach(function(e){var c=e.closest('article,section,.rounded-\\[20px\\],.rounded-\\[16px\\],.rounded-\\[14px\\]')||e.closest('[class*="rounded"]');if(c&&c!==root&&c.parentElement&&!out.includes(c))out.push(c)});
+   if(out.length<2){
+     var all=[].slice.call(root.querySelectorAll('article,section,[class*="rounded"]'));
+     all.forEach(function(c){var t=norm(c.textContent);if(c.parentElement&&/\b\d{1,2}\s*(?:h|:)\s*\d{2}\b/.test(t)&&t.length>20&&t.length<2500&&!out.includes(c))out.push(c)})
+   }
+   return out
+ }
+ function run(){queued=false;if(running)return;var r=area();if(!r)return;var cs=candidates(r);if(cs.length<2)return;
+   /* ne trie ensemble que les cartes réellement sœurs : aucun affichage en parallèle */
+   var groups=new Map();cs.forEach(function(c){var p=c.parentElement;if(!groups.has(p))groups.set(p,[]);groups.get(p).push(c)});
+   running=true;
+   try{groups.forEach(function(list,p){if(list.length<2)return;var sorted=list.map(function(c,i){return{c:c,t:timeOf(c),i:i}}).sort(function(a,b){return a.t-b.t||a.i-b.i});var sig=sorted.map(function(x){return x.t+'@'+(x.c.dataset&&x.c.dataset.routeId||norm(x.c.textContent).slice(0,35))}).join('|');if(sig===p.dataset.bdV202Sig)return;p.dataset.bdV202Sig=sig;p.classList.add('bd-v202-list');var frag=document.createDocumentFragment();sorted.forEach(function(x){x.c.classList.add('bd-v202-route');frag.appendChild(x.c)});p.appendChild(frag)})
+   }finally{running=false}
+ }
+ function schedule(){if(queued||running)return;queued=true;requestAnimationFrame(function(){requestAnimationFrame(run)})}
+ var mo=new MutationObserver(function(ms){for(var i=0;i<ms.length;i++)if(ms[i].addedNodes.length||ms[i].removedNodes.length){schedule();break}});
+ function start(){mo.observe(document.body,{childList:true,subtree:true});schedule()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+ window.addEventListener('bd-settings-applied',schedule);window.addEventListener('bd-distance-settings-change',schedule);
+})();
+</script>
+
 </body>
 </html>
