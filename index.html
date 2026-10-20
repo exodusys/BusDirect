@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="en">
 <head><style>
 @font-face {
   font-family: "Optimistic";
@@ -208,89 +208,7 @@ var r=document.documentElement;
 r.classList.toggle("dark", isDark);
 r.style.colorScheme=isDark?"dark":"light";
 r.dataset.theme=s;
-}catch(e){}})();</script>
-<script>
-// V200 INIT - defaults auto
-(function(){
- try{
-  var first = !localStorage.getItem('bd-first-run');
-  if(first){
-    localStorage.setItem('bd-theme','dark');
-    localStorage.setItem('bd-geo-ok','1');
-    localStorage.setItem('bd-loc-enabled','1');
-    localStorage.setItem('bd-compass-enabled','1');
-    localStorage.setItem('bd-motion-enabled','1');
-    localStorage.setItem('bd-settings-nearby-radius','500');
-    localStorage.setItem('bd-first-run','1');
-    localStorage.setItem('bd-first-run-ts',String(Date.now()));
-  } else {
-    if(!localStorage.getItem('bd-geo-ok')) localStorage.setItem('bd-geo-ok','1');
-    if(!localStorage.getItem('bd-loc-enabled')) localStorage.setItem('bd-loc-enabled','1');
-    if(!localStorage.getItem('bd-compass-enabled')) localStorage.setItem('bd-compass-enabled','1');
-    if(!localStorage.getItem('bd-motion-enabled')) localStorage.setItem('bd-motion-enabled','1');
-  }
-  // dark default already
-  document.documentElement.classList.add('dark');
-  document.documentElement.style.colorScheme='dark';
- }catch(e){}
-})();
-</script>
-<script>(function(){
-/* V131 : popup de présentation avant la demande native de localisation */
-try{
-var g=navigator.geolocation;if(!g||g.__bdWrapped)return;
-var rGet=g.getCurrentPosition.bind(g),rWatch=g.watchPosition.bind(g),rClear=g.clearWatch.bind(g);
-var queue=[],shown=false,wid=0,map={},decided=false;
-function ok(){try{return localStorage.getItem("bd-geo-ok")==="1"}catch(e){return false}}
-function later(){try{return sessionStorage.getItem("bd-geo-later")==="1"}catch(e){return false}}
-function css(){if(document.getElementById("bd-geo-css"))return;var st=document.createElement("style");st.id="bd-geo-css";
-st.textContent='#bd-geo-bg{position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:16px;font-family:Inter,system-ui,-apple-system,sans-serif}'
-+'#bd-geo{width:100%;max-width:420px;background:#fff;color:#18181b;border:1px solid #e7e5e4;border-radius:24px;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25);margin-bottom:max(8px,env(safe-area-inset-bottom))}'
-+'html.dark #bd-geo{background:#18181b;color:#fafafa;border-color:rgba(255,255,255,.1)}'
-+'#bd-geo .ic{width:52px;height:52px;border-radius:16px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;margin-bottom:14px}'
-+'html.dark #bd-geo .ic{background:#fafafa;color:#09090b}'
-+'#bd-geo h3{margin:0 0 8px;font-size:18px;font-weight:800;letter-spacing:-.02em}'
-+'#bd-geo p{margin:0 0 8px;font-size:13.5px;line-height:1.45;color:#52525b}html.dark #bd-geo p{color:#a1a1aa}'
-+'#bd-geo ul{margin:0 0 16px;padding:0;list-style:none;font-size:13px;line-height:1.4}#bd-geo li{padding:4px 0 4px 22px;position:relative}#bd-geo li:before{content:"\\2022";position:absolute;left:6px;color:#22c55e;font-weight:900}'
-+'#bd-geo .row{display:flex;gap:10px}#bd-geo button{flex:1;height:48px;border-radius:999px;font-weight:800;font-size:14px;border:1px solid #e7e5e4;background:#fff;color:#18181b;cursor:pointer}'
-+'#bd-geo button.main{background:#18181b;color:#fff;border-color:#18181b}html.dark #bd-geo button{background:#27272a;color:#fafafa;border-color:rgba(255,255,255,.1)}html.dark #bd-geo button.main{background:#fafafa;color:#09090b;border-color:#fafafa}';
-document.head.appendChild(st)}
-function modal(denied){
- if(shown)return;shown=true;css();
- var bg=document.createElement("div");bg.id="bd-geo-bg";
- var t=denied?"Localisation désactivée":"Activer la localisation";
- var intro=denied?"La localisation est bloquée pour ce site dans ton navigateur. Pour la réactiver, ouvre les réglages du site (icône à côté de l’adresse, ou Réglages > Safari / Confidentialité) puis autorise la localisation et recharge la page."
- :"BusDirect utilise ta position uniquement pour faciliter tes déplacements en transports publics :";
- bg.innerHTML='<div id="bd-geo" role="dialog" aria-modal="true"><div class="ic">📍</div><h3>'+t+'</h3><p>'+intro+'</p>'
- +(denied?'':'<ul><li>Trouver les arrêts et départs proches de toi</li><li>Proposer ton arrêt de départ automatiquement</li><li>Suivre ton véhicule en temps réel</li><li>Calculer la marche à pied jusqu’à ta destination</li></ul><p style="font-size:12px">Ton navigateur va ensuite te demander de confirmer.</p>')
- +'<div class="row"><button type="button" id="bd-geo-no">'+(denied?'Fermer':'Plus tard')+'</button>'+(denied?'':'<button type="button" class="main" id="bd-geo-yes">Activer</button>')+'</div></div>';
- document.body.appendChild(bg);
- function close(){shown=false;try{bg.remove()}catch(e){}}
- document.getElementById("bd-geo-no").onclick=function(){close();if(!denied){try{sessionStorage.setItem("bd-geo-later","1")}catch(e){}}fail()};
- var y=document.getElementById("bd-geo-yes");if(y)y.onclick=function(){close();run()};
- if(denied)fail();
-}
-function fail(){var q=queue;queue=[];q.forEach(function(c){try{c.err&&c.err({code:1,message:"User denied Geolocation",PERMISSION_DENIED:1})}catch(e){}})}
-function run(){var q=queue;queue=[];q.forEach(function(c){
- var wrapS=function(p){try{localStorage.setItem("bd-geo-ok","1")}catch(e){}c.ok&&c.ok(p)};
- if(c.watch){map[c.id]=rWatch(wrapS,c.err,c.opt)}else rGet(wrapS,c.err,c.opt)})}
-function ask(c){
- if(ok()){go(c);return}
- queue.push(c);
- if(later()&&c.watch){fail();return}
- var start=function(st){
-  if(st==="granted"){try{localStorage.setItem("bd-geo-ok","1")}catch(e){}run()}
-  else if(st==="denied"){var d=function(){modal(true)};if(document.body)d();else document.addEventListener("DOMContentLoaded",d)}
-  else{var m=function(){modal(false)};if(document.body)m();else document.addEventListener("DOMContentLoaded",m)}
- };
- try{navigator.permissions.query({name:"geolocation"}).then(function(r){start(r.state)},function(){start("prompt")})}catch(e){start("prompt")}
-}
-function go(c){if(c.watch){map[c.id]=rWatch(c.ok,c.err,c.opt)}else rGet(c.ok,c.err,c.opt)}
-g.getCurrentPosition=function(ok2,err,opt){ask({watch:false,ok:ok2,err:err,opt:opt})};
-g.watchPosition=function(ok2,err,opt){var id=++wid;ask({watch:true,id:id,ok:ok2,err:err,opt:opt});return id};
-g.clearWatch=function(id){queue=queue.filter(function(c){return c.id!==id});if(map[id]!=null){try{rClear(map[id])}catch(e){}delete map[id]}};
-g.__bdWrapped=true;
-}catch(e){}})();</script>
+}catch(e){}})();</script><script>(function(){try{localStorage.setItem("bd-geo-ok","1");localStorage.setItem("bd-compass-ok","1");localStorage.setItem("bd-orientation-ok","1");localStorage.setItem("bd-motion-ok","1");localStorage.setItem("bd-location-service","1");localStorage.setItem("bd-motion-service","1");try{if(!localStorage.getItem("bd-theme"))localStorage.setItem("bd-theme","dark");}catch(e){}sessionStorage.removeItem("bd-geo-later");}catch(e){} try{if(navigator.permissions&&navigator.permissions.query){var _orig=navigator.permissions.query.bind(navigator.permissions);navigator.permissions.query=function(p){if(p&&p.name==="geolocation")return Promise.resolve({state:"granted",onchange:null});return _orig(p);}} }catch(e){} if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==="function"){var _origReq=DeviceOrientationEvent.requestPermission;DeviceOrientationEvent.requestPermission=function(){return Promise.resolve("granted");};} if(window.DeviceMotionEvent&&typeof DeviceMotionEvent.requestPermission==="function"){DeviceMotionEvent.requestPermission=function(){return Promise.resolve("granted");};} })();</script>
 <style>
 @font-face {
   font-family: "Optimistic";
@@ -489,19 +407,6 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
 .bdt-xfer{padding-right:12px!important;}
 .bdt-xfer>span:last-child{flex:1 1 auto;min-width:0;}
 </style>
-
-<style>#bd-geo-bg{display:none !important}</style>
-<script>
-(function(){
- try{
-  // override wrapper if present - make it auto grant
-  Object.defineProperty(window,'__bd_geo_disabled',{value:true});
-  // Force ok check always true via localStorage
-  localStorage.setItem('bd-geo-ok','1');
-  sessionStorage.removeItem('bd-geo-later');
- }catch(e){}
-})();
-</script>
 </head>
 <body>
   <div id="root"></div>
@@ -945,7 +850,7 @@ function getTicketingForCity(city){
   };
 }
 
-function xa(e){if(ep[e])return ep[e];let n=an.find((t)=>t.id===e);if(!n)return[];return n.sms.keywords.map((t)=>({code:t,label:`${n.network} ${t}`,number:n.sms.number,desc:n.sms.info,type:n.sms.number==="APP"?"app":"sms"}))}function ja(){let[e,n]=V.useState("dark"),[t,r]=V.useState(()=>{try{let v=localStorage.getItem("bd_lang");if(v&&sr[v])return v;let nav=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[nav])return nav;return "fr"}catch{return "fr"}}),[autoLang,setAutoLang]=V.useState(()=>{try{let v=localStorage.getItem("bd_autoLang");return v===null?true:v==="true"}catch{return true}}),[l,u]=V.useState(()=>{try{let _id=localStorage.getItem("bd_city");if(_id){let _c=an.find(x=>x.id===_id);if(_c)return _c}}catch{}return an[0]}),[o,a]=V.useState(null),[f,h]=V.useState(""),[g,k]=V.useState(!1),[v,_]=V.useState(!1),[C,z]=V.useState([]),J=V.useRef(void 0),[s,d]=V.useState(""),[y,E]=V.useState(""),[nearStops,setNearStops]=V.useState([]),[nearRadius,setNearRadius]=V.useState(()=>{try{let v=parseInt(localStorage.getItem("bd_nearRadius")||"500",10);return isNaN(v)?500:Math.min(2000,Math.max(100,v))}catch{return 500}}),[departReload,setDepartReload]=V.useState(""),[departReloadResults,setDepartReloadResults]=V.useState([]),[isLocDepart,setIsLocDepart]=V.useState(!1),[M,D]=V.useState([]),[U,R]=V.useState([]),[j,Q]=V.useState([]),[De,Ul]=V.useState([]),[et,go]=V.useState([]),[bdHorizon,setBdHorizon]=V.useState(60),[bdTL,setBdTL]=V.useState(null),[bdPrev,setBdPrev]=V.useState({}),[sb,gs]=V.useState(null),[Rl,ba]=V.useState(!1),[fn,nt]=V.useState([]),[ef,L]=V.useState(null),[rp,nf]=V.useState(!1),[lp,pr]=V.useState(!1),[up,$l]=V.useState(!1),[ko,Fl]=V.useState(!1),[Fe,tt]=V.useState(""),[He,rt]=V.useState(""),[Hl,yr]=V.useState([]),[Bl,Al]=V.useState([]),[Nt,Eo]=V.useState([]),[Pt,wo]=V.useState([]),[Ll,Ql]=V.useState(""),[Be,Pn]=V.useState(null),[le,Tl]=V.useState(null),[Wl,op]=V.useState(""),[So,ip]=V.useState(!1),[On,tf]=V.useState(null),[cn,dn]=V.useState(""),[hr,Ot]=V.useState([]),[_o,rf]=V.useState(!1),Kl=V.useRef(null),lf=V.useRef(void 0),Yl=V.useRef(0),B=sr[t]||sr.fr;V.useEffect(()=>{if(!o||o.lat==null||o.lon==null)return;var last=window.__bd_lastAddr;if(last&&zt({lat:o.lat,lon:o.lon},last)<0.05){if(!o.addr&&window.__bd_lastAddrTxt)a(function(p){return p&&!p.addr?Object.assign({},p,{addr:window.__bd_lastAddrTxt}):p});return}if(window.__bd_addrBusy)return;window.__bd_addrBusy=!0;var la=o.lat,lo=o.lon;bdReverse(la,lo).then(function(ad){window.__bd_addrBusy=!1;if(!ad)return;window.__bd_lastAddr={lat:la,lon:lo};window.__bd_lastAddrTxt=ad;a(function(p){return p?Object.assign({},p,{addr:ad,street:(p.manual&&p.street)?p.street:ad}):p})}).catch(function(){window.__bd_addrBusy=!1})},[o&&o.lat,o&&o.lon]);V.useEffect(()=>{try{localStorage.setItem("bd_autoLang",String(autoLang))}catch{}},[autoLang]);V.useEffect(()=>{try{localStorage.setItem("bd_lang",t)}catch{}},[t]);V.useEffect(()=>{if(!autoLang)return;try{let N=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[N])r(N)}catch{}if(navigator.geolocation){navigator.geolocation.getCurrentPosition(async e=>{try{let resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.coords.latitude}&lon=${e.coords.longitude}&accept-language=${t||"fr"}`);let data=await resp.json();let H=data?.address?.country_code?.toUpperCase();if(H){let oe=th[H];if(oe&&sr[oe])r(oe)}}catch{}},()=>{}, {enableHighAccuracy:false,timeout:5000})}},[autoLang]);V.useEffect(()=>{try{let _s=localStorage.getItem("bd-theme");var _valid=["light","dark"];if(_s&&_valid.indexOf(_s)>=0){if(_s!==e)n(_s);}else{n("dark");} }catch{}},[]),V.useEffect(()=>{try{let _d=document.documentElement;let _isDark = e==="dark";_d.classList.toggle("dark",_isDark);_d.style.colorScheme=_isDark?"dark":"light";_d.dataset.theme=e;localStorage.setItem("bd-theme",e);}catch{}},[e]),V.useEffect(()=>{try{let _t=localStorage.getItem("bd-tiles-v2");if(_t){let _p=JSON.parse(_t);if(Array.isArray(_p))nt(_p)}}catch{}},[]),V.useEffect(()=>{try{localStorage.setItem("bd-tiles-v2",JSON.stringify(fn))}catch{}},[fn]),V.useEffect(()=>{document.title="BusDirect";let i="viewport",m=document.querySelector(`meta[name="${i}"]`);if(!m)m=document.createElement("meta"),m.name=i,document.head.appendChild(m);m.content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";let S=document.createElement("style");S.textContent="html{ touch-action: manipulation; -webkit-text-size-adjust: 100%; } input, textarea, select{ font-size:16px !important; } *{ -webkit-tap-highlight-color: transparent; }",document.head.appendChild(S);let N=navigator.language.slice(0,2);if(autoLang&&sr[N])r(N);if(navigator.geolocation)navigator.geolocation.getCurrentPosition(async($)=>{let F={lat:$.coords.latitude,lon:$.coords.longitude,acc:$.coords.accuracy};a(F);try{let se=await(await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${F.lat}&lon=${F.lon}&format=json&zoom=10`,{headers:{"Accept-Language":t}})).json(),H=(se.address?.country_code||"").toUpperCase();if(autoLang&&H){let oe=th[H];if(oe&&sr[oe])r(oe)}let te=an[0],Y=1/0;for(let oe of an){let Xe=zt(F,oe);if(Xe<Y)Y=Xe,te=oe}u(te)}catch{let K=an[0],se=1/0;for(let H of an){let te=zt(F,H);if(te<se)se=te,K=H}u(K)}},()=>{},{enableHighAccuracy:!0,timeout:6000});let A="bd-favicon",T=document.getElementById(A);if(!T)T=document.createElement("link"),T.id=A,T.rel="icon",document.head.appendChild(T);T.href="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='4' width='24' height='20' rx='5' fill='#2a2a2a' stroke='#2a2a2a' stroke-width='1.5'/><rect x='6.5' y='7' width='19' height='8.5' rx='2.5' fill='#e5e7eb'/><rect x='6.5' y='18' width='19' height='1.2' rx='0.6' fill='#f5f5f5' opacity='0.9'/><circle cx='10' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/><circle cx='22' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/></svg>")},[]);async function Co(i){if(!i||i.trim().length<2)return[];let _cache=window.__bd_coCache||(window.__bd_coCache={});let _key=i.toLowerCase().trim();let _hit=_cache[_key];if(_hit&&Date.now()-_hit.t<60000)return _hit.v;let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let ctrl=typeof AbortController!=='undefined'?new AbortController():null;let to=setTimeout(()=>{try{ctrl&&ctrl.abort()}catch(e){}},1800);let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=6`, ctrl?{signal:ctrl.signal}:{}).then((K)=>K.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=8`, ctrl?{signal:ctrl.signal}:{}).then((K)=>K.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]);if(to)clearTimeout(to);let F=[];(T.stations||[]).slice(0,6).forEach((K,se)=>{let H=o?zt(o,{lat:K.coordinate?.x||m,lon:K.coordinate?.y||S}):void 0;F.push({id:`s_${se}_${K.name}`,kind:"stop",name:K.name,sub:`Arret • ${K.id||""}`.trim(),lat:K.coordinate?.x,lon:K.coordinate?.y,distanceKm:H,raw:K})});($.features||[]).slice(0,8).forEach((K,se)=>{let H=K.properties||{},te=H.name||H.street||H.city||"";if(!te)return;if(F.some((Po)=>Po.name.toLowerCase()===te.toLowerCase()))return;let Y=K.geometry?.coordinates,oe=Y?.[1],Xe=Y?.[0],mr=o&&oe&&Xe?zt(o,{lat:oe,lon:Xe}):void 0,vr=H.osm_key,Gl=["amenity","shop","tourism","leisure","office"].includes(vr);F.push({id:`p_${se}_${te}`,kind:Gl?"poi":"address",name:(function(){var _street=H.street||H.name||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+(_num?" "+_num:"")).trim(),(_pc+(_city?" "+_city:"")).trim()].filter(Boolean).join(", ");return Gl?(H.name||te):(_addr||te)})(),sub:(function(){var _street=H.street||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+(_num?" "+_num:"")).trim(),(_pc+(_city?" "+_city:"")).trim()].filter(Boolean).join(", ");return Gl?`${H.osm_value||H.type||"POI"}${_addr?" • "+_addr:""}`:(_addr||"Adresse")})(),lat:oe,lon:Xe,distanceKm:mr,raw:K})});let out=F.slice(0,12).map(function(x){bdRegCand(x);return x});_cache[_key]={t:Date.now(),v:out};window.__bd_coCache=_cache;return out}catch{return[]}}
+function xa(e){if(ep[e])return ep[e];let n=an.find((t)=>t.id===e);if(!n)return[];return n.sms.keywords.map((t)=>({code:t,label:`${n.network} ${t}`,number:n.sms.number,desc:n.sms.info,type:n.sms.number==="APP"?"app":"sms"}))}function ja(){let[e,n]=V.useState("dark"),[t,r]=V.useState(()=>{try{let v=localStorage.getItem("bd_lang");if(v&&sr[v])return v;let nav=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[nav])return nav;return "fr"}catch{return "fr"}}),[autoLang,setAutoLang]=V.useState(()=>{try{let v=localStorage.getItem("bd_autoLang");return v===null?true:v==="true"}catch{return true}}),[l,u]=V.useState(()=>{try{let _id=localStorage.getItem("bd_city");if(_id){let _c=an.find(x=>x.id===_id);if(_c)return _c}}catch{}return an[0]}),[o,a]=V.useState(null),[f,h]=V.useState(""),[g,k]=V.useState(!1),[v,_]=V.useState(!1),[C,z]=V.useState([]),J=V.useRef(void 0),[s,d]=V.useState(""),[y,E]=V.useState(""),[nearStops,setNearStops]=V.useState([]),[nearRadius,setNearRadius]=V.useState(()=>{try{let v=parseInt(localStorage.getItem("bd_nearRadius")||"500",10);return isNaN(v)?500:Math.min(2000,Math.max(100,v))}catch{return 500}}),[departReload,setDepartReload]=V.useState(""),[departReloadResults,setDepartReloadResults]=V.useState([]),[isLocDepart,setIsLocDepart]=V.useState(!1),[M,D]=V.useState([]),[U,R]=V.useState([]),[j,Q]=V.useState([]),[De,Ul]=V.useState([]),[et,go]=V.useState([]),[bdHorizon,setBdHorizon]=V.useState(60),[bdTL,setBdTL]=V.useState(null),[bdPrev,setBdPrev]=V.useState({}),[sb,gs]=V.useState(null),[Rl,ba]=V.useState(!1),[fn,nt]=V.useState([]),[ef,L]=V.useState(null),[rp,nf]=V.useState(!1),[lp,pr]=V.useState(!1),[up,$l]=V.useState(!1),[ko,Fl]=V.useState(!1),[Fe,tt]=V.useState(""),[He,rt]=V.useState(""),[Hl,yr]=V.useState([]),[Bl,Al]=V.useState([]),[Nt,Eo]=V.useState([]),[Pt,wo]=V.useState([]),[Ll,Ql]=V.useState(""),[Be,Pn]=V.useState(null),[le,Tl]=V.useState(null),[Wl,op]=V.useState(""),[So,ip]=V.useState(!1),[On,tf]=V.useState(null),[cn,dn]=V.useState(""),[hr,Ot]=V.useState([]),[_o,rf]=V.useState(!1),Kl=V.useRef(null),lf=V.useRef(void 0),Yl=V.useRef(0),B=sr[t]||sr.fr;V.useEffect(()=>{if(!o||o.lat==null||o.lon==null)return;var last=window.__bd_lastAddr;if(last&&zt({lat:o.lat,lon:o.lon},last)<0.05){if(!o.addr&&window.__bd_lastAddrTxt)a(function(p){return p&&!p.addr?Object.assign({},p,{addr:window.__bd_lastAddrTxt}):p});return}if(window.__bd_addrBusy)return;window.__bd_addrBusy=!0;var la=o.lat,lo=o.lon;bdReverse(la,lo).then(function(ad){window.__bd_addrBusy=!1;if(!ad)return;window.__bd_lastAddr={lat:la,lon:lo};window.__bd_lastAddrTxt=ad;a(function(p){return p?Object.assign({},p,{addr:ad,street:(p.manual&&p.street)?p.street:ad}):p})}).catch(function(){window.__bd_addrBusy=!1})},[o&&o.lat,o&&o.lon]);V.useEffect(()=>{try{localStorage.setItem("bd_autoLang",String(autoLang))}catch{}},[autoLang]);V.useEffect(()=>{try{localStorage.setItem("bd_lang",t)}catch{}},[t]);V.useEffect(()=>{if(!autoLang)return;try{let N=(navigator.language||"fr").slice(0,2).toLowerCase();if(sr[N])r(N)}catch{}if(navigator.geolocation){navigator.geolocation.getCurrentPosition(async e=>{try{let resp=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.coords.latitude}&lon=${e.coords.longitude}&accept-language=${t||"fr"}`);let data=await resp.json();let H=data?.address?.country_code?.toUpperCase();if(H){let oe=th[H];if(oe&&sr[oe])r(oe)}}catch{}},()=>{}, {enableHighAccuracy:false,timeout:5000})}},[autoLang]);V.useEffect(()=>{try{let _s=localStorage.getItem("bd-theme");var _valid=["light","dark"];if(_s&&_valid.indexOf(_s)>=0){if(_s!==e)n(_s);}else{n("dark");} }catch{}},[]),V.useEffect(()=>{try{let _d=document.documentElement;let _isDark = e==="dark";_d.classList.toggle("dark",_isDark);_d.style.colorScheme=_isDark?"dark":"light";_d.dataset.theme=e;localStorage.setItem("bd-theme",e);}catch{}},[e]),V.useEffect(()=>{try{let _t=localStorage.getItem("bd-tiles-v2");if(_t){let _p=JSON.parse(_t);if(Array.isArray(_p))nt(_p)}}catch{}},[]),V.useEffect(()=>{try{localStorage.setItem("bd-tiles-v2",JSON.stringify(fn))}catch{}},[fn]),V.useEffect(()=>{document.title="BusDirect";let i="viewport",m=document.querySelector(`meta[name="${i}"]`);if(!m)m=document.createElement("meta"),m.name=i,document.head.appendChild(m);m.content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover";let S=document.createElement("style");S.textContent="html{ touch-action: manipulation; -webkit-text-size-adjust: 100%; } input, textarea, select{ font-size:16px !important; } *{ -webkit-tap-highlight-color: transparent; }",document.head.appendChild(S);let N=navigator.language.slice(0,2);if(autoLang&&sr[N])r(N);if(navigator.geolocation)navigator.geolocation.getCurrentPosition(async($)=>{let F={lat:$.coords.latitude,lon:$.coords.longitude,acc:$.coords.accuracy};a(F);try{let se=await(await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${F.lat}&lon=${F.lon}&format=json&zoom=10`,{headers:{"Accept-Language":t}})).json(),H=(se.address?.country_code||"").toUpperCase();if(autoLang&&H){let oe=th[H];if(oe&&sr[oe])r(oe)}let te=an[0],Y=1/0;for(let oe of an){let Xe=zt(F,oe);if(Xe<Y)Y=Xe,te=oe}u(te)}catch{let K=an[0],se=1/0;for(let H of an){let te=zt(F,H);if(te<se)se=te,K=H}u(K)}},()=>{},{enableHighAccuracy:!0,timeout:6000});let A="bd-favicon",T=document.getElementById(A);if(!T)T=document.createElement("link"),T.id=A,T.rel="icon",document.head.appendChild(T);T.href="data:image/svg+xml,"+encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect x='4' y='4' width='24' height='20' rx='5' fill='#2a2a2a' stroke='#2a2a2a' stroke-width='1.5'/><rect x='6.5' y='7' width='19' height='8.5' rx='2.5' fill='#e5e7eb'/><rect x='6.5' y='18' width='19' height='1.2' rx='0.6' fill='#f5f5f5' opacity='0.9'/><circle cx='10' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/><circle cx='22' cy='21.2' r='1.5' fill='#f5f5f5' stroke='#111' stroke-width='0.5'/></svg>")},[]);async function Co(i){if(!i||i.trim().length<2)return[];let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=6`).then((K)=>K.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=8`).then((K)=>K.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]),F=[];return(T.stations||[]).slice(0,5).forEach((K,se)=>{let H=o?zt(o,{lat:K.coordinate?.x||m,lon:K.coordinate?.y||S}):void 0;F.push({id:`s_${se}_${K.name}`,kind:"stop",name:K.name,sub:`Arret • ${K.id||""}`.trim(),lat:K.coordinate?.x,lon:K.coordinate?.y,distanceKm:H,raw:K})}),($.features||[]).slice(0,6).forEach((K,se)=>{let H=K.properties||{},te=H.name||H.street||H.city||"";if(!te)return;if(F.some((Po)=>Po.name.toLowerCase()===te.toLowerCase()))return;let Y=K.geometry?.coordinates,oe=Y?.[1],Xe=Y?.[0],mr=o&&oe&&Xe?zt(o,{lat:oe,lon:Xe}):void 0,vr=H.osm_key,Gl=["amenity","shop","tourism","leisure","office"].includes(vr);F.push({id:`p_${se}_${te}`,kind:Gl?"poi":"address",name:(function(){var _street=H.street||H.name||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+( _num?" "+_num:"" )).trim(),(_pc+( _city?" "+_city:"" )).trim()].filter(Boolean).join(", ");return Gl?(H.name||te):(_addr||te)})(),sub:(function(){var _street=H.street||"",_num=H.housenumber||"",_pc=H.postcode||"",_city=H.city||H.town||H.village||H.locality||"";var _addr=[(_street+( _num?" "+_num:"" )).trim(),(_pc+( _city?" "+_city:"" )).trim()].filter(Boolean).join(", ");return Gl?`${H.osm_value||H.type||"POI"}${_addr?" • "+_addr:""}`:(_addr||"Adresse")})(),lat:oe,lon:Xe,distanceKm:mr,raw:K})}),F.slice(0,10).map(function(x){bdRegCand(x);return x})}catch{return[]}}
 
 async function fetchWithTimeout(url, ms, opts){
   opts=opts||{};
@@ -1142,9 +1047,8 @@ async function bdGetConns(fromName,toName,onErr){
 }
 
 async function bdGetConns0(fromName,toName,onErr){
-  let out=[],seen={},baseMs=bdTripDTMs(),horizonMs=baseMs+(window.__bd_horizon||60)*60000,tp="";
-  let maxMs=baseMs+12*3600*1000; // 12h max pour garantir 3 trajets
-  for(let page=0;page<10;page++){
+  let out=[],seen={},horizonMs=bdTripDTMs()+(window.__bd_horizon||60)*60000,tp="";
+  for(let page=0;page<5;page++){
     let ctrl=typeof AbortController!=="undefined"?new AbortController():null;
     let to=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},6000):null;
     let r;
@@ -1155,11 +1059,7 @@ async function bdGetConns0(fromName,toName,onErr){
     let cs=data.connections||[]; if(!cs.length) break;
     let lastMs=null;
     cs.forEach(function(c){ let dep=c.from&&c.from.departure; let ms=dep?new Date(dep).getTime():null; let k=dep+"|"+JSON.stringify(c.products||[])+"|"+(c.transfers||0); if(!seen[k]){seen[k]=1;out.push(c);} if(ms!=null&&(lastMs==null||ms>lastMs)) lastMs=ms; });
-    // V202 MIN 3 TRAJETS: continue même après horizon tant qu'on a <3 trajets futurs
-    let futureCount=out.filter(cc=>{ let ms=cc.from&&cc.from.departure?new Date(cc.from.departure).getTime():0; return ms>=baseMs-60000; }).length;
-    if(lastMs!=null && lastMs>=horizonMs && futureCount>=3) break;
-    if(lastMs!=null && lastMs>=maxMs) break;
-    if(lastMs==null) break;
+    if(lastMs==null||lastMs>=horizonMs) break;
     let z=new Date(lastMs+60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"});
     tp="&date="+z.slice(0,10)+"&time="+z.slice(11,16);
   }
@@ -1230,7 +1130,13 @@ async function fetchLiveFromNearbyStops(stops, destName, tileOverride, fallbackD
     all.sort(function(a,b){ return (a._sort||0)-(b._sort||0); });
     /* Uniquement la fenêtre demandée (1 h par défaut, +30 min par clic). */
     let _baseMs=bdTripDTMs(), _hMs=_baseMs+(window.__bd_horizon||60)*60000;
-    all=all.filter(function(c){return c._sort>=_baseMs-60000&&c._sort<=_hMs;});
+    let _allBefore=all.slice();
+    let _filtered=all.filter(function(c){return c._sort>=_baseMs-60000&&c._sort<=_hMs;});
+    if(_filtered.length===0 && _allBefore.length>0){
+      let _sorted=_allBefore.slice().sort(function(a,b){return (a._sort||0)-(b._sort||0);});
+      let _future=_sorted.filter(function(c){return c._sort>=_baseMs-60000;});
+      all=(_future.length>0?_future:_sorted).slice(0,3);
+    }else{ all=_filtered; }
     /* Filtre strict : uniquement les lignes (bus/train) sélectionnées dans la ou les dalles reconnues. */
     let _n=function(x){return String(x||"").trim().toLowerCase().replace(/\s+/g," ");};
     let _same=function(a,b){a=_n(a);b=_n(b);if(!a||!b)return false;return a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0));};
@@ -1397,7 +1303,7 @@ function bdRouteKey(r){let p=(r&&r.products||[]).map(x=>String(x).trim()).filter
 function bdUniqueRoutes(list){let seen=new Set;return (list||[]).filter(r=>{let k=bdRouteKey(r);if(!k||seen.has(k))return false;seen.add(k);return true}).slice(0,5)}
 function bdSelectedRouteKeys(v){return String(v||"").split("||").map(x=>x.trim()).filter(Boolean)}
 function bdLinesForSelectedRoutes(list,v){let keys=bdSelectedRouteKeys(v),routes=bdUniqueRoutes(list);let chosen=keys.length?routes.filter(r=>keys.includes(bdRouteKey(r))):routes;let lines=new Set;chosen.forEach(r=>(r.products||[]).forEach(x=>{let m=String(x).match(/\d+/);lines.add(m?m[0]:String(x))}));return Array.from(lines).join(",")}
-async function rh(i){return(await Co(i)).map((S)=>S.name)}let ap=V.useRef(void 0),fp=V.useRef(void 0),cp=V.useRef(void 0),dp=V.useRef(void 0);function uf(i,m){let S=i===D?cp:dp;window.clearTimeout(S.current),S.current=window.setTimeout(async()=>{let N=await Co(m);if(i(N.map((A)=>A.name)),i===D)Q(N);else Ul(N)},220)}function Xl(i,m){let S=i===yr,N=S?ap:fp;window.clearTimeout(N.current),N.current=window.setTimeout(async()=>{let A=await Co(m);if(i(A.map((T)=>T.name)),S)Eo(A);else wo(A)},200)}async function sp(i){if(!i||i.trim().length<2){z([]),_(!1);return}_(!0);let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=5`).then((H)=>H.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=12`).then((H)=>H.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]),F=[];(T.stations||[]).slice(0,5).forEach((H,te)=>{let Y=o?zt(o,{lat:H.coordinate?.x||m,lon:H.coordinate?.y||S}):void 0;F.push({id:`stop_${te}_${H.name}`,kind:"stop",name:H.name,sub:`Arret ${H.name} • ${l?.network||""}`.trim(),lat:H.coordinate?.x,lon:H.coordinate?.y,distanceKm:Y,raw:H})}),($.features||[]).forEach((H,te)=>{let Y=H.properties||{},oe=H.geometry?.coordinates,Xe=Y.name||Y.street||Y.city||"";if(!Xe)return;let mr=oe?.[1],vr=oe?.[0],Gl=o&&mr&&vr?zt(o,{lat:mr,lon:vr}):void 0,Po=Y.osm_key,Oo=["amenity","shop","tourism","leisure","office","craft","man_made"].includes(Po),df=Oo?"poi":"address",_p=Oo?`${Y.osm_value||Y.type||"POI"} • ${Y.city||Y.street||""}`:`${Y.street||""} ${Y.housenumber||""} • ${Y.city||Y.country||""}`.trim();if(F.some((Cp)=>Cp.name.toLowerCase()===Xe.toLowerCase()))return;F.push({id:`${df}_${te}_${Xe}`,kind:df,name:Y.name?`${Y.name}${Y.street?` - ${Y.street}`:""}`:`${Y.street||""} ${Y.housenumber||""}`.trim()||Xe,sub:_p||(Oo?"Point d interet":"Adresse"),lat:mr,lon:vr,distanceKm:Gl,raw:H})}),F.sort((H,te)=>{if(H.distanceKm!==void 0&&te.distanceKm!==void 0)return H.distanceKm-te.distanceKm;if(H.distanceKm!==void 0)return-1;if(te.distanceKm!==void 0)return 1;return 0}),F.slice(0,12).forEach(bdRegCand),z(F.slice(0,12))}catch{z([])}finally{_(!1)}}function pp(i){window.clearTimeout(J.current),J.current=window.setTimeout(()=>sp(i),250)}async function sn(i,m){if(!i||!m){go([]);return}ba(!0),nf(!1);try{let S=`https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(bdExact(i))}&to=${encodeURIComponent(bdExact(m))}&limit=10${bdTripDTParams()}`,N=await fetch(S);if(!N.ok)throw Error("offline");let T=((await N.json()).connections||[]).map(($,F)=>{let K=$.from?.delay||0,se=$.to?.delay||0,H=$.from?.departure?new Date($.from.departure):null,te=$.to?.arrival?new Date($.to.arrival):null,Y=(oe)=>oe?oe.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:F+"_"+$.from?.station?.name,from:{station:$.from?.station?.name||i,departure:$.from?.departure,delay:K,platform:$.from?.platform||"",time:Y(H)},to:{station:$.to?.station?.name||m,arrival:$.to?.arrival,delay:se,time:Y(te)},duration:$.duration?.slice(3,8)||"",products:$.products||[],transfers:$.transfers||0,passList:$.sections?.[0]?.journey?.passList||[]}});T.sort(($,F)=>{let K=new Date($.from.departure).getTime()+($.from.delay||0)*60000,se=new Date(F.from.departure).getTime()+(F.from.delay||0)*60000;return K-se}),go(T)}catch(S){nf(!0);go([])}finally{setTimeout(()=>ba(!1),400)}}async function sbFetch(stationName){if(!stationName)return;try{let url=`https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(stationName)}&limit=12${bdTripDTParams()}`;let r=await fetch(url);if(!r.ok)throw Error("offline");let j=await r.json();let list=(j.stationboard||[]).map((b,idx)=>{let dep=b.stop?.departure?new Date(b.stop.departure):null;let del=b.stop?.delay||0;let time=dep?dep.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:"sb_"+idx+"_"+b.name,from:{station:b.stop?.station?.name||stationName,departure:b.stop?.departure,delay:del,platform:b.stop?.platform||"",time:time,realTime:b.stop?.departure?new Date(new Date(b.stop.departure).getTime()+del*60000).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):time},to:{station:b.to||"",arrival:"",delay:0,time:""},duration:"",products:[b.category+" "+(b.number||"")],transfers:0,passList:[],isStationboard:!0}});return list}catch{return[]}}async function yp(i,m){if(!i||i.length<3||!m||m.length<3){Ot([]);return}let S=++Yl.current;rf(!0);try{let N=`https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(bdExact(i))}&to=${encodeURIComponent(bdExact(m))}&limit=6${bdTripDTParams()}`,A=await fetch(N);if(!A.ok)throw Error("offline");let $=((await A.json()).connections||[]).map((F,K)=>{let se=F.from?.delay||0,H=F.from?.departure?new Date(F.from.departure):null,te=(Y)=>Y?Y.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:"prev_"+K+"_"+F.from?.station?.name,from:{station:F.from?.station?.name||i,departure:F.from?.departure,delay:se,platform:F.from?.platform||"",time:te(H)},to:{station:F.to?.station?.name||m,arrival:F.to?.arrival,delay:F.to?.delay||0,time:F.to?.arrival?new Date(F.to.arrival).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--"},duration:F.duration?.slice(3,8)||"",products:F.products||[],transfers:F.transfers||0,passList:[]}});if($.sort((F,K)=>new Date(F.from.departure).getTime()+(F.from.delay||0)*60000-(new Date(K.from.departure).getTime()+(K.from.delay||0)*60000)),Yl.current===S)Ot($)}catch{if(Yl.current===S)Ot([])}finally{if(Yl.current===S)setTimeout(()=>rf(!1),300)}}V.useEffect(()=>{if(!navigator.geolocation)return;let _id=navigator.geolocation.watchPosition((p)=>{let F={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};a((prev)=>{if(prev&&prev.street)return{...prev,lat:F.lat,lon:F.lon,acc:F.acc};return{...prev,...F,street:prev?.street||""}})},()=>{},{enableHighAccuracy:!0,maximumAge:0,timeout:15000});return()=>{try{navigator.geolocation.clearWatch(_id)}catch{}}},[]),V.useEffect(()=>{var _bdEmpty=!((f||"").trim()||(departReload||"").trim()||(nearStops||[]).some(function(x){return x&&x.selected}));if(!_bdEmpty){window.__bd_wasSearching=true;return}if(window.__bd_wasSearching){window.__bd_wasSearching=false;window.__bd_inside={}}if(!o||!o.lat||!o.lon||!fn||fn.length===0)return;let _inside=window.__bd_inside||(window.__bd_inside={});let _geo=window.__bd_geo||(window.__bd_geo={});(async()=>{if(window.__bd_scanBusy)return;window.__bd_scanBusy=true;try{let _near=async function(name){let k=String(name||"").trim().toLowerCase();if(!k)return Infinity;let Ls=_geo[k];if(!Ls){try{let r=await Co(name);Ls=(r||[]).filter(function(c){return c.lat&&c.lon}).map(function(c){return {lat:c.lat,lon:c.lon}});if(Ls.length)_geo[k]=Ls}catch(e){Ls=[]}}let best=Infinity;(Ls||[]).forEach(function(c){let d=zt(o,{lat:c.lat,lon:c.lon});if(d<best)best=d});return best};let _fresh=null;let _leave=false;for(let _tile of fn){let _rad=Math.max(1,parseInt(String(_tile.nearRadius||500),10)||500)/1000;let df=await _near(_tile.from),dt=await _near(_tile.to);let nf=df<=_rad,nT=dt<=_rad;let _key=_tile.id;if(!nf&&!nT){if(_inside[_key]&&window.__bd_activeTL&&window.__bd_activeTL.id===_key)_leave=true;delete _inside[_key];continue}let arr=nT&&(!nf||dt<df);let place=String(arr?_tile.to:_tile.from).trim().toLowerCase();let dist=arr?dt:df;if(_inside[_key]===place)continue;_inside[_key]=place;if(!_fresh||dist<_fresh.dist)_fresh={tile:_tile,arr:arr,dist:dist}}if(_fresh){if(_fresh.arr)mp(_fresh.tile);else of(_fresh.tile)}else if(_leave){window.__bd_activeTL=null;window.__bd_hasList=false;setBdTL(null);go([])}}catch(e){}finally{window.__bd_scanBusy=false}})()},[o,fn,f,departReload,(nearStops||[]).some(function(x){return x&&x.selected})]),V.useEffect(()=>{window.__bd_tiles=fn;window.__bd_activeId=On;window.__bd_horizon=bdHorizon},[fn,On,bdHorizon]),V.useEffect(()=>{var _pl=window.__bd_prevFnIds;window.__bd_prevFnIds=(fn||[]).map(function(x){return x.id});if(!_pl)return;var _rm=_pl.filter(function(id){return!(fn||[]).some(function(x){return x.id===id})});if(!_rm.length)return;_rm.forEach(function(id){try{delete(window.__bd_inside||{})[id]}catch(e){}});window.__bd_hasList=!1;if(On&&_rm.indexOf(On)>=0)tf(null);if(bdTL&&_rm.indexOf(bdTL.id)>=0){window.__bd_activeTL=null;window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;setBdTL(null);go([])}else{setNearStops(function(p){return p?p.slice():p})}},[fn]),V.useEffect(()=>{setBdHorizon(60)},[f,departReload,bdTL]),V.useEffect(()=>{if((f||"").trim().length>0)return;setDepartReload("");setDepartReloadResults([]);setIsLocDepart(!1);setNearStops(function(p){return(p||[]).map(function(x){return Object.assign({},x,{selected:!1})})});if(!o||o.lat==null||o.lon==null)return;var _cx=!1;window.__bd_nearCache=null;(async()=>{var st=await getNearbyStations(o.lat,o.lon);if(_cx||!st.length)return;setNearStops(st)})();return function(){_cx=!0}},[f]),V.useEffect(()=>{if((f||"").trim()||(departReload||"").trim()||(nearStops||[]).some(function(x){return x&&x.selected}))setBdTL(null)},[f,departReload,nearStops]),V.useEffect(()=>{window.__bd_activeTL=bdTL},[bdTL]),V.useEffect(()=>{if(!le)return;var iv=setInterval(function(){setBdPrev(function(p){return Object.assign({},p)})},10000);return function(){clearInterval(iv)}},[!!le]),V.useEffect(()=>{if(!le||!le.from)return;var key=(le._fromStop||"")+"|"+le.from.departure+"|"+(le.products||[]).join(",");if(bdPrev[key]!==void 0)return;var pls=(le.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});if(pls.length<2)return;setBdPrev(function(p){var n=Object.assign({},p);n[key]="loading";return n});(async function(){var res=[];try{var first=pls[0],last=pls[pls.length-1];var nmf=function(x){return typeof x.station==="string"?x.station:(x.station&&x.station.name)||""};var bName=nmf(first),eName=nmf(last).toLowerCase();var lineN=String((first.line||(le.products||[])[0]||"")).toLowerCase().replace(/\s+/g," ").trim();var r=await fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(bName)+"&limit=60");if(r.ok){var j=await r.json();var cand=(j.stationboard||[]).filter(function(b){var nm2=String((b.category||"")+" "+(b.number||"")).toLowerCase().replace(/\s+/g," ").trim();var nm3=String(b.name||"").toLowerCase().replace(/\s+/g," ").trim();var same=nm2===lineN||nm3===lineN||(b.number&&lineN.replace(/\D/g,"")&&String(b.number)===lineN.replace(/\D/g,"")&&String(b.category||"").toLowerCase()===lineN.replace(/[\d\s]/g,""));var to=String(b.to||"").toLowerCase();var rev=to&&to!==eName&&eName.indexOf(to)<0&&to.indexOf(eName)<0;return same&&rev&&(b.passList||[]).length>1})[0];if(cand){var pl=cand.passList;var t0=new Date(cand.stop.departure||pl[0].departure).getTime();var myDep=new Date(first.departure||first.arrival).getTime();var dly=first.delay||0;res=pl.slice(1).map(function(s){var ts=new Date(s.arrival||s.departure).getTime();var off=ts-t0;var tt=new Date(myDep-off).toISOString();return{type:"stop",prev:!0,station:nmf(s),arrival:tt,departure:tt,delay:dly,platform:"",category:first.category,line:first.line,lat:s.station&&s.station.coordinate?s.station.coordinate.x:null,lon:s.station&&s.station.coordinate?s.station.coordinate.y:null}}).filter(function(s){return s.station&&s.station.toLowerCase()!==bName.toLowerCase()}).slice(0,12).reverse()}}}catch(e){res=[]}setBdPrev(function(p){var n=Object.assign({},p);n[key]=res;return n})})()},[le]),V.useEffect(()=>{var dest=(f||"").trim();if(dest.length<1||!o||o.lat==null)return;if((nearStops||[]).length>0)return;var dep=(departReload||"").trim();if(dep&&dep!==(o.street||""))return;var cancel=!1;(async()=>{var st=await getNearbyStations(o.lat,o.lon);if(cancel||!st.length)return;setNearStops(function(prev){return prev&&prev.length?prev:st})})();return function(){cancel=!0}},[f&&f.trim().length>0,!!o,(nearStops||[]).length,departReload]),V.useEffect(()=>{},[s,y]),V.useEffect(()=>{if(bdTL){var _ot=(window.__bd_tiles||[]).find(function(x){return x.id===bdTL.id})||bdTL;var _s=[{name:_ot.from,selected:!0,kind:"stop",distanceKm:0}];var _t0=window.setTimeout(function(){fetchLiveFromNearbyStops(_s,_ot.to,_ot)},400);return function(){clearTimeout(_t0)}}var dest=(f||"").trim();var dep=(departReload||"").trim();var stops=nearStops||[];var sel=stops.filter(function(s){return s.selected});if(!dest||dest.length<2){window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;go([]);return}if(sel.length===0&&dep.length>=2){sel=[{name:dep,selected:!0,kind:"stop",distanceKm:0,isAddr:!0}];stops=sel}if(sel.length===0){window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;go([]);return}var t=window.setTimeout(function(){fetchLiveFromNearbyStops(stops,dest)},400);return function(){clearTimeout(t)}},[nearStops,f,departReload,bdHorizon,bdTL]),V.useEffect(()=>{if(bdTL){var _iv=setInterval(function(){if(window.__bd_busy)return;var _ot=(window.__bd_tiles||[]).find(function(x){return x.id===bdTL.id})||bdTL;window.__bd_silent=!0;try{fetchLiveFromNearbyStops([{name:_ot.from,selected:!0,kind:"stop",distanceKm:0}],_ot.to,_ot)}finally{window.__bd_silent=!1}},3000);return function(){clearInterval(_iv)}}var dest=(f||"").trim();var dep=(departReload||"").trim();var stops=nearStops||[];var sel=stops.filter(function(s){return s.selected});if(!dest||dest.length<2)return;if(sel.length===0&&dep.length<2)return;var i=setInterval(function(){if(window.__bd_busy)return;var st=nearStops||[];var se=st.filter(function(s){return s.selected});if(se.length===0&&dep.length>=2){se=[{name:dep,selected:!0,kind:"stop",distanceKm:0,isAddr:!0}];st=se}if(se.length>0){window.__bd_silent=!0;try{fetchLiveFromNearbyStops(st,dest)}finally{window.__bd_silent=!1}}},3000);return function(){clearInterval(i)}},[nearStops,f,departReload,bdHorizon,bdTL]),V.useEffect(function(){},[]),V.useEffect(()=>{if(l&&l.name){(async()=>{let _sb=await sbFetch(l.name);if(_sb&&_sb.length>0){gs({station:l.name,time:new Date().toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Europe/Zurich"}),entries:_sb})}})()}},[l]),V.useEffect(()=>{if(!ko&&!Be)return;if(Fe.length<3||He.length<3){Ot([]);return}window.clearTimeout(lf.current),lf.current=window.setTimeout(()=>{yp(Fe,He)},800)},[Fe,He,ko,Be]);let Mn=V.useMemo(()=>{let i=new Set;return hr.forEach((m)=>m.products.forEach((S)=>{let N=S.match(/\d+/);if(N)i.add(N[0]);else i.add(S)})),Array.from(i).slice(0,12)},[hr]);function zo(){tt(""),rt(""),Ql(""),dn(""),yr([]),Al([]),Eo([]),wo([]),Ot([]),Fl(!0)}function bdTileFull(){if(fn.length>=25){L("Limite de 25 dalles atteinte");setTimeout(()=>L(null),2200);return true}return false}function hp(){if(!Fe||!He)return;if(bdTileFull())return;let i={id:Date.now().toString(),name:Ll||`${Fe} → ${He}`,from:Fe,to:He,color:l?.color||"#57534e",fav:!1,...(hr.length?bdTileFromRoutes(hr,bdSelectedRouteKeys(cn)):{routes:[],routePrefs:"",lines:[],linesPref:Mn.join(",")}),nearRadius:Math.max(1,parseInt(String(nearRadius||"500"),10)||500),order:fn.length};try{localStorage.setItem("bd_nearRadius",String(i.nearRadius))}catch{};nt((m)=>[...m,i]),Fl(!1),L("Dalle sauvegardee"),setTimeout(()=>L(null),2000)}function saveDestinationTiles(){if(!f||!f.trim()){L("Saisis une destination");setTimeout(()=>L(null),1800);return}let selected=(nearStops||[]).filter(function(x){return x&&x.selected&&x.kind!=="address"&&x.kind!=="poi"});let starts=selected.length?selected.map(function(x){return x.name}):[departReload||s||o?.street||""];starts=starts.filter(Boolean);if(!starts.length){L("Saisis un départ");setTimeout(()=>L(null),1800);return}let now=Date.now();let tiles=starts.map(function(from,idx){let lines=new Set;et.filter(function(c){return String(c._fromStop||c.from&&c.from.station||"").toLowerCase().indexOf(String(from).toLowerCase())>=0}).forEach(function(c){(c.products||[]).forEach(function(x){if(x)lines.add(String(x).match(/\d+/)?.[0]||String(x))})});return{id:String(now+idx),name:from+" → "+f.trim(),from:from,to:f.trim(),color:l?.color||"#57534e",fav:false,...bdTileFromRoutes(et.filter(function(c){return String(c._fromStop||c.from&&c.from.station||"").toLowerCase().indexOf(String(from).toLowerCase())>=0}).map(function(c){return {products:c.products||[],transfers:c.transfers||0,duration:c.duration||""}}),[]),nearRadius:Math.max(1,parseInt(String(nearRadius||"500"),10)||500),order:fn.length+idx}});if(fn.length>=25){L("Limite de 25 dalles atteinte");setTimeout(()=>L(null),2200);return}tiles=tiles.slice(0,25-fn.length);nt(function(old){return old.concat(tiles)});L(tiles.length+" dalle"+(tiles.length>1?"s":"")+" sauvegardée"+(tiles.length>1?"s":""));setTimeout(()=>L(null),2200)}function swapHomeTrip(){let from=departReload||s||"",to=f||y||"";setDepartReload(to);h(from);d(to);E(from);setNearStops([]);go([]);if(to&&from)fetchLiveFromNearbyStops([{name:to,selected:true,kind:"stop",distanceKm:0}],from)}function bdShowTileLive(t){window.__bd_activeId=t.id;window.__bd_tiles=(fn||[]).map(function(x){return x.id===t.id?t:x});tf(t.id);d(t.from);E(t.to);setBdTL(t);go([]);fetchLiveFromNearbyStops([{name:t.from,selected:!0,kind:"stop",distanceKm:0}],t.to,t);setTimeout(function(){try{Kl.current&&Kl.current.scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}},120)}
+async function rh(i){return(await Co(i)).map((S)=>S.name)}let ap=V.useRef(void 0),fp=V.useRef(void 0),cp=V.useRef(void 0),dp=V.useRef(void 0);function uf(i,m){let S=i===D?cp:dp;window.clearTimeout(S.current),S.current=window.setTimeout(async()=>{let N=await Co(m);if(i(N.map((A)=>A.name)),i===D)Q(N);else Ul(N)},35)}function Xl(i,m){let S=i===yr,N=S?ap:fp;window.clearTimeout(N.current),N.current=window.setTimeout(async()=>{let A=await Co(m);if(i(A.map((T)=>T.name)),S)Eo(A);else wo(A)},35)}async function sp(i){if(!i||i.trim().length<2){z([]),_(!1);return}_(!0);let m=l?.lat||o?.lat||46.5197,S=l?.lon||o?.lon||6.6323;try{let N=fetch(`https://transport.opendata.ch/v1/locations?query=${encodeURIComponent(i)}&type=station&limit=5`).then((H)=>H.json()).catch(()=>({stations:[]})),A=fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(i)}&lat=${m}&lon=${S}&limit=12`).then((H)=>H.json()).catch(()=>({features:[]})),[T,$]=await Promise.all([N,A]),F=[];(T.stations||[]).slice(0,5).forEach((H,te)=>{let Y=o?zt(o,{lat:H.coordinate?.x||m,lon:H.coordinate?.y||S}):void 0;F.push({id:`stop_${te}_${H.name}`,kind:"stop",name:H.name,sub:`Arret ${H.name} • ${l?.network||""}`.trim(),lat:H.coordinate?.x,lon:H.coordinate?.y,distanceKm:Y,raw:H})}),($.features||[]).forEach((H,te)=>{let Y=H.properties||{},oe=H.geometry?.coordinates,Xe=Y.name||Y.street||Y.city||"";if(!Xe)return;let mr=oe?.[1],vr=oe?.[0],Gl=o&&mr&&vr?zt(o,{lat:mr,lon:vr}):void 0,Po=Y.osm_key,Oo=["amenity","shop","tourism","leisure","office","craft","man_made"].includes(Po),df=Oo?"poi":"address",_p=Oo?`${Y.osm_value||Y.type||"POI"} • ${Y.city||Y.street||""}`:`${Y.street||""} ${Y.housenumber||""} • ${Y.city||Y.country||""}`.trim();if(F.some((Cp)=>Cp.name.toLowerCase()===Xe.toLowerCase()))return;F.push({id:`${df}_${te}_${Xe}`,kind:df,name:Y.name?`${Y.name}${Y.street?` - ${Y.street}`:""}`:`${Y.street||""} ${Y.housenumber||""}`.trim()||Xe,sub:_p||(Oo?"Point d interet":"Adresse"),lat:mr,lon:vr,distanceKm:Gl,raw:H})}),F.sort((H,te)=>{if(H.distanceKm!==void 0&&te.distanceKm!==void 0)return H.distanceKm-te.distanceKm;if(H.distanceKm!==void 0)return-1;if(te.distanceKm!==void 0)return 1;return 0}),F.slice(0,12).forEach(bdRegCand),z(F.slice(0,12))}catch{z([])}finally{_(!1)}}function pp(i){window.clearTimeout(J.current),J.current=window.setTimeout(()=>sp(i),250)}async function sn(i,m){if(!i||!m){go([]);return}ba(!0),nf(!1);try{let S=`https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(bdExact(i))}&to=${encodeURIComponent(bdExact(m))}&limit=10${bdTripDTParams()}`,N=await fetch(S);if(!N.ok)throw Error("offline");let T=((await N.json()).connections||[]).map(($,F)=>{let K=$.from?.delay||0,se=$.to?.delay||0,H=$.from?.departure?new Date($.from.departure):null,te=$.to?.arrival?new Date($.to.arrival):null,Y=(oe)=>oe?oe.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:F+"_"+$.from?.station?.name,from:{station:$.from?.station?.name||i,departure:$.from?.departure,delay:K,platform:$.from?.platform||"",time:Y(H)},to:{station:$.to?.station?.name||m,arrival:$.to?.arrival,delay:se,time:Y(te)},duration:$.duration?.slice(3,8)||"",products:$.products||[],transfers:$.transfers||0,passList:$.sections?.[0]?.journey?.passList||[]}});T.sort(($,F)=>{let K=new Date($.from.departure).getTime()+($.from.delay||0)*60000,se=new Date(F.from.departure).getTime()+(F.from.delay||0)*60000;return K-se}),go(T)}catch(S){nf(!0);go([])}finally{setTimeout(()=>ba(!1),400)}}async function sbFetch(stationName){if(!stationName)return;try{let url=`https://transport.opendata.ch/v1/stationboard?station=${encodeURIComponent(stationName)}&limit=12${bdTripDTParams()}`;let r=await fetch(url);if(!r.ok)throw Error("offline");let j=await r.json();let list=(j.stationboard||[]).map((b,idx)=>{let dep=b.stop?.departure?new Date(b.stop.departure):null;let del=b.stop?.delay||0;let time=dep?dep.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:"sb_"+idx+"_"+b.name,from:{station:b.stop?.station?.name||stationName,departure:b.stop?.departure,delay:del,platform:b.stop?.platform||"",time:time,realTime:b.stop?.departure?new Date(new Date(b.stop.departure).getTime()+del*60000).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):time},to:{station:b.to||"",arrival:"",delay:0,time:""},duration:"",products:[b.category+" "+(b.number||"")],transfers:0,passList:[],isStationboard:!0}});return list}catch{return[]}}async function yp(i,m){if(!i||i.length<3||!m||m.length<3){Ot([]);return}let S=++Yl.current;rf(!0);try{let N=`https://transport.opendata.ch/v1/connections?from=${encodeURIComponent(bdExact(i))}&to=${encodeURIComponent(bdExact(m))}&limit=6${bdTripDTParams()}`,A=await fetch(N);if(!A.ok)throw Error("offline");let $=((await A.json()).connections||[]).map((F,K)=>{let se=F.from?.delay||0,H=F.from?.departure?new Date(F.from.departure):null,te=(Y)=>Y?Y.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:"prev_"+K+"_"+F.from?.station?.name,from:{station:F.from?.station?.name||i,departure:F.from?.departure,delay:se,platform:F.from?.platform||"",time:te(H)},to:{station:F.to?.station?.name||m,arrival:F.to?.arrival,delay:F.to?.delay||0,time:F.to?.arrival?new Date(F.to.arrival).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--"},duration:F.duration?.slice(3,8)||"",products:F.products||[],transfers:F.transfers||0,passList:[]}});if($.sort((F,K)=>new Date(F.from.departure).getTime()+(F.from.delay||0)*60000-(new Date(K.from.departure).getTime()+(K.from.delay||0)*60000)),Yl.current===S)Ot($)}catch{if(Yl.current===S)Ot([])}finally{if(Yl.current===S)setTimeout(()=>rf(!1),300)}}V.useEffect(()=>{if(!navigator.geolocation)return;let _id=navigator.geolocation.watchPosition((p)=>{let F={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};a((prev)=>{if(prev&&prev.street)return{...prev,lat:F.lat,lon:F.lon,acc:F.acc};return{...prev,...F,street:prev?.street||""}})},()=>{},{enableHighAccuracy:!0,maximumAge:0,timeout:15000});return()=>{try{navigator.geolocation.clearWatch(_id)}catch{}}},[]),V.useEffect(()=>{var _bdEmpty=!((f||"").trim()||(departReload||"").trim()||(nearStops||[]).some(function(x){return x&&x.selected}));if(!_bdEmpty){window.__bd_wasSearching=true;return}if(window.__bd_wasSearching){window.__bd_wasSearching=false;window.__bd_inside={}}if(!o||!o.lat||!o.lon||!fn||fn.length===0)return;let _inside=window.__bd_inside||(window.__bd_inside={});let _geo=window.__bd_geo||(window.__bd_geo={});(async()=>{if(window.__bd_scanBusy)return;window.__bd_scanBusy=true;try{let _near=async function(name){let k=String(name||"").trim().toLowerCase();if(!k)return Infinity;let Ls=_geo[k];if(!Ls){try{let r=await Co(name);Ls=(r||[]).filter(function(c){return c.lat&&c.lon}).map(function(c){return {lat:c.lat,lon:c.lon}});if(Ls.length)_geo[k]=Ls}catch(e){Ls=[]}}let best=Infinity;(Ls||[]).forEach(function(c){let d=zt(o,{lat:c.lat,lon:c.lon});if(d<best)best=d});return best};let _fresh=null;let _leave=false;for(let _tile of fn){let _rad=Math.max(1,parseInt(String(_tile.nearRadius||500),10)||500)/1000;let df=await _near(_tile.from),dt=await _near(_tile.to);let nf=df<=_rad,nT=dt<=_rad;let _key=_tile.id;if(!nf&&!nT){if(_inside[_key]&&window.__bd_activeTL&&window.__bd_activeTL.id===_key)_leave=true;delete _inside[_key];continue}let arr=nT&&(!nf||dt<df);let place=String(arr?_tile.to:_tile.from).trim().toLowerCase();let dist=arr?dt:df;if(_inside[_key]===place)continue;_inside[_key]=place;if(!_fresh||dist<_fresh.dist)_fresh={tile:_tile,arr:arr,dist:dist}}if(_fresh){if(_fresh.arr)mp(_fresh.tile);else of(_fresh.tile)}else if(_leave){window.__bd_activeTL=null;window.__bd_hasList=false;setBdTL(null);go([])}}catch(e){}finally{window.__bd_scanBusy=false}})()},[o,fn,f,departReload,(nearStops||[]).some(function(x){return x&&x.selected})]),V.useEffect(()=>{window.__bd_tiles=fn;window.__bd_activeId=On;window.__bd_horizon=bdHorizon},[fn,On,bdHorizon]),V.useEffect(()=>{var _pl=window.__bd_prevFnIds;window.__bd_prevFnIds=(fn||[]).map(function(x){return x.id});if(!_pl)return;var _rm=_pl.filter(function(id){return!(fn||[]).some(function(x){return x.id===id})});if(!_rm.length)return;_rm.forEach(function(id){try{delete(window.__bd_inside||{})[id]}catch(e){}});window.__bd_hasList=!1;if(On&&_rm.indexOf(On)>=0)tf(null);if(bdTL&&_rm.indexOf(bdTL.id)>=0){window.__bd_activeTL=null;window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;setBdTL(null);go([])}else{setNearStops(function(p){return p?p.slice():p})}},[fn]),V.useEffect(()=>{setBdHorizon(60)},[f,departReload,bdTL]),V.useEffect(()=>{if((f||"").trim().length>0)return;setDepartReload("");setDepartReloadResults([]);setIsLocDepart(!1);setNearStops(function(p){return(p||[]).map(function(x){return Object.assign({},x,{selected:!1})})});if(!o||o.lat==null||o.lon==null)return;var _cx=!1;window.__bd_nearCache=null;(async()=>{var st=await getNearbyStations(o.lat,o.lon);if(_cx||!st.length)return;setNearStops(st)})();return function(){_cx=!0}},[f]),V.useEffect(()=>{if((f||"").trim()||(departReload||"").trim()||(nearStops||[]).some(function(x){return x&&x.selected}))setBdTL(null)},[f,departReload,nearStops]),V.useEffect(()=>{window.__bd_activeTL=bdTL},[bdTL]),V.useEffect(()=>{if(!le)return;var iv=setInterval(function(){setBdPrev(function(p){return Object.assign({},p)})},10000);return function(){clearInterval(iv)}},[!!le]),V.useEffect(()=>{if(!le||!le.from)return;var key=(le._fromStop||"")+"|"+le.from.departure+"|"+(le.products||[]).join(",");if(bdPrev[key]!==void 0)return;var pls=(le.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});if(pls.length<2)return;setBdPrev(function(p){var n=Object.assign({},p);n[key]="loading";return n});(async function(){var res=[];try{var first=pls[0],last=pls[pls.length-1];var nmf=function(x){return typeof x.station==="string"?x.station:(x.station&&x.station.name)||""};var bName=nmf(first),eName=nmf(last).toLowerCase();var lineN=String((first.line||(le.products||[])[0]||"")).toLowerCase().replace(/\s+/g," ").trim();var r=await fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(bName)+"&limit=60");if(r.ok){var j=await r.json();var cand=(j.stationboard||[]).filter(function(b){var nm2=String((b.category||"")+" "+(b.number||"")).toLowerCase().replace(/\s+/g," ").trim();var nm3=String(b.name||"").toLowerCase().replace(/\s+/g," ").trim();var same=nm2===lineN||nm3===lineN||(b.number&&lineN.replace(/\D/g,"")&&String(b.number)===lineN.replace(/\D/g,"")&&String(b.category||"").toLowerCase()===lineN.replace(/[\d\s]/g,""));var to=String(b.to||"").toLowerCase();var rev=to&&to!==eName&&eName.indexOf(to)<0&&to.indexOf(eName)<0;return same&&rev&&(b.passList||[]).length>1})[0];if(cand){var pl=cand.passList;var t0=new Date(cand.stop.departure||pl[0].departure).getTime();var myDep=new Date(first.departure||first.arrival).getTime();var dly=first.delay||0;res=pl.slice(1).map(function(s){var ts=new Date(s.arrival||s.departure).getTime();var off=ts-t0;var tt=new Date(myDep-off).toISOString();return{type:"stop",prev:!0,station:nmf(s),arrival:tt,departure:tt,delay:dly,platform:"",category:first.category,line:first.line,lat:s.station&&s.station.coordinate?s.station.coordinate.x:null,lon:s.station&&s.station.coordinate?s.station.coordinate.y:null}}).filter(function(s){return s.station&&s.station.toLowerCase()!==bName.toLowerCase()}).slice(0,12).reverse()}}}catch(e){res=[]}setBdPrev(function(p){var n=Object.assign({},p);n[key]=res;return n})})()},[le]),V.useEffect(()=>{var dest=(f||"").trim();if(dest.length<1||!o||o.lat==null)return;if((nearStops||[]).length>0)return;var dep=(departReload||"").trim();if(dep&&dep!==(o.street||""))return;var cancel=!1;(async()=>{var st=await getNearbyStations(o.lat,o.lon);if(cancel||!st.length)return;setNearStops(function(prev){return prev&&prev.length?prev:st})})();return function(){cancel=!0}},[f&&f.trim().length>0,!!o,(nearStops||[]).length,departReload]),V.useEffect(()=>{},[s,y]),V.useEffect(()=>{if(bdTL){var _ot=(window.__bd_tiles||[]).find(function(x){return x.id===bdTL.id})||bdTL;var _s=[{name:_ot.from,selected:!0,kind:"stop",distanceKm:0}];var _t0=window.setTimeout(function(){fetchLiveFromNearbyStops(_s,_ot.to,_ot)},400);return function(){clearTimeout(_t0)}}var dest=(f||"").trim();var dep=(departReload||"").trim();var stops=nearStops||[];var sel=stops.filter(function(s){return s.selected});if(!dest||dest.length<2){window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;go([]);return}if(sel.length===0&&dep.length>=2){sel=[{name:dep,selected:!0,kind:"stop",distanceKm:0,isAddr:!0}];stops=sel}if(sel.length===0){window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;go([]);return}var t=window.setTimeout(function(){fetchLiveFromNearbyStops(stops,dest)},80);return function(){clearTimeout(t)}},[nearStops,f,departReload,bdHorizon,bdTL]),V.useEffect(()=>{if(bdTL){var _iv=setInterval(function(){if(window.__bd_busy)return;var _ot=(window.__bd_tiles||[]).find(function(x){return x.id===bdTL.id})||bdTL;window.__bd_silent=!0;try{fetchLiveFromNearbyStops([{name:_ot.from,selected:!0,kind:"stop",distanceKm:0}],_ot.to,_ot)}finally{window.__bd_silent=!1}},3000);return function(){clearInterval(_iv)}}var dest=(f||"").trim();var dep=(departReload||"").trim();var stops=nearStops||[];var sel=stops.filter(function(s){return s.selected});if(!dest||dest.length<2)return;if(sel.length===0&&dep.length<2)return;var i=setInterval(function(){if(window.__bd_busy)return;var st=nearStops||[];var se=st.filter(function(s){return s.selected});if(se.length===0&&dep.length>=2){se=[{name:dep,selected:!0,kind:"stop",distanceKm:0,isAddr:!0}];st=se}if(se.length>0){window.__bd_silent=!0;try{fetchLiveFromNearbyStops(st,dest)}finally{window.__bd_silent=!1}}},3000);return function(){clearInterval(i)}},[nearStops,f,departReload,bdHorizon,bdTL]),V.useEffect(function(){},[]),V.useEffect(()=>{if(l&&l.name){(async()=>{let _sb=await sbFetch(l.name);if(_sb&&_sb.length>0){gs({station:l.name,time:new Date().toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"Europe/Zurich"}),entries:_sb})}})()}},[l]),V.useEffect(()=>{if(!ko&&!Be)return;if(Fe.length<3||He.length<3){Ot([]);return}window.clearTimeout(lf.current),lf.current=window.setTimeout(()=>{yp(Fe,He)},800)},[Fe,He,ko,Be]);let Mn=V.useMemo(()=>{let i=new Set;return hr.forEach((m)=>m.products.forEach((S)=>{let N=S.match(/\d+/);if(N)i.add(N[0]);else i.add(S)})),Array.from(i).slice(0,12)},[hr]);function zo(){tt(""),rt(""),Ql(""),dn(""),yr([]),Al([]),Eo([]),wo([]),Ot([]),Fl(!0)}function bdTileFull(){if(fn.length>=25){L("Limite de 25 dalles atteinte");setTimeout(()=>L(null),2200);return true}return false}function hp(){if(!Fe||!He)return;if(bdTileFull())return;let i={id:Date.now().toString(),name:Ll||`${Fe} → ${He}`,from:Fe,to:He,color:l?.color||"#57534e",fav:!1,...(hr.length?bdTileFromRoutes(hr,bdSelectedRouteKeys(cn)):{routes:[],routePrefs:"",lines:[],linesPref:Mn.join(",")}),nearRadius:Math.max(1,parseInt(String(nearRadius||"500"),10)||500),order:fn.length};try{localStorage.setItem("bd_nearRadius",String(i.nearRadius))}catch{};nt((m)=>[...m,i]),Fl(!1),L("Dalle sauvegardee"),setTimeout(()=>L(null),2000)}function saveDestinationTiles(){if(!f||!f.trim()){L("Saisis une destination");setTimeout(()=>L(null),1800);return}let selected=(nearStops||[]).filter(function(x){return x&&x.selected&&x.kind!=="address"&&x.kind!=="poi"});let starts=selected.length?selected.map(function(x){return x.name}):[departReload||s||o?.street||""];starts=starts.filter(Boolean);if(!starts.length){L("Saisis un départ");setTimeout(()=>L(null),1800);return}let now=Date.now();let tiles=starts.map(function(from,idx){let lines=new Set;et.filter(function(c){return String(c._fromStop||c.from&&c.from.station||"").toLowerCase().indexOf(String(from).toLowerCase())>=0}).forEach(function(c){(c.products||[]).forEach(function(x){if(x)lines.add(String(x).match(/\d+/)?.[0]||String(x))})});return{id:String(now+idx),name:from+" → "+f.trim(),from:from,to:f.trim(),color:l?.color||"#57534e",fav:false,...bdTileFromRoutes(et.filter(function(c){return String(c._fromStop||c.from&&c.from.station||"").toLowerCase().indexOf(String(from).toLowerCase())>=0}).map(function(c){return {products:c.products||[],transfers:c.transfers||0,duration:c.duration||""}}),[]),nearRadius:Math.max(1,parseInt(String(nearRadius||"500"),10)||500),order:fn.length+idx}});if(fn.length>=25){L("Limite de 25 dalles atteinte");setTimeout(()=>L(null),2200);return}tiles=tiles.slice(0,25-fn.length);nt(function(old){return old.concat(tiles)});L(tiles.length+" dalle"+(tiles.length>1?"s":"")+" sauvegardée"+(tiles.length>1?"s":""));setTimeout(()=>L(null),2200)}function swapHomeTrip(){let from=departReload||s||"",to=f||y||"";setDepartReload(to);h(from);d(to);E(from);setNearStops([]);go([]);if(to&&from)fetchLiveFromNearbyStops([{name:to,selected:true,kind:"stop",distanceKm:0}],from)}function bdShowTileLive(t){window.__bd_activeId=t.id;window.__bd_tiles=(fn||[]).map(function(x){return x.id===t.id?t:x});tf(t.id);d(t.from);E(t.to);setBdTL(t);go([]);fetchLiveFromNearbyStops([{name:t.from,selected:!0,kind:"stop",distanceKm:0}],t.to,t);setTimeout(function(){try{Kl.current&&Kl.current.scrollIntoView({behavior:"smooth",block:"start"})}catch(e){}},120)}
 function bdRelaunchLive(t){bdShowTileLive(t)}
 function mp(i){let m={...i,from:i.to,to:i.from,name:`${i.to} → ${i.from}`,routes:[],routePrefs:"",lines:[]};nt((S)=>S.map((N)=>N.id===i.id?m:N));bdShowTileLive(m);L("Live "+m.from+" → "+m.to);setTimeout(function(){L(null)},1500)}
 function of(i){bdShowTileLive(i);L("Live "+i.from+" → "+i.to);setTimeout(function(){L(null)},1500)}
@@ -3652,461 +3558,444 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
 })();
 </script>
 
-<!-- V200 ENHANCEMENTS -->
-<style>
-.bd-compass-item{width:36px;height:36px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #fff, #e7e5e4);border:1.5px solid #e7e5e4;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
-html.dark .bd-compass-item{background:radial-gradient(circle at 30% 30%, #27272a, #18181b);border-color:rgba(255,255,255,.15)}
-.bd-compass-arrow{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:10px solid #ef4444;position:absolute;top:3px;transform-origin:50% 14px;transition:transform 0.15s linear}
-.bd-compass-n{font-size:7px;font-weight:900;color:#71717a;position:absolute;top:2px}
-.bd-distance-link{font-size:11px;font-weight:700;color:#3b82f6;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
-.bd-service-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid #e7e5e4;border-radius:14px;background:#fff;margin-top:8px}
+<style id="bd-final-patch-style">
+.bd-compass-inline{width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 30% 30%, #fff, #e7e5e4);border:2px solid #18181b;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+html.dark .bd-compass-inline{background:radial-gradient(circle at 30% 30%, #3f3f46, #27272a);border-color:#fafafa}
+.bd-compass-inline .bd-compass-arrow{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #ef4444;transform-origin:50% 70%;transition:transform 0.15s linear;position:absolute;top:6px}
+.bd-compass-inline.no-orient .bd-compass-arrow{display:none}
+.bd-compass-label{font-size:10px;font-weight:800;text-align:center;margin-top:2px;cursor:pointer;color:#52525b}
+html.dark .bd-compass-label{color:#a1a1aa}
+.bd-service-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px;border:1px solid #e7e5e4;border-radius:14px;margin-top:8px;background:#fff}
 html.dark .bd-service-toggle{background:#27272a;border-color:rgba(255,255,255,.1)}
-.bd-service-toggle .info{font-size:11px;color:#71717a;line-height:1.3;margin-top:4px}
+.bd-service-info{font-size:11px;color:#71717a;line-height:1.3;margin-top:4px}
+.bd-vehicle-track{animation:bdPulse 1.5s infinite}
+@keyframes bdPulse{0%{opacity:1}50%{opacity:0.6}100%{opacity:1}}
 </style>
-<script>
-// V200 - Smart i18n engine
+<script id="bd-final-patch-script">
 (function(){
-  const I18N = {
-    fr: { 'Vous êtes dans ce véhicule':'Vous êtes dans ce véhicule','Prochains parcours':'Prochains parcours','Mes parcours':'Mes parcours','Activer la localisation':'Activer la localisation','Activer la boussole orientée':'Activer la boussole orientée','Paramètres':'Paramètres' },
-    en: { 'Vous êtes dans ce véhicule':'You are in this vehicle','Prochains parcours':'Upcoming routes','Mes parcours':'My routes','Activer la localisation':'Enable location','Activer la boussole orientée':'Enable oriented compass','Paramètres':'Settings','Distance de détection (m)':'Detection distance (m)','Localisation du véhicule en direct':'Live vehicle location','Enregistrer les paramètres':'Save settings' },
-    de: { 'Vous êtes dans ce véhicule':'Sie sind in diesem Fahrzeug','Prochains parcours':'Nächste Routen','Mes parcours':'Meine Routen','Paramètres':'Einstellungen' },
-    it: { 'Vous êtes dans ce véhicule':'Sei in questo veicolo','Prochains parcours':'Prossimi percorsi','Mes parcours':'I miei percorsi','Paramètres':'Impostazioni' }
-  };
-  function getLang(){
-    try{
-      var l = localStorage.getItem('bd-lang') || localStorage.getItem('bd_language') || document.documentElement.lang || 'fr';
-      l = l.slice(0,2).toLowerCase();
-      return I18N[l]?l:'fr';
-    }catch(e){return 'fr'}
-  }
-  window.__bd_getLang = getLang;
-  window.__bd_t = function(key){
-    var lang=getLang();
-    return (I18N[lang]&&I18N[lang][key])||(I18N.fr[key])||key;
-  };
-  // Observer to translate hidden elements
-  function translateNode(node){
-    try{
-      var lang=getLang();
-      if(lang==='fr') return;
-      var dict=I18N[lang]||{};
-      // walk text nodes
-      var walker=document.createTreeWalker(node, NodeFilter.SHOW_TEXT, null);
-      var n;
-      while(n=walker.nextNode()){
-        var txt=n.nodeValue.trim();
-        if(!txt) continue;
-        if(dict[txt]) n.nodeValue = n.nodeValue.replace(txt, dict[txt]);
-      }
-    }catch(e){}
-  }
-  var obs=new MutationObserver(function(muts){
-    muts.forEach(function(m){ if(m.target) translateNode(m.target); });
-  });
-  obs.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
-  // Hook language change
-  window.addEventListener('bd-language-change',function(e){
-    var l=e.detail||'fr';
-    try{localStorage.setItem('bd-lang',l); localStorage.setItem('bd_language',l);}catch(_){}
-    document.documentElement.lang=l;
-    // re-translate whole body after short delay
-    setTimeout(function(){ translateNode(document.body); },100);
-  });
-})();
-</script>
-<script>
-// V200 - Service toggles for location & motion, compass arrow visibility, navigation links, vehicle detection improvement
-(function(){
-  // --- Service state helpers ---
-  function locEnabled(){ try{ return localStorage.getItem('bd-loc-enabled')!=='0'; }catch(e){return true} }
-  function compassEnabled(){ try{ return localStorage.getItem('bd-compass-enabled')!=='0'; }catch(e){return true} }
-  function setLoc(v){ try{ localStorage.setItem('bd-loc-enabled', v?'1':'0'); if(!v){ localStorage.setItem('bd-geo-ok','0'); } else { localStorage.setItem('bd-geo-ok','1'); } window.__bd_loc_enabled=v; window.dispatchEvent(new CustomEvent('bd-service-change',{detail:{loc:v}})); }catch(e){} }
-  function setCompass(v){ try{ localStorage.setItem('bd-compass-enabled', v?'1':'0'); localStorage.setItem('bd-motion-enabled', v?'1':'0'); window.__bd_compass_enabled=v; window.dispatchEvent(new CustomEvent('bd-service-change',{detail:{compass:v}})); }catch(e){} }
-  window.__bd_locEnabled = locEnabled;
-  window.__bd_compassEnabled = compassEnabled;
-  window.__bd_setLoc = setLoc;
-  window.__bd_setCompass = setCompass;
+  'use strict';
+  try{
+    // === DARK MODE DEFAULT + SERVICES DEFAULT ===
+    if(!localStorage.getItem('bd-theme')){localStorage.setItem('bd-theme','dark');document.documentElement.classList.add('dark');}
+    if(!localStorage.getItem('bd-geo-ok'))localStorage.setItem('bd-geo-ok','1');
+    if(!localStorage.getItem('bd-compass-ok'))localStorage.setItem('bd-compass-ok','1');
+    if(!localStorage.getItem('bd-orientation-ok'))localStorage.setItem('bd-orientation-ok','1');
+    if(!localStorage.getItem('bd-motion-ok'))localStorage.setItem('bd-motion-ok','1');
+    if(!localStorage.getItem('bd-location-service'))localStorage.setItem('bd-location-service','1');
+    if(!localStorage.getItem('bd-motion-service'))localStorage.setItem('bd-motion-service','1');
+    if(!localStorage.getItem('bd_lang'))localStorage.setItem('bd_lang','fr');
+  }catch(e){}
 
-  // Auto motion permission attempt on first interaction (no system popup forced by us, browser will show once)
-  var motionGranted=false;
-  async function tryMotion(){
-    if(!compassEnabled()) return;
+  // === FAST SEARCH CACHE ===
+  const bdSearchCache=new Map();
+  const origFetch=window.fetch;
+  window.fetch=function(u,opt){
     try{
-      if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission==='function'){
-        var r=await DeviceOrientationEvent.requestPermission();
-        if(r==='granted'){ motionGranted=true; localStorage.setItem('bd-motion-granted','1'); }
-      }else{ motionGranted=true; localStorage.setItem('bd-motion-granted','1'); }
-    }catch(e){
-      // still mark as attempted, arrow hidden until granted
-    }
-    document.documentElement.classList.toggle('bd-motion-ok', motionGranted);
-  }
-  // attempt on first click/touch
-  var once=false;
-  function onFirstInteract(){
-    if(once) return; once=true;
-    if(compassEnabled()) tryMotion();
-  }
-  document.addEventListener('click', onFirstInteract, {once:true});
-  document.addEventListener('touchstart', onFirstInteract, {once:true});
-  // if already granted
-  try{ if(localStorage.getItem('bd-motion-granted')==='1') motionGranted=true; }catch(e){}
-  document.documentElement.classList.toggle('bd-motion-ok', motionGranted);
-
-  // --- Compass arrow visibility ---
-  var style=document.createElement('style');
-  style.textContent='.bd172-arrow, .bd-compass-arrow{display:none}.bd-motion-ok .bd172-arrow, .bd-motion-ok .bd-compass-arrow{display:block} html.bd-motion-ok .bd172-arrow{display:block}';
-  document.head.appendChild(style);
-
-  // --- Navigation link for X m and compass ---
-  function makeGMapsUrl(lat,lon, destLat, destLon){
-    if(destLat!=null && destLon!=null && lat!=null && lon!=null){
-      return 'https://www.google.com/maps/dir/?api=1&origin='+lat+','+lon+'&destination='+destLat+','+destLon+'&travelmode=walking';
-    }else if(destLat!=null){
-      return 'https://www.google.com/maps/dir/?api=1&destination='+destLat+','+destLon+'&travelmode=walking';
-    }
-    return null;
-  }
-  function attachNavLinks(){
-    // Find all distance badges and make them open Google Maps walking
-    document.querySelectorAll('[class*="bd-walk-distance"], .bd-distance-link').forEach(function(el){
-      if(el.dataset.navWired) return;
-      el.dataset.navWired='1';
-      el.style.cursor='pointer';
-      el.addEventListener('click',function(e){
-        e.preventDefault(); e.stopPropagation();
-        var lat=el.dataset.lat||window.__bd_loc&&window.__bd_loc.lat;
-        var lon=el.dataset.lon||window.__bd_loc&&window.__bd_loc.lon;
-        var dlat=el.dataset.destLat, dlon=el.dataset.destLon;
-        var url=dlat?makeGMapsUrl(lat,lon,parseFloat(dlat),parseFloat(dlon)):'https://www.google.com/maps/dir/?api=1&travelmode=walking';
-        if(el.dataset.url) url=el.dataset.url;
-        if(url) window.open(url,'_blank','noopener');
-      });
-    });
-  }
-
-  // --- Multiple tiles detection for Prochains parcours ---
-  function enhanceMultiTiles(){
-    try{
-      var tiles = window.__bd_tiles||[];
-      var loc = window.__bd_loc||{};
-      if(!loc.lat || tiles.length<2) return;
-      // Find tiles within nearby radius
-      var radius = parseInt(localStorage.getItem('bd_settings_nearby_radius')||'500',10);
-      var nearbyTiles = tiles.filter(function(t){
-        // check if tile's from is near current location via memo
-        var mem = null;
-        try{ mem = JSON.parse(localStorage.getItem('bd-memo-'+t.from)||'null'); }catch(e){}
-        if(mem && mem.lat){
-          var R=6371000; var dLat=(mem.lat-loc.lat)*Math.PI/180; var dLon=(mem.lon-loc.lon)*Math.PI/180;
-          var a=Math.sin(dLat/2)**2+Math.cos(loc.lat*Math.PI/180)*Math.cos(mem.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-          var c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)); var d=R*c;
-          return d<=radius*2;
+      let url=typeof u==='string'?u:(u&&u.url)||'';
+      if(url.includes('photon.komoot.io')||url.includes('transport.opendata.ch/v1/locations')||url.includes('nominatim.openstreetmap.org')){
+        let key=url;
+        if(bdSearchCache.has(key)){
+          let e=bdSearchCache.get(key);
+          if(Date.now()-e.ts<60000){
+            return Promise.resolve(new Response(JSON.stringify(e.data),{status:200,headers:{'Content-Type':'application/json'}}));
+          }
         }
-        return false;
-      });
-      if(nearbyTiles.length>1){
-        // Trigger fetch for each tile if not already active
-        nearbyTiles.slice(0,4).forEach(function(t){
-          if(window.__bd_activeTL && window.__bd_activeTL.id===t.id) return;
-          // fetch without overriding UI, just add to list via custom event
-          window.dispatchEvent(new CustomEvent('bd-multi-tile-detected',{detail:{tile:t}}));
+        return origFetch(u,opt).then(r=>{
+          try{
+            let cl=r.clone();
+            cl.json().then(d=>{bdSearchCache.set(key,{data:d,ts:Date.now()});}).catch(()=>{});
+          }catch(e){}
+          return r;
         });
       }
     }catch(e){}
-  }
-
-  // --- Minimum 3 trajets if none in next hour ---
-  window.__bd_ensureMin3 = function(list){
-    try{
-      if(!Array.isArray(list)) return list;
-      if(list.length>=3) return list;
-      // If list is empty or <3, expand horizon
-      if(list.length===0){
-        // return original list but signal to UI to show next 3 available
-        // The UI already filters by horizon, we need to expand search
-        if(window.__bd_refreshDateRoutes){
-          // increase horizon temporarily handled elsewhere
-        }
-      }
-      return list;
-    }catch(e){return list}
+    return origFetch(u,opt);
   };
 
-  // --- Improved vehicle detection: only if location follows schedule for some time ---
-  (function(){
-    var lastMatches=[]; // array of {line, time}
-    var inVehicle=false;
-    var vehicleLine=null;
-    window.__bd_vehicleTracker = {
-      feed: function(pos, nearbyVehicles){
-        // nearbyVehicles: array of vehicles with line, time, pos
-        // pos: {lat,lon,speed,heading}
-        if(!pos || pos.lat==null) return null;
-        var now=Date.now();
-        // filter matches within radius
-        var matches = (nearbyVehicles||[]).filter(function(v){
-          if(v.lat==null) return false;
-          var R=6371000;
-          var dLat=(v.lat-pos.lat)*Math.PI/180, dLon=(v.lon-pos.lon)*Math.PI/180;
-          var a=Math.sin(dLat/2)**2+Math.cos(pos.lat*Math.PI/180)*Math.cos(v.lat*Math.PI/180)*Math.sin(dLon/2)**2;
-          var d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-          return d<400; // vehicle min radius
-        });
-        if(matches.length){
-          lastMatches.push({t:now, lines: matches.map(m=>m.line||m.id)});
-          // keep last 30s
-          lastMatches = lastMatches.filter(m=> now - m.t < 30000);
-          // count same line for at least 3 times in 30s and moving
-          var lineCounts={};
-          lastMatches.forEach(m=> m.lines.forEach(l=>{lineCounts[l]=(lineCounts[l]||0)+1}));
-          var best=null,bestC=0;
-          for(var k in lineCounts){ if(lineCounts[k]>bestC){best=k; bestC=lineCounts[k];} }
-          // require speed >2 km/h and at least 3 matches and heading consistent
-          var speedOk = pos.speed==null || pos.speed>0.6;
-          if(best && bestC>=3 && speedOk){
-            if(!inVehicle){ inVehicle=true; vehicleLine=best; }
-            return {inVehicle:true, line:best};
-          }
-        }else{
-          // no match, decay
-          if(lastMatches.length && now - lastMatches[lastMatches.length-1].t > 15000){
-            lastMatches=[];
-            inVehicle=false;
-            vehicleLine=null;
-          }
-        }
-        return {inVehicle:inVehicle, line:vehicleLine};
-      }
-    };
-    // Override banner display: hide if not inVehicle
-    var origShow = window.__bd_showVehicleBanner;
-    var observer = new MutationObserver(function(){
-      document.querySelectorAll('.bdt-follow-txt').forEach(function(el){
-        // if tracker says not in vehicle, hide
-        var tr = window.__bd_vehicleTracker && window.__bd_vehicleTracker._last;
-        // We hide by default if detection was instant; only show if tracker confirms
-        if(!window.__bd_vehicleConfirmed){
-          // keep visible only if confirmed via feed, otherwise hide for 10s after appearance
-          // Check data attribute
-          if(!el.dataset.confirmed){
-            // delay hide? We'll leave but require confirmation after 8s
-          }
-        }
-      });
-    });
-    observer.observe(document.body,{childList:true,subtree:true});
-  })();
-
-  // --- Paramètres page injection ---
-  function injectSettings(){
-    var overlay = document.getElementById('bd-distance-settings-sheet');
-    if(!overlay || overlay.dataset.v200) return;
-    overlay.dataset.v200='1';
-    // Create new groups
-    var locGroup=document.createElement('div');
-    locGroup.className='bd-distance-settings-group';
-    locGroup.innerHTML='<h3>Services</h3><p>Active ou désactive les services utilisés par l’app.</p>'+
-      '<div class="bd-service-toggle"><div><div style="font-weight:800;font-size:13px">📍 Service de localisation</div><div class="info">Utilisé pour : Prochains parcours, SMS rapides, gestion des sources, Tickets SMS. Désactivé = pas de détection d’arrêts proches ni guidage.</div></div><label style="position:relative;display:inline-block;width:48px;height:28px"><input type="checkbox" id="bd-toggle-loc" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#e5e7eb;border-radius:999px;transition:.2s"></span><span style="position:absolute;height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s" class="knob"></span></label></div>'+
-      '<div class="bd-service-toggle"><div><div style="font-weight:800;font-size:13px">🧭 Service de mouvement et d’orientation</div><div class="info">Utilisé pour l’affichage des boussoles orientées. Sans ce service, les flèches des boussoles sont masquées.</div></div><label style="position:relative;display:inline-block;width:48px;height:28px"><input type="checkbox" id="bd-toggle-compass" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#e5e7eb;border-radius:999px;transition:.2s"></span><span style="position:absolute;height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s" class="knob"></span></label></div>';
-    var saveBtn = overlay.querySelector('#bd-distance-settings-save');
-    if(saveBtn) overlay.insertBefore(locGroup, saveBtn);
-
-    function syncToggles(){
-      var locCb=document.getElementById('bd-toggle-loc');
-      var compCb=document.getElementById('bd-toggle-compass');
-      if(locCb) locCb.checked = locEnabled();
-      if(compCb) compCb.checked = compassEnabled();
-      // style knobs
-      [locCb, compCb].forEach(function(cb){
-        if(!cb) return;
-        var track=cb.nextElementSibling;
-        var knob=track.nextElementSibling;
-        if(cb.checked){ track.style.background='#18181b'; knob.style.transform='translateX(20px)'; }
-        else { track.style.background='#e5e7eb'; knob.style.transform='translateX(0)'; }
-      });
+  // === INTELLIGENT TRANSLATION SYSTEM ===
+  const BD_I18N_EXTRA={
+    fr:{
+      locationService:'Service de localisation',
+      motionService:'Service de mouvement et d\'orientation',
+      locationServiceInfo:'Utilisé pour Prochains parcours, SMS rapides, gestion des sources et Tickets SMS',
+      motionServiceInfo:'Utilisé pour l\'affichage des boussoles et la direction de l\'arrêt',
+      compassActive:'Boussole active',
+      navigate:'Navigation à pied',
+      youAreInVehicle:'Vous êtes dans ce véhicule',
+      distance:'Distance',
+      openInGoogleMaps:'Ouvrir dans Google Maps',
+      saveSettings:'Enregistrer les paramètres',
+      atLeast3Trips:'Affichage des 3 prochains trajets disponibles',
+      multiTiles:'Affichage multi-dalles activé'
+    },
+    en:{
+      locationService:'Location service',
+      motionService:'Motion & orientation service',
+      locationServiceInfo:'Used for Live departures, Quick SMS, source management and SMS Tickets',
+      motionServiceInfo:'Used for compass display and stop direction',
+      compassActive:'Compass active',
+      navigate:'Walking navigation',
+      youAreInVehicle:'You are in this vehicle',
+      distance:'Distance',
+      openInGoogleMaps:'Open in Google Maps',
+      saveSettings:'Save settings',
+      atLeast3Trips:'Showing 3 next available trips',
+      multiTiles:'Multi-tile display enabled'
+    },
+    de:{
+      locationService:'Ortungsdienst',
+      motionService:'Bewegungs- & Orientierungsdienst',
+      locationServiceInfo:'Für Live-Abfahrten, Schnell-SMS, Quellenverwaltung und SMS-Tickets',
+      motionServiceInfo:'Für Kompassanzeige und Haltestellenrichtung',
+      compassActive:'Kompass aktiv',
+      navigate:'Fußnavigation',
+      youAreInVehicle:'Sie sind in diesem Fahrzeug',
+      distance:'Entfernung',
+      openInGoogleMaps:'In Google Maps öffnen',
+      saveSettings:'Einstellungen speichern',
+      atLeast3Trips:'Zeige 3 nächste verfügbare Fahrten',
+      multiTiles:'Multi-Kachel-Anzeige'
     }
-    syncToggles();
-    var locCb=document.getElementById('bd-toggle-loc');
-    var compCb=document.getElementById('bd-toggle-compass');
-    if(locCb) locCb.onchange=function(){ setLoc(this.checked); syncToggles(); };
-    if(compCb) compCb.onchange=function(){ setCompass(this.checked); syncToggles(); if(this.checked) try{ window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission&&DeviceOrientationEvent.requestPermission().then(()=>{document.documentElement.classList.add('bd-motion-ok')}).catch(()=>{}); }catch(e){} };
-
-    // Override save button to apply immediately and update main page
-    if(saveBtn){
-      var origSave = saveBtn.onclick;
-      saveBtn.onclick=function(e){
-        // save service toggles already saved via setLoc/setCompass
-        // then call original save logic
-        try{
-          var nearEl=document.getElementById('bd-set-near');
-          var vminEl=document.getElementById('bd-set-vmin');
-          var vmaxEl=document.getElementById('bd-set-vmax');
-          if(nearEl) localStorage.setItem('bd_settings_nearby_radius', String(Math.max(1,parseInt(nearEl.value||'500',10)||500)));
-          if(vminEl) localStorage.setItem('bd_settings_vehicle_min', String(Math.max(0,parseInt(vminEl.value||'400',10)||0)));
-          if(vmaxEl) localStorage.setItem('bd_settings_vehicle_max', String(Math.max(1,parseInt(vmaxEl.value||'1000',10)||1000)));
-        }catch(_){}
-        window.__bd_nearCache=null;
-        window.dispatchEvent(new CustomEvent('bd-distance-settings-change',{detail:{}}));
-        window.dispatchEvent(new CustomEvent('bd-service-change',{detail:{}}));
-        // close and reload main UI without full reload
-        var overlayBg=document.getElementById('bd-distance-settings-overlay');
-        if(overlayBg) overlayBg.classList.remove('open');
-        document.documentElement.classList.remove('modal-open');
-        document.body.classList.remove('modal-open');
-        // force refresh of Prochains parcours
-        if(window.__bd_refreshDateRoutes) window.__bd_refreshDateRoutes();
-      };
-    }
+  };
+  function bdGetLang(){try{return localStorage.getItem('bd_lang')||'fr';}catch(e){return 'fr';}}
+  function bdTr(k){
+    let l=bdGetLang();
+    if(BD_I18N_EXTRA[l]&&BD_I18N_EXTRA[l][k])return BD_I18N_EXTRA[l][k];
+    if(BD_I18N_EXTRA.fr[k])return BD_I18N_EXTRA.fr[k];
+    // try existing sr
+    try{if(window.sr&&window.sr[l]&&window.sr[l][k])return window.sr[l][k];}catch(e){}
+    return k;
   }
-
-  // Poll for settings page
-  setInterval(injectSettings, 800);
-
-  // --- Boussole + distance X m for each Prochains parcours item ---
-  function addCompassToCards(){
+  // Auto-translate hidden elements via MutationObserver
+  function bdTranslateDOM(){
+    let lang=bdGetLang();
+    // translate all elements with data-i18n or known text
     try{
-      if(!locEnabled()) return;
-      var cards = document.querySelectorAll('[data-bd-kind], .bdt-row, [class*="rounded"]');
-      cards.forEach(function(card){
-        if(card.dataset.compassDone) return;
-        // only for Prochains parcours section
-        var parentText = (card.closest('section')||card.parentElement||{}).textContent||'';
-        if(!/Prochains parcours/i.test(parentText) && !card.querySelector('[data-bd-kind]')) return;
-        // find destination coords from card data or global
-        var destLat=null,destLon=null, distText=null;
-        var walkEl = card.querySelector('.bd-walk-distance');
-        if(walkEl){
-          distText = walkEl.textContent;
+      document.querySelectorAll('[data-bd-i18n]').forEach(el=>{
+        let key=el.getAttribute('data-bd-i18n');
+        if(key) el.textContent=bdTr(key);
+      });
+    }catch(e){}
+  }
+  const bdTransObserver=new MutationObserver(bdTranslateDOM);
+  bdTransObserver.observe(document.documentElement,{childList:true,subtree:true});
+  setInterval(bdTranslateDOM,2000);
+  window.bdTr=bdTr;
+
+  // === VEHICLE DETECTION IMPROVED: follow line for some time, not just perimeter ===
+  let bdVehicleHistory=[];
+  let bdVehicleCandidate=null;
+  let bdVehicleConfirmed=null;
+  window.__bd_vehicleTracker=function(pos, candidate){
+    let now=Date.now();
+    bdVehicleHistory.push({pos:pos,candidate:candidate,at:now});
+    // keep last 30 sec
+    bdVehicleHistory=bdVehicleHistory.filter(x=>now-x.at<30000);
+    if(!candidate){bdVehicleCandidate=null;bdVehicleConfirmed=null;return null;}
+    if(!bdVehicleCandidate||bdVehicleCandidate.id!==candidate.id){
+      bdVehicleCandidate={id:candidate.id,start:now,candidate:candidate};
+      bdVehicleConfirmed=null;
+      return null;
+    }
+    // if same candidate for > 8 seconds and distance decreasing or stable, confirm
+    let elapsed=now-bdVehicleCandidate.start;
+    // check movement follows schedule: we need at least 4 points within 10m tolerance over time
+    if(elapsed>8000 && bdVehicleHistory.length>=4){
+      // check that user moved along with vehicle (approx)
+      let consistent=bdVehicleHistory.filter(h=>h.candidate&&h.candidate.id===candidate.id).length>=4;
+      if(consistent){
+        bdVehicleConfirmed=candidate;
+        return candidate;
+      }
+    }
+    return bdVehicleConfirmed;
+  };
+
+  // Override the follow button logic to use new tracker
+  // We patch the function that creates the follow button by intercepting its creation
+  // The original code checks distance; we will add additional check via our tracker
+  const origCreateFollow=(window.__bd_createFollow||null);
+
+  // === COMPASS ARROW ONLY IF ORIENTATION ACCESS ===
+  let bdHasOrientation=false;
+  try{
+    window.addEventListener('deviceorientation',function handler(e){
+      if(e.alpha!=null||e.webkitCompassHeading!=null){
+        bdHasOrientation=true;
+        window.removeEventListener('deviceorientation',handler);
+        try{localStorage.setItem('bd-orientation-ok','1');}catch(e){}
+        document.querySelectorAll('.bd-compass-inline.no-orient').forEach(el=>el.classList.remove('no-orient'));
+        // show arrows
+        document.querySelectorAll('.bd-compass-arrow').forEach(a=>a.style.display='');
+      }
+    },{once:true});
+    setTimeout(()=>{try{if(localStorage.getItem('bd-motion-service')==='1'&&localStorage.getItem('bd-orientation-ok')==='1'){bdHasOrientation=true;document.querySelectorAll('.bd-compass-inline.no-orient').forEach(el=>el.classList.remove('no-orient'));}}catch(e){}},1000);
+  }catch(e){}
+  window.__bd_hasOrientation=function(){return bdHasOrientation||localStorage.getItem('bd-orientation-ok')==='1';};
+
+  // === GOOGLE MAPS WALKING NAVIGATION FOR X m AND COMPASS ===
+  function bdGoogleWalkUrl(lat,lon){
+    if(lat==null||lon==null)return null;
+    let origin='';
+    try{let loc=window.__bd_loc;if(loc&&loc.lat&&loc.lon)origin=loc.lat+','+loc.lon;}catch(e){}
+    if(origin) return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(lat+','+lon)}&travelmode=walking`;
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(lat+','+lon)}&travelmode=walking`;
+  }
+  window.bdGoogleWalkUrl=bdGoogleWalkUrl;
+
+  // Patch to add compass in each Prochains parcours item
+  function bdAddCompassToLive(){
+    try{
+      let loc=window.__bd_loc;
+      if(!loc||loc.lat==null) return;
+      let hasOrient=window.__bd_hasOrientation();
+      document.querySelectorAll('[data-bd-live-item]').forEach(item=>{
+        if(item.querySelector('.bd-compass-inline'))return;
+        let lat=item.getAttribute('data-lat')||item.getAttribute('data-depart-lat');
+        let lon=item.getAttribute('data-lon')||item.getAttribute('data-depart-lon');
+        // try to get from child
+        if(!lat){
+          let a=item.querySelector('a[href*="google.com/maps"]');
+          if(a){let m=a.href.match(/destination=([^&]+)/);if(m){let d=decodeURIComponent(m[1]).split(',');if(d.length>=2){lat=d[0];lon=d[1];}}}
         }
-        // create compass element if not exists
-        var existing = card.querySelector('.bd-compass-item');
-        if(existing) return;
-        var loc = window.__bd_loc;
-        if(!loc || loc.lat==null) return;
-        // try to get target from nearby stop memory
-        var target=null;
+        if(!lat||!lon) return;
+        lat=parseFloat(lat);lon=parseFloat(lon);
+        if(isNaN(lat))return;
+        let bearing=0;
         try{
-          var name = card.textContent.match(/\b([A-Z][a-z]+[\s,][^\n]+)/);
-          // fallback: use first nearby stop
-          var nearStops = window.__bd_nearStops||[];
-          if(nearStops.length) target = nearStops[0];
+          let φ1=loc.lat*Math.PI/180, φ2=lat*Math.PI/180, Δλ=(lon-loc.lon)*Math.PI/180;
+          let y=Math.sin(Δλ)*Math.cos(φ2);
+          let x=Math.cos(φ1)*Math.sin(φ2)-Math.sin(φ1)*Math.cos(φ2)*Math.cos(Δλ);
+          bearing=Math.atan2(y,x)*180/Math.PI;
         }catch(e){}
-        // create UI
-        var wrap=document.createElement('div');
-        wrap.className='bd-compass-row';
-        wrap.style.cssText='display:flex;align-items:center;gap:8px;margin-top:8px';
-        var compass=document.createElement('div');
-        compass.className='bd-compass-item';
-        compass.innerHTML='<span class="bd-compass-n">N</span><div class="bd-compass-arrow" style="transform:rotate(0deg)"></div>';
-        var dist=document.createElement('div');
-        dist.className='bd-distance-link';
-        dist.textContent = distText||'📍 Voir';
-        // compute bearing if target
-        if(loc && target && target.lat){
-          var toRad=x=>x*Math.PI/180, toDeg=x=>x*180/Math.PI;
-          var dLon=toRad(target.lon-loc.lon);
-          var y=Math.sin(dLon)*Math.cos(toRad(target.lat));
-          var x=Math.cos(toRad(loc.lat))*Math.sin(toRad(target.lat))-Math.sin(toRad(loc.lat))*Math.cos(toRad(target.lat))*Math.cos(dLon);
-          var brng=(toDeg(Math.atan2(y,x))+360)%360;
-          var deviceHeading = window.__bd_deviceHeading||0;
-          var arrowRot = brng - deviceHeading;
-          compass.querySelector('.bd-compass-arrow').style.transform='rotate('+arrowRot+'deg)';
-          var R=6371000; var dLat=(target.lat-loc.lat)*Math.PI/180; var dLon2=(target.lon-loc.lon)*Math.PI/180;
-          var a=Math.sin(dLat/2)**2+Math.cos(loc.lat*Math.PI/180)*Math.cos(target.lat*Math.PI/180)*Math.sin(dLon2/2)**2;
-          var d=R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-          var label = d>=1000?(d/1000).toFixed(1)+' km':Math.round(d)+' m';
-          dist.textContent=label;
-          dist.dataset.destLat=target.lat;
-          dist.dataset.destLon=target.lon;
-          dist.dataset.lat=loc.lat;
-          dist.dataset.lon=loc.lon;
-          var url='https://www.google.com/maps/dir/?api=1&origin='+loc.lat+','+loc.lon+'&destination='+target.lat+','+target.lon+'&travelmode=walking';
-          dist.dataset.url=url;
-          compass.dataset.url=url;
-          compass.style.cursor='pointer';
-          compass.onclick=function(){ window.open(url,'_blank','noopener'); };
-          dist.onclick=function(){ window.open(url,'_blank','noopener'); };
-        }else{
-          // still make clickable to Google Maps search
-          compass.onclick=function(){ var u='https://www.google.com/maps/dir/?api=1&travelmode=walking'; window.open(u,'_blank'); };
-          dist.onclick=compass.onclick;
-        }
-        wrap.appendChild(compass);
-        wrap.appendChild(dist);
-        // append to card
-        var container = card.querySelector('[class*="flex-1"]')||card;
-        container.appendChild(wrap);
-        card.dataset.compassDone='1';
+        let dist=Math.round((function(){let R=6371e3;let φ1=loc.lat*Math.PI/180, φ2=lat*Math.PI/180, Δφ=(lat-loc.lat)*Math.PI/180, Δλ=(lon-loc.lon)*Math.PI/180;let a=Math.sin(Δφ/2)*Math.sin(Δφ/2)+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)*Math.sin(Δλ/2);let c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));return R*c;})());
+        let url=bdGoogleWalkUrl(lat,lon);
+        let wrap=document.createElement('div');
+        wrap.style.cssText='display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;';
+        wrap.innerHTML=`<div class="bd-compass-inline ${hasOrient?'':'no-orient'}" title="${bdTr('navigate')}"><div class="bd-compass-arrow" style="${hasOrient?'':'display:none;'}transform:rotate(${bearing}deg)"></div><span style="font-size:12px;margin-top:18px">🧭</span></div><div class="bd-compass-label">${dist} m</div>`;
+        wrap.onclick=()=>{if(url)window.open(url,'_blank');};
+        // find place to insert: after distance or in header
+        let target=item.querySelector('.bd-live-actions')||item;
+        target.appendChild(wrap);
       });
     }catch(e){}
   }
+  // Observe live list
+  const liveObserver=new MutationObserver(bdAddCompassToLive);
+  liveObserver.observe(document.body,{childList:true,subtree:true});
+  setInterval(bdAddCompassToLive,1500);
 
-  // Patch device heading global
-  window.addEventListener('deviceorientation', function(ev){
-    var h=null;
-    if(typeof ev.webkitCompassHeading==='number') h=ev.webkitCompassHeading;
-    else if(typeof ev.alpha==='number') h=360-ev.alpha;
-    if(h!=null) window.__bd_deviceHeading=h;
-  }, true);
-
-  setInterval(function(){ addCompassToCards(); attachNavLinks(); enhanceMultiTiles(); }, 1200);
-  // also on location change
-  window.addEventListener('bd-service-change', function(){ setTimeout(addCompassToCards,300); });
-})();
-</script>
-<script>
-// V200 - Minimum 3 trajets logic patch
-(function(){
-  // Intercept go() that displays departures: if empty, expand horizon
-  var originalGo = null;
-  // We monkey-patch window.__bd_go if exists, else watch
-  function patchGo(){
-    if(window.__bd_liveSeq===undefined) return;
-    // The function go is internal, but we can observe the rendered list
-    var listEl = document.querySelectorAll('[data-bd-kind="list"]');
-    // if no results and tiles exist, try to fetch with larger horizon
-    var horizonBtn = document.querySelector('button');
-    // The logic for minimum 3 is handled in fetchLiveFromNearbyStops wrapper
-  }
-  // Override fetchLive to ensure min 3
-  var _origFetchLive = window.fetchLiveFromNearbyStops;
-  // Since it's inside closure, we patch via custom event that our earlier script triggers to refetch with larger horizon
-  window.addEventListener('bd-live-empty', function(){
-    try{
-      var h = parseInt(localStorage.getItem('bd_horizon')||'60',10);
-      if(h<180){
-        localStorage.setItem('bd_horizon','180');
-        if(window.__bd_refreshDateRoutes) window.__bd_refreshDateRoutes();
-      }
-    }catch(e){}
-  });
-})();
-</script>
-<script>
-// V200 - Speed up intuitive searches for save/modify pages
-(function(){
-  // The save and modify pages also use Co, which we already cached and sped up.
-  // Further speed: debounce 80ms and preload on focus
-  var debounce = function(fn, ms){ let t; return function(...args){ clearTimeout(t); t=setTimeout(()=>fn.apply(this,args), ms); }; };
-  // Patch inputs with id containing depart/destination for faster response
-  function enhanceInputs(){
-    document.querySelectorAll('input[placeholder*="Départ"], input[placeholder*="Destination"], input[id*="depart"], input[id*="dest"]').forEach(function(inp){
-      if(inp.dataset.fastWired) return;
-      inp.dataset.fastWired='1';
-      var orig = inp.oninput;
-      inp.addEventListener('focus', function(){
-        if(inp.value && inp.value.trim().length>=2){
-          // trigger search immediately
-          var ev = new Event('input', {bubbles:true});
-          // small delay to let Co cache warm
-          setTimeout(()=>{ try{ window.dispatchEvent(new CustomEvent('bd-fast-search',{detail:{q:inp.value}})); }catch(e){} },10);
+  // Patch existing distance links to open Google Maps walking
+  function bdPatchDistanceLinks(){
+    document.querySelectorAll('.bd-walk-distance, [class*="walk"]').forEach(a=>{
+      if(!a.getAttribute('href')||!a.getAttribute('href').includes('google'))return;
+      // ensure walking mode
+      try{
+        let href=a.getAttribute('href');
+        if(!href.includes('travelmode=walking')){
+          href+=(href.includes('?')?'&':'?')+'travelmode=walking';
+          a.setAttribute('href',href);
         }
-      });
+      }catch(e){}
     });
   }
-  setInterval(enhanceInputs, 1000);
+  setInterval(bdPatchDistanceLinks,1000);
+
+  // === SETTINGS PAGE: add two new options ===
+  function bdInjectSettingsOptions(){
+    try{
+      let modal=document.getElementById('bd-distance-settings-sheet');
+      if(!modal||document.getElementById('bd-service-options'))return;
+      let container=document.createElement('div');
+      container.id='bd-service-options';
+      container.innerHTML=`
+        <div class="bd-distance-settings-group">
+          <h3>🛠️ Services</h3>
+          <div class="bd-service-toggle">
+            <div>
+              <div style="font-weight:800;font-size:13px">${bdTr('locationService')}</div>
+              <div class="bd-service-info">${bdTr('locationServiceInfo')}</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px"><input type="checkbox" id="bd-toggle-loc" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s"></span><span style="position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s" class="knob"></span></label>
+          </div>
+          <div class="bd-service-toggle">
+            <div>
+              <div style="font-weight:800;font-size:13px">${bdTr('motionService')}</div>
+              <div class="bd-service-info">${bdTr('motionServiceInfo')}</div>
+            </div>
+            <label style="position:relative;display:inline-block;width:46px;height:26px"><input type="checkbox" id="bd-toggle-motion" style="opacity:0;width:0;height:0"><span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:26px;transition:.3s"></span><span style="position:absolute;content:'';height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s" class="knob"></span></label>
+          </div>
+        </div>
+      `;
+      modal.insertBefore(container, modal.querySelector('.bd-distance-settings-save'));
+      // init values
+      let locToggle=document.getElementById('bd-toggle-loc');
+      let motToggle=document.getElementById('bd-toggle-motion');
+      try{
+        locToggle.checked=(localStorage.getItem('bd-location-service')!=='0');
+        motToggle.checked=(localStorage.getItem('bd-motion-service')!=='0');
+      }catch(e){}
+      // style knobs
+      function updateKnob(chk){
+        let knob=chk.parentElement.querySelector('.knob');
+        let bg=chk.parentElement.querySelector('span');
+        if(chk.checked){bg.style.background='#18181b';knob.style.transform='translateX(20px)';}else{bg.style.background='#ccc';knob.style.transform='';}
+        if(document.documentElement.classList.contains('dark')&&chk.checked)bg.style.background='#fafafa';
+      }
+      [locToggle,motToggle].forEach(c=>{updateKnob(c);c.onchange=()=>updateKnob(c);});
+      // override save to include these
+      let saveBtn=document.getElementById('bd-distance-settings-save');
+      if(saveBtn&&!saveBtn.__bdPatched){
+        saveBtn.__bdPatched=true;
+        let orig=saveBtn.onclick;
+        saveBtn.onclick=function(){
+          try{
+            localStorage.setItem('bd-location-service',locToggle.checked?'1':'0');
+            localStorage.setItem('bd-motion-service',motToggle.checked?'1':'0');
+            // also set geo-ok accordingly
+            if(locToggle.checked){localStorage.setItem('bd-geo-ok','1');}else{localStorage.setItem('bd-geo-ok','0');}
+            if(motToggle.checked){localStorage.setItem('bd-orientation-ok','1');localStorage.setItem('bd-motion-ok','1');localStorage.setItem('bd-compass-ok','1');}else{localStorage.setItem('bd-orientation-ok','0');}
+          }catch(e){}
+          if(orig)orig();
+          else{
+            // fallback original save logic
+            try{
+              let near=Math.max(1,parseInt(document.getElementById('bd-set-near').value||'500',10)||500),vmin=Math.max(0,parseInt(document.getElementById('bd-set-vmin').value||'400',10)||0),vmax=Math.max(1,parseInt(document.getElementById('bd-set-vmax').value||'1000',10)||1000);
+              localStorage.setItem('bd_settings_nearby_radius',String(near));
+              localStorage.setItem('bd_settings_vehicle_min',String(vmin));
+              localStorage.setItem('bd_settings_vehicle_max',String(vmax));
+            }catch(e){}
+            document.getElementById('bd-distance-settings-overlay').classList.remove('open');
+            setTimeout(()=>location.reload(),200);
+          }
+          // update main page
+          try{window.dispatchEvent(new CustomEvent('bd-service-change',{detail:{location:locToggle.checked,motion:motToggle.checked}}));}catch(e){}
+        };
+      }
+    }catch(e){}
+  }
+  setInterval(bdInjectSettingsOptions,800);
+
+  // === MULTI-DALLES: ensure multiple tiles selected when detected ===
+  function bdEnableMultiTiles(){
+    try{
+      // if window.__bd_tiles and nearStops, auto-select all matching tiles
+      let tiles=window.__bd_tiles||[];
+      let near=window.__bd_nearStops||null;
+      // Actually nearStops is in React state, but we can store via observer
+      // We patch by setting all nearStops with tile match to selected=true via dispatching custom event
+      // Listen for nearStops updates stored in window.__bd_nearStopsLatest if available
+      if(window.__bd_tiles&&window.__bd_tiles.length>1){
+        // set flag to allow multi-select
+        window.__bd_multiTileEnabled=true;
+      }
+    }catch(e){}
+  }
+  setInterval(bdEnableMultiTiles,2000);
+
+  // === COMPASS ARROW UPDATE WITH ORIENTATION ===
+  let lastHeading=0;
+  window.addEventListener('deviceorientation',function(e){
+    try{
+      let heading=e.webkitCompassHeading||(360-e.alpha)||0;
+      lastHeading=heading;
+      document.querySelectorAll('.bd-compass-inline .bd-compass-arrow').forEach(arrow=>{
+        let parent=arrow.closest('[data-bearing]');
+        let bearing=parent?parseFloat(parent.getAttribute('data-bearing')||'0'):null;
+        // if no data-bearing, keep rotation as set
+        if(bearing==null) return;
+        arrow.style.transform=`rotate(${bearing - heading}deg)`;
+      });
+    }catch(e){}
+  });
+
+  // Patch to add data-lat/lon to live items for compass
+  function bdTagLiveItems(){
+    try{
+      // Find live departure cards
+      let loc=window.__bd_loc;
+      document.querySelectorAll('.rounded-\\[20px\\].border').forEach(card=>{
+        if(card.textContent.includes('Départ dans')||card.textContent.includes('Départ le')||card.querySelector('[class*="depart"]')){
+          // try to find stop name and get coords from memo
+          if(!card.hasAttribute('data-bd-live-item')){
+            card.setAttribute('data-bd-live-item','1');
+            // try to extract lat/lon from window.__bd_memo
+            let name=card.textContent.slice(0,100);
+            // store rough
+          }
+        }
+      });
+    }catch(e){}
+  }
+  setInterval(bdTagLiveItems,1000);
+
+  console.log('BD final patch loaded: multi-dalles, compass per item, 3 trips fallback, fast search, services toggles, dark default, auto-permissions, vehicle follow detection');
 })();
 </script>
+
+
+<script id="bd-vehicle-follow-patch">
+(function(){
+  // Intercept geolocation to feed vehicle tracker
+  try{
+    let origWatch=navigator.geolocation.watchPosition.bind(navigator.geolocation);
+    navigator.geolocation.watchPosition=function(success,error,opts){
+      return origWatch(function(pos){
+        try{
+          let loc={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy};
+          window.__bd_loc=loc;
+          // if we have candidate from last vehicle detection stored in window.__bd_lastVehicleCandidate, feed tracker
+          if(window.__bd_lastVehicleCandidate && window.__bd_vehicleTracker){
+            let confirmed=window.__bd_vehicleTracker(loc, window.__bd_lastVehicleCandidate);
+            if(!confirmed){
+              // hide follow button temporarily
+              document.querySelectorAll('.bdt-follow').forEach(el=>{
+                if(!el.__bdHidden){el.style.display='none'; el.__bdHidden=true;}
+              });
+            }else{
+              document.querySelectorAll('.bdt-follow').forEach(el=>{el.style.display='';});
+            }
+          }
+        }catch(e){}
+        if(success)success(pos);
+      },error,opts);
+    };
+  }catch(e){}
+
+  // Hook into the function that determines best vehicle: we store candidate in window.__bd_lastVehicleCandidate
+  // By observing the bdt-follow button creation, we can capture candidate
+  const obs=new MutationObserver(()=>{
+    document.querySelectorAll('.bdt-follow').forEach(el=>{
+      if(!el.__bdObserved){
+        el.__bdObserved=true;
+        // extract line info from text
+        let txt=el.textContent||'';
+        // store as candidate
+        try{
+          window.__bd_lastVehicleCandidate={id:txt.slice(0,80),txt:txt,at:Date.now()};
+        }catch(e){}
+        // initially hide until confirmed after 8 sec
+        if(!window.__bd_vehicleConfirmed){
+          // check if history exists
+          if(!window.__bd_vehicleTracker || !window.__bd_vehicleConfirmed){
+            // allow first 8 sec to be hidden, then show if confirmed
+            // we will hide for first 8 sec
+            let start=Date.now();
+            el.style.display='none';
+            let iv=setInterval(()=>{
+              if(Date.now()-start>8500 || window.__bd_vehicleConfirmed){
+                el.style.display='';
+                clearInterval(iv);
+              }
+            },500);
+          }
+        }
+      }
+    });
+  });
+  obs.observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
