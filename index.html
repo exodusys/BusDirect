@@ -4103,5 +4103,276 @@ html.dark .bd-service-toggle{background:#27272a;border-color:rgba(255,255,255,.1
   setInterval(enhanceInputs, 1000);
 })();
 </script>
+
+
+
+
+<style id="bd-compass-prochains-v6">
+.bd-prochains-compass{ display:flex; flex-direction:column; align-items:center; gap:3px; min-width:58px; padding:6px 6px; border-radius:14px; background:#ffffff; border:1px solid #e7e5e4; box-shadow:0 2px 10px rgba(0,0,0,0.07); cursor:pointer; user-select:none; flex-shrink:0; }
+html.dark .bd-prochains-compass{ background:#27272a; border-color:rgba(255,255,255,0.12); }
+.bd-prochains-compass:active{ transform:scale(0.95); }
+.bd-compass-ring{ width:40px; height:40px; border-radius:50%; background:conic-gradient(from 0deg, #f4f4f5, #fff, #f4f4f5); border:1.5px solid #e7e5e4; position:relative; display:flex; align-items:center; justify-content:center; }
+html.dark .bd-compass-ring{ background:radial-gradient(circle at 30% 30%, #3f3f46, #18181b); border-color:rgba(255,255,255,0.15); }
+.bd-compass-arrow{ position:absolute; width:0; height:0; border-left:5px solid transparent; border-right:5px solid transparent; border-bottom:11px solid #ef4444; top:3px; left:50%; transform:translateX(-50%) rotate(0deg); transform-origin:50% 15px; transition:transform 0.25s cubic-bezier(0.2,0,0,1); filter:drop-shadow(0 1px 1px rgba(0,0,0,0.3)); }
+.bd-compass-dot{ width:6px; height:6px; border-radius:50%; background:#18181b; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); }
+html.dark .bd-compass-dot{ background:#fafafa; }
+.bd-compass-n{ position:absolute; top:1px; left:50%; transform:translateX(-50%); font-size:7px; font-weight:900; color:#a1a1aa; }
+.bd-compass-dist{ font-size:11px; font-weight:800; color:#2563eb; line-height:1; }
+html.dark .bd-compass-dist{ color:#60a5fa; }
+</style>
+<script id="bd-compass-prochains-v6">
+// V600 - Boussole + X m sur CHAQUE élément Prochains parcours → Google Maps à pied
+(function(){
+  function hav(a,b){
+    let R=6371000;
+    let dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lon-a.lon)*Math.PI/180;
+    let aa=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(aa),Math.sqrt(1-aa));
+  }
+  function bear(a,b){
+    let y=Math.sin((b.lon-a.lon)*Math.PI/180)*Math.cos(b.lat*Math.PI/180);
+    let x=Math.cos(a.lat*Math.PI/180)*Math.sin(b.lat*Math.PI/180)-Math.sin(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.cos((b.lon-a.lon)*Math.PI/180);
+    return (Math.atan2(y,x)*180/Math.PI+360)%360;
+  }
+  function getCoords(name){
+    if(!name) return null;
+    let n=name.toLowerCase().trim();
+    try{
+      // 1) memo from transport
+      if(typeof bdMemoFor==='function'){
+        let m=bdMemoFor(name);
+        if(m && m.lat!=null) return {lat:+m.lat, lon:+m.lon};
+      }
+    }catch(e){}
+    try{
+      // 2) coCache
+      let cache=window.__bd_coCache||{};
+      for(let k in cache){
+        let entry=cache[k];
+        let arr=entry.v||entry;
+        if(Array.isArray(arr)){
+          for(let it of arr){
+            if(it && it.name && it.name.toLowerCase()===n && it.lat!=null) return {lat:+it.lat, lon:+it.lon};
+            if(it && it.name && n.includes(it.name.toLowerCase()) && it.lat!=null) return {lat:+it.lat, lon:+it.lon};
+          }
+        }
+      }
+    }catch(e){}
+    try{
+      // 3) nearStops
+      let near=window.__bd_nearStops||[];
+      for(let s of near){
+        if(s.name && s.name.toLowerCase()===n && s.lat!=null) return {lat:+s.lat, lon:+s.lon};
+      }
+    }catch(e){}
+    try{
+      // 4) trips
+      let trips=window.__bd_trips?Object.values(window.__bd_trips):[];
+      for(let t of trips){
+        if(t.from && t.from.station && t.from.station.toLowerCase()===n && t.from.lat!=null) return {lat:+t.from.lat, lon:+t.from.lon};
+        if(t._fromStop && t._fromStop.toLowerCase()===n){
+          if(t.passList){
+            for(let p of t.passList){ if(p.station && p.station.toLowerCase()===n && p.lat!=null) return {lat:+p.lat, lon:+p.lon}; }
+          }
+        }
+        // also search passList for any stop matching name
+        if(t.passList){
+          for(let p of t.passList){ if(p.station && p.station.toLowerCase()===n && p.lat!=null) return {lat:+p.lat, lon:+p.lon}; }
+        }
+      }
+    }catch(e){}
+    try{
+      // 5) geocode via photon if not found - async fetch and cache
+      if(!window.__bd_geocodeCache) window.__bd_geocodeCache={};
+      if(!window.__bd_geocodeCache[n]){
+        window.__bd_geocodeCache[n]=true;
+        fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(name)}&limit=1`).then(r=>r.json()).then(j=>{
+          let f=j.features&&j.features[0];
+          if(f && f.geometry && f.geometry.coordinates){
+            let lon=f.geometry.coordinates[0], lat=f.geometry.coordinates[1];
+            // store in memo
+            if(typeof bdRegCand==='function'){
+              bdRegCand({name:name, lat:lat, lon:lon});
+            }
+            if(!window.__bd_coCache) window.__bd_coCache={};
+            // add to cache
+            window.__bd_coCache[name.toLowerCase()]={t:Date.now(), v:[{name:name, lat:lat, lon:lon}]};
+          }
+        }).catch(()=>{});
+      }
+    }catch(e){}
+    return null;
+  }
+  function userPos(){
+    return window.__bd_loc||null;
+  }
+  function gmapsUrl(user, dest){
+    if(!dest) return null;
+    if(user && user.lat!=null){
+      return `https://www.google.com/maps/dir/?api=1&origin=${user.lat},${user.lon}&destination=${dest.lat},${dest.lon}&travelmode=walking`;
+    }
+    return `https://www.google.com/maps/dir/?api=1&destination=${dest.lat},${dest.lon}&travelmode=walking`;
+  }
+
+  function enhance(){
+    let loc=userPos();
+    if(!loc || loc.lat==null) return;
+
+    // The actual trip rows are buttons/divs with data-bd-kind="list" OR they have class with departure
+    // In this app, each trip is rendered as a div with rounded-[16px] and contains from/to info
+    // We'll find all trip containers via [data-bd-kind]
+    let rows=document.querySelectorAll('[data-bd-kind="list"]');
+    // Fallback: also look for elements that have departure time attribute
+    if(rows.length===0){
+      rows=document.querySelectorAll('[data-bd-dep]');
+    }
+    // Another fallback: find the container that holds Prochains parcours list - it's usually after h2 Prochains parcours
+    if(rows.length===0){
+      let h2s=Array.from(document.querySelectorAll('h2, h3, div')).filter(el=> (el.textContent||'').includes('Prochains parcours'));
+      if(h2s.length){
+        let container=h2s[0].parentElement;
+        // look for direct children that are trip cards
+        rows=container.querySelectorAll(':scope > div > div, :scope > button, div.rounded-\[16px\]');
+      }
+    }
+
+    rows.forEach(row=>{
+      if(row.dataset.compassV6) return;
+      // Do not enhance if already has compass
+      if(row.querySelector('.bd-prochains-compass')) return;
+
+      // Get departure name
+      let depName=null;
+      // Try from dataset
+      if(row.dataset.fromStop) depName=row.dataset.fromStop;
+      if(!depName && row.getAttribute('data-from')) depName=row.getAttribute('data-from');
+      // Try from global trips matching dep time
+      if(!depName){
+        let depAttr=row.getAttribute('data-bd-dep');
+        if(depAttr){
+          let trips=window.__bd_trips?Object.values(window.__bd_trips):[];
+          for(let t of trips){
+            if(String(t._sort)===depAttr || (t.from&&t.from.departure&& String(new Date(t.from.departure).getTime())===depAttr)){
+              depName=t._fromStop || (t.from&&t.from.station) || null;
+              if(depName) break;
+            }
+          }
+        }
+      }
+      // Try from row text - look for first bold stop
+      if(!depName){
+        // The trip card often shows from stop as first line
+        // Use nearStops selected as fallback
+        let near=window.__bd_nearStops||[];
+        let sel=near.filter(s=>s.selected);
+        if(sel.length>0) depName=sel[0].name;
+        else if(near.length>0) depName=near[0].name;
+      }
+      if(!depName) return;
+
+      let coords=getCoords(depName);
+      if(!coords) return; // will retry later when geocoded
+
+      let dist=hav(loc, coords);
+      let b=bear(loc, coords);
+      let heading=window.__bd_deviceHeading||0;
+      let rot=b - heading;
+
+      // Build compass DOM
+      let wrap=document.createElement('div');
+      wrap.className='bd-prochains-compass';
+      wrap.title=`Marcher jusqu'à ${depName}`;
+
+      let ring=document.createElement('div');
+      ring.className='bd-compass-ring';
+      ring.innerHTML=`<span class="bd-compass-n">N</span><div class="bd-compass-arrow" style="transform:translateX(-50%) rotate(${rot}deg)"></div><div class="bd-compass-dot"></div>`;
+
+      let distEl=document.createElement('div');
+      distEl.className='bd-compass-dist';
+      distEl.textContent=dist>=1000?(dist/1000).toFixed(1)+' km':Math.round(dist)+' m';
+
+      wrap.appendChild(ring);
+      wrap.appendChild(distEl);
+
+      let url=gmapsUrl(loc, coords);
+      if(url){
+        wrap.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          window.open(url, '_blank', 'noopener');
+        });
+        ring.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          window.open(url, '_blank', 'noopener');
+        });
+        distEl.addEventListener('click', (e)=>{
+          e.preventDefault(); e.stopPropagation();
+          window.open(url, '_blank', 'noopener');
+        });
+      }
+
+      // Insert into row
+      // Make row flex if not already
+      let cs=window.getComputedStyle(row);
+      if(cs.display!=='flex'){
+        row.style.display='flex';
+        row.style.alignItems='center';
+        row.style.justifyContent='space-between';
+        row.style.gap='12px';
+      }
+      // Ensure row has left content wrapper
+      // If row has many children, we keep them and add compass at end with auto margin
+      wrap.style.marginLeft='auto';
+      row.appendChild(wrap);
+      row.dataset.compassV6='1';
+      row.dataset.depName=depName;
+    });
+  }
+
+  function updateRotations(){
+    let loc=userPos();
+    if(!loc) return;
+    let heading=window.__bd_deviceHeading||0;
+    document.querySelectorAll('.bd-prochains-compass').forEach(wrap=>{
+      let row=wrap.closest('[data-bd-kind="list"]')||wrap.parentElement;
+      let depName=row?.dataset.depName||wrap.dataset.depName;
+      if(!depName) return;
+      let coords=getCoords(depName);
+      if(!coords) return;
+      let b=bear(loc, coords);
+      let rot=b-heading;
+      let arrow=wrap.querySelector('.bd-compass-arrow');
+      if(arrow) arrow.style.transform=`translateX(-50%) rotate(${rot}deg)`;
+      let distEl=wrap.querySelector('.bd-compass-dist');
+      if(distEl){
+        let d=hav(loc, coords);
+        distEl.textContent=d>=1000?(d/1000).toFixed(1)+' km':Math.round(d)+' m';
+      }
+      // Update url
+      let url=gmapsUrl(loc, coords);
+      if(url) wrap.dataset.url=url;
+    });
+  }
+
+  // Device orientation
+  window.addEventListener('deviceorientation', ev=>{
+    let h=null;
+    if(typeof ev.webkitCompassHeading==='number') h=ev.webkitCompassHeading;
+    else if(typeof ev.alpha==='number') h=360-ev.alpha;
+    if(h!=null){
+      window.__bd_deviceHeading=h;
+      updateRotations();
+    }
+  }, true);
+
+  // Poll
+  setInterval(()=>{ enhance(); updateRotations(); }, 1200);
+  setTimeout(enhance, 800);
+  setTimeout(enhance, 2000);
+  setTimeout(enhance, 4000);
+  window.addEventListener('bd-service-change', ()=>setTimeout(enhance, 400));
+  // Expose
+  window.__bd_enhanceProchainsCompass=enhance;
+})();
+</script>
 <script>(function(){var loc=location.href.replace(/#.*$/,"");var ATTR_NAMES=["data-product-id","data-productid","data-product_id","product-id","productid","product_id","data-source-entity-id","source-entity-id","source_entity_id","data-product","data-metadata","data-meta"];var DATASET_KEYS=["productId","productid","product_id","sourceEntityId","sourceentityid","source_entity_id","product","metadata","meta"];function readProductId(value){if(typeof value!=="string"||value.length===0)return null;if(/^[0-9]{6,}$/.test(value))return value;var match=value.match(/(?:product(?:_|-)?id|source(?:_|-)?entity(?:_|-)?id)["'=:\s]+([0-9]{6,})/i);return match?match[1]:null}function extractProductId(start){for(var node=start;node&&node!==document.body;node=node.parentElement){for(var i=0;i<ATTR_NAMES.length;i++){var attrValue=node.getAttribute&&node.getAttribute(ATTR_NAMES[i]);var attrProductId=readProductId(attrValue);if(attrProductId)return attrProductId}var dataset=node.dataset||null;if(dataset){for(var j=0;j<DATASET_KEYS.length;j++){var dataValue=dataset[DATASET_KEYS[j]];var dataProductId=readProductId(dataValue);if(dataProductId)return dataProductId}}}return null}function isInlineMediaSlotElement(node){return !!(node&&node.getAttribute&&node.getAttribute("data-clippy-inline-media-slot")!==null)}function findInlineMediaSlot(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(isInlineMediaSlotElement(node))return node}return null}function readInlineMediaUrl(node){if(!node)return null;return node.getAttribute&&((node.getAttribute("data-clippy-inline-media-url")||node.getAttribute("data-url")||node.getAttribute("data_url")))||node.href||null}function stripHash(url){return String(url).replace(/#.*$/,"")}function urlsMatch(a,b){if(!a||!b)return false;try{return stripHash(new URL(a,loc).href)===stripHash(new URL(b,loc).href)}catch(_){return stripHash(a)===stripHash(b)}}function isFirstPartyReelUrl(value){try{var url=new URL(value,loc);if(url.protocol!=="https:")return false;var host=url.hostname.toLowerCase();var supported=host==="instagram.com"||host.endsWith(".instagram.com")||host==="facebook.com"||host.endsWith(".facebook.com");return supported&&/\/reels?\//i.test(url.pathname)}catch(_){return false}}function isInlineMediaUrlClick(node,href){var slot=findInlineMediaSlot(node);if(!slot)return false;var slotUrl=readInlineMediaUrl(slot);if(slotUrl)return urlsMatch(href,slotUrl);return isFirstPartyReelUrl(href)}function findDataHref(start){for(var node=start;node&&node!==document.body;node=node.parentElement){if(node.getAttribute){var href=node.getAttribute("data-href")||node.getAttribute("data-url");if(href)return{href:href,node:node}}}return null}var nativeOpen=window.open;window.open=function(url){if(parent!==window&&typeof url==="string"&&/^https?:\/\//.test(url)){parent.postMessage({type:"ecto:usercontent-link-click",href:url},"*");return null}return nativeOpen?nativeOpen.apply(window,arguments):null};document.addEventListener("click",function(e){var target=e.target instanceof Element?e.target:null;if(!target)return;if(parent===window)return;var a=target.closest?target.closest("a[href]"):null;if(a&&a.href&&/^https?:\/\//.test(a.href)&&a.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(a,a.href))return;var productId=extractProductId(target)||extractProductId(a);if(productId){e.preventDefault();parent.postMessage({type:"ecto-artifact-link-click",productId:productId},"*");return}e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:a.href},"*");return}var dataHref=findDataHref(target);if(dataHref&&/^https?:\/\//.test(dataHref.href)&&dataHref.href.replace(/#.*$/,"")!==loc){if(isInlineMediaUrlClick(dataHref.node,dataHref.href))return;e.preventDefault();parent.postMessage({type:"ecto:usercontent-link-click",href:dataHref.href},"*")}},true)})();</script><script>(function(){var FOCUS_TYPE="ecto:artifact-focus-request";var CLOSE_TYPE="ecto:artifact-close-request";function focusArtifactDocument(){var body=document.body;if(!body)return;try{window.focus();}catch(e){}if(!body.hasAttribute("tabindex"))body.setAttribute("tabindex","-1");try{body.focus({preventScroll:true});}catch(e){try{body.focus();}catch(e2){}}}window.addEventListener("message",function(event){if(event.source!==window.parent)return;var data=event.data;if(!data||typeof data!=="object"||data.type!==FOCUS_TYPE)return;if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",focusArtifactDocument,{once:true});return;}focusArtifactDocument();});window.addEventListener("keydown",function(event){if(event.key!=="Escape")return;window.setTimeout(function(){if(event.defaultPrevented)return;window.parent.postMessage({type:CLOSE_TYPE},"*");},0);});})();</script></body>
 </html>
