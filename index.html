@@ -517,7 +517,7 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
     var open=function(e){e.stopPropagation();e.preventDefault();W.open(url,'_blank','noopener,noreferrer')};
     return c('span',{className:'bd-walk-distance',role:'link',tabIndex:0,'aria-label':'Itinéraire à pied vers '+name+', '+lab,
      onClick:open,onKeyDown:function(e){if(e.key==='Enter'||e.key===' ')open(e)},
-     style:{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,fontSize:11,fontWeight:600,color:'#ffffff',textDecoration:'none',cursor:'pointer'},
+     style:{display:'inline-flex',alignItems:'center',gap:6,marginTop:8,fontSize:11,fontWeight:600,color:'inherit',textDecoration:'none',cursor:'pointer'},
      children:'🚶 '+lab+' jusqu’à '+name+' · à pied'});
    }catch(e){return null}
   }
