@@ -452,7 +452,7 @@ html body .bd-v101-hamb{right:max(16px,calc(50vw - 304px))!important;top:calc(15
   var d=new Date(W.__bd_tripDate+'T'+W.__bd_tripTime+':00');
   return isNaN(d.getTime())?null:d;
  }
- function loc(d){ try{return d.toLocaleString('fr-CH')}catch(e){return d.toLocaleString()} }
+ function loc(d){ var z=function(n){return (n<10?'0':'')+n}; try{return d.toLocaleDateString('fr-CH')+' à '+z(d.getHours())+'h'+z(d.getMinutes())}catch(e){return d.toLocaleDateString()+' à '+z(d.getHours())+'h'+z(d.getMinutes())} }
  function onDay(base,hm,after){
   var m=/^(\d{1,2}):(\d{2})/.exec(String(hm||'').trim()); if(!m) return null;
   var d=new Date(base.getTime()); d.setHours(+m[1],+m[2],0,0);
