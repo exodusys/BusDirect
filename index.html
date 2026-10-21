@@ -1358,21 +1358,20 @@ async function ypNear(i,m,via,S,main,R){
 }
 function bdStopRows(S){
   try{
-    var nm=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};
-    var same=function(a,b){a=nm(a);b=nm(b);return !!a&&!!b&&(a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0)))};
-    var fromN=(S.from&&S.from.station)||S._fromStop||"",toN=(S.to&&S.to.station)||S.destQuery||"";
-    var tiles=(window.__bd_tiles||[]),tile=null;
-    tiles.forEach(function(t){if(!tile&&same(t.from,S._fromStop||fromN)&&same(t.to,S.destQuery||toN))tile=t});
     var pl=(S.passList||[]).filter(function(x){return x&&x.type==="stop"&&x.station});
-    var vias=[];
-    if(S._tileVia){S._tileVia.forEach(function(v){var f=pl.find(function(x){return same(x.station,v)});vias.push(f?f.station:v)})}
-    else if(tile&&(tile.via||[]).length){
-      (tile.via||[]).forEach(function(v){var vn=typeof v==="string"?v:(v&&(v.name||v.title))||"";if(!vn)return;var f=pl.find(function(x){return same(x.station,vn)});vias.push(f?f.station:vn)});
+    var fromN=(S.from&&S.from.station)||(pl[0]&&pl[0].station)||"",toN=(S.to&&S.to.station)||(pl.length&&pl[pl.length-1].station)||"";
+    var tile=null,tl=(window.__bd_tiles||[]);
+    tl.forEach(function(t){if(!tile&&(t.via||[]).length&&bdNameEq(t.from,S._fromStop||fromN)&&bdNameEq(t.to,S.destQuery||toN))tile=t});
+    var wanted=S._tileVia&&S._tileVia.length?S._tileVia:(tile?tile.via:[]);
+    var vias=[],kind="Changement";
+    if(wanted&&wanted.length){
+      kind="Intermédiaire";var pos=0;
+      wanted.forEach(function(v){var vn=typeof v==="string"?v:(v&&v.name)||"";for(var i=pos;i<pl.length;i++){if(bdNameEq(pl[i].station,vn)){vias.push(pl[i].station);pos=i+1;return}}});
     }else{
       (S.passList||[]).forEach(function(x){if(x&&x.type==="transfer"&&x.at)vias.push(x.at)});
     }
     var rows=[{k:"Départ",n:fromN}];
-    vias.forEach(function(v,i){rows.push({k:vias.length>1?"Interméd. "+(i+1):((S._tileVia&&S._tileVia.length)||(tile&&tile.via&&tile.via.length)?"Intermédiaire":"Changement"),n:v})});
+    vias.forEach(function(v,i){rows.push({k:vias.length>1?(kind==="Changement"?"Chang. ":"Interméd. ")+(i+1):kind,n:v})});
     rows.push({k:"Arrivée",n:toN});
     return rows;
   }catch(e){return[{k:"Départ",n:(S.from&&S.from.station)||""},{k:"Arrivée",n:(S.to&&S.to.station)||""}]}
@@ -1418,9 +1417,10 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
 /* Exécute une ou plusieurs recherches (une par dalle détectée) et fusionne les résultats dans « Prochains parcours ».
    Règle : trajets de la fenêtre (1 h par défaut). Si aucun n'est trouvé, on affiche au minimum les 3 prochains
    départs disponibles, même dans plusieurs heures. */
-function bdIsAltStops(tile,s){try{if(!tile||!s||s.length<2)return false;var nm=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var same=function(a,b){a=nm(a);b=nm(b);return !!a&&!!b&&(a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0)))};var v=(tile.via||[]).map(function(x){return typeof x==="string"?x:(x&&x.name)||""});var mid=s.slice(1,-1);if(!same(s[0],tile.from)||!same(s[s.length-1],tile.to))return true;if(mid.length!==v.length)return true;return mid.some(function(m,i){return!same(m,v[i])})}catch(e){return false}}
-function bdTileAlts(tile){try{var g={},o=[];(tile.routes||[]).forEach(function(r){if(r&&bdIsAltStops(tile,r.stopsReal)){var k=r.stopsReal.join(">");if(!g[k]){g[k]=1;var s=r.stopsReal;o.push("Autre : "+s[0]+" → "+s[s.length-1]+(s.length>2?" via "+s.slice(1,-1).join(", "):""))}}});return o}catch(e){return[]}}
-function bdAltSpecs(sp){try{var tile=sp&&sp.tileOverride;if(!tile||tile._alt)return[];var g={};(tile.routes||[]).forEach(function(r){if(r&&bdIsAltStops(tile,r.stopsReal)){var k=r.stopsReal.join(">");(g[k]=g[k]||{s:r.stopsReal,r:[]}).r.push(r)}});return Object.keys(g).map(function(k){var s=g[k].s;return{stops:[{name:s[0],selected:true,kind:"stop",distanceKm:0}],destName:s[s.length-1],tileOverride:Object.assign({},tile,{from:s[0],to:s[s.length-1],via:s.slice(1,-1),routes:g[k].r,_alt:true})}})}catch(e){return[]}}
+function bdNameEq(a,b){var nm=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};a=nm(a);b=nm(b);return !!a&&!!b&&(a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0)))}
+function st0name(sel){return sel&&sel[0]?sel[0].name:""}
+function bdViaOnRoute(c,vn){try{var pl=(c.passList||[]).filter(function(x){return x&&x.type==="stop"&&x.station});if(!pl.length)return false;var pos=0;return vn.every(function(v){for(var i=pos;i<pl.length;i++){if(bdNameEq(pl[i].station,v)&&(pl[i].arrival||pl[i].departure)){pos=i+1;return true}}return false})}catch(e){return false}}
+function bdAltSpecs(sp){try{var tile=sp&&sp.tileOverride;if(!tile||tile._alt)return[];var g={};(tile.routes||[]).forEach(function(r){if(r&&r.alt&&r.stopsReal&&r.stopsReal.length>=2){var k=r.stopsReal.join(">");(g[k]=g[k]||{s:r.stopsReal,r:[]}).r.push(r)}});return Object.keys(g).map(function(k){var s=g[k].s;return{stops:[{name:s[0],selected:true,kind:"stop",distanceKm:0}],destName:s[s.length-1],tileOverride:Object.assign({},tile,{from:s[0],to:s[s.length-1],via:s.slice(1,-1),routes:g[k].r,_alt:true})}})}catch(e){return[]}}
 async function bdLiveRun(specs){specs=[].concat.apply([],(specs||[]).map(function(sp){return[sp].concat(bdAltSpecs(sp))}));
   const _seq=window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;
   const goS=function(v,fb){if(_seq===window.__bd_liveSeq){window.__bd_fallback=!!fb;go(v)}};
@@ -1529,6 +1529,9 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide){
     /* Uniquement la fenêtre demandée (1 h par défaut, +30 min par clic). */
     let _baseMs=bdTripDTMs(), _hMs=_baseMs+(window.__bd_horizon||60)*60000;
     all=all.filter(function(c){return c._sort>=_baseMs-60000;});
+    try{var _vt=tileOverride;if(!_vt||!(_vt.via||[]).length){_vt=(_tiles||[]).find(function(x){return(x.via||[]).length&&bdNameEq(x.from,st0name(selected))&&bdNameEq(x.to,destName)})||_vt}
+      var _vn=((_vt&&_vt.via)||[]).map(function(v){return typeof v==="string"?v:(v&&v.name)||""}).filter(Boolean);
+      if(_vn.length)all=all.filter(function(c){return bdViaOnRoute(c,_vn)})}catch(e){}
     /* Filtre strict : uniquement les lignes (bus/train) sélectionnées dans la ou les dalles reconnues. */
     let _n=function(x){return String(x||"").trim().toLowerCase().replace(/\s+/g," ");};
     let _same=function(a,b){a=_n(a);b=_n(b);if(!a||!b)return false;return a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0));};
@@ -1851,7 +1854,7 @@ fn.length===0?p("div",{className:"rounded-[16px] border border-dashed border-[#e
  p("button",{type:"button",onClick:zo,className:"h-11 px-5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black font-bold text-[13px] flex items-center justify-center gap-2 active:scale-95 transition",children:[c("span",{className:"text-[18px] leading-none font-bold",children:"+"})," Ajouter le premier parcours"]})
 ]}):c("div",{className:"grid grid-cols-1 gap-2",children:fn.map((i)=>p("div",{onClick:()=>of(i),className:`rounded-[20px] p-3 border bg-[#FAFAF9] dark:bg-zinc-800 border-[#e7e5e4] dark:border-white/10 relative cursor-pointer transition-all ${i.fav?"ring-1 ring-amber-300":""}`,style:{borderLeft:`3px solid ${i.color}`},children:[
  p("div",{className:"flex items-start justify-between gap-2",children:[c("div",{className:"font-bold text-[13px] leading-tight",children:i.name}),p("div",{className:"flex items-center gap-1 shrink-0",children:[i.fav&&c(Ct,{className:"w-3.5 h-3.5 fill-amber-400 text-amber-400"}),null]})]}),
- p("div",{className:"mt-1",children:[p("div",{className:"text-[11px] text-zinc-500",children:[i.from," → ",i.to]}),(i.via&&i.via.length)?c("div",{className:"text-[10px] text-zinc-500 mt-0.5",children:"via "+i.via.join(", ")}):null,...bdTileAlts(i).map(function(x,k){return c("div",{key:"alt"+k,className:"text-[10px] text-zinc-500 mt-0.5",children:x})}),(i.linesPref||(i.lines&&i.lines.length))?p("div",{className:"flex flex-wrap gap-1 mt-1.5",children:(i.lines&&i.lines.length?i.lines:(i.linesPref||"").split(",")).map(function(x){return x.trim()}).filter(Boolean).map(function(ln){return c("span",{className:"inline-flex items-center px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-sm",style:{background:getLineColor(ln)},children:ln},ln+"main")})}):null
+ p("div",{className:"mt-1",children:[p("div",{className:"text-[11px] text-zinc-500",children:[i.from," → ",i.to]}),(i.via&&i.via.length)?c("div",{className:"text-[10px] text-zinc-500 mt-0.5",children:"via "+i.via.join(", ")}):null,(i.linesPref||(i.lines&&i.lines.length))?p("div",{className:"flex flex-wrap gap-1 mt-1.5",children:(i.lines&&i.lines.length?i.lines:(i.linesPref||"").split(",")).map(function(x){return x.trim()}).filter(Boolean).map(function(ln){return c("span",{className:"inline-flex items-center px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-sm",style:{background:getLineColor(ln)},children:ln},ln+"main")})}):null
 ]})
  ,p("div",{className:"flex gap-1.5 mt-2",children:[
   p("button",{type:"button","aria-label":"Inverser le sens du parcours",title:"Inverser le sens",onClick:(m)=>{m.stopPropagation();bdInvertTile(i)},className:"flex-1 h-9 rounded-full bg-white border border-[#e7e5e4] dark:bg-zinc-700 dark:border-white/10 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition",children:[c(wt,{className:"w-4 h-4"})," Inverser"]}),
