@@ -1365,13 +1365,14 @@ function bdStopRows(S){
     tiles.forEach(function(t){if(!tile&&same(t.from,S._fromStop||fromN)&&same(t.to,S.destQuery||toN))tile=t});
     var pl=(S.passList||[]).filter(function(x){return x&&x.type==="stop"&&x.station});
     var vias=[];
-    if(tile&&(tile.via||[]).length){
+    if(S._tileVia){S._tileVia.forEach(function(v){var f=pl.find(function(x){return same(x.station,v)});vias.push(f?f.station:v)})}
+    else if(tile&&(tile.via||[]).length){
       (tile.via||[]).forEach(function(v){var vn=typeof v==="string"?v:(v&&(v.name||v.title))||"";if(!vn)return;var f=pl.find(function(x){return same(x.station,vn)});vias.push(f?f.station:vn)});
     }else{
       (S.passList||[]).forEach(function(x){if(x&&x.type==="transfer"&&x.at)vias.push(x.at)});
     }
     var rows=[{k:"Départ",n:fromN}];
-    vias.forEach(function(v,i){rows.push({k:vias.length>1?"Interméd. "+(i+1):(tile&&tile.via&&tile.via.length?"Intermédiaire":"Changement"),n:v})});
+    vias.forEach(function(v,i){rows.push({k:vias.length>1?"Interméd. "+(i+1):((S._tileVia&&S._tileVia.length)||(tile&&tile.via&&tile.via.length)?"Intermédiaire":"Changement"),n:v})});
     rows.push({k:"Arrivée",n:toN});
     return rows;
   }catch(e){return[{k:"Départ",n:(S.from&&S.from.station)||""},{k:"Arrivée",n:(S.to&&S.to.station)||""}]}
@@ -1417,7 +1418,8 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
 /* Exécute une ou plusieurs recherches (une par dalle détectée) et fusionne les résultats dans « Prochains parcours ».
    Règle : trajets de la fenêtre (1 h par défaut). Si aucun n'est trouvé, on affiche au minimum les 3 prochains
    départs disponibles, même dans plusieurs heures. */
-async function bdLiveRun(specs){
+function bdAltSpecs(sp){try{var tile=sp&&sp.tileOverride;if(!tile||tile._alt)return[];var g={};(tile.routes||[]).forEach(function(r){if(r&&r.alt&&r.stopsReal&&r.stopsReal.length>=2){var k=r.stopsReal.join(">");(g[k]=g[k]||{s:r.stopsReal,r:[]}).r.push(r)}});return Object.keys(g).map(function(k){var s=g[k].s;return{stops:[{name:s[0],selected:true,kind:"stop",distanceKm:0}],destName:s[s.length-1],tileOverride:Object.assign({},tile,{from:s[0],to:s[s.length-1],via:s.slice(1,-1),routes:g[k].r,_alt:true})}})}catch(e){return[]}}
+async function bdLiveRun(specs){specs=[].concat.apply([],(specs||[]).map(function(sp){return[sp].concat(bdAltSpecs(sp))}));
   const _seq=window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;
   const goS=function(v,fb){if(_seq===window.__bd_liveSeq){window.__bd_fallback=!!fb;go(v)}};
   if(!window.__bd_silent)ba(true);
@@ -1511,6 +1513,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide){
             transfers:c.transfers||0,
             passList:passList,
             _fromStop:st.name,
+            _tileVia:(tileOverride&&tileOverride._alt)?(tileOverride.via||[]):null,
             originQuery:String(departReload||fallbackDep||""),
             destQuery:destName,
             _sort:actualDep!=null?actualDep:1e15
@@ -1679,7 +1682,7 @@ function getFilteredCities(){
 
 function getLineColor(prod){try{let m=(prod||"").toString().match(/\d+/);let num=m?m[0]:prod;const map={"12":"#009EE0","14":"#009640","15":"#E2007A","17":"#A6192E","18":"#005C8E","1":"#FFD100","2":"#E30613","3":"#009EE0","4":"#009640","5":"#E2007A","6":"#FFD100","7":"#A6192E","8":"#009640","9":"#FFD100","10":"#E30613","11":"#009EE0","19":"#FFD100","22":"#009640","23":"#E2007A","25":"#FFD100","26":"#005C8E","32":"#009640","33":"#E30613","35":"#FFD100","36":"#009EE0"};if(map[num])return map[num];let pal=["#E30613","#009EE0","#009640","#FFD100","#A6192E","#E2007A","#005C8E","#FF6A00","#6A1B9A","#00838F","#2E7D32","#D81B60"];let h=0;let str=(prod||"").toString();for(let i=0;i<str.length;i++)h=str.charCodeAt(i)+((h<<5)-h);return pal[Math.abs(h)%pal.length]}catch{return"#57534e"}}
 function bdIsTrain(x){return /^(ICE|ICN|IC|IRE|IR|EC|EN|NJ|RJX|RJ|TGV|TER|RER|RE|RB|R|SN|S\d*|EXT|PE|VAE|D)(\s|\d|$)/i.test(String(x||"").trim())}
-function bdRouteObj(r){return {key:bdRouteKey(r),products:(r.products||[]).map(x=>String(x).trim()).filter(Boolean),transfers:r.transfers||0,duration:r.duration||""}}
+function bdRouteObj(r){var o={key:bdRouteKey(r),products:(r.products||[]).map(x=>String(x).trim()).filter(Boolean),transfers:r.transfers||0,duration:r.duration||""};try{if(r.stopsReal&&r.stopsReal.length>=2){o.stopsReal=r.stopsReal.slice();o.alt=(r.stopsNote||[]).some(function(x){return/\d+ m de /.test(String(x))})}}catch(e){}return o}
 function bdTileFromRoutes(list,selKeys){let uniq=bdUniqueRoutes(list,12);let chosen=selKeys&&selKeys.length?uniq.filter(r=>selKeys.includes(bdRouteKey(r))):uniq;if(!chosen.length)chosen=uniq;let routes=chosen.map(bdRouteObj);let lines=[];routes.forEach(r=>r.products.forEach(p=>{if(!lines.includes(p))lines.push(p)}));return {routes:routes,routePrefs:routes.map(r=>r.key).join("||"),lines:lines,linesPref:bdLinesForSelectedRoutes(chosen,"")}}
 function bdTileRoutes(t){if(t&&Array.isArray(t.routes)&&t.routes.length)return t.routes;return bdSelectedRouteKeys(t&&t.routePrefs).map(k=>{let q=String(k).split("|");return {key:k,products:String(q[0]).split(">").map(x=>x.trim()).filter(Boolean),transfers:parseInt(q[1])||0}})}
 function bdSameName(a,b){var nn=function(x){return String(x||"").trim().toLowerCase().replace(/\s+/g," ")};var same=function(x,y){x=nn(x);y=nn(y);if(!x||!y)return false;return x===y||(x.length>=3&&y.length>=3&&(x.indexOf(y)>=0||y.indexOf(x)>=0))};a=nn(a);b=nn(b);var pa=a.split(","),pb=b.split(",");if(pa.length>1&&pb.length>1)return same(a,b);return same(pa[pa.length-1],pb[pb.length-1])}
