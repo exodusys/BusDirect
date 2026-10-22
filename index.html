@@ -2138,6 +2138,8 @@ var rows=visibleStops.map(function(obj,vi){
  var dotBg = (hasTransferAfter||isChange)?lc:((isFirst||isLast)?lc:null);
  var dotStyle = {};
  if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
+ /* Arrêt de destination : point à la couleur du bus / train */
+ if(i===_arrIdx){ dotStyle.background=lc; dotStyle.borderColor=lc; dotStyle.boxShadow="0 0 0 3px "+lc+"40"; }
  var cls="bdt-row is-first"+(((isLast||i===_nmE)&&!_fin)?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
  var _row=p("div",{className:cls,style:{"--acc":lc},children:[
   c("span",{className:"bdt-dot",style:dotStyle}),
@@ -2147,7 +2149,7 @@ var rows=visibleStops.map(function(obj,vi){
     /* DEPART tag supprimé sur demande jaune */null,
     null,
     isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw)]}):null,
-    (i===_arrIdx)?c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt de Destination"}):null,
+    (i===_arrIdx)?p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[isLast?null:chipEl(curLineRaw),c("span",{className:"bdt-tag",style:{background:lc,color:"#fff"},children:"ARRÊT DE DESTINATION"})]}):null,
     (function(){try{var vv=_lp.length>2?_lp.slice(1,-1):((cur._tileVia&&cur._tileVia.length)?cur._tileVia:((_tile&&_tile.via)||[]));var hit=vv.some(function(v){return bdNameEq(name,typeof v==="string"?v:(v&&v.name)||"")});return hit?c("span",{className:"bdt-tag bdt-tag-me",children:"Intermédiaire"}):null}catch(e){return null}})(),
     /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
     mine&&!isLast&&!isChange?p(Vl,{children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"})]}):null,
