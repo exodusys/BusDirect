@@ -463,11 +463,7 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
   function on(){try{return localStorage.getItem(KEY)!=='0'}catch(e){return true}}
   var needsPerm=(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function');
   var supported=(typeof DeviceMotionEvent!=='undefined')||(typeof DeviceOrientationEvent!=='undefined');
-  /* Mémoire de l'autorisation Mouvement & orientation (uniquement si l'option est activée) */
-  var MKEY='bd-motion-ok';
-  function remembered(){try{return on()&&localStorage.getItem(MKEY)==='1'}catch(e){return false}}
-  function remember(v){try{if(v)localStorage.setItem(MKEY,'1');else localStorage.removeItem(MKEY)}catch(e){}}
-  var S={m:[],h:[],started:false,perm:needsPerm?(remembered()?'granted':'prompt'):(supported?'granted':'unsupported'),last:0,asked:false};
+  var S={m:[],h:[],started:false,perm:needsPerm?'prompt':(supported?'granted':'unsupported'),last:0,asked:false};
   function onMotion(e){
     var a=e.accelerationIncludingGravity||e.acceleration;
     if(!a||a.x==null||a.y==null||a.z==null)return;
@@ -514,35 +510,10 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
     return Promise.all(p).then(function(r){
       var ok=r.some(function(x){return x==='granted'});
       S.perm=ok?'granted':'denied';
-      remember(ok);
       if(ok)start(force);
       return S.perm;
-    },function(){S.perm='denied';remember(false);return 'denied'});
+    },function(){S.perm='denied';return 'denied'});
   }
-  /* Reprise automatique : autorisation déjà accordée + option activée → pas de nouvelle demande.
-     iOS exige un geste pour rappeler requestPermission ; comme l'accès est déjà accordé,
-     l'appel est silencieux (aucune fenêtre) et se fait au premier toucher de l'écran. */
-  function resume(){
-    if(!supported||!remembered())return;
-    start();
-    if(!needsPerm)return;
-    var done=false,evs=['touchend','click','keydown'];
-    function off(){evs.forEach(function(n){document.removeEventListener(n,silent,true)})}
-    function silent(){
-      if(done)return;done=true;off();
-      if(!remembered())return;
-      var p=[];
-      try{p.push(DeviceMotionEvent.requestPermission())}catch(e){}
-      try{if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function')p.push(DeviceOrientationEvent.requestPermission())}catch(e){}
-      Promise.all(p).then(function(r){
-        var ok=r.some(function(x){return x==='granted'});
-        S.perm=ok?'granted':'denied';remember(ok);
-        if(ok)start();else stop();
-      },function(){});
-    }
-    evs.forEach(function(n){document.addEventListener(n,silent,true)});
-  }
-  try{resume()}catch(e){}
   function ang(a,b){var d=((a-b+540)%360)-180;return d}
   function bearing(p,q){
     var r=Math.PI/180,y=Math.sin((q.lon-p.lon)*r)*Math.cos(q.lat*r),
@@ -1427,15 +1398,9 @@ function bdHidSave(){try{localStorage.setItem("bd-tiles-hid-v1",JSON.stringify(b
 function bdHidSet(pid,list){var h=bdHidAll();if(list&&list.length)h[pid]=list.map(function(x,i){return Object.assign({},x,{id:pid+"_h"+i,parent:pid,hidden:true})});else delete h[pid];bdHidSave()}
 function bdHidDrop(pid){var h=bdHidAll();if(h[pid]){delete h[pid];bdHidSave()}}
 function bdHidGet(pid){return bdHidAll()[pid]||[]}
-/* Variantes enregistrées d'une dalle : uniquement celles des parcours cochés dans la dalle. */
-function bdHidSel(t){var ch=bdHidGet(t&&t.id);if(!ch.length)return ch;var ks={};bdTileRoutes(t).forEach(function(r){if(r&&r.key)ks[r.key]=1});if(!Object.keys(ks).length)return ch;return ch.filter(function(c){return bdTileRoutes(c).some(function(r){return r&&ks[r.key]})})}
-/* Même arrêt (tolérant aux variantes « Renens VD » / « Renens VD, gare »). */
-function bdLooseStop(a,b){a=bdNorm(a);b=bdNorm(b);if(!a||!b)return false;return a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0))}
-/* Le départ et l'arrivée de la connexion correspondent à ceux du parcours coché (si connus). */
-function bdStopsMatch(conn,tiles,key){var any=false,ok=false;(tiles||[]).forEach(function(t){bdTileRoutes(t).forEach(function(r){if(!r||r.key!==key)return;var s=r.stopsReal;if(!s||s.length<2){ok=true;return}any=true;var dep=[conn.from&&conn.from.station],arr=[conn.to&&conn.to.station];var dOk=dep.some(function(x){return bdLooseStop(x,s[0])}),aOk=arr.some(function(x){return bdLooseStop(x,s[s.length-1])||bdLooseStop(x,t.to)});if(dOk&&aOk)ok=true})});return ok||!any}
 function bdHidFind(id){var h=bdHidAll(),k,i;for(k in h){for(i=0;i<h[k].length;i++){if(h[k][i].id===id)return h[k][i]}}return null}
 function bdTileFromItem(it,radius,color){try{var s=it&&it.stopsReal&&it.stopsReal.length>=2?it.stopsReal:null;if(!s)return null;var from=s[0],to=s[s.length-1],via=s.slice(1,-1);var tr=bdTileFromRoutes([it],[bdRouteKey(it)]);tr.routes=(tr.routes||[]).map(function(r){return Object.assign({},r,{alt:false})});return Object.assign({name:bdAutoName(from,via,to),from:from,to:to,via:via,color:color,fav:false,nearRadius:radius},tr)}catch(e){return null}}
-function bdHiddenItems(hr,hrNear,cn){try{var keys=bdSelectedRouteKeys(cn),seen={},out=[];var add=function(it){var s=(it&&it.stopsReal)||[];var k=s.join(">")+"|"+bdRouteKey(it);if(seen[k])return;seen[k]=1;out.push(it)};bdUniqueRoutes(hr||[],24).forEach(function(r){if(keys.includes(bdRouteKey(r)))add(r)});(hrNear||[]).forEach(function(r){if(!keys.length||keys.includes(bdRouteKey(r)))add(r)});return out}catch(e){return[]}}
+function bdHiddenItems(hr,hrNear,cn){try{var keys=bdSelectedRouteKeys(cn),seen={},out=[];var add=function(it){var s=(it&&it.stopsReal)||[];var k=s.join(">")+"|"+bdRouteKey(it);if(seen[k])return;seen[k]=1;out.push(it)};bdUniqueRoutes(hr||[],24).forEach(function(r){if(keys.includes(bdRouteKey(r)))add(r)});(hrNear||[]).forEach(add);return out}catch(e){return[]}}
 function bdSelectedItems(hr,hrNear,cn){try{var keys=bdSelectedRouteKeys(cn);if(!keys.length)return[];return bdUniqueRoutes((hr||[]).concat(hrNear||[]),24).filter(function(r){return keys.includes(bdRouteKey(r))})}catch(e){return[]}}
 async function bdRealPrev(first,last,le,cands){
   try{
@@ -1516,7 +1481,7 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
    Règle : trajets de la fenêtre (1 h par défaut). Si aucun n'est trouvé, on affiche au minimum les 3 prochains
    départs disponibles, même dans plusieurs heures. */
 function bdAltSpecs(sp){try{var tile=sp&&sp.tileOverride;if(!tile||tile._alt)return[];var g={};(tile.routes||[]).forEach(function(r){if(r&&r.alt&&r.stopsReal&&r.stopsReal.length>=2){var k=r.stopsReal.join(">");(g[k]=g[k]||{s:r.stopsReal,r:[]}).r.push(r)}});return Object.keys(g).map(function(k){var s=g[k].s;return{stops:[{name:s[0],selected:true,kind:"stop",distanceKm:0}],destName:s[s.length-1],tileOverride:Object.assign({},tile,{from:s[0],to:s[s.length-1],via:s.slice(1,-1),routes:g[k].r,_alt:true})}})}catch(e){return[]}}
-async function bdLiveRun(specs){specs=[].concat.apply([],(specs||[]).map(function(sp){var ch=(sp&&sp.tileOverride)?bdHidSel(sp.tileOverride):[];if(ch.length)return ch.map(function(c){return{stops:[{name:c.from,selected:true,kind:"stop",distanceKm:0}],destName:c.to,tileOverride:c}});return[sp].concat(bdAltSpecs(sp))}));
+async function bdLiveRun(specs){specs=[].concat.apply([],(specs||[]).map(function(sp){var ch=(sp&&sp.tileOverride)?bdHidGet(sp.tileOverride.id):[];if(ch.length)return ch.map(function(c){return{stops:[{name:c.from,selected:true,kind:"stop",distanceKm:0}],destName:c.to,tileOverride:c}});return[sp].concat(bdAltSpecs(sp))}));
   const _seq=window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;
   const goS=function(v,fb){if(_seq===window.__bd_liveSeq){window.__bd_fallback=!!fb;go(v)}};
   if(!window.__bd_silent)ba(true);
@@ -1654,12 +1619,10 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide){
     }
     all=all.filter(function(conn){
       let starts=[conn._fromStop,conn.from&&conn.from.station];
-      /* Recherche lancée depuis une dalle : uniquement les parcours cochés de CETTE dalle. */
-      let mine=tileOverride?_tiles.filter(function(t){return t.id===tileOverride.id;}).slice(0,1):_tiles.filter(function(t){
+      let mine=_tiles.filter(function(t){
         if(_n(t.to)!==_dn&&!_same(t.to,destName)) return false;
         return starts.some(function(x){return _sameStop(t.from,x);});
       });
-      if(tileOverride&&!mine.length) mine=[tileOverride];
       if(!mine.length) return true;
       mine.forEach(function(t){_rc[t.name||t.id]=1;bdTileRoutes(t).forEach(function(r){(r.products||[]).forEach(function(p){_rl[p]=1;});});});
       /* Parcours EXACT : même suite de lignes et même nombre de changements que le parcours coché dans la dalle. */
@@ -1669,7 +1632,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide){
         if(keys.length){ keys.forEach(function(k){exact[k]=1;}); }
         else{ legacy=true; String(t.linesPref||"").split(",").map(function(x){return x.trim();}).filter(Boolean).forEach(function(x){dig[_n(x)]=1;}); }
       });
-      if(exact[bdRouteKey(conn)]) return tileOverride?bdStopsMatch(conn,mine,bdRouteKey(conn)):true;
+      if(exact[bdRouteKey(conn)]) return true;
       if(!legacy) return false;
       let prods=(conn.products||[]).filter(Boolean);
       return prods.length>0&&prods.every(function(p){return dig[_dig(p)];});
