@@ -642,6 +642,7 @@ html body .bd-v101-hamb.bd-hamb-docked{position:absolute!important;right:0!impor
 .bdt-xfer>span:last-child{flex:1 1 auto;min-width:0;}
 </style>
 <style id="bd-next-nomaps">.bd-next-list a[href*="google."],.bd-next-list a[href*="maps.apple"],.bd-next-list .bd-walk-distance{display:none!important}</style>
+<style id="bd-no-tile-box">.bdt-sheet .bdt-tile,.bdt-wrap .bdt-tile{display:none!important}</style>
 </head>
 <body>
   <div id="root"></div>
@@ -2230,7 +2231,7 @@ if(_fin&&rows.length){
 }
 var _cfS=cur.from.station,_cfT=cur.from.time,_ctS=cur.to.station,_ctT=cur.to.time,_cdur=cur.duration;
 if(_tile&&stops.length){var _tcI=Math.max(0,mineIdx),_tcA=ms(stops[_tcI],false),_tcB=ms(stops[stops.length-1],true);_cfS=nm(stops[_tcI]);_cfT=fm(_tcA);_ctS=nm(stops[stops.length-1]);_ctT=fm(_tcB);if(_tcA!=null&&_tcB!=null&&_tcB>_tcA){var _tcM=Math.round((_tcB-_tcA)/60000);_cdur=("0"+Math.floor(_tcM/60)).slice(-2)+":"+("0"+(_tcM%60)).slice(-2)}}
-var _tileHdr=_tile?p("div",{className:"bdt-tile",style:{display:"flex",flexDirection:"column",gap:"4px",marginBottom:"12px",padding:"10px 12px",borderRadius:"12px",background:"rgba(120,120,120,.10)",borderLeft:"4px solid "+(_tile.color||"#57534e")},children:[c("div",{style:{fontSize:"10px",fontWeight:800,letterSpacing:".06em",textTransform:"uppercase",opacity:.6},children:"Mes parcours"}),c("div",{style:{fontSize:"14px",fontWeight:800},children:_ln||bdTileTitle(_tile)}),c("div",{style:{fontSize:"12px",fontWeight:600,opacity:.8},children:(function(){try{return bdStopRows(cur).map(function(r){return r.n}).join(" → ")}catch(e){return _tile.from+" → "+_tile.to}})()}),(function(){var _tl2=bdTileLines(_tile);return _tl2.length?c("div",{style:{display:"flex",gap:"6px",flexWrap:"wrap",marginTop:"2px"},children:_tl2.slice(0,8).map(function(l){return c("span",{className:"bdt-chip",style:{background:getLineColor(l)},children:l},l)})}):null})()]}):null;
+var _tileHdr=null;
 var rowsEls = p("div",{children:[c("div",{className:"bdt-list",children:rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"})})]});
 
 return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
