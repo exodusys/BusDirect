@@ -1481,19 +1481,35 @@ function bdTripDTParams(){try{var d=window.__bd_tripDate,t=window.__bd_tripTime;
 function bdTripDTMs(){try{var d=window.__bd_tripDate,t=window.__bd_tripTime;if(d&&t){var x=new Date(d+"T"+t+":00");if(!isNaN(x))return x.getTime()}}catch(e){}return Date.now()}
 /* Adresse ou lieu choisi (coordonnées connues) → arrêt le plus proche de ces coordonnées.
    Évite que le service d'horaires interprète le texte librement (ex. « Rue Centrale 42, 1964 Conthey » compris comme Monthey). */
-var __bdEP={};
-async function bdEndpoint(name){
+var __bdEP={},__bdGP={};
+/* Coordonnées d'une adresse / d'un lieu : suggestion choisie, sinon texte tapé géocodé (adresse avec numéro, NPA ou virgule). null = arrêt ou nom d'arrêt. */
+async function bdGeoPoint(name){
   try{
     var m=bdMemoFor(name);
-    if(!m||m.kind==="stop"||m.lat==null||m.lon==null||!isFinite(+m.lat))return [bdExact(name)];
-    var k=(+m.lat).toFixed(5)+","+(+m.lon).toFixed(5);if(__bdEP[k])return __bdEP[k];
-    var r=await fetch("https://transport.opendata.ch/v1/locations?x="+m.lat+"&y="+m.lon+"&type=station");if(!r.ok)return [bdExact(name)];
-    var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&(x.id||x.name)&&x.coordinate&&x.coordinate.x!=null});
-    st.forEach(function(x){x._d=zt({lat:+m.lat,lon:+m.lon},{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});
-    var ids=st.filter(function(x){return x._d<=1.5}).slice(0,2).map(function(x){return String(x.id||x.name)});
-    if(!ids.length&&st[0])ids=[String(st[0].id||st[0].name)];
-    if(!ids.length)return [bdExact(name)];
-    __bdEP[k]=ids;return ids;
+    if(m&&m.kind==="stop")return null;
+    if(m&&m.lat!=null&&isFinite(+m.lat))return{lat:+m.lat,lon:+m.lon};
+    var q=String(name||"").trim();if(!q||!(/\d/.test(q)||/,/.test(q)))return null;
+    if(__bdGP[q]!==undefined)return __bdGP[q];
+    var st=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
+    var exact=st&&(st.stations||[]).find(function(x){return bdNorm(x.name)===bdNorm(q)});if(exact){__bdGP[q]=null;return null}
+    var g=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
+    var f=g&&g.features&&g.features[0];var pt=f?{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]}:null;__bdGP[q]=pt;return pt;
+  }catch(e){return null}
+}
+/* Arrêts les plus proches d'un point (1 ou 2, à moins de 1,5 km ; sinon le plus proche). */
+async function bdNearStations(pt,n){
+  var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5);if(__bdEP[k])return __bdEP[k];
+  var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");if(!r.ok)return[];
+  var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&(x.id||x.name)&&x.coordinate&&x.coordinate.x!=null});
+  st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});
+  var L=st.filter(function(x){return x._d<=1.5}).slice(0,n||2);if(!L.length&&st[0])L=[st[0]];__bdEP[k]=L;return L;
+}
+async function bdEndpoint(name){
+  try{
+    var pt=await bdGeoPoint(name);
+    if(!pt)return [bdExact(name)];
+    var L=await bdNearStations(pt,2);var ids=L.map(function(x){return String(x.id||x.name)});
+    if(!ids.length)return [bdExact(name)];return ids;
   }catch(e){return [bdExact(name)]}
 }
 try{window.bdEndpoint=bdEndpoint}catch(e){}
@@ -1526,6 +1542,7 @@ async function bdResolve(q){
   try{
     var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
     if(src&&src.active===false)return null;
+    try{var _pt=await bdGeoPoint(q);if(_pt){var _L=await bdNearStations(_pt,1);if(_L[0]&&_L[0].id)return{id:String(_L[0].id),name:_L[0].name,lat:+_L[0].coordinate.x,lon:+_L[0].coordinate.y}}}catch(e){}
     var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(q))+"&type=station");
     if(!r.ok)return null;
     var st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
