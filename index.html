@@ -2243,7 +2243,7 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
   ]}),
   p("div",{className:"bdt-body",children:[
    p("div",{className:"bdt-card",children:[
-    _tileHdr,
+    /* encadré « Mes parcours » retiré du Suivi en direct */null,
     p("div",{className:"bdt-top",children:[
      c("div",{className:"bdt-chips",children:prods.slice(0,4).map(function(q){return c("span",{className:"bdt-chip",style:{background:getLineColor(q)},children:q},q)})}),
      delay>0?p("span",{className:"bdt-pill bdt-pill-late",children:["+"+delay+" min"]}):c("span",{className:"bdt-pill bdt-pill-ok",children:B.onTime})
