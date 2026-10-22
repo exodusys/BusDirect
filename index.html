@@ -461,15 +461,19 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
 <script id="bd-v190-motion">
 (function(){
   'use strict';
-  var KEY='bd_settings_motion';
+  var KEY='bd_settings_motion',KEYG='bd_motion_granted';
+  /* autorisation mouvement/orientation mémorisée après acceptation */
+  function remembered(){try{return localStorage.getItem(KEYG)==='1'}catch(e){return false}}
+  function remember(v){try{if(v)localStorage.setItem(KEYG,'1');else localStorage.removeItem(KEYG)}catch(e){}}
   function on(){try{return localStorage.getItem(KEY)!=='0'}catch(e){return true}}
   var needsPerm=(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function');
   var supported=(typeof DeviceMotionEvent!=='undefined')||(typeof DeviceOrientationEvent!=='undefined');
-  var S={m:[],h:[],started:false,perm:needsPerm?'prompt':(supported?'granted':'unsupported'),last:0,asked:false};
+  var S={m:[],h:[],started:false,perm:needsPerm?(remembered()?'granted':'prompt'):(supported?'granted':'unsupported'),last:0,asked:false};
   function onMotion(e){
     var a=e.accelerationIncludingGravity||e.acceleration;
     if(!a||a.x==null||a.y==null||a.z==null)return;
     var t=Date.now();
+    if(!S.got){S.got=true;if(needsPerm){S.perm='granted';remember(true)}}
     S.m.push({t:t,v:Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z)});
     S.last=t;
     var lim=t-12000;
@@ -511,7 +515,7 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
     if(!p.length)return Promise.resolve(S.perm);
     return Promise.all(p).then(function(r){
       var ok=r.some(function(x){return x==='granted'});
-      S.perm=ok?'granted':'denied';
+      S.perm=ok?'granted':'denied';remember(ok);
       if(ok)start(force);
       return S.perm;
     },function(){S.perm='denied';return 'denied'});
@@ -604,7 +608,9 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
   if(on()){
     if(!needsPerm)start();
     else{
-      var once=function(){document.removeEventListener('click',once,true);document.removeEventListener('touchend',once,true);if(on()&&S.perm!=='granted'&&S.perm!=='denied')request()};
+      /* déjà autorisé auparavant : on démarre tout de suite, et le premier toucher confirme l'autorisation sans nouvelle demande */
+      if(remembered())start();
+      var once=function(){document.removeEventListener('click',once,true);document.removeEventListener('touchend',once,true);if(on()&&S.perm!=='denied'&&(S.perm!=='granted'||!S.got))request()};
       document.addEventListener('click',once,true);document.addEventListener('touchend',once,true);
     }
   }
