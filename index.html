@@ -2143,8 +2143,8 @@ var rows=visibleStops.map(function(obj,vi){
    p("div",{className:"bdt-tags",children:[
     /* DEPART tag supprimé sur demande jaune */null,
     null,
-    isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Arrivée"})]}):null,
-    (i===_arrIdx&&!isLast)?c("span",{className:"bdt-tag bdt-tag-me",children:"Arrivée (votre parcours)"}):null,
+    isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw)]}):null,
+    (i===_arrIdx&&!isLast)?c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt de Destination"}):null,
     (function(){try{var vv=(cur._tileVia&&cur._tileVia.length)?cur._tileVia:((_tile&&_tile.via)||[]);var hit=vv.some(function(v){return bdNameEq(name,typeof v==="string"?v:(v&&v.name)||"")});return hit?c("span",{className:"bdt-tag bdt-tag-me",children:"Intermédiaire"}):null}catch(e){return null}})(),
     /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
     mine&&!isLast&&!isChange?p(Vl,{children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"})]}):null,
