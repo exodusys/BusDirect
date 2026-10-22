@@ -2000,7 +2000,7 @@ var tz={hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"};
 var fm=function(t){return t?new Date(t).toLocaleTimeString("fr-CH",tz):"--:--"};
 var now=Date.now();
 var pkey=(cur._fromStop||"")+"|"+cur.from.departure+"|"+(cur.products||[]).join(",");var pv=bdPrev[pkey];var prevItems=Array.isArray(pv)?pv:[];var pc=prevItems.length;var list=prevItems.concat((cur.passList||[]).filter(function(x){return x}));
-var stops=list.filter(function(x){return x.type==="stop"||!x.type});var _arrIdx=-1;if(_tile){var _sn=function(x){return typeof x.station==="string"?x.station:((x.station&&x.station.name)||"")};var _fi0=-1,_ti0=-1;stops.forEach(function(x,i){if(_fi0<0&&bdSameName(_sn(x),_tile.from))_fi0=i});stops.forEach(function(x,i){if(_ti0<0&&i>_fi0&&bdSameName(_sn(x),_tile.to))_ti0=i});if(_ti0>0)_arrIdx=_ti0}/* V125: les prochains arrêts restent issus du passList réel fourni par les sources actives. */
+var stops=list.filter(function(x){return x.type==="stop"||!x.type});var _arrIdx=-1;if(_tile){var _sn=function(x){return typeof x.station==="string"?x.station:((x.station&&x.station.name)||"")};var _fi0=-1,_ti0=-1;stops.forEach(function(x,i){if(_fi0<0&&bdSameName(_sn(x),cur._fromStop||_tile.from))_fi0=i});stops.forEach(function(x,i){if(_ti0<0&&i>_fi0&&bdSameName(_sn(x),cur.destQuery||_tile.to))_ti0=i});if(_ti0>0)_arrIdx=_ti0}/* V125: les prochains arrêts restent issus du passList réel fourni par les sources actives. */
 var nm=function(x){return typeof x.station==="string"?x.station:(x.station&&x.station.name?x.station.name:"")};
 var ms=function(x,end){var t=end?(x.arrival||x.departure):(x.departure||x.arrival);return t?new Date(t).getTime()+(x.delay||0)*60000:null};
 var liveIdx=-1;
@@ -2015,7 +2015,7 @@ else if(liveIdx<0){status={k:"wait",t:window.__bdTL.text(cur,"dep",firstMs),d:wi
 else{var nx=stops[liveIdx+1];var nt2=ms(nx,liveIdx+1===stops.length-1);status={k:"run",t:"Prochain arrêt : "+nm(nx),s:(nt2!=null?(mins(nt2)>0?"dans "+mins(nt2)+" min":"à l'instant"):"")+" · après "+nm(stops[liveIdx])}}
 var prods=(cur.products||[]).filter(Boolean);
 var acc=getLineColor(prods[0]||"");
-var myStop=((_tile&&_tile.from)||cur._fromStop||cur.from&&cur.from.station||"").toLowerCase();
+var myStop=(cur._fromStop||(_tile&&_tile.from)||cur.from&&cur.from.station||"").toLowerCase();
 var mineIdx=-1;
 var _mineFind=function(key){if(!key)return;stops.forEach(function(s0,i0){if(mineIdx>=0)return;var n0=String(nm(s0)||"").toLowerCase();if(n0&&(n0.indexOf(key)>=0||key.indexOf(n0)>=0))mineIdx=i0;});};
 _mineFind(myStop);
@@ -2058,8 +2058,9 @@ list.forEach(function(entry){
 });
 var firstVisible = 0;
 if(pc>0){ firstVisible = pc; }
-var globalDepIdx = firstVisible;
-var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ if(mineIdx>=0) return true; return o.i>=globalDepIdx || o.i===0 || o.i===stops.length-1; });
+/* L'affichage part de l'arrêt où je suis (arrêt de recherche détecté) ; les arrêts précédents sont masqués. */
+var globalDepIdx = mineIdx>=0 ? mineIdx : firstVisible;
+var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ if(mineIdx>=0) return o.i>=mineIdx; return o.i>=globalDepIdx || o.i===0 || o.i===stops.length-1; });
 function chipEl(line){
   if(!line) return null;
   var clean=String(line).trim();
@@ -2202,7 +2203,7 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
    ]}),
    p("div",{className:"bdt-card",children:[
     null,
-    p("div",{className:"bdt-sec",children:[c("span",{children:"Arrêts"+(stops.length?" ("+stops.length+")":"")}),p("span",{className:"bdt-leg",children:[c("i",{className:"bdt-lg bdt-lg-past"})," passé ",c("i",{className:"bdt-lg bdt-lg-live"})," véhicule ",c("i",{className:"bdt-lg bdt-lg-next"})," à venir"]})]}),
+    p("div",{className:"bdt-sec",children:[c("span",{children:"Arrêts"+(visibleStops.length?" ("+visibleStops.length+")":"")}),p("span",{className:"bdt-leg",children:[c("i",{className:"bdt-lg bdt-lg-past"})," passé ",c("i",{className:"bdt-lg bdt-lg-live"})," véhicule ",c("i",{className:"bdt-lg bdt-lg-next"})," à venir"]})]}),
     rows.length?c("div",{className:"bdt-list",ref:function(el){if(!el)return;var lv=el.querySelector(".is-live .bdt-name");var k=lv?lv.textContent:"";if(el.__lk!==k){el.__lk=k;var row=el.querySelector(".is-live");if(row)setTimeout(function(){try{row.scrollIntoView({block:"nearest",behavior:"smooth"})}catch(e){}},60)}},children:rowsEls}):c("div",{className:"bdt-empty",children:"Le détail des arrêts n’est pas disponible pour ce trajet."}),(Array.isArray(pv)&&pc===0&&stops.length>0)?c("div",{className:"bdt-note",children:"Arrêts précédents indisponibles pour cette ligne."}):(pv==="loading"?c("div",{className:"bdt-note",children:"Recherche des arrêts précédents…"}):null)
    ]}),
    p("div",{className:"bdt-actions",children:[
