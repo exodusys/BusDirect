@@ -4610,7 +4610,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
  /* clic sur la boussole ou la distance : Google Maps à pied jusqu'à l'arrêt (sans ouvrir la carte du parcours) */
  function go(e){var el=e.target&&e.target.closest&&e.target.closest('.bd-compass');if(!el)return;e.preventDefault();e.stopPropagation();if(e.stopImmediatePropagation)e.stopImmediatePropagation();if(e.type!=='click')return;
   var name=el.getAttribute('data-stop')||'',lat=parseFloat(el.getAttribute('data-lat')),lon=parseFloat(el.getAttribute('data-lon')),xy=null;try{xy=window.bdStopXY?window.bdStopXY(name,isFinite(lat)?lat:null,isFinite(lon)?lon:null,null):null}catch(x){}if(!xy&&isFinite(lat))xy={lat:lat,lon:lon};
-  var loc=window.__bd_loc,dest=xy?xy.lat+','+xy.lon:name;/* sans origine = position actuelle → Google Maps lance directement la navigation guidée à pied */var url='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest)+'&travelmode=walking&dir_action=navigate';
+  var loc=window.__bd_loc,dest=xy?xy.lat+','+xy.lon:name;var url='https://www.google.com/maps/dir/?api=1'+(loc&&loc.lat!=null?'&origin='+encodeURIComponent(loc.lat+','+loc.lon):'')+'&destination='+encodeURIComponent(dest)+'&travelmode=walking';
   var w=null;try{w=window.open(url,'_blank','noopener')}catch(x){}if(!w)location.href=url}
  window.addEventListener('click',go,true);window.addEventListener('pointerup',function(e){var el=e.target&&e.target.closest&&e.target.closest('.bd-compass');if(el)e.stopPropagation()},true);
 })();
