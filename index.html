@@ -368,6 +368,8 @@ html.dark .bdt-pill-late{background:rgba(239,68,68,.18);color:#f87171;}
 .bdt-tag-live{background:#ef4444;color:#fff;}
 .bdt-tag-me{background:rgba(59,130,246,.14);color:#2563eb;}
 html.dark .bdt-tag-me{color:#93c5fd;}
+.bdt-tag.bdt-tag-dest{background:rgba(59,130,246,.14)!important;color:#2563eb!important;}
+html.dark .bdt-tag.bdt-tag-dest{color:#93c5fd!important;}
 .bdt-plat{font-size:10px;color:var(--mu);font-weight:500;}
 .bdt-time{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
 .bdt-t{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;}
@@ -2149,7 +2151,7 @@ var rows=visibleStops.map(function(obj,vi){
     /* DEPART tag supprimé sur demande jaune */null,
     null,
     isLast?c("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(curLineRaw)]}):null,
-    (i===_arrIdx)?p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[isLast?null:chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt de destination"})]}):null,
+    (i===_arrIdx)?p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[isLast?null:chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me bdt-tag-dest",children:"Arrêt de destination"})]}):null,
     (function(){try{var vv=_lp.length>2?_lp.slice(1,-1):((cur._tileVia&&cur._tileVia.length)?cur._tileVia:((_tile&&_tile.via)||[]));var hit=vv.some(function(v){return bdNameEq(name,typeof v==="string"?v:(v&&v.name)||"")});return hit?c("span",{className:"bdt-tag bdt-tag-me",children:"Intermédiaire"}):null}catch(e){return null}})(),
     /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
     mine&&!isLast&&!isChange?p(Vl,{children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Votre arrêt"})]}):null,
