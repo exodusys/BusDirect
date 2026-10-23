@@ -463,8 +463,12 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
   'use strict';
   var KEY='bd_settings_motion',KEYG='bd_motion_granted';
   /* autorisation mouvement/orientation mémorisée après acceptation */
-  function remembered(){try{return localStorage.getItem(KEYG)==='1'}catch(e){return false}}
-  function remember(v){try{if(v)localStorage.setItem(KEYG,'1');else localStorage.removeItem(KEYG)}catch(e){}}
+  /* réponse mémorisée dans localStorage « motionPermission » : "granted" ou "denied" (reprend l'ancienne clé) */
+  var KEYP='motionPermission';
+  try{if(!localStorage.getItem(KEYP)&&localStorage.getItem(KEYG)==='1')localStorage.setItem(KEYP,'granted')}catch(e){}
+  function saved(){try{return localStorage.getItem(KEYP)||''}catch(e){return ''}}
+  function remembered(){return saved()==='granted'}
+  function remember(v){try{localStorage.setItem(KEYP,v?'granted':'denied');if(v)localStorage.setItem(KEYG,'1');else localStorage.removeItem(KEYG)}catch(e){}}
   /* app ajoutée à l'écran d'accueil iOS : iOS n'y garde pas l'autorisation → capteurs désactivés d'office, aucune demande */
   var standalone=false;try{standalone=window.navigator.standalone===true||(window.matchMedia&&(matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches))}catch(e){}
   window.__bdStandalone=standalone;
@@ -472,7 +476,7 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
   function on(){try{var v=localStorage.getItem(KEY);return standalone?v==='1':v!=='0'}catch(e){return !standalone}}
   var needsPerm=(typeof DeviceMotionEvent!=='undefined'&&typeof DeviceMotionEvent.requestPermission==='function');
   var supported=(typeof DeviceMotionEvent!=='undefined')||(typeof DeviceOrientationEvent!=='undefined');
-  var S={m:[],h:[],started:false,perm:needsPerm?(remembered()?'granted':'prompt'):(supported?'granted':'unsupported'),last:0,asked:false};
+  var S={m:[],h:[],started:false,perm:needsPerm?(remembered()?'granted':(saved()==='denied'?'denied':'prompt')):(supported?'granted':'unsupported'),last:0,asked:false};
   function onMotion(e){
     var a=e.accelerationIncludingGravity||e.acceleration;
     if(!a||a.x==null||a.y==null||a.z==null)return;
@@ -519,10 +523,10 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
     if(!p.length)return Promise.resolve(S.perm);
     return Promise.all(p).then(function(r){
       var ok=r.some(function(x){return x==='granted'});
-      S.perm=ok?'granted':'denied';remember(ok);
+      S.perm=ok?'granted':'denied';remember(ok);if(ok)S.t0=Date.now();
       if(ok)start(force);
       return S.perm;
-    },function(){S.perm='denied';return 'denied'});
+    },function(){S.perm='denied';remember(false);return 'denied'});
   }
   function ang(a,b){var d=((a-b+540)%360)-180;return d}
   function bearing(p,q){
@@ -614,8 +618,10 @@ html:not(.dark) main [class*="rounded-[16px]"][class*="border"]{
     if(!needsPerm)start();
     else{
       /* déjà autorisé auparavant : on démarre tout de suite, et le premier toucher confirme l'autorisation sans nouvelle demande */
-      if(remembered())start();
-      var once=function(){document.removeEventListener('click',once,true);document.removeEventListener('touchend',once,true);if(on()&&S.perm!=='denied'&&(S.perm!=='granted'||!S.got))request()};
+      if(remembered()){start();S.t0=Date.now()}
+      /* autorisé auparavant : on écoute d'abord les capteurs ; s'ils répondent déjà, aucune demande. Refusé auparavant : on ne redemande pas (bouton dans Paramètres). */
+      var once=function(){if(S.got||!on()||saved()==='denied'){off2();return}if(remembered()&&S.t0&&Date.now()-S.t0<1200)return;off2();request()};
+      var off2=function(){document.removeEventListener('click',once,true);document.removeEventListener('touchend',once,true)};
       document.addEventListener('click',once,true);document.addEventListener('touchend',once,true);
     }
   }
