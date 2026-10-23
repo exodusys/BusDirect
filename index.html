@@ -1556,6 +1556,20 @@ keys[last]="Arrivée";
 var idx=Object.keys(keys).map(Number).sort(function(a,b){return a-b});
 return{ok:true,names:idx.map(function(i){return seq[i].name}),kinds:idx.map(function(i){return keys[i]})}}
 function bdRealStopsOk(F,via){var _s=F.sections||[];if(_s.length&&(!_s[0].journey||!_s[_s.length-1].journey))return false;var vs=(via||[]).map(function(x){return String(x||"").trim()}).filter(Boolean);if(!vs.length)return true;var all=[];_s.forEach(function(s){if(s.journey&&s.journey.passList)s.journey.passList.forEach(function(p){if(p&&p.station&&(p.arrival||p.departure))all.push(p.station.name)})});var pos=1,ok=true;vs.forEach(function(v){var q=bdNorm(v),f=-1;for(var k=pos;k<all.length-1;k++){var n=bdNorm(all[k]);if(n.length>=3&&q.length>=3&&(n===q||n.indexOf(q)>=0||q.indexOf(n)>=0)){f=k;break}}if(f<0)ok=false;else pos=f});return ok}
+/* « Mon parcours » : arrêts proches d'un point, avec nouvel essai si le service ne répond pas (pas de mise en cache d'un échec) ; arrêt à moins de 5 km sinon rien */
+var __bdEPm={};
+async function bdNearStationsMP(pt){
+  var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5);if(__bdEPm[k])return __bdEPm[k];
+  for(var a=0;a<3;a++){
+    try{var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");
+      if(r.ok){var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&x.id&&x.name&&x.coordinate&&x.coordinate.x!=null});
+        st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});st=st.filter(function(x){return x._d<=5});
+        if(st.length){__bdEPm[k]=st.slice(0,2);return __bdEPm[k]}}
+    }catch(e){}
+    await new Promise(function(res){setTimeout(res,700*(a+1))});
+  }
+  return[];
+}
 /* « Mon parcours » uniquement : coordonnées d'une adresse / d'un lieu / d'un Plus Code (la page principale garde bdGeoPoint inchangé). */
 var __bdGPm={};
 async function bdGeoPointMP(name){
@@ -1582,14 +1596,17 @@ async function bdResolve(q){
   try{
     var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
     if(src&&src.active===false)return null;
-    try{var _pt=await bdGeoPointMP(q);if(_pt){var _L=await bdNearStations(_pt,1);if(_L[0]&&_L[0].id)return{id:String(_L[0].id),name:_L[0].name,lat:+_L[0].coordinate.x,lon:+_L[0].coordinate.y}}}catch(e){}
+    /* adresse / lieu / Plus Code : UNIQUEMENT l'arrêt le plus proche de ses coordonnées (jamais une recherche par texte : « Rue Centrale … Conthey » ≠ « Monthey, place centrale ») */
+    var _mm=bdMemoFor(q),_isStop=!!(_mm&&_mm.kind==="stop"),_addrQ=!_isStop&&((_mm&&_mm.lat!=null&&_mm.kind&&_mm.kind!=="stop")||/\d/.test(q)||!!(window.bdPlusCode&&window.bdPlusCode.parse(q)));
+    var _pt=null;try{_pt=await bdGeoPointMP(q)}catch(e){}
+    if(_pt){var _L=await bdNearStationsMP(_pt);if(_L[0])return{id:String(_L[0].id),name:_L[0].name,lat:+_L[0].coordinate.x,lon:+_L[0].coordinate.y};return null}
+    if(_addrQ)return null;
     var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(q))+"&type=station");
     if(!r.ok)return null;
     var st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
     if(!st.length)return null;
     var n=bdNorm(q),ex=st.find(function(s){return bdNorm(s.name)===n})||st.find(function(s){return bdNorm(s.name).indexOf(n)===0});
-    /* « Mon parcours » : adresse (numéro / NPA / virgule) sans coordonnées → jamais un arrêt « approchant » d'une autre localité (Conthey ≠ Monthey) */
-    if(!ex){var _addrQ=/\d/.test(q)||/,/.test(q);if(_addrQ){var _ws=n.split(" ").filter(function(w){return w.length>=4&&!/\d/.test(w)&&!/^(rue|route|chemin|avenue|place|quai|allee|impasse|boulevard|passage|sentier|strasse|weg|gasse|platz)$/.test(w)});ex=st.find(function(s){var sn=" "+bdNorm(s.name)+" ";return _ws.some(function(w){return sn.indexOf(" "+w+" ")>=0})})||null;if(!ex)return null}else ex=st[0]}
+    if(!ex)ex=st[0];
     return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
   }catch(e){return null}
 }
