@@ -230,11 +230,10 @@ function ask(c){
  if(function(){try{return localStorage.getItem("bd_settings_geoloc")==="0"}catch(e){return false}}()){try{c.err&&c.err({code:1,message:"Localisation désactivée dans les paramètres",PERMISSION_DENIED:1})}catch(e){}return}
  if(ok()){go(c);return}
  queue.push(c);
- if(later()&&c.watch){fail();return}
  var start=function(st){
   if(st==="granted"){try{localStorage.setItem("bd-geo-ok","1")}catch(e){}run()}
-  else if(st==="denied"){var d=function(){modal(true)};if(document.body)d();else document.addEventListener("DOMContentLoaded",d)}
-  else{var m=function(){modal(false)};if(document.body)m();else document.addEventListener("DOMContentLoaded",m)}
+  /* aucun popup : la localisation est activée par défaut, demande directe au navigateur (s'il l'a bloquée, l'erreur est renvoyée sans message) */
+  else run()
  };
  try{navigator.permissions.query({name:"geolocation"}).then(function(r){start(r.state)},function(){start("prompt")})}catch(e){start("prompt")}
 }
@@ -4632,7 +4631,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
    var d=dist({lat:+loc.lat,lon:+loc.lon},xy),b=brg({lat:+loc.lat,lon:+loc.lon},xy),rot=hd!=null?b-hd:b;
    svg.style.opacity='1';svg.style.transform='rotate('+Math.round(rot)+'deg)';
    var dt=d<15?'Vous y êtes':(d>=1000?(d/1000).toFixed(1).replace('.',',')+' km':Math.round(d/5)*5+' m');
-   t.innerHTML=dt+(hd==null&&d>=15?' <span class="bd-cp-n">nord ↑</span>':'');
+   t.textContent=dt;
    el.title='Direction et distance jusqu’à '+name+(hd==null?' (flèche par rapport au nord : boussole indisponible)':'');});}
  setInterval(tick,400);
  /* clic sur la boussole ou la distance : Google Maps à pied jusqu'à l'arrêt (sans ouvrir la carte du parcours) */
