@@ -1562,8 +1562,11 @@ async function bdNearStationsMP(pt){
   var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5);if(__bdEPm[k])return __bdEPm[k];
   for(var a=0;a<3;a++){
     try{var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");
-      if(r.ok){var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&x.id&&x.name&&x.coordinate&&x.coordinate.x!=null});
+      if(r.ok){var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&x.name&&x.coordinate&&x.coordinate.x!=null});
         st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});st=st.filter(function(x){return x._d<=5});
+        /* la recherche par coordonnées ne donne pas toujours l'identifiant : on le retrouve par le nom exact de l'arrêt */
+        st=st.slice(0,3);for(var q2=0;q2<st.length;q2++){if(st[q2].id)continue;try{var r2=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(st[q2].name));if(r2.ok){var j2=await r2.json();var ex2=(j2.stations||[]).find(function(y){return y&&y.id&&bdNorm(y.name)===bdNorm(st[q2].name)});if(ex2)st[q2].id=ex2.id}}catch(e){}}
+        st=st.filter(function(x){return x.id});
         if(st.length){__bdEPm[k]=st.slice(0,2);return __bdEPm[k]}}
     }catch(e){}
     await new Promise(function(res){setTimeout(res,700*(a+1))});
