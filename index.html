@@ -392,7 +392,7 @@ html.dark .bdt-walk{background:rgba(217,119,6,.14);color:#fcd34d;}
 .bdt-fold>summary:before{content:"▸";font-size:10px;}
 .bdt-fold[open]>summary:before{content:"▾";}
 .bdt-empty{font-size:13px;color:var(--mu);text-align:center;padding:14px 0;}
-.bdt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.bdt-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}.bdt-btn-save{grid-column:1/-1;order:-1;background:#16a34a!important;border-color:#16a34a!important;color:#fff!important}.bdt-btn-save:disabled{opacity:.5}
 .bdt-btn{height:48px;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;text-decoration:none;}
 .bdt-btn-main{background:#18181b;color:#fff;border-color:#18181b;}
 html.dark .bdt-btn-main{background:#fafafa;color:#09090b;border-color:#fafafa;}
@@ -2526,6 +2526,19 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
    ]}),
    p("div",{className:"bdt-actions",children:[
     p("a",{href:(function(){var _o=_XY(stops[mineIdx>=0?mineIdx:0]),_d=_XY(stops[_arrIdx>0?_arrIdx:stops.length-1]);return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(_o?_o.lat+","+_o.lon:_cfS)}&destination=${encodeURIComponent(_d?_d.lat+","+_d.lon:_ctS)}&travelmode=transit`})(),target:"_blank",className:"bdt-btn bdt-btn-main",children:[c(gl,{className:"w-4 h-4"})," Google Maps"]}),
+    (function(){/* Sauvegarder le parcours suivi dans « Mes parcours » : départ → destination du parcours affiché, mêmes lignes et changements */try{
+     var _sF=(_lp.length>=2?_lp[0]:"")||nm(stops[mineIdx>=0?mineIdx:0]||{})||String((cur.from&&cur.from.station)||"");
+     var _sT=(_lp.length>=2?_lp[_lp.length-1]:"")||nm(stops[_arrIdx>0?_arrIdx:stops.length-1]||{})||String((cur.to&&cur.to.station)||"");
+     var _sV=(_lp.length>2?_lp.slice(1,-1):[]);
+     var _rt={products:(cur.products||[]).slice(),transfers:cur.transfers||0,duration:cur.duration||"",stopsReal:[_sF,_sT]};var _rk=bdRouteKey(_rt);
+     var _have=(fn||[]).find(function(t){return bdSameName(t.from,_sF)&&bdSameName(t.to,_sT)&&bdTileRoutes(t).some(function(r){return(r.key||bdRouteKey(r))===_rk})});
+     var _save=function(){if(_have){L("Déjà dans « Mes parcours »");setTimeout(function(){L(null)},1800);return}if(!_sF||!_sT){L("Parcours incomplet");setTimeout(function(){L(null)},1800);return}if(bdTileFull())return;
+      var _ex=(fn||[]).find(function(t){return bdSameName(t.from,_sF)&&bdSameName(t.to,_sT)&&!(t.via||[]).length&&!_sV.length});
+      if(_ex){var _ro=bdRouteObj(_rt);var _up=Object.assign({},_ex,{routes:bdTileRoutes(_ex).concat([_ro]),routePrefs:bdSelectedRouteKeys(_ex.routePrefs).concat([_ro.key]).join("||"),lines:(_ex.lines||[]).concat(_ro.products.filter(function(p){return(_ex.lines||[]).indexOf(p)<0}))});nt(function(m){return m.map(function(t){return t.id===_ex.id?_up:t})});bdAfterTileSave(_up);L("Lignes ajoutées à « "+(_ex.name||bdAutoName(_ex.from,_ex.via,_ex.to))+" »");setTimeout(function(){L(null)},2200);return}
+      var _ln0=(cur.products||[]).find(function(x){return x})||"";
+      var tile=Object.assign({id:Date.now().toString(),name:bdAutoName(_sF,_sV,_sT),from:_sF,to:_sT,via:_sV,color:_ln0?getLineColor(_ln0):"#57534e",fav:false},bdTileFromRoutes([_rt],[]),{nearRadius:(function(){try{return parseInt(localStorage.getItem("bd_nearRadius")||"500",10)||500}catch(e){return 500}})(),order:(fn||[]).length});
+      nt(function(m){return m.concat([tile])});bdAfterTileSave(tile);L("Parcours sauvegardé dans « Mes parcours »");setTimeout(function(){L(null)},2200)};
+     return p("button",{type:"button",className:"bdt-btn bdt-btn-save",onClick:_save,disabled:!_sF||!_sT,style:_have?{opacity:.6}:null,children:[c(St,{className:"w-4 h-4"})," ",_have?"Déjà dans Mes parcours":"Sauvegarder dans Mes parcours"]})}catch(e){return null}})(),
     c("button",{className:"bdt-btn",onClick:()=>Tl(null),children:B.close})
    ]})
   ]})
