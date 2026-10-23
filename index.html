@@ -1269,7 +1269,7 @@ function bdRankQ(q,items){
     var prio=[prim].concat(["stop","poi","address"].filter(function(k){return k!==prim}));
     window.__bdQPrio=prio;
     var rk=function(x){var i=prio.indexOf(x.kind);return i<0?9:i};
-    return items.map(function(x,i){return[x,i]}).sort(function(a,b){return rk(a[0])-rk(b[0])||a[1]-b[1]}).map(function(a){return a[0]});
+    /* à type égal : d'abord les résultats qui contiennent le plus de mots tapés (localité, NPA… : « rue centrale 42 conthey » → Conthey avant Hermance) */var qw=nq.split(" ").filter(function(w){return w.length>=3||/\d/.test(w)});var sc=function(x){var n=" "+bdNormQ(x.name+" "+(x.sub||""))+" ";return qw.reduce(function(t,w){return t+(n.indexOf(" "+w)>=0?1:0)},0)};var S=items.map(function(x,i){return[x,i,sc(x)]});return S.sort(function(a,b){return rk(a[0])-rk(b[0])||b[2]-a[2]||a[1]-b[1]}).map(function(a){return a[0]});
   }catch(e){return items}
 }
 function bdOrd(k){var p=window.__bdQPrio||["stop","poi","address"],i=p.indexOf(k);return i<0?9:i+1}
@@ -1525,11 +1525,19 @@ async function bdEndpoint(name){
 try{window.bdEndpoint=bdEndpoint}catch(e){}
 async function bdGetConns(fromName,toName,onErr,wide,via){
   var failed=false,out=[];
+  /* Adresse / lieu avec coordonnées connues : on ne laisse JAMAIS le service d'horaires interpréter le texte (« Conthey » compris comme « Monthey »).
+     On cherche vers les arrêts proches (identifiant, puis nom exact de l'arrêt) et on écarte tout trajet qui arrive / part à plus de 5 km du point. */
+  var FP=null,TP=null;try{FP=await bdGeoPoint(fromName)}catch(e){}try{TP=await bdGeoPoint(toName)}catch(e){}
   var FE=await bdEndpoint(fromName),TE=await bdEndpoint(toName);
-  for(var a=0;a<FE.length&&!out.length;a++)for(var b=0;b<TE.length&&!out.length;b++){out=await bdGetConns0(FE[a],TE[b],function(){failed=true},wide,via)}
-  var fe=bdExact(fromName),te=bdExact(toName);
-  if(!out.length&&(FE[0]!==fe||TE[0]!==te)){failed=false;out=await bdGetConns0(fe,te,function(){failed=true},wide,via)}
-  if(!out.length&&(fe!==fromName||te!==toName)){failed=false;out=await bdGetConns0(fromName,toName,function(){failed=true},wide,via)}
+  var near=function(st,pt){try{if(!pt||!st)return true;var c=st.coordinate||{};if(c.x==null||c.y==null)return true;return zt(pt,{lat:+c.x,lon:+c.y})<=5}catch(e){return true}};
+  var keep=function(L){return(L||[]).filter(function(c){return near(c.to&&c.to.station,TP)&&near(c.from&&c.from.station,FP)})};
+  var tryAll=async function(A,B){for(var a=0;a<A.length&&!out.length;a++)for(var b=0;b<B.length&&!out.length;b++){out=keep(await bdGetConns0(A[a],B[b],function(){failed=true},wide,via))}};
+  await tryAll(FE,TE);
+  if(!out.length&&(FP||TP)){var _nm=async function(pt,E){if(!pt)return E;try{var L=await bdNearStations(pt,2);var n=L.map(function(x){return x.name}).filter(Boolean);return n.length?n:E}catch(e){return E}};failed=false;await tryAll(await _nm(FP,FE),await _nm(TP,TE))}
+  var fe=FP?FE[0]:bdExact(fromName),te=TP?TE[0]:bdExact(toName);
+  if(!out.length&&(!FP||!TP)&&(FE[0]!==fe||TE[0]!==te)){failed=false;out=keep(await bdGetConns0(fe,te,function(){failed=true},wide,via))}
+  var fr=FP?fe:fromName,tr=TP?te:toName;
+  if(!out.length&&(!FP||!TP)&&(fe!==fr||te!==tr)){failed=false;out=keep(await bdGetConns0(fr,tr,function(){failed=true},wide,via))}
   if(failed&&!out.length&&onErr)onErr();
   return out;
 }
@@ -1699,7 +1707,7 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
   let out=[],seen={},horizonMs=bdTripDTMs()+(window.__bd_horizon||60)*60000,tp="";
   for(let page=0;page<5;page++){
     let ctrl=typeof AbortController!=="undefined"?new AbortController():null;
-    let to=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},6000):null;
+    let to=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},page===0?15000:8000):null;
     let r;
     try{ r=await fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(fromName)+"&to="+encodeURIComponent(toName)+"&limit=16"+bdViaQS(via)+(tp||bdTripDTParams()), ctrl?{signal:ctrl.signal}:undefined); }catch(e){ if(to)clearTimeout(to); onErr(); break; }
     if(to)clearTimeout(to);
