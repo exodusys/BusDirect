@@ -1502,14 +1502,8 @@ async function bdGeoPoint(name){
     if(__bdGP[q]!==undefined)return __bdGP[q];
     var st=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
     var exact=st&&(st.stations||[]).find(function(x){return bdNorm(x.name)===bdNorm(q)});if(exact){__bdGP[q]=null;return null}
-    /* Plus Code (Google) : code complet, ou court + localité */
-    try{var pc=window.bdPlusCode&&window.bdPlusCode.parse(q);if(pc){var ref=null;if(!pc.full&&pc.locality){var gl=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(pc.locality)).then(function(r){return r.json()}).catch(function(){return null});var fl=gl&&gl.features&&gl.features[0];if(fl)ref={lat:fl.geometry.coordinates[1],lon:fl.geometry.coordinates[0]}}if(!ref&&window.__bd_loc)ref=window.__bd_loc;var cc=pc.full?window.bdPlusCode.decode(pc.code):(ref?window.bdPlusCode.recover(pc.code,ref.lat,ref.lon):null);if(cc&&isFinite(cc.lat)){var p0={lat:+cc.lat,lon:+cc.lng};__bdGP[q]=p0;return p0}}}catch(e){}
-    /* adresse tapée : plusieurs résultats, on garde celui qui contient le plus de mots tapés (NPA, localité…) — « rue centrale 42, 1964 conthey » → Conthey, pas Hermance */
-    var g=await fetch("https://photon.komoot.io/api/?limit=8&lang=fr&q="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
-    var qw=bdNorm(q).split(" ").filter(function(w){return w.length>=3||/\d/.test(w)});
-    var sc=function(p){var t=" "+bdNorm([p.name,p.street,p.housenumber,p.postcode,p.city,p.town,p.village,p.locality,p.county].filter(Boolean).join(" "))+" ";return qw.reduce(function(a,w){return a+(t.indexOf(" "+w+" ")>=0?1:0)},0)};
-    var best=null,bs=-1;((g&&g.features)||[]).forEach(function(f){var v=sc(f.properties||{});if(v>bs){bs=v;best=f}});
-    var pt=best?{lat:best.geometry.coordinates[1],lon:best.geometry.coordinates[0]}:null;__bdGP[q]=pt;return pt;
+    var g=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
+    var f=g&&g.features&&g.features[0];var pt=f?{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]}:null;__bdGP[q]=pt;return pt;
   }catch(e){return null}
 }
 /* Arrêts les plus proches d'un point (1 ou 2, à moins de 1,5 km ; sinon le plus proche). */
@@ -1571,9 +1565,7 @@ async function bdResolve(q){
     if(!r.ok)return null;
     var st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
     if(!st.length)return null;
-    var n=bdNorm(q),ex=st.find(function(s){return bdNorm(s.name)===n})||st.find(function(s){return bdNorm(s.name).indexOf(n)===0});
-    /* adresse (numéro / NPA / virgule) sans coordonnées : jamais d'arrêt « approchant » d'une autre localité (Conthey ≠ Monthey) */
-    if(!ex){var _addrQ=/\d/.test(q)||/,/.test(q);if(_addrQ){var _ws=n.split(" ").filter(function(w){return w.length>=4&&!/\d/.test(w)&&!/^(rue|route|chemin|avenue|place|quai|allee|impasse|boulevard|passage|sentier|strasse|weg|gasse|platz)$/.test(w)});ex=st.find(function(s){var sn=" "+bdNorm(s.name)+" ";return _ws.some(function(w){return sn.indexOf(" "+w+" ")>=0})})||null;if(!ex)return null}else ex=st[0]}
+    var n=bdNorm(q),ex=st.find(function(s){return bdNorm(s.name)===n})||st.find(function(s){return bdNorm(s.name).indexOf(n)===0})||st[0];
     return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
   }catch(e){return null}
 }
