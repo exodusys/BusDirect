@@ -812,6 +812,7 @@ html.dark .bd-v101-sheet{background:#18181b!important;color:#fafafa!important}
 .bd-v101-sheet .bd-src-routes{margin:0;padding:0;border:0}
 html.modal-open .bd-v101-overlay.open{touch-action:pan-y}
 </style>
+<style id="bd-del-trip-css">.bd-del-trip{border:1px solid rgba(220,38,38,.35)!important;background:rgba(220,38,38,.06)!important;color:#dc2626!important;box-shadow:none!important;margin-top:2px}html.dark .bd-del-trip{border-color:rgba(248,113,113,.35)!important;background:rgba(248,113,113,.10)!important;color:#f87171!important}.bd-del-trip svg{stroke:currentColor}</style>
 </head>
 <body>
   <div id="root"></div>
@@ -2310,7 +2311,7 @@ p("div",{className:"relative w-full max-w-[520px] max-h-[95dvh] rounded-[28px] b
    p("button",{type:"button",onClick:bdCloseTrip,className:"flex-1 h-[52px] rounded-full border border-[#e7e5e4] dark:border-white/10 bg-white dark:bg-zinc-800 font-bold text-[14px] flex items-center justify-center gap-2",children:[c(on,{className:"w-4 h-4"})," ",B.cancel]}),
    p("button",{type:"button",onClick:bdSaveTrip,disabled:!Fe||!He,className:"flex-1 h-[52px] rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black font-bold text-[14px] flex items-center justify-center gap-2 shadow-[0_4px_12px_rgba(0,0,0,0.15)] disabled:opacity-40",children:[c(St,{className:"w-4 h-4"})," ",B.save]})
   ]}),
-  Be&&p("button",{type:"button",onClick:bdDeleteTrip,className:"w-full h-11 rounded-full border border-red-200 text-red-600 dark:border-red-900/50 dark:text-red-400 font-bold text-[12px] flex items-center justify-center gap-1.5 active:scale-95 transition",children:[c(Ml,{className:"w-3.5 h-3.5"})," Supprimer ce parcours"]})
+  Be&&p("button",{type:"button",onClick:bdDeleteTrip,className:"bd-del-trip w-full h-[52px] rounded-full font-bold text-[14px] flex items-center justify-center gap-2 active:scale-95 transition",children:[c(Ml,{className:"w-4 h-4"})," Supprimer ce parcours"]})
  ]})
 ]})
 ]}),le&&(function(){
