@@ -1850,7 +1850,17 @@ function bdRemoteInfo(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null||!(et||[
 function bdJoinXY(target){try{var xy=null;var A=bdTSAll();Object.keys(A).some(function(id){var y=(A[id]||[]).find(function(z){return z&&z.lat!=null&&bdNorm(z.n)===bdNorm(target)});if(y){xy={lat:+y.lat,lon:+y.lon};return true}return false});if(xy)return xy;var m=bdMemoFor(target);if(m&&m.lat!=null&&isFinite(+m.lat))return{lat:+m.lat,lon:+m.lon};return null}catch(e){return null}}
 /* Trajets vers le lieu exact : on cherche vers les arrêts qui entourent ce lieu (jusqu'à 3, à moins de 1,5 km),
    puis on garde pour chaque départ le trajet qui arrive le plus tôt AU LIEU (arrivée à l'arrêt + marche jusqu'au lieu). */
-async function bdJoinFetch(fromName,target,xy){
+/* « Détecter n'importe où » : le trajet part du VRAI arrêt où l'on monte (ex. on marche de « Veyrier, Les Quibières » jusqu'à « Veyrier, Sierne » où passe le 20).
+   La marche du début est retirée : elle est comptée depuis ma position GPS jusqu'à cet arrêt (distance et temps de marche). */
+function bdBoardFix(S){try{if(!S||!S.passList)return S;var pl=S.passList,i=-1;for(var q=0;q<pl.length;q++){var x=pl[q];if(x&&(x.type==="stop"||!x.type)){i=q;break}}if(i<0)return S;
+  var f=pl[i],nm0=typeof f.station==="string"?f.station:((f.station&&f.station.name)||"");if(!nm0)return S;
+  var curN=String((S.from&&S.from.station)||"");if(i===0&&bdNorm(nm0)===bdNorm(curN))return S;
+  var dep=f.departure||f.arrival,dl=f.delay||0,ms=dep?new Date(dep).getTime()+dl*60000:null;
+  var fm=function(t){return t!=null?new Date(t).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--"};
+  var arr=S.to&&S.to.actualMs,dur=S.duration;if(ms&&arr&&arr>ms){var m=Math.round((arr-ms)/60000);dur=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+(m%60)).slice(-2)}
+  return Object.assign({},S,{passList:pl.slice(i),from:Object.assign({},S.from,{station:nm0,departure:dep,delay:dl,platform:f.platform||"",time:fm(ms),plannedTime:fm(dep?new Date(dep).getTime():null),actualMs:ms}),_fromStop:nm0,duration:dur,_sort:ms!=null?ms:S._sort,_boardFix:true})}catch(e){return S}}
+async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromName,target,xy);try{__r.full=(__r.full||[]).map(bdBoardFix)}catch(e){}return __r}
+async function bdJoinFetch0(fromName,target,xy){
   try{
     if(!xy){try{xy=await bdGeoPoint(target)}catch(e){xy=null}}
     if(!xy){var r0=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,null,"",false,true);return{full:((r0&&r0.full)||[]).slice(),xy:null}}
