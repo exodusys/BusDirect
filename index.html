@@ -1854,9 +1854,11 @@ function bdJoinSection(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null)return 
   if(J&&near){if(bdSameName(near.name,J.target)){body=c("div",{className:"text-[12px] text-zinc-500 px-1",children:"Vous êtes déjà à cet arrêt."})}else{var k=bdNorm(near.name)+"|"+bdNorm(J.target),R=window.__bd_joinR;
     if(!R||R.key!==k||Date.now()-R.at>60000){if(window.__bd_joinBusy!==k){window.__bd_joinBusy=k;bdLiveCore([{name:near.name,selected:true,kind:"stop",distanceKm:0}],J.target,null,"",false,true).then(function(r){window.__bd_joinR={key:k,list:((r&&r.full)||[]).slice(),at:Date.now()};window.__bd_joinBusy=null;rer()}).catch(function(){window.__bd_joinBusy=null})}}
     var now=Date.now();
+    /* coordonnées du lieu exact de « Mon parcours » (arrêt mémorisé du parcours, sinon lieu choisi) */
+    var _jXY=null;try{var _jA=bdTSAll();Object.keys(_jA).some(function(id){var y=(_jA[id]||[]).find(function(z){return z&&z.lat!=null&&bdNorm(z.n)===bdNorm(J.target)});if(y){_jXY={lat:+y.lat,lon:+y.lon};return true}return false});if(!_jXY){var _jm=bdMemoFor(J.target);if(_jm&&_jm.lat!=null)_jXY={lat:+_jm.lat,lon:+_jm.lon}}}catch(e){_jXY=null}
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var list=(R&&R.key===k?R.list:[]).filter(function(S){return(S._sort||0)>=now-60000}).sort(function(a,b){return(a._sort||0)-(b._sort||0)}).slice(0,8);
-    body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,_liveName:String((S.from&&S.from.station)||near.name)+" → "+String((S.to&&S.to.station)||J.target)});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun trajet trouvé depuis cet arrêt.":"Recherche des prochains parcours…"})}}
+    body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun trajet trouvé depuis cet arrêt.":"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body]})}catch(e){return null}}
 function bdCardFn(S,_ix){let _del=S.from.delay||0;let _hasDelay=_del>0;let _bar=_hasDelay?"#E30613":"#22c55e";let _badge=_hasDelay?"bg-[#ffeaea] text-[#E30613]":"bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400";let _arrow=_hasDelay?"bg-[#E30613] text-white":"bg-zinc-900 text-white dark:bg-white dark:text-black";return p("button",{onClick:()=>Tl(S),className:"w-full text-left bg-white dark:bg-zinc-900 rounded-[16px] p-4 border border-[#e7e5e4] dark:border-white/10 shadow-[0_6px_20px_rgba(0,0,0,0.08)] hover:shadow-[0_10px_28px_rgba(0,0,0,0.14)] transition-all relative overflow-hidden active:scale-[0.98]",children:[c("div",{className:"absolute left-0 top-0 bottom-0 w-[3px]",style:{background:_bar}}),p("div",{className:"flex items-start justify-between gap-3",children:[p("div",{className:"flex items-center gap-3 flex-1 min-w-0",children:[p("div",{className:"flex flex-col items-center shrink-0",children:[c("span",{className:"text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none tabular-nums",children:S.from.time}),c("span",{className:"mt-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium "+_badge,style:_hasDelay?{color:"#ef4444",background:"rgba(239,68,68,.16)",fontWeight:700}:void 0,children:_hasDelay?"+"+_del+" min":"A l’heure"})]}),p("div",{className:"flex items-center gap-2 mt-1",children:[c("div",{className:"w-[28px] h-[1px] bg-zinc-200 dark:bg-zinc-700 relative",children:c("div",{className:"absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-zinc-300"})}),c("div",{className:"text-[11px] text-zinc-500 tabular-nums whitespace-nowrap",children:S.duration}),c("div",{className:"w-[28px] h-[1px] bg-zinc-200 dark:bg-zinc-700"})]}),p("div",{className:"flex flex-col items-center shrink-0",children:[c("span",{className:"text-[22px] font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none tabular-nums",children:S.to.time}),c("span",{className:"mt-1 text-[11px] px-1.5 py-0.5 rounded-full font-medium bg-zinc-100 text-zinc-500 dark:bg-zinc-800",children:B.arrival})]})]}),c("div",{className:"w-7 h-7 rounded-full flex items-center justify-center shrink-0 "+_arrow,children:c("svg",{width:"14",height:"14",viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"2",children:c("path",{d:"M9 18l6-6-6-6"})})})]}),p("div",{className:"mt-3 flex flex-wrap items-center gap-2",children:[c("div",{className:"flex items-center gap-1.5 flex-wrap",children:(S.products||[]).slice(0,4).map((N)=>c("span",{className:"inline-flex items-center gap-1 px-2 py-1 rounded-full text-white text-[11px] font-semibold",style:{background:getLineColor(N)},children:N},N))}),c("div",{className:"flex items-center gap-2",children:[
   c("span",{className:"text-[11px] text-zinc-500",children:S.transfers>0?S.transfers+" chang.":"Direct"})
@@ -2460,6 +2462,16 @@ try{
     var _lsX=_XY(_ls)||_ls;_fin={addr:_dm.addr||_dm.title,lat:_dm.lat,lon:_dm.lon,fromLat:_lsX.lat,fromLon:_lsX.lon,walk:Math.max(1,Math.round(_km*1000*1.3/80))};var _gw=bdWalkGoogle({lat:_ls.lat,lon:_ls.lon},{lat:_dm.lat,lon:_dm.lon},function(){setBdPrev(function(p){return Object.assign({},p)})});if(_gw!=null)_fin.walk=_gw;
   }
 }catch(e){_fin=null}
+/* mode « Détecter n'importe où » : la destination finale est toujours le lieu exact de « Mon parcours » */
+var _jT=(le&&le._joinTarget)||cur._joinTarget||"";
+try{if(_jT&&stops.length){
+  if(_fin){_fin.addr=_jT}
+  else if(_nmE<0&&!bdSameName(nm(stops[stops.length-1]),_jT)){
+    var _jx=(le&&le._joinXY)||cur._joinXY||null;if(!_jx){var _jm2=bdMemoFor(_jT);if(_jm2&&_jm2.lat!=null)_jx={lat:+_jm2.lat,lon:+_jm2.lon}}
+    var _jl=stops[stops.length-1],_jlX=_XY(_jl)||_jl;
+    if(_jx&&_jlX&&_jlX.lat!=null&&_jlX.lon!=null){var _jkm=zt({lat:+_jlX.lat,lon:+_jlX.lon},_jx);_fin={addr:_jT,lat:_jx.lat,lon:_jx.lon,fromLat:_jlX.lat,fromLon:_jlX.lon,walk:Math.max(1,Math.round(_jkm*1000*1.3/80))};var _jgw=bdWalkGoogle({lat:+_jlX.lat,lon:+_jlX.lon},_jx,function(){setBdPrev(function(p){return Object.assign({},p)})});if(_jgw!=null)_fin.walk=_jgw}
+  }
+}}catch(e){}
 var delay=cur.from&&cur.from.delay||0;
 /* V85: ARRIVE DANS min+sec, pastilles dalles depart/changements/arrivee uniquement, points colores */
 var progress=0;
@@ -2598,6 +2610,7 @@ if(_fin&&rows.length){
 }
 var _cfS=cur.from.station,_cfT=cur.from.time,_ctS=cur.to.station,_ctT=cur.to.time,_cdur=cur.duration;
 if(_tile&&stops.length){var _tcI=Math.max(0,mineIdx),_tcA=ms(stops[_tcI],false),_tcB=ms(stops[stops.length-1],true);_cfS=nm(stops[_tcI]);_cfT=fm(_tcA);_ctS=nm(stops[stops.length-1]);_ctT=fm(_tcB);if(_tcA!=null&&_tcB!=null&&_tcB>_tcA){var _tcM=Math.round((_tcB-_tcA)/60000);_cdur=("0"+Math.floor(_tcM/60)).slice(-2)+":"+("0"+(_tcM%60)).slice(-2)}}
+if(_jT&&stops.length){_ctS=_jT;if(_fin){var _jEnd=_nmE>0?_nmE:stops.length-1,_jA2=ms(stops[_jEnd],true);if(_jA2!=null){_jA2+=(_fin.walk||0)*60000;_ctT=fm(_jA2);var _jD=ms(stops[Math.max(0,_nmS>=0?_nmS:mineIdx)],false);if(_jD!=null&&_jA2>_jD){var _jM=Math.round((_jA2-_jD)/60000);_cdur=("0"+Math.floor(_jM/60)).slice(-2)+":"+("0"+(_jM%60)).slice(-2)}}}}
 var _tileHdr=null;
 var rowsEls = p("div",{children:[c("div",{className:"bdt-list",children:rows.length?rows:c("div",{className:"bdt-empty",children:"Aucun arrêt à venir"})})]});
 
@@ -4792,9 +4805,21 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
  function markup(id,col,size){var d=L[id]||L.classic;return'<svg viewBox="0 0 32 32" width="'+(size||62)+'" height="'+(size||62)+'" aria-label="BusDirect logo" xmlns="http://www.w3.org/2000/svg">'+d.svg(col||'#22c55e')+'</svg>'}
  window.bdLogo={list:ORDER.map(function(k){return{id:k,name:L[k].name}}),current:cur,markup:markup};
  /* icônes de l'onglet et de l'écran d'accueil */
- function icons(){try{var id=cur(),svg=markup(id,'#22c55e',180);var u='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+ function icons(){try{var id=cur(),root=document.documentElement;
+   var dark=root.classList.contains('dark');
+   var bg=dark?'#0C0A09':'#FAFAF9';
+   var svg=markup(id,'#22c55e',180);
+   /* comme dans l'en-tête : en mode sombre les roues passent en blanc (html.dark .bd-wheel) */
+   if(dark)svg=svg.replace(/fill="#1c1917" class="bd-wheel"/g,'fill="#ffffff" class="bd-wheel"');
+   var u='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
    ['icon','shortcut icon'].forEach(function(rel){var l=document.querySelector('link[rel="'+rel+'"]');if(!l){l=document.createElement('link');l.rel=rel;document.head.appendChild(l)}l.type='image/svg+xml';l.href=u});
-   var img=new Image();img.onload=function(){try{var cv=document.createElement('canvas');cv.width=cv.height=180;var x=cv.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,180,180);x.drawImage(img,0,0,180,180);var a=document.querySelector('link[rel="apple-touch-icon"]');if(!a){a=document.createElement('link');a.rel='apple-touch-icon';document.head.appendChild(a)}a.href=cv.toDataURL('image/png')}catch(e){}};img.src=u}catch(e){}}
+   /* barre d'état / barre du navigateur de la même couleur que le fond de l'app */
+   var m=document.querySelector('meta[name="theme-color"]');if(!m){m=document.createElement('meta');m.name='theme-color';document.head.appendChild(m)}m.content=bg;
+   var sb=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(!sb){sb=document.createElement('meta');sb.name='apple-mobile-web-app-status-bar-style';document.head.appendChild(sb)}sb.content=dark?'black':'default';
+   /* icône de l'écran d'accueil : même logo, sur le fond clair ou sombre de l'app, avec une marge pour les coins arrondis */
+   var img=new Image();img.onload=function(){try{var S=180,P=22,cv=document.createElement('canvas');cv.width=cv.height=S;var x=cv.getContext('2d');x.fillStyle=bg;x.fillRect(0,0,S,S);x.drawImage(img,P,P,S-2*P,S-2*P);var a=document.querySelector('link[rel="apple-touch-icon"]');if(!a){a=document.createElement('link');a.rel='apple-touch-icon';document.head.appendChild(a)}a.setAttribute('sizes','180x180');a.href=cv.toDataURL('image/png')}catch(e){}};img.src=u}catch(e){}}
+ /* refaire l'icône quand on change de mode clair/sombre */
+ try{var _lastDark=document.documentElement.classList.contains("dark");new MutationObserver(function(){var d=document.documentElement.classList.contains('dark');if(d!==_lastDark){_lastDark=d;icons()}}).observe(document.documentElement,{attributes:true,attributeFilter:['class','data-theme']})}catch(e){}
  /* en-tête : mise à jour immédiate après un changement (la couleur de précision GPS est conservée) */
  function header(){try{var sp=document.querySelector('[data-bd-logo]');if(!sp)return;var f=sp.querySelector('[fill]');var col=f?f.getAttribute('fill'):'#22c55e';if(/^#fff/i.test(col)){var all=sp.querySelectorAll('[fill]');for(var i=0;i<all.length;i++){var v=all[i].getAttribute('fill');if(!/^#fff|^#1c1917|^none/i.test(v)){col=v;break}}}sp.innerHTML=markup(cur(),col,62)}catch(e){}}
  window.bdLogo.set=function(id){if(!L[id])return;try{localStorage.setItem('bd_logo',id)}catch(e){}header();icons();ui()};
