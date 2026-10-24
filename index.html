@@ -3931,7 +3931,7 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
         var code=t.code||'SMS';
         var label=t.label||s.info||('SMS au '+s.number);
         var href='sms:'+s.number+'?body='+encodeURIComponent(code);
-        rows.push('<div class="bd-sms-rapides-row" data-sms-number="'+String(s.number||'').replace(/"/g,'&quot;')+'"><div><div class="bd-sms-rapides-name">'+code+' · '+label+'</div>'+
+        rows.push('<div class="bd-sms-rapides-row"><div><div class="bd-sms-rapides-name">'+code+' · '+label+'</div>'+
           '<div class="bd-sms-rapides-desc">Source : '+(s.name||'')+(s.number&&s.number!=='APP'?' · SMS '+s.number:'')+'</div></div>'+
           '<a class="bd-sms-rapides-btn" href="'+href+'">'+code+'</a></div>');
       });
@@ -5333,69 +5333,6 @@ html.dark .bd-mode-pill{color:#fff;background:linear-gradient(135deg,rgba(255,25
   setInterval(function(){if(lang()!==cur)full()},700)}
  window.bdTr=function(t){return tr(t,lang())||t};
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
-})();
-</script>
-
-<style id="bd-ticket-share-settings-css">
-#bd-ticket-share-group textarea.bd-distance-settings-input{height:88px;padding:12px 13px;resize:vertical;line-height:1.35}
-#bd-ticket-share-group .bd-ticket-share-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
-#bd-ticket-share-group .bd-ticket-share-actions button{height:42px;border-radius:999px;background:#18181b;color:#fff;font-size:12px;font-weight:850}
-html.dark #bd-ticket-share-group .bd-ticket-share-actions button{background:#fafafa;color:#09090b}
-.bd-sms-email-btn{display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:36px;border-radius:999px;padding:0 12px;margin-left:6px;background:#e4e4e7;color:#18181b;font-size:12px;font-weight:850;text-decoration:none}
-html.dark .bd-sms-email-btn{background:#3f3f46;color:#fafafa}
-</style>
-<script id="bd-ticket-share-settings-js">
-(function(){
-'use strict';
-var KE='bd_ticket_email_enabled', KA='bd_ticket_email_address', KM='bd_ticket_sms_message';
-function get(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}}
-function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
-function esc(s){return String(s||'').replace(/[&<>\"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]})}
-function template(code){var t=get(KM,'{code}');return t.replace(/\{code\}/gi,code)}
-function addSettings(){
- var sheet=document.getElementById('bd-distance-settings-sheet'); if(!sheet||document.getElementById('bd-ticket-share-group'))return;
- var save=sheet.querySelector('#bd-distance-settings-save,.bd-distance-settings-save');
- var g=document.createElement('div');g.className='bd-distance-settings-group';g.id='bd-ticket-share-group';
- g.innerHTML='<h3>Tickets SMS · e-mail · Raccourci iOS</h3><p>Personnalisez le texte envoyé avec les codes des tickets SMS. <b>{code}</b> est remplacé automatiquement par le code du billet.</p>'+ 
- '<label class="bd-distance-settings-label" for="bd-ticket-sms-message">Message SMS</label><textarea class="bd-distance-settings-input" id="bd-ticket-sms-message" placeholder="{code}"></textarea>'+ 
- '<label class="bd-set-toggle"><input type="checkbox" id="bd-ticket-email-enabled"><span>Permettre l’envoi par e-mail</span></label>'+ 
- '<label class="bd-distance-settings-label" for="bd-ticket-email-address">Adresse e-mail destinataire</label><input class="bd-distance-settings-input" id="bd-ticket-email-address" type="email" inputmode="email" autocomplete="email" placeholder="exemple@domaine.ch">'+
- '<div class="bd-set-hint">L’objet de l’e-mail est toujours « BusDirect ». Le corps reprend le message du ticket SMS avec son code.</div>'+  '<label class="bd-distance-settings-label" for="bd-ticket-sms-number">Numéro du service SMS détecté</label><input class="bd-distance-settings-input" id="bd-ticket-sms-number" type="text" inputmode="tel" readonly placeholder="Détection automatique">'+  '<div class="bd-set-hint">Le raccourci utilise automatiquement le numéro du service SMS actif (par exemple 788 ou 873) à la place d’un contact.</div>'+ 
- '<div class="bd-ticket-share-actions"><button type="button" id="bd-ticket-config-download">↓ Télécharger les données</button><button type="button" id="bd-ticket-shortcut-create">⌘ Créer le raccourci</button></div>'+ 
- '<div class="bd-set-hint">« Créer le raccourci » copie automatiquement l’e-mail et le modèle SMS puis ouvre l’éditeur Raccourcis iOS.</div>';
- if(save&&save.parentNode)save.parentNode.insertBefore(g,save);else sheet.appendChild(g);
- var msg=g.querySelector('#bd-ticket-sms-message'), em=g.querySelector('#bd-ticket-email-address'), en=g.querySelector('#bd-ticket-email-enabled'), sn=g.querySelector('#bd-ticket-sms-number');
- msg.value=get(KM,'{code}'); em.value=get(KA,''); en.checked=get(KE,'0')==='1';
- function detectedSmsNumber(){
-  var row=document.querySelector('#bd-sms-rapides .bd-sms-rapides-row[data-sms-number]');
-  if(row&&row.dataset.smsNumber)return row.dataset.smsNumber;
-  var a=document.querySelector('#bd-sms-rapides a.bd-sms-rapides-btn[href^="sms:"]');
-  if(a){var m=(a.getAttribute('href')||'').match(/^sms:([^?&]+)/i);if(m)return m[1]}
-  return '';
- }
- function syncNumber(){var n=detectedSmsNumber();if(sn){sn.value=n||'Aucun service SMS actif';sn.dataset.number=n}}
- syncNumber();
- function persist(){set(KM,msg.value||'{code}');set(KA,em.value.trim());set(KE,en.checked?'1':'0');refreshTickets()}
- msg.addEventListener('input',persist);em.addEventListener('input',persist);en.addEventListener('change',persist);
- g.querySelector('#bd-ticket-config-download').onclick=function(){persist();syncNumber();var number=(sn&&sn.dataset.number)||detectedSmsNumber();var data={name:'BusDirect',email:em.value.trim(),subject:'BusDirect',smsNumber:number,smsMessage:msg.value||'{code}',placeholder:'{code}',automation:'Lorsque je reçois un e-mail dont l’objet contient BusDirect, envoyer le contenu de l’e-mail par Messages au numéro SMS du service'};var b=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='BusDirect-raccourci.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)};
- g.querySelector('#bd-ticket-shortcut-create').onclick=async function(){persist();var payload='BusDirect\\nEMAIL='+em.value.trim()+'\\nOBJET=BusDirect\\nSMS='+(msg.value||'{code}');try{await navigator.clipboard.writeText(payload)}catch(e){var ta=document.createElement('textarea');ta.value=payload;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}location.href='shortcuts://create-shortcut'};
-}
-function refreshTickets(){
- var host=document.getElementById('bd-sms-rapides');if(!host)return;
- host.querySelectorAll('.bd-sms-rapides-row').forEach(function(row){
-  var sms=row.querySelector('a.bd-sms-rapides-btn');if(!sms)return;
-  var code=(sms.textContent||'').trim()||'SMS', msg=template(code), href=sms.getAttribute('href')||'', num='';
-  var m=href.match(/^sms:([^?&]+)/i);if(m)num=m[1];
-  sms.href='sms:'+num+'?body='+encodeURIComponent(msg);
-  var old=row.querySelector('.bd-sms-email-btn');if(old)old.remove();
-  if(get(KE,'0')==='1'){
-   var email=get(KA,'').trim();if(email){var a=document.createElement('a');a.className='bd-sms-email-btn';a.textContent='✉︎';a.title='Envoyer par e-mail';a.href='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent('BusDirect')+'&body='+encodeURIComponent(msg);sms.insertAdjacentElement('afterend',a)}
-  }
- });
-}
-function run(){addSettings();refreshTickets();setTimeout(function(){var n=document.getElementById('bd-ticket-sms-number');if(n){var r=document.querySelector('#bd-sms-rapides .bd-sms-rapides-row[data-sms-number]');var v=r&&r.dataset.smsNumber?r.dataset.smsNumber:'';n.value=v||'Aucun service SMS actif';n.dataset.number=v}},80)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
-new MutationObserver(function(){addSettings();refreshTickets()}).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
 </body>
