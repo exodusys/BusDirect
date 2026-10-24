@@ -889,14 +889,15 @@ function verifierLocalisationAuDemarrage() {
   if (!("geolocation" in navigator)) {
     return;
   }
-  /* option désactivée volontairement dans « Paramètres » alors que la localisation est autorisée : on respecte ce choix */
-  try{if(localStorage.getItem("bd_geo_user_off")==="1")return}catch(e){}
+  /* option désactivée volontairement dans « Paramètres » alors que la localisation est autorisée : on respecte ce choix (la page d’information s’affiche) */
+  try{if(localStorage.getItem("bd_geo_user_off")==="1"){bdInfoLater();return}}catch(e){}
   /* IMPORTANT : même si "granted" est mémorisé, on vérifie toujours réellement la localisation. */
   bdGeoGet(
     function(position) {
       localStorage.setItem(LOCATION_PERMISSION_KEY, "granted");
       bdSyncGeoSetting(true);
       utiliserPosition(position);
+      bdInfoLater();
     },
     function(error) {
       if (error.code === error.PERMISSION_DENIED) {
@@ -907,13 +908,64 @@ function verifierLocalisationAuDemarrage() {
         localStorage.setItem(LOCATION_PERMISSION_KEY, "granted");
         bdSyncGeoSetting(true);
       }
+      bdInfoLater();
     },
     { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
   );
 }
+function bdInfoLater(){setTimeout(function(){try{window.__bdGeoInfoCheck&&window.__bdGeoInfoCheck()}catch(e){}},300)}
 window.demanderLocalisation=demanderLocalisation;
 /* LANCEMENT AUTOMATIQUE */
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",verifierLocalisationAuDemarrage);else verifierLocalisationAuDemarrage();
+</script><style id="bd-geo-info-css">
+#bd-geo-info{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-family:Inter,system-ui,-apple-system,sans-serif}
+#bd-geo-info .bx{width:100%;max-width:440px;max-height:90dvh;overflow:auto;background:#fafaf9;color:#18181b;border-radius:28px;padding:24px 22px;box-shadow:0 25px 70px rgba(0,0,0,.35)}
+html.dark #bd-geo-info .bx{background:#18181b;color:#fafafa}
+#bd-geo-info .ic{width:56px;height:56px;border-radius:18px;background:#22c55e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:14px}
+#bd-geo-info h2{margin:0 0 8px;font-size:20px;font-weight:900;letter-spacing:-.02em}
+#bd-geo-info p{margin:0 0 10px;font-size:14px;line-height:1.45;color:#52525b}html.dark #bd-geo-info p{color:#a1a1aa}
+#bd-geo-info ul{margin:0 0 14px;padding:0;list-style:none;font-size:13.5px;line-height:1.4}
+#bd-geo-info li{padding:5px 0 5px 24px;position:relative}#bd-geo-info li:before{content:"✓";position:absolute;left:4px;color:#22c55e;font-weight:900}
+#bd-geo-info .how{display:none;background:rgba(120,120,120,.1);border-radius:16px;padding:12px 14px;margin:0 0 14px;font-size:13px;line-height:1.5}
+#bd-geo-info .how.on{display:block}#bd-geo-info .how b{font-weight:800}
+#bd-geo-info button{width:100%;height:50px;border-radius:999px;font-weight:800;font-size:15px;border:0;cursor:pointer;margin-top:8px}
+#bd-geo-info .yes{background:#22c55e;color:#fff}
+#bd-geo-info .no{background:transparent;color:inherit;border:1px solid rgba(120,120,120,.35)}
+</style>
+<script id="bd-geo-info-js">
+/* Page d’information affichée quand la localisation n’est pas activée (au démarrage, ou après un refus) */
+(function(){
+ function standalone(){try{return window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches}catch(e){return false}}
+ function hide(){var o=document.getElementById("bd-geo-info");if(o)o.remove()}
+ function show(denied){
+  if(document.getElementById("bd-geo-info"))return;
+  if(!document.body){document.addEventListener("DOMContentLoaded",function(){show(denied)});return}
+  var o=document.createElement("div");o.id="bd-geo-info";o.setAttribute("role","dialog");o.setAttribute("aria-modal","true");
+  var path=standalone()?"<b>Réglages</b> › <b>Confidentialité et sécurité</b> › <b>Service de localisation</b> › <b>Sites web Safari</b> › <b>Lorsque l’app est active</b>":"<b>Réglages</b> › <b>Applications</b> › <b>Safari</b> › <b>Localisation</b> › <b>Demander</b> ou <b>Autoriser</b> (ou touche « aA » dans la barre d’adresse › <b>Réglages du site web</b> › <b>Localisation</b>)";
+  o.innerHTML='<div class="bx"><div class="ic">📍</div><h2>Localisation non activée</h2>'
+   +'<p>BusDirect utilise ta position uniquement pour faciliter tes déplacements :</p>'
+   +'<ul><li>Trouver les arrêts et les départs proches de toi</li><li>Détecter automatiquement tes parcours</li><li>Suivre ton bus ou ton train en direct</li><li>Afficher la distance et la direction jusqu’à l’arrêt</li></ul>'
+   +'<p>Sans localisation, tu peux toujours chercher un départ et une destination à la main.</p>'
+   +'<div class="how'+(denied?' on':'')+'" id="bd-geo-info-how">La localisation est bloquée par le téléphone. Pour l’autoriser : '+path+', puis reviens dans BusDirect.</div>'
+   +'<button type="button" class="yes" id="bd-geo-info-yes">Activer la localisation</button>'
+   +'<button type="button" class="no" id="bd-geo-info-no">Continuer sans localisation</button></div>';
+  document.body.appendChild(o);
+  document.getElementById("bd-geo-info-no").onclick=function(){try{sessionStorage.setItem("bd-geo-info-later","1")}catch(e){}hide()};
+  document.getElementById("bd-geo-info-yes").onclick=function(){var b=this;b.disabled=true;b.textContent="Demande en cours…";
+   try{localStorage.removeItem("bd_geo_user_off")}catch(e){}
+   if(typeof window.demanderLocalisation!=="function"){hide();return}
+   window.demanderLocalisation(function(ok){if(ok){hide();return}b.disabled=false;b.textContent="Réessayer";var h=document.getElementById("bd-geo-info-how");if(h)h.classList.add("on")})};
+ }
+ window.bdGeoInfo={show:show,hide:hide};
+ /* au démarrage : une fois la vraie autorisation vérifiée */
+ function check(){var on=true,perm=null;try{on=localStorage.getItem("bd_settings_geoloc")!=="0";perm=localStorage.getItem("busdirect_location_permission")}catch(e){}
+  if(!("geolocation" in navigator)){return}
+  if(on){hide();return}
+  try{if(sessionStorage.getItem("bd-geo-info-later")==="1")return}catch(e){}
+  show(perm==="denied")}
+ window.addEventListener("bd-geo-mode-change",function(){try{if(localStorage.getItem("bd_settings_geoloc")!=="0")hide()}catch(e){}});
+ window.__bdGeoInfoCheck=check;
+})();
 </script></head>
 <body>
   <div id="root"></div>
@@ -4762,7 +4814,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
   function upd(){var M=window.__bdMotion;var sb=document.getElementById('bd-set-msub');if(sb)sb.classList.toggle('off',!mc.checked);mp.style.display=(M&&M.supported&&mc.checked&&M.needsPermission&&M.permission()!=='granted')?'block':'none';geoUpd();motUpd()}
   mc.onchange=function(){var M=window.__bdMotion;try{localStorage.setItem('bd_settings_motion',mc.checked?'1':'0')}catch(e){}if(M){if(mc.checked){M.request(true).then(upd)}else{M.stop()}}upd()};
   document.getElementById('bd-set-geo-cont').onchange=function(){try{localStorage.setItem('bd_settings_geo_continuous',this.checked?'1':'0')}catch(e){}gcUpd();geoGate();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}};window.__bdGeoUi=function(){try{geoGate();geoUpd()}catch(e){}};document.getElementById('bd-set-geo').addEventListener('change',function(){var cb=this;try{localStorage.setItem('bd_settings_geoloc',cb.checked?'1':'0');if(cb.checked)localStorage.removeItem('bd_geo_user_off');else localStorage.setItem('bd_geo_user_off','1')}catch(e){}geoGate();geoUpd();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}
-   /* activation : demande au téléphone ; en cas de refus, l'option se désactive */if(cb.checked&&typeof window.demanderLocalisation==='function')window.demanderLocalisation(function(ok){if(!ok){try{localStorage.removeItem('bd_geo_user_off')}catch(e){}}})});var gi=document.getElementById('bd-set-geo-int');gi.oninput=function(){if(gi.value!==''&&parseInt(gi.value,10)<1)gi.value='1'};gi.onblur=function(){var v=parseInt(gi.value,10);if(isNaN(v)||v<1)gi.value=String(isNaN(v)&&gi.value===''?10:1)};
+   /* activation : demande au téléphone ; en cas de refus, l'option se désactive */if(cb.checked&&typeof window.demanderLocalisation==='function')window.demanderLocalisation(function(ok){if(!ok){try{localStorage.removeItem('bd_geo_user_off')}catch(e){}try{window.bdGeoInfo&&window.bdGeoInfo.show(true)}catch(e){}}})});var gi=document.getElementById('bd-set-geo-int');gi.oninput=function(){if(gi.value!==''&&parseInt(gi.value,10)<1)gi.value='1'};gi.onblur=function(){var v=parseInt(gi.value,10);if(isNaN(v)||v<1)gi.value=String(isNaN(v)&&gi.value===''?10:1)};
   mp.onclick=function(){if(window.__bdMotion)window.__bdMotion.request(true).then(upd)};
   window.__bdSetMotionUpd=upd;setInterval(function(){if(o.classList.contains('open'))upd()},1500)}
  function flag(k){try{return localStorage.getItem(k)!=='0'}catch(e){return true}}
