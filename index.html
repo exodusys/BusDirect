@@ -5028,12 +5028,17 @@ html.dark .bd-sub-back{border-color:rgba(255,255,255,.15)}
  apply(on());bind();setInterval(bind,600);
 })();
 </script>
+<style id="bd-home-sms-css">
+/* « Tickets SMS » dans l’encadré « Page principale » : sous-partie sans cadre */
+#bd-home-group #bd-set-sms-group{border:0!important;border-top:1px solid rgba(127,127,127,.2)!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;margin:14px 0 0!important;padding:12px 0 0!important}
+#bd-home-group #bd-set-sms-group h3{font-size:13px}
+</style>
 <script id="bd-settings-order">
-/* Paramètres : « Langue et sources » puis « Proximité et alertes » placés en dessous de « Tickets SMS » */
+/* Paramètres : « Tickets SMS » dans l’encadré « Page principale » ; « Langue et sources » puis « Proximité et alertes » en bas de la page */
 (function(){
- function fix(){var sms=document.getElementById('bd-set-sms-group'),ls=document.getElementById('bd-set-langsrc'),px=document.getElementById('bd-prox-entry');if(!sms||!ls||!sms.parentNode)return;
-  if(sms.nextElementSibling!==ls)sms.parentNode.insertBefore(ls,sms.nextSibling);
-  if(px&&ls.nextElementSibling!==px)ls.parentNode.insertBefore(px,ls.nextSibling)}
+ function fix(){var main=document.getElementById('bd-distance-settings-sheet'),home=document.getElementById('bd-home-group'),sms=document.getElementById('bd-set-sms-group'),ls=document.getElementById('bd-set-langsrc'),px=document.getElementById('bd-prox-entry'),sv=document.getElementById('bd-distance-settings-save');if(!main)return;
+  if(home&&sms&&sms.parentNode!==home)home.appendChild(sms);
+  if(ls&&sv&&sv.parentNode===main){if(ls.nextElementSibling!==(px||sv))main.insertBefore(ls,px&&px.parentNode===main?px:sv);if(px&&px.parentNode===main&&px.nextElementSibling!==sv)main.insertBefore(px,sv);if(ls.nextElementSibling!==(px||sv))main.insertBefore(ls,px||sv)}}
  setInterval(fix,500);document.addEventListener('click',function(){setTimeout(fix,0)},true);
 })();
 </script>
