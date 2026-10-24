@@ -1860,20 +1860,24 @@ function bdBoardFix(S){try{if(!S||!S.passList)return S;var pl=S.passList,i=-1;fo
   var arr=S.to&&S.to.actualMs,dur=S.duration;if(ms&&arr&&arr>ms){var m=Math.round((arr-ms)/60000);dur=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+(m%60)).slice(-2)}
   return Object.assign({},S,{passList:pl.slice(i),from:Object.assign({},S.from,{station:nm0,departure:dep,delay:dl,platform:f.platform||"",time:fm(ms),plannedTime:fm(dep?new Date(dep).getTime():null),actualMs:ms}),_fromStop:nm0,duration:dur,_sort:ms!=null?ms:S._sort,_boardFix:true})}catch(e){return S}}
 async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromName,target,xy);try{__r.full=(__r.full||[]).map(bdBoardFix)}catch(e){}return __r}
+/* le trajet arrive exactement à cet arrêt (dernier arrêt du dernier véhicule = arrêt du bouton) */
+function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});var l=pl[pl.length-1];var ln=l?(typeof l.station==="string"?l.station:((l.station&&l.station.name)||"")):((S.to&&S.to.station)||"");return!!ln&&k(ln)===k(name)}catch(e){return false}}
+/* « Détecter n'importe où » : seule destination utilisée = le lieu du bouton.
+   Arrêt → uniquement les trajets qui arrivent exactement à cet arrêt.
+   Adresse / POI → uniquement les trajets qui arrivent à l'arrêt le plus proche de ce lieu (puis marche). */
 async function bdJoinFetch0(fromName,target,xy){
   try{
-    if(!xy){try{xy=await bdGeoPoint(target)}catch(e){xy=null}}
-    if(!xy){var r0=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,null,"",false,true);return{full:((r0&&r0.full)||[]).slice(),xy:null}}
-    var C=[];try{C=await bdNearStations(xy,3)}catch(e){C=[]}
-    C=(C||[]).filter(function(x){return x&&x.name&&x._d!=null&&x._d<=1.5});
-    /* le lieu est lui-même un arrêt : on vise cet arrêt-là (identifiant exact), pas un homonyme */
-    if(!C.length){var r1=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,null,"",false,true);return{full:((r1&&r1.full)||[]).slice(),xy:xy}}
-    var sets=await Promise.all(C.map(function(st){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],st.name,null,"",false,true).then(function(r){var w=Math.max(0,Math.round(st._d*1000*1.3/80));return((r&&r.full)||[]).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0})})}).catch(function(){return[]})}));
-    var all=[].concat.apply([],sets);
-    /* trajets dont le dernier arrêt est trop loin du lieu : écartés */
-    all=all.filter(function(S){try{var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)&&x.lat!=null});var l=pl[pl.length-1];if(!l)return true;return zt(xy,{lat:+l.lat,lon:+l.lon})<=1.5}catch(e){return true}});
-    var best={};all.forEach(function(S){var k=(S.from&&S.from.departure)+"|"+(S.products||[]).join(",");var b=best[k];if(!b||(S._placeArr&&(!b._placeArr||S._placeArr<b._placeArr)))best[k]=S});
-    return{full:Object.keys(best).map(function(k){return best[k]}),xy:xy};
+    var dm=bdMemoFor(target),isPlace=!!(dm&&dm.kind&&dm.kind!=="stop");
+    if(!dm){var inTS=false;try{var A=bdTSAll();inTS=Object.keys(A).some(function(id){return(A[id]||[]).some(function(z){return z&&bdNorm(z.n)===bdNorm(target)})})}catch(e){}
+      if(!inTS){var gp=null;try{gp=await bdGeoPoint(target)}catch(e){}if(gp){isPlace=true;xy=xy||gp}}}
+    var run=function(dest){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],dest,null,"",false,true).then(function(r){return((r&&r.full)||[]).slice()}).catch(function(){return[]})};
+    if(!isPlace){var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});return{full:L,xy:xy||bdJoinXY(target)}}
+    if(!xy&&dm&&dm.lat!=null&&isFinite(+dm.lat))xy={lat:+dm.lat,lon:+dm.lon};
+    var C=[];if(xy){try{C=await bdNearStations(xy,1)}catch(e){C=[]}}
+    if(!C||!C.length||!C[0].name){return{full:await run(target),xy:xy}}
+    var st=C[0],w=Math.max(0,Math.round((st._d||0)*1000*1.3/80));
+    var L3=(await run(st.name)).filter(function(S){return bdJoinEndsAt(S,st.name)}).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0})});
+    return{full:L3,xy:xy};
   }catch(e){return{full:[],xy:xy||null}}
 }
 function bdJoinSection(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null)return null;var me={lat:+lc.lat,lon:+lc.lon};
