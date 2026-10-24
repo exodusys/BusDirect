@@ -2742,9 +2742,12 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
     p("div",{className:"bd-st2-top",children:[p("span",{className:"bd-st2-k",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(_ln),"Position du "+_veh+(stops.some(function(z){return z&&z._est})&&_j<Math.max(0,mineIdx)?" · estimée":"")]}),p("span",{className:"bd-st3-cdw",children:[c("span",{className:"bd-st2-cd",children:_cd}),_tgtK?c("span",{className:"bd-st3-cdk",children:_tgtK}):null,_dlTxt?c("span",{className:"bd-st3-dl"+(_dl>0?" late":""),children:_dlTxt}):null]})]}),
     (function(){/* ligne horizontale de tous les arrêts : dès que le véhicule atteint le milieu, la ligne défile et le véhicule reste au centre */
       var _last=_destIdx>=0?_destIdx:stops.length-1;if(_last<1)_last=stops.length-1;var _N=_last+1;
-      var _fi=_mode==="before"?0:(_mode==="end"?_last:(_mode==="at"?_j:_j+_pp));_fi=Math.min(_last,Math.max(0,_fi));
-      var S=78,P=40,_tot=2*P+(_N-1)*S,_xb=P+_fi*S;
+      /* véhicule pas encore arrivé au premier arrêt connu : il avance sur un tronçon d'approche (15 dernières minutes) avant ce premier arrêt */
+      var _ap=0;if(_mode==="before"){var _t0=_depT(stops[0]);if(_t0!=null){var _w0=15*60000;_ap=Math.min(1,Math.max(0,(now-(_t0-_w0))/_w0))}}
+      var _fi=_mode==="before"?(_ap-1):(_mode==="end"?_last:(_mode==="at"?_j:_j+_pp));_fi=Math.min(_last,Math.max(-1,_fi));
+      var S=78,P0=40,P=P0+(_mode==="before"?S:0),_tot=P+P0+(_N-1)*S,_xb=P+_fi*S;
       var _els=[c("span",{className:"bd-st5-line",style:{left:P+"px",width:((_N-1)*S)+"px"}},"ln"),c("span",{className:"bd-st5-fill",style:{left:P+"px",width:Math.max(0,_xb-P).toFixed(1)+"px"}},"fl")];
+      if(_mode==="before"){_els.push(c("span",{className:"bd-st5-appr",style:{left:P0+"px",width:S+"px"}},"ap"));_els.push(c("span",{className:"bd-st5-appf",style:{left:P0+"px",width:Math.max(0,_xb-P0).toFixed(1)+"px"}},"apf"))}
       for(var _k=0;_k<_N;_k++){var _x=P+_k*S,_past=_k<=_j&&_mode!=="before",_me=_k===Math.max(0,mineIdx),_de=_k===_last;
        _els.push(c("span",{className:"bd-st4-dot"+(_past?" past":"")+(_me?" me":"")+(_de?" dest":""),style:{left:_x+"px"}},"d"+_k));
        _els.push(c("span",{className:"bd-st5-lbl"+((_me||_de)?" me":""),style:{left:_x+"px"},children:nm(stops[_k])},"l"+_k))}
@@ -5152,6 +5155,7 @@ html.dark .bd-st2-veh{background:#18181b}
 </style>
 <style id="bd-st3-css">
 .bd-st3{display:block!important;padding:12px 14px!important;border-radius:16px!important}
+.bd-st2-top .bdt-chip,.bd-st2-name .bdt-chip{flex:none!important;white-space:nowrap!important}.bd-st3 .bd-st2-top>span:first-child{min-width:0}
 .bd-st3-cdw{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none}.bd-st3-cdk{font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--mu)}.bd-st3-dl{font-size:11px;font-weight:800;color:#16a34a}.bd-st3-dl.late{color:#ef4444}
 .bd-st3-cols{display:flex;justify-content:space-between;gap:12px;margin-top:6px}
 .bd-st3-col{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 0}
@@ -5181,6 +5185,8 @@ html.dark .bd-st2-veh{background:#18181b}
 .bd-st5-lbl{position:absolute;top:24px;width:72px;margin-left:-36px;font-size:9px;font-weight:700;line-height:1.15;text-align:center;color:var(--mu);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .bd-st5-lbl.me{font-weight:900;color:inherit}
 .bd-st5-veh{top:3px!important;transition:left 1s linear}
+.bd-st5-appr{position:absolute;top:11px;height:2px;background:repeating-linear-gradient(90deg,var(--lc,#ef4444) 0 5px,transparent 5px 10px);opacity:.55}
+.bd-st5-appf{position:absolute;top:10px;height:4px;border-radius:4px;background:var(--lc,#ef4444);opacity:.85;transition:width 1s linear}
 </style>
 <style id="bd-mode-pill-css">
 /* info-bulle « Mode parcours » / « Mode direct » à droite de « Prochains parcours » */
