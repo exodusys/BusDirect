@@ -2012,7 +2012,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
           let actualDep=plannedDep!=null?plannedDep+delFrom*60000:null;
           let actualArr=plannedArr!=null?plannedArr+delTo*60000:null;
           let fmt=function(ms){ return ms!=null?new Date(ms).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--"; };
-          let passList=(function(){var R=[];(c.sections||[]).forEach(function(sec,si){if(sec.journey&&sec.journey.passList){var cat=sec.journey.category||"";var line=sec.journey.name||sec.journey.number||cat;var plList=sec.journey.passList;plList.forEach(function(pl,pi){var d=0;try{var _pp=pl.prognosis&&(pl.prognosis.departure||pl.prognosis.arrival);var _pb=pl.prognosis&&pl.prognosis.departure?pl.departure:pl.arrival;if(_pp&&_pb){d=Math.round((new Date(_pp)-new Date(_pb))/60000)}else if(typeof pl.delay==="number"){d=pl.delay}}catch(e){}R.push({lat:pl.station&&pl.station.coordinate?pl.station.coordinate.x:null,lon:pl.station&&pl.station.coordinate?pl.station.coordinate.y:null,station:pl.station&&pl.station.name?pl.station.name:(pl.station||""),arrival:pl.arrival,departure:pl.departure,delay:d,platform:(pl.prognosis&&pl.prognosis.platform)||pl.platform||"",category:cat,line:line,type:"stop",isStart:si===0&&pi===0,isEnd:si===(c.sections.length-1)&&pi===plList.length-1,sectionIdx:si,stopIdx:pi})});if(si<c.sections.length-1&&c.sections.slice(si+1).some(function(z){return z&&z.journey})){var next=c.sections.slice(si+1).find(function(z){return z&&z.journey});var nextLine="";var nextDep="";if(next&&next.journey){nextLine=next.journey.name||next.journey.number||next.journey.category||"";nextDep=next.journey.passList&&next.journey.passList[0]?next.journey.passList[0].departure:""}R.push({type:"transfer",station:"Correspondance",at:(function(){var a=sec.arrival&&sec.arrival.station&&sec.arrival.station.name;if(a)return a;var q=sec.journey&&sec.journey.passList;var lp=q&&q[q.length-1];return lp&&lp.station&&lp.station.name?lp.station.name:""})(),line:nextLine,category:next&&next.journey?next.journey.category:"",departure:nextDep,sectionIdx:si})}}else if(sec.walk){var mins=sec.walk.duration?Math.round(sec.walk.duration/60):0;R.push({type:"walk",station:"Marche a pied",walkMin:mins,sectionIdx:si})}});return R})();
+          let passList=(function(){var R=[];(c.sections||[]).forEach(function(sec,si){if(sec.journey&&sec.journey.passList){var cat=sec.journey.category||"";var line=sec.journey.name||sec.journey.number||cat;var plList=sec.journey.passList;plList.forEach(function(pl,pi){var d=0;try{var _pp=pl.prognosis&&(pl.prognosis.departure||pl.prognosis.arrival);var _pb=pl.prognosis&&pl.prognosis.departure?pl.departure:pl.arrival;if(_pp&&_pb){d=Math.round((new Date(_pp)-new Date(_pb))/60000)}else if(typeof pl.delay==="number"){d=pl.delay}}catch(e){}R.push({lat:pl.station&&pl.station.coordinate?pl.station.coordinate.x:null,lon:pl.station&&pl.station.coordinate?pl.station.coordinate.y:null,station:pl.station&&pl.station.name?pl.station.name:(pl.station||""),arrival:pl.arrival,departure:pl.departure,delay:d,platform:(pl.prognosis&&pl.prognosis.platform)||pl.platform||"",category:cat,line:line,num:String(sec.journey.number||""),type:"stop",isStart:si===0&&pi===0,isEnd:si===(c.sections.length-1)&&pi===plList.length-1,sectionIdx:si,stopIdx:pi})});if(si<c.sections.length-1&&c.sections.slice(si+1).some(function(z){return z&&z.journey})){var next=c.sections.slice(si+1).find(function(z){return z&&z.journey});var nextLine="";var nextDep="";if(next&&next.journey){nextLine=next.journey.name||next.journey.number||next.journey.category||"";nextDep=next.journey.passList&&next.journey.passList[0]?next.journey.passList[0].departure:""}R.push({type:"transfer",station:"Correspondance",at:(function(){var a=sec.arrival&&sec.arrival.station&&sec.arrival.station.name;if(a)return a;var q=sec.journey&&sec.journey.passList;var lp=q&&q[q.length-1];return lp&&lp.station&&lp.station.name?lp.station.name:""})(),line:nextLine,category:next&&next.journey?next.journey.category:"",departure:nextDep,sectionIdx:si})}}else if(sec.walk){var mins=sec.walk.duration?Math.round(sec.walk.duration/60):0;R.push({type:"walk",station:"Marche a pied",walkMin:mins,sectionIdx:si})}});return R})();
           return {
             id: st.name+"_"+idx+"_"+(c.from&&c.from.station&&c.from.station.name||""),
             from:{station:c.from&&c.from.station&&c.from.station.name||st.name, departure:c.from&&c.from.departure, delay:delFrom, platform:c.from&&c.from.platform||"", time:fmt(actualDep), plannedTime:fmt(plannedDep), actualMs:actualDep},
@@ -2511,21 +2511,28 @@ if(pc>0){ firstVisible = pc; }
 /* L'affichage part de l'arrêt où je suis (arrêt de recherche détecté) ; les arrêts précédents sont masqués. */
 var globalDepIdx = mineIdx>=0 ? mineIdx : firstVisible;
 var visibleStops = stops.map(function(s,i){return {s:s,i:i}}).filter(function(o){ if(_nmS>=0) return o.i>=_nmS&&o.i<=_nmE; if(mineIdx>=0) return o.i>=mineIdx; return o.i>=globalDepIdx || o.i===0 || o.i===stops.length-1; });
+/* ligne de chaque arrêt : n-ième véhicule du trajet = n-ième ligne du trajet (les tronçons à pied ne décalent plus les lignes) */
+var _jOrd={},_jN=0;stops.forEach(function(s0){var k=s0.sectionIdx!=null?s0.sectionIdx:0;if(_jOrd[k]==null)_jOrd[k]=_jN++});
+function bdStopLine(stop){var cat=String(stop.category||"").trim(),num=String(stop.num||"").trim(),ln=String(stop.line||"").trim();if(num&&!/^\d{4,}$/.test(num))return(cat&&num.indexOf(cat)!==0?cat+" "+num:num);if(ln&&!/^\d{4,}$/.test(ln))return ln;return cat}
 function chipEl(line){
   if(!line) return null;
-  var clean=String(line).trim();
+  var clean=String(line).trim().replace(/\s+/g," ");
   if(/^[0-9]{4,}$/.test(clean)) return null;
-  var m=clean.match(/\d+|[A-Z]+\d*/);
-  var label=m?m[0]:clean.split(" ")[0];
-  if(label.length>4 || /^\d{4,}$/.test(label)) return null;
+  /* même libellé que les cartes « Prochains parcours » (ex. « B 2 », « IR 15 ») : catégorie + vrai numéro de ligne */
+  var label=clean.replace(/\s+\d{4,}$/,"");
+  if(label.length>8) label=label.split(" ").slice(0,2).join(" ");
   var col=getLineColor(clean);
   return c("span",{className:"bdt-chip",style:{background:col,color:"#fff",display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:"26px",height:"20px",fontSize:"11px",fontWeight:800,padding:"0 7px",borderRadius:"99px"},children:label});
 }
 function getLineForStop(stop){
   var sec = stop.sectionIdx!=null?stop.sectionIdx:0;
-  if(prods&&prods[sec]) return prods[sec];
-  if(prods&&prods[0]) return prods[0];
-  return stop.line||stop.category||"";
+  var o=_jOrd[sec]!=null?_jOrd[sec]:0;
+  /* lignes du trajet alignées sur ses véhicules : on prend celle du même rang */
+  if(prods&&prods.length===_jN&&prods[o]) return prods[o];
+  var own=bdStopLine(stop);
+  if(own) return own;
+  if(prods&&prods[o]) return prods[o];
+  return (prods&&prods[0])||"";
 }
 var depStop = visibleStops.length?visibleStops[0].s:null;
 var depMs = depStop?ms(depStop,false):null;
