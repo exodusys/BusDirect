@@ -1835,6 +1835,26 @@ function bdRemoteInfo(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null||!(et||[
   var now=Date.now(),list=(R&&R.key===k?R.list:[]).filter(function(S){return(S._sort||0)>=now-60000}).sort(function(a,b){return(a._sort||0)-(b._sort||0)});
   return{near:N.st,dest:dest,list:list,loading:!(R&&R.key===k)}}catch(e){return null}}
 /* Mode « Détecter n'importe où » : loin de vos parcours, rejoindre le départ ou la destination d'un parcours de « Mes parcours » depuis l'arrêt le plus proche (trajets qui arrivent le plus tôt). */
+/* Lieu exact saisi dans « Mon parcours » : coordonnées (arrêt mémorisé du parcours, sinon lieu choisi dans les suggestions, sinon adresse géocodée) */
+function bdJoinXY(target){try{var xy=null;var A=bdTSAll();Object.keys(A).some(function(id){var y=(A[id]||[]).find(function(z){return z&&z.lat!=null&&bdNorm(z.n)===bdNorm(target)});if(y){xy={lat:+y.lat,lon:+y.lon};return true}return false});if(xy)return xy;var m=bdMemoFor(target);if(m&&m.lat!=null&&isFinite(+m.lat))return{lat:+m.lat,lon:+m.lon};return null}catch(e){return null}}
+/* Trajets vers le lieu exact : on cherche vers les arrêts qui entourent ce lieu (jusqu'à 3, à moins de 1,5 km),
+   puis on garde pour chaque départ le trajet qui arrive le plus tôt AU LIEU (arrivée à l'arrêt + marche jusqu'au lieu). */
+async function bdJoinFetch(fromName,target,xy){
+  try{
+    if(!xy){try{xy=await bdGeoPoint(target)}catch(e){xy=null}}
+    if(!xy){var r0=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,null,"",false,true);return{full:((r0&&r0.full)||[]).slice(),xy:null}}
+    var C=[];try{C=await bdNearStations(xy,3)}catch(e){C=[]}
+    C=(C||[]).filter(function(x){return x&&x.name&&x._d!=null&&x._d<=1.5});
+    /* le lieu est lui-même un arrêt : on vise cet arrêt-là (identifiant exact), pas un homonyme */
+    if(!C.length){var r1=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,null,"",false,true);return{full:((r1&&r1.full)||[]).slice(),xy:xy}}
+    var sets=await Promise.all(C.map(function(st){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],st.name,null,"",false,true).then(function(r){var w=Math.max(0,Math.round(st._d*1000*1.3/80));return((r&&r.full)||[]).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0})})}).catch(function(){return[]})}));
+    var all=[].concat.apply([],sets);
+    /* trajets dont le dernier arrêt est trop loin du lieu : écartés */
+    all=all.filter(function(S){try{var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)&&x.lat!=null});var l=pl[pl.length-1];if(!l)return true;return zt(xy,{lat:+l.lat,lon:+l.lon})<=1.5}catch(e){return true}});
+    var best={};all.forEach(function(S){var k=(S.from&&S.from.departure)+"|"+(S.products||[]).join(",");var b=best[k];if(!b||(S._placeArr&&(!b._placeArr||S._placeArr<b._placeArr)))best[k]=S});
+    return{full:Object.keys(best).map(function(k){return best[k]}),xy:xy};
+  }catch(e){return{full:[],xy:xy||null}}
+}
 function bdJoinSection(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null)return null;var me={lat:+lc.lat,lon:+lc.lon};
   var tiles=(fn||[]).filter(function(t){return t&&!t.hidden&&t.from&&t.to});if(!tiles.length)return null;
   var pk=me.lat.toFixed(3)+","+me.lon.toFixed(3),N=window.__bd_remNear;
@@ -1852,10 +1872,10 @@ function bdJoinSection(){try{var lc=window.__bd_loc;if(!lc||lc.lat==null)return 
   var head=p("div",{className:"flex flex-col gap-1 px-1 mt-1",children:[c("h2",{className:"font-bold tracking-[-0.02em] text-[18px]",children:"Rejoindre mon parcours"}),near?p("div",{className:"flex items-center gap-2 text-[11px] text-zinc-500",children:[c("span",{className:"flex-1 min-w-0",children:"Depuis l’arrêt le plus proche de vous : "+near.name+" ("+near.d+" m)"}),c("span",{className:"bd-compass","data-stop":near.name,"data-lat":String(near.lat),"data-lon":String(near.lon)})]}):c("div",{className:"text-[11px] text-zinc-500",children:"Recherche de l’arrêt le plus proche de vous…"})]});
   var body=null;
   if(J&&near){if(bdSameName(near.name,J.target)){body=c("div",{className:"text-[12px] text-zinc-500 px-1",children:"Vous êtes déjà à cet arrêt."})}else{var k=bdNorm(near.name)+"|"+bdNorm(J.target),R=window.__bd_joinR;
-    if(!R||R.key!==k||Date.now()-R.at>60000){if(window.__bd_joinBusy!==k){window.__bd_joinBusy=k;bdLiveCore([{name:near.name,selected:true,kind:"stop",distanceKm:0}],J.target,null,"",false,true).then(function(r){window.__bd_joinR={key:k,list:((r&&r.full)||[]).slice(),at:Date.now()};window.__bd_joinBusy=null;rer()}).catch(function(){window.__bd_joinBusy=null})}}
+    if(!R||R.key!==k||Date.now()-R.at>60000){if(window.__bd_joinBusy!==k){window.__bd_joinBusy=k;bdJoinFetch(near.name,J.target,bdJoinXY(J.target)).then(function(r){window.__bd_joinR={key:k,list:((r&&r.full)||[]).slice(),xy:(r&&r.xy)||null,at:Date.now()};window.__bd_joinBusy=null;rer()}).catch(function(){window.__bd_joinBusy=null})}}
     var now=Date.now();
     /* coordonnées du lieu exact de « Mon parcours » (arrêt mémorisé du parcours, sinon lieu choisi) */
-    var _jXY=null;try{var _jA=bdTSAll();Object.keys(_jA).some(function(id){var y=(_jA[id]||[]).find(function(z){return z&&z.lat!=null&&bdNorm(z.n)===bdNorm(J.target)});if(y){_jXY={lat:+y.lat,lon:+y.lon};return true}return false});if(!_jXY){var _jm=bdMemoFor(J.target);if(_jm&&_jm.lat!=null)_jXY={lat:+_jm.lat,lon:+_jm.lon}}}catch(e){_jXY=null}
+    var _jXY=(R&&R.key===k&&R.xy)||bdJoinXY(J.target);
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var list=(R&&R.key===k?R.list:[]).filter(function(S){return(S._sort||0)>=now-60000}).sort(function(a,b){return(a._sort||0)-(b._sort||0)}).slice(0,8);
     body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun trajet trouvé depuis cet arrêt.":"Recherche des prochains parcours…"})}}
