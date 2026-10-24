@@ -815,6 +815,7 @@ html.modal-open .bd-v101-overlay.open{touch-action:pan-y}
 </style>
 <style id="bd-del-trip-css">.bd-del-trip{border:1px solid rgba(220,38,38,.35)!important;background:rgba(220,38,38,.06)!important;color:#dc2626!important;box-shadow:none!important;margin-top:2px}html.dark .bd-del-trip{border-color:rgba(248,113,113,.35)!important;background:rgba(248,113,113,.10)!important;color:#f87171!important}.bd-del-trip svg{stroke:currentColor}</style>
 <style id="bd-direct-sw-css">.bd-direct-sw{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0;cursor:pointer;color:inherit}.bd-direct-lbl{font-size:13px;font-weight:700}.bd-direct-track{position:relative;width:46px;height:28px;border-radius:999px;background:#d4d4d8;transition:background .2s}html.dark .bd-direct-track{background:#3f3f46}.bd-direct-track.on{background:#22c55e!important}.bd-direct-knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}.bd-direct-track.on .bd-direct-knob{transform:translateX(18px)}</style>
+<style id="bd-sms-master-css">.bd-v104-sms-sheet.bd-sms-off #bd-auto-detect-sms,.bd-v104-sms-sheet.bd-sms-off .bd-v104-sms-actions,.bd-v104-sms-sheet.bd-sms-off > .bd-v104-sms-note{display:none!important}.bd-sms-master-row{margin:4px 0 10px}.bd-sms-hidden{display:none!important}</style>
 </head>
 <body>
   <div id="root"></div>
@@ -3323,7 +3324,13 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
     var box=document.getElementById('bd-v104-sms-list');
     if(!box) return;
     var city=getActiveCity();
-    box.innerHTML=sources.map(function(s,i){
+    var mt=document.getElementById('bd-sms-master');if(mt)mt.classList.toggle('on',smsOn());var md=document.getElementById('bd-sms-master-dot');if(md)md.classList.toggle('ok',smsOn());
+    var sh=document.querySelector('.bd-v104-sms-sheet');if(sh)sh.classList.toggle('bd-sms-off',!smsOn());
+    if(!smsOn()){box.innerHTML='<div class="bd-v104-sms-note">Tickets SMS désactivés. Activez l’interrupteur ci-dessus pour les retrouver.</div>';return}
+    /* uniquement le service actif en ce moment (ville / pays actif ou activé manuellement) */
+    var _act=sources.map(function(s,i){return{s:s,i:i}}).filter(function(x){return x.s.active});
+    if(!_act.length){box.innerHTML='<div class="bd-v104-sms-note">Aucun service de tickets SMS actif pour la ville actuelle.</div>';return}
+    box.innerHTML=_act.map(function(x){var s=x.s,i=x.i;
       var st=s.active?'ok':'';
       var badge=s.manual?(s.active?'manuel':'off'):(s.active?'auto':'');
       var badgeTxt=s.manual?(s.active?'manuel':'désactivé'):(s.active?'auto':'inactif');
@@ -3334,7 +3341,7 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
         cov+
         '</div><div class="bd-v104-sms-sub">'+esc(s.info||'')+' · '+esc(s.number&&s.number!=='APP'?'SMS '+s.number:'App')+
         nTickets+
-        '</div></div><button class="bd-v104-sms-toggle '+(s.active?'on':'')+'" data-sms-toggle="'+i+'" aria-label="toggle"><span class="bd-v104-sms-knob"></span></button></div>';
+        '</div></div></div>';
     }).join('');
   }
 
@@ -3359,12 +3366,14 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
     o.id='bd-v104-sms-overlay';
     o.className='bd-v104-sms-overlay';
     o.innerHTML='<section class="bd-v104-sms-sheet"><div class="bd-v104-sms-head"><div><h2 style="font-size:19px;font-weight:900;margin:0">Tickets SMS</h2><div style="font-size:11px;color:#71717a">Sources SMS transport · auto selon ville / pays</div></div><button class="bd-v104-sms-close" id="bd-v104-sms-close">×</button></div>'+
+      '<div class="bd-v104-sms-row bd-sms-master-row"><span class="bd-v104-sms-dot ok" id="bd-sms-master-dot"></span><div><div class="bd-v104-sms-name">Tickets SMS</div><div class="bd-v104-sms-sub">Interrupteur général : tous les services et les SMS rapides de l’accueil</div></div><button class="bd-v104-sms-toggle" id="bd-sms-master" aria-label="Activer ou désactiver les tickets SMS"><span class="bd-v104-sms-knob"></span></button></div>'+
       '<button class="bd-auto-detect-btn" id="bd-auto-detect-sms">Activer la détection automatique</button>'+
-      '<div class="bd-v104-sms-note">Les sources s’activent automatiquement selon la ville ou le pays actif. Vous pouvez les désactiver manuellement. Les SMS rapides s’affichent en bas de l’accueil.</div>'+
+      '<div class="bd-v104-sms-note">Le service s’active automatiquement selon la ville ou le pays actif. Pour ne plus utiliser les tickets SMS, désactivez l’interrupteur général. Les SMS rapides s’affichent en bas de l’accueil.</div>'+
       '<div class="bd-v104-sms-actions"><button class="bd-v104-sms-action" id="bd-v104-sms-update">Mettre à jour la liste</button><button class="bd-v104-sms-action" id="bd-v104-sms-autosync">Chercher des sources sur le web</button></div>'+
       '<div id="bd-v104-sms-list"></div></section>';
     document.body.appendChild(o);
     document.getElementById('bd-v104-sms-close').onclick=closePanel;
+    document.getElementById('bd-sms-master').onclick=function(e){e.stopPropagation();try{localStorage.setItem('bd_sms_master',smsOn()?'0':'1')}catch(x){}applyHomeSmsFilter();renderList();try{window.dispatchEvent(new CustomEvent('bd-sms-sources-change',{detail:sources}))}catch(x){}};
     o.addEventListener('click',function(e){if(e.target===o)closePanel()});
     o.addEventListener('click',function(e){
       var t=e.target.closest('[data-sms-toggle]');
@@ -3459,7 +3468,13 @@ html.dark .bd-v104-sms-badge.auto{background:rgba(37,99,235,.2);color:#93c5fd}
   }
 
   // Filter homepage Ticket SMS cards based on active sources
+  function smsOn(){try{return localStorage.getItem('bd_sms_master')!=='0'}catch(e){return true}}
+  window.bdSmsOn=smsOn;
   function applyHomeSmsFilter(){
+    /* interrupteur général : désactivé → aucun SMS rapide sur l'accueil */
+    var _on=smsOn();
+    document.querySelectorAll('section').forEach(function(sec){var h=sec.querySelector('h3');if(!h||!/Ticket SMS|SMS/i.test(h.textContent||''))return;sec.classList.toggle('bd-sms-hidden',!_on)});
+    if(!_on)return;
     var active=sources.filter(function(s){return s.active});
     var keywords=[];
     active.forEach(function(s){
@@ -3702,6 +3717,7 @@ html.dark .bd-sms-rapides-empty{border-color:rgba(255,255,255,.12);color:#a1a1aa
     }
     var _geoOn=true;try{_geoOn=localStorage.getItem('bd_settings_geoloc')!=='0'&&!!window.__bdGeoFix}catch(e){}
     if(!_geoOn){host.innerHTML='';host.style.display='none';return}
+    /* interrupteur général « Tickets SMS » désactivé */if(window.bdSmsOn&&!window.bdSmsOn()){host.innerHTML='';host.__bdHtml='';host.style.display='none';return}
     var srcs=activeSmsSources();
     var city=cityLabel()||'Ville';
     // No SMS for this city → hide the whole block (no empty message)
