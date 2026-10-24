@@ -5335,5 +5335,136 @@ html.dark .bd-mode-pill{color:#fff;background:linear-gradient(135deg,rgba(255,25
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
 })();
 </script>
+
+<style id="bd-external-shortcut-css">
+#bd-external-launch-wrap{
+  width:min(640px,calc(100% - 32px));margin:18px auto calc(24px + env(safe-area-inset-bottom));
+  padding:0 0 4px;position:relative;z-index:1
+}
+#bd-external-launch{
+  width:100%;min-height:54px;border:1px solid #e7e5e4;border-radius:18px;
+  background:#18181b;color:#fff;font-size:14px;font-weight:850;
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08)
+}
+html.dark #bd-external-launch{background:#fafafa;color:#09090b;border-color:rgba(255,255,255,.12)}
+#bd-external-launch[disabled]{opacity:.45;cursor:not-allowed}
+.bd-shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.bd-shortcut-grid .bd-set-perm{display:block!important;margin:0!important}
+.bd-shortcut-status{font-size:10px;color:#71717a;margin-top:7px;line-height:1.4}
+.bd-shortcut-platform{font-size:11px;font-weight:800;margin:8px 0 2px}
+</style>
+
+<script id="bd-external-shortcut-js">
+(function(){
+'use strict';
+var KEY={
+ enabled:'bd_ext_shortcut_enabled',
+ ios:'bd_ext_shortcut_ios_name',
+ android:'bd_ext_shortcut_android_uri'
+};
+function get(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}}
+function set(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function platform(){
+ var ua=navigator.userAgent||'';
+ if(/iPad|iPhone|iPod/i.test(ua))return 'ios';
+ if(/Android/i.test(ua))return 'android';
+ return 'other';
+}
+function enabled(){return get(KEY.enabled,'1')!=='0'}
+function iosURL(){
+ var name=(get(KEY.ios,'BusDirect')||'').trim();
+ return name?'shortcuts://run-shortcut?name='+encodeURIComponent(name):'';
+}
+function androidURL(){return (get(KEY.android,'tasker://assistantactions')||'').trim()}
+function targetURL(){
+ var p=platform();
+ return p==='ios'?iosURL():p==='android'?androidURL():'';
+}
+function launch(){
+ if(!enabled())return;
+ var u=targetURL();
+ if(!u){
+   alert(platform()==='ios'?'Configure le nom du raccourci iOS dans Paramètres.':
+         platform()==='android'?'Configure le lien Tasker dans Paramètres.':
+         'Ce bouton est prévu pour iOS ou Android.');
+   return;
+ }
+ window.location.href=u;
+}
+function ensureSettings(){
+ var sheet=document.getElementById('bd-distance-settings-sheet');
+ if(!sheet||document.getElementById('bd-shortcut-settings'))return;
+ var g=document.createElement('div');
+ g.className='bd-distance-settings-group';
+ g.id='bd-shortcut-settings';
+ g.innerHTML=
+  '<h3>Raccourci iOS / Tasker Android</h3>'+
+  '<p>Configure le bouton placé au fond de la page principale. Sur iPhone il lance un raccourci Apple ; sur Android il ouvre le lien configuré pour Tasker.</p>'+
+  '<label class="bd-set-toggle"><input type="checkbox" id="bd-shortcut-enabled"><span>Afficher et activer le bouton</span></label>'+
+  '<div class="bd-shortcut-platform" id="bd-shortcut-platform"></div>'+
+  '<label class="bd-distance-settings-label" for="bd-shortcut-ios">Nom du raccourci iOS</label>'+
+  '<input class="bd-distance-settings-input" id="bd-shortcut-ios" type="text" autocomplete="off" placeholder="BusDirect">'+
+  '<div class="bd-set-hint">Le nom doit être exactement le même que dans l’app Raccourcis.</div>'+
+  '<label class="bd-distance-settings-label" for="bd-shortcut-android">Lien / URI Tasker Android</label>'+
+  '<input class="bd-distance-settings-input" id="bd-shortcut-android" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="tasker://...">'+
+  '<div class="bd-set-hint">Colle ici le lien ou URI que ton profil Tasker sait intercepter.</div>'+
+  '<div class="bd-shortcut-grid"><button type="button" class="bd-set-perm" id="bd-shortcut-test-ios">Tester iOS</button>'+
+  '<button type="button" class="bd-set-perm" id="bd-shortcut-test-android">Tester Android</button></div>'+
+  '<div class="bd-shortcut-status" id="bd-shortcut-status"></div>';
+ var save=document.getElementById('bd-distance-settings-save');
+ if(save&&save.parentNode===sheet)sheet.insertBefore(g,save);else sheet.appendChild(g);
+
+ var cb=document.getElementById('bd-shortcut-enabled');
+ var ii=document.getElementById('bd-shortcut-ios');
+ var ai=document.getElementById('bd-shortcut-android');
+ cb.checked=enabled(); ii.value=get(KEY.ios,'BusDirect'); ai.value=get(KEY.android,'tasker://assistantactions');
+ document.getElementById('bd-shortcut-platform').textContent=
+   'Appareil détecté : '+(platform()==='ios'?'iOS':platform()==='android'?'Android':'autre');
+ function saveNow(){
+   set(KEY.enabled,cb.checked?'1':'0');
+   set(KEY.ios,ii.value.trim());
+   set(KEY.android,ai.value.trim());
+   updateButton();
+ }
+ cb.addEventListener('change',saveNow);
+ ii.addEventListener('change',saveNow);
+ ai.addEventListener('change',saveNow);
+ ii.addEventListener('input',function(){set(KEY.ios,ii.value)});
+ ai.addEventListener('input',function(){set(KEY.android,ai.value)});
+ document.getElementById('bd-shortcut-test-ios').onclick=function(){
+   var u=iosURL(); if(u)window.location.href=u;
+ };
+ document.getElementById('bd-shortcut-test-android').onclick=function(){
+   var u=androidURL(); if(u)window.location.href=u;
+ };
+ var st=document.getElementById('bd-shortcut-status');
+ st.textContent='Configuration mémorisée sur cet appareil.';
+}
+function ensureButton(){
+ if(document.getElementById('bd-external-launch-wrap'))return;
+ var w=document.createElement('div');w.id='bd-external-launch-wrap';
+ w.innerHTML='<button type="button" id="bd-external-launch"><span id="bd-external-launch-icon">↗</span><span id="bd-external-launch-label">Lancer le raccourci</span></button>';
+ document.body.appendChild(w);
+ document.getElementById('bd-external-launch').onclick=launch;
+ updateButton();
+}
+function updateButton(){
+ var w=document.getElementById('bd-external-launch-wrap'),b=document.getElementById('bd-external-launch'),
+     l=document.getElementById('bd-external-launch-label'),ic=document.getElementById('bd-external-launch-icon');
+ if(!w||!b)return;
+ w.style.display=enabled()?'block':'none';
+ var p=platform();
+ if(p==='ios'){l.textContent='Lancer le raccourci iOS';ic.textContent='';}
+ else if(p==='android'){l.textContent='Lancer Tasker';ic.textContent='🤖';}
+ else {l.textContent='Raccourci mobile';ic.textContent='↗';}
+ b.disabled=(p==='other');
+}
+function boot(){ensureButton();ensureSettings();updateButton()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+setInterval(function(){ensureSettings();ensureButton();updateButton()},700);
+})();
+</script>
+
 </body>
 </html>
