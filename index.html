@@ -190,6 +190,13 @@ r.classList.toggle("dark", isDark);
 r.style.colorScheme=isDark?"dark":"light";
 r.dataset.theme=s;
 }catch(e){}})();</script><script>(function(){
+/* test de localisation au démarrage : demande réelle au téléphone, qui détecte le service et propose de l’autoriser */
+try{(function(){var g=navigator.geolocation;if(!g)return;var raw=g.getCurrentPosition.bind(g);
+ var test=function(){try{raw(function(p){try{localStorage.setItem("bd-geo-ok","1");localStorage.setItem("bd_geo_test","granted")}catch(e){}window.__bdGeoTest={ok:true,lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy}},
+  function(e){try{localStorage.setItem("bd_geo_test",e&&e.code===1?"denied":"unavailable")}catch(x){}window.__bdGeoTest={ok:false,code:e&&e.code}},
+  {enableHighAccuracy:true,timeout:15000,maximumAge:0})}catch(e){}};
+ if(document.readyState==="complete")test();else window.addEventListener("load",test,{once:true});
+})()}catch(e){}
 /* localisation activée par défaut à chaque démarrage de la page (« Service de localisation activé » dans Paramètres) */
 try{localStorage.setItem("bd_settings_geoloc","1")}catch(e){}
 /* V131 : popup de présentation avant la demande native de localisation */
