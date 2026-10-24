@@ -4985,7 +4985,7 @@ html.dark .bd-sub-sheet{background:#18181b;color:#fafafa}
 .bd-sub-head h2{flex:1;margin:0;font-size:19px;font-weight:900}
 .bd-sub-back{height:36px;padding:0 12px;border-radius:999px;border:1px solid #e7e5e4;background:transparent;color:inherit;font-weight:800;font-size:13px;cursor:pointer}
 html.dark .bd-sub-back{border-color:rgba(255,255,255,.15)}
-.bd-prox-open{display:flex!important;align-items:center;justify-content:space-between;width:100%;text-align:left}
+.bd-prox-open{display:flex!important;align-items:center;justify-content:center;width:100%;text-align:center;position:relative}.bd-prox-open>span:last-child{position:absolute;right:16px;top:50%;transform:translateY(-50%)}
 </style>
 <script id="bd-prox-page-js">
 /* Paramètres → page séparée « Proximité, véhicule et alertes » : Arrêt(s) à proximité, Parcours à proximité, Localisation du véhicule en direct, Alertes d’approche */
@@ -5013,6 +5013,15 @@ html.dark .bd-sub-back{border-color:rgba(255,255,255,.15)}
   new MutationObserver(function(){if(!ov.classList.contains('open')&&ov.classList.contains('bd-sub-on'))ov.classList.remove('bd-sub-on')}).observe(ov,{attributes:true,attributeFilter:['class']});
   return true}
  var tries=0;(function loop(){if(setup()||++tries>80)return;setTimeout(loop,250)})();
+})();
+</script>
+<script id="bd-settings-order">
+/* Paramètres : « Langue et sources » puis « Proximité et alertes » placés en dessous de « Tickets SMS » */
+(function(){
+ function fix(){var sms=document.getElementById('bd-set-sms-group'),ls=document.getElementById('bd-set-langsrc'),px=document.getElementById('bd-prox-entry');if(!sms||!ls||!sms.parentNode)return;
+  if(sms.nextElementSibling!==ls)sms.parentNode.insertBefore(ls,sms.nextSibling);
+  if(px&&ls.nextElementSibling!==px)ls.parentNode.insertBefore(px,ls.nextSibling)}
+ setInterval(fix,500);document.addEventListener('click',function(){setTimeout(fix,0)},true);
 })();
 </script>
 <script id="bd-i18n-auto">
