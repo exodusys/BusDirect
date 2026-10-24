@@ -4861,32 +4861,22 @@ html.bd-glass .bdt-sheet{--card:transparent}
   var g=get();cb.checked=g.on;rg.value=String(g.v);if(lb)lb.textContent=g.v+' %';rg.disabled=!g.on;rg.style.opacity=g.on?'1':'.45';
   cb.addEventListener('change',function(){var v=parseInt(rg.value,10)||0;rg.disabled=!cb.checked;rg.style.opacity=cb.checked?'1':'.45';apply(cb.checked,v);save(cb.checked,v)});
   rg.addEventListener('input',function(){var v=parseInt(rg.value,10)||0;if(lb)lb.textContent=v+' %';apply(cb.checked,v);save(cb.checked,v)})}
- /* 20 fonds d'écran : dégradés doux à légères nuances (version claire / sombre), visibles derrière le verre */
+ /* 10 fonds d'écran bien distincts, couleurs vives (version claire / sombre), visibles derrière le verre */
  var WP=[
-  ['brume','Brume',[56,189,248],[244,114,182],[52,211,153],'#eef2f7','#0b0b10'],
-  ['aube','Aube',[251,191,146],[244,143,177],[196,181,253],'#fbf4f1','#100c10'],
-  ['lagon','Lagon',[45,212,191],[56,189,248],[94,234,212],'#ecf7f6','#081012'],
-  ['lavande','Lavande',[196,181,253],[216,180,254],[165,180,252],'#f3f1fb','#0d0b14'],
-  ['menthe','Menthe',[134,239,172],[167,243,208],[94,234,212],'#effaf3','#09110d'],
-  ['sable','Sable',[253,230,138],[253,186,116],[254,215,170],'#faf6ee','#110f0b'],
-  ['peche','Pêche',[253,164,175],[253,186,116],[254,240,138],'#fdf3f0','#120d0c'],
-  ['glacier','Glacier',[186,230,253],[203,213,225],[165,243,252],'#f0f5f9','#0a0e12'],
-  ['rosee','Rosée',[251,207,232],[249,168,212],[254,226,226],'#fcf3f6','#120c0f'],
-  ['foret','Forêt',[74,222,128],[132,204,22],[45,212,191],'#eef6ef','#08100a'],
-  ['crepuscule','Crépuscule',[129,140,248],[192,132,252],[251,113,133],'#f1f0f9','#0c0a16'],
-  ['ocean','Océan',[59,130,246],[14,165,233],[34,211,238],'#edf3fa','#070c16'],
-  ['aurore','Aurore boréale',[52,211,153],[34,211,238],[167,139,250],'#eef6f6','#060f10'],
-  ['doree','Lumière dorée',[251,191,36],[251,146,60],[251,113,133],'#fbf6ec','#120e08'],
-  ['ardoise','Ardoise',[148,163,184],[100,116,139],[147,197,253],'#f1f3f6','#0c0e12'],
-  ['cerise','Cerise',[244,114,182],[232,121,249],[253,164,175],'#fbf1f5','#130a10'],
-  ['citron','Citron',[253,224,71],[190,242,100],[134,239,172],'#f9f9ec','#10110a'],
-  ['nuit','Nuit étoilée',[79,70,229],[147,51,234],[20,184,166],'#eff0f8','#07071a'],
-  ['perle','Perle',[226,232,240],[221,214,254],[254,243,199],'#f5f5f7','#0e0e12'],
-  ['corail','Corail',[251,113,133],[45,212,191],[253,224,71],'#f8f4f1','#100c0c']
+  ['ocean','Océan',[37,99,235],[6,182,212],[99,102,241],'#dbeafe','#050b1f'],
+  ['sunset','Coucher de soleil',[249,115,22],[236,72,153],[250,204,21],'#ffedd5','#1a0a06'],
+  ['foret','Forêt',[22,163,74],[132,204,22],[16,185,129],'#dcfce7','#04140a'],
+  ['lavande','Lavande',[139,92,246],[192,38,211],[244,114,182],'#ede9fe','#0f0820'],
+  ['lagon','Lagon',[20,184,166],[34,211,238],[74,222,128],'#ccfbf1','#031614'],
+  ['framboise','Framboise',[225,29,72],[219,39,119],[251,146,60],'#ffe4e6','#1a0509'],
+  ['aurore','Aurore boréale',[34,197,94],[6,182,212],[168,85,247],'#e0f2fe','#04101a'],
+  ['soleil','Soleil',[234,179,8],[245,158,11],[163,230,53],'#fef9c3','#171204'],
+  ['nuit','Nuit',[67,56,202],[30,64,175],[192,38,211],'#e0e7ff','#06051a'],
+  ['ardoise','Ardoise',[71,85,105],[100,116,139],[14,165,233],'#e2e8f0','#0b0f16']
  ];
- function curWp(){var id='brume';try{id=localStorage.getItem('bd_glass_wp')||'brume'}catch(e){}return WP.find(function(w){return w[0]===id})||WP[0]}
+ function curWp(){var id='ocean';try{id=localStorage.getItem('bd_glass_wp')||'ocean'}catch(e){}return WP.find(function(w){return w[0]===id})||WP[0]}
  function rg(c,a,f){return'rgba('+c.join(',')+',calc('+a+'*(.35 + .65*var(--bdg-k))'+(f?'*'+f:'')+'))'}
- function bgOf(w,dark){var f=dark?.55:1;return'radial-gradient(60% 45% at 8% 0%,'+rg(w[2],.55,f)+',transparent 62%),radial-gradient(55% 40% at 100% 18%,'+rg(w[3],.45,f)+',transparent 62%),radial-gradient(70% 50% at 45% 100%,'+rg(w[4],.45,f)+',transparent 62%),'+(dark?w[6]:w[5])}
+ function bgOf(w,dark){var f=dark?.8:1;return'radial-gradient(70% 50% at 5% 0%,'+rg(w[2],.9,f)+',transparent 65%),radial-gradient(65% 48% at 100% 22%,'+rg(w[3],.8,f)+',transparent 65%),radial-gradient(80% 55% at 40% 100%,'+rg(w[4],.8,f)+',transparent 65%),'+(dark?w[6]:w[5])}
  function wpCss(w){return'html.bd-glass.bd-glass.bd-glass{background:'+w[5]+'!important}html.bd-glass.bd-glass.bd-glass body{background:'+bgOf(w,false)+'!important;background-attachment:fixed!important}html.bd-glass.bd-glass.bd-glass.dark{background:'+w[6]+'!important}html.bd-glass.bd-glass.bd-glass.dark body{background:'+bgOf(w,true)+'!important;background-attachment:fixed!important}'}
  function applyWp(){var w=curWp(),css=wpCss(w),st=document.getElementById('bd-glass-wp');if(!st){st=document.createElement('style');st.id='bd-glass-wp';document.head.appendChild(st)}if(st.textContent!==css)st.textContent=css;try{localStorage.setItem('bd_glass_wp_css',css)}catch(e){}}
  function wpGrid(){var g=document.getElementById('bd-glass-wp-grid');if(!g)return;var dark=document.documentElement.classList.contains('dark'),id=curWp()[0],sig=id+'|'+dark;if(g.getAttribute('data-sig')===sig&&g.childNodes.length)return;g.setAttribute('data-sig',sig);
