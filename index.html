@@ -190,15 +190,6 @@ r.classList.toggle("dark", isDark);
 r.style.colorScheme=isDark?"dark":"light";
 r.dataset.theme=s;
 }catch(e){}})();</script><script>(function(){
-/* test de localisation au démarrage : demande réelle au téléphone, qui détecte le service et propose de l’autoriser */
-try{(function(){var g=navigator.geolocation;if(!g)return;var raw=g.getCurrentPosition.bind(g);window.__bdGeoRawTest=raw;
- var t0=0;var test=function(){t0=Date.now();window.__bdGeoTest={pending:true};try{raw(function(p){try{localStorage.setItem("bd-geo-ok","1");localStorage.setItem("bd_geo_test","granted")}catch(e){}window.__bdGeoTest={ok:true,lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy,ms:Date.now()-t0};window.bdGeoDiag&&window.bdGeoDiag()},
-  function(e){try{localStorage.setItem("bd_geo_test",e&&e.code===1?"denied":"unavailable")}catch(x){}window.__bdGeoTest={ok:false,code:e&&e.code,msg:e&&e.message,ms:Date.now()-t0};window.bdGeoDiag&&window.bdGeoDiag()},
-  {enableHighAccuracy:true,timeout:15000,maximumAge:0})}catch(e){}};
- if(document.readyState==="complete")test();else window.addEventListener("load",test,{once:true});
-})()}catch(e){}
-/* localisation activée par défaut à chaque démarrage de la page (« Service de localisation activé » dans Paramètres) */
-try{localStorage.setItem("bd_settings_geoloc","1")}catch(e){}
 /* V131 : popup de présentation avant la demande native de localisation */
 try{
 var g=navigator.geolocation;if(!g||g.__bdWrapped)return;
@@ -827,57 +818,7 @@ html.modal-open .bd-v101-overlay.open{touch-action:pan-y}
 <style id="bd-sms-master-css">.bd-v104-sms-sheet.bd-sms-off #bd-auto-detect-sms,.bd-v104-sms-sheet.bd-sms-off .bd-v104-sms-actions,.bd-v104-sms-sheet.bd-sms-off > .bd-v104-sms-note{display:none!important}.bd-sms-master-row{margin:4px 0 10px}.bd-sms-hidden{display:none!important}</style>
 <style id="bd-sms-nopage">#bd-v101-sms{display:none!important}</style>
 <style id="bd-menu-moved">#bd-v101-lang,#bd-v101-src,#bd-v101-src2{display:none!important}</style>
-<style id="bd-geo-diag-css">
-#bd-geo-diag{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:100002;max-width:520px;margin:0 auto;background:#18181b;color:#fafafa;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:14px 16px 12px;box-shadow:0 20px 50px rgba(0,0,0,.45);font:13px/1.45 Inter,system-ui,-apple-system,sans-serif}
-#bd-geo-diag .h{display:flex;align-items:center;gap:8px;font-weight:900;font-size:15px;margin-bottom:6px}
-#bd-geo-diag .dot{width:10px;height:10px;border-radius:50%;flex:none}
-#bd-geo-diag .x{margin-left:auto;width:30px;height:30px;border-radius:50%;border:0;background:rgba(255,255,255,.12);color:#fff;font-size:18px;line-height:1;cursor:pointer}
-#bd-geo-diag .m{margin:0 0 8px;color:#e4e4e7}#bd-geo-diag .m b{font-weight:800}
-#bd-geo-diag table{width:100%;border-collapse:collapse;font-size:11.5px;color:#a1a1aa}#bd-geo-diag td{padding:2px 0;vertical-align:top}#bd-geo-diag td:last-child{text-align:right;color:#e4e4e7;font-weight:700;padding-left:10px;word-break:break-word}
-#bd-geo-diag .row{display:flex;gap:8px;margin-top:10px}#bd-geo-diag .row button{flex:1;height:40px;border-radius:999px;border:0;font-weight:800;font-size:13px;cursor:pointer}
-#bd-geo-diag .b1{background:#22c55e;color:#fff}#bd-geo-diag .b2{background:rgba(255,255,255,.12);color:#fff}
-</style>
-<script id="bd-geo-diag-js">
-/* Message de diagnostic : résultat du test de localisation au démarrage */
-(function(){
- var perm="—";
- try{navigator.permissions.query({name:"geolocation"}).then(function(r){perm=r.state;render();r.onchange=function(){perm=r.state;render()}},function(){perm="non disponible"})}catch(e){perm="non disponible"}
- function standalone(){try{return window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches}catch(e){return false}}
- function ios(){var m=navigator.userAgent.match(/OS (\d+)_(\d+)/);return m?("iOS "+m[1]+"."+m[2]):(/Android/.test(navigator.userAgent)?"Android":"autre")}
- var closed=false;
- function verdict(T){
-  if(!navigator.geolocation)return["#ef4444","Géolocalisation non disponible","Ce navigateur ne propose pas la localisation."];
-  if(!window.isSecureContext)return["#ef4444","Page non sécurisée","La localisation exige une adresse en https://."];
-  if(!T||T.pending)return["#eab308","Test en cours…","Une demande de position a été envoyée au téléphone. Si aucun popup n’apparaît, attends quelques secondes."];
-  if(T.ok)return["#22c55e","Localisation autorisée","Position reçue (précision "+Math.round(T.acc||0)+" m) en "+(T.ms/1000).toFixed(1)+" s. Tout fonctionne."];
-  if(T.code===1){if(T.ms<1500)return["#ef4444","Refusée immédiatement — bloquée par un réglage","Le téléphone a refusé en "+T.ms+" ms, sans afficher de popup. Vérifie : <b>Réglages › Confidentialité et sécurité › Service de localisation</b> (activé) › <b>Sites web Safari</b> (« Lorsque l’app est active » ou « Demander la prochaine fois »), puis dans Safari <b>aA › Réglages du site web › Position</b> (« Demander »). "+(standalone()?"Tu es dans l’app de l’écran d’accueil : ses autorisations sont séparées de Safari.":"Si tu as déjà refusé, ferme l’onglet et rouvre la page.")];
-   return["#ef4444","Refusée","Le popup a été refusé (réponse après "+(T.ms/1000).toFixed(1)+" s)."]}
-  if(T.code===2)return["#eab308","Autorisée, mais position indisponible","Le téléphone n’arrive pas à se localiser (GPS / Wi-Fi). Vérifie que le Wi-Fi est activé et réessaie dehors."];
-  if(T.code===3)return["#eab308","Autorisée, mais délai dépassé","La position n’est pas arrivée en 15 s. Réessaie."];
-  return["#eab308","Résultat inconnu",String(T.msg||"")];
- }
- function render(){
-  if(closed||!document.body)return;
-  var T=window.__bdGeoTest,v=verdict(T),o=document.getElementById("bd-geo-diag");
-  if(!o){o=document.createElement("div");o.id="bd-geo-diag";o.setAttribute("role","status");document.body.appendChild(o)}
-  o.innerHTML='<div class="h"><span class="dot" style="background:'+v[0]+'"></span><span>Diagnostic localisation</span><button type="button" class="x" id="bd-geo-diag-x" aria-label="Fermer">×</button></div>'
-   +'<div class="m"><b>'+v[1]+'</b><br>'+v[2]+'</div>'
-   +'<table><tr><td>Autorisation du navigateur</td><td>'+({granted:"autorisée",denied:"refusée",prompt:"demander"}[perm]||perm)+'</td></tr>'
-   +'<tr><td>Résultat du test</td><td>'+(!T||T.pending?"en cours":T.ok?"position reçue":"erreur "+T.code+(T.ms!=null?" ("+T.ms+" ms)":""))+'</td></tr>'
-   +'<tr><td>Mode</td><td>'+(standalone()?"app écran d’accueil":"Safari / navigateur")+'</td></tr>'
-   +'<tr><td>Système</td><td>'+ios()+'</td></tr>'
-   +'<tr><td>Page sécurisée (https)</td><td>'+(window.isSecureContext?"oui":"non")+'</td></tr>'
-   +'<tr><td>Service dans Paramètres</td><td>'+((function(){try{return localStorage.getItem("bd_settings_geoloc")==="0"?"désactivé":"activé"}catch(e){return"?"}})())+'</td></tr></table>'
-   +'<div class="row"><button type="button" class="b1" id="bd-geo-diag-retry">Refaire le test</button><button type="button" class="b2" id="bd-geo-diag-ok">Fermer</button></div>';
-  document.getElementById("bd-geo-diag-x").onclick=document.getElementById("bd-geo-diag-ok").onclick=function(){closed=true;o.remove()};
-  /* nouveau test depuis un toucher : certains iPhone n’affichent le popup qu’après une action */
-  document.getElementById("bd-geo-diag-retry").onclick=function(){var t0=Date.now();window.__bdGeoTest={pending:true};render();
-   try{(window.__bdGeoRawTest||navigator.geolocation.getCurrentPosition.bind(navigator.geolocation))(function(p){window.__bdGeoTest={ok:true,acc:p.coords.accuracy,ms:Date.now()-t0};try{localStorage.setItem("bd-geo-ok","1")}catch(e){}render()},function(e){window.__bdGeoTest={ok:false,code:e&&e.code,msg:e&&e.message,ms:Date.now()-t0};render()},{enableHighAccuracy:true,timeout:15000,maximumAge:0})}catch(e){}};
- }
- window.bdGeoDiag=render;
- if(document.readyState==="complete")render();else window.addEventListener("load",function(){setTimeout(render,50)});
-})();
-</script></head>
+</head>
 <body>
   <div id="root"></div>
   
