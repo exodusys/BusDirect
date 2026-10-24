@@ -2717,17 +2717,24 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
      p("div",{className:"bdt-mid",children:[c("div",{className:"bdt-dur",children:_cdur||""}),c("div",{className:"bdt-line"}),c("div",{className:"bdt-sub",children:cur.transfers>0?cur.transfers+" chang.":"Direct"})]}),
      p("div",{className:"bdt-end bdt-right",children:[c("div",{className:"bdt-big",children:_ctT}),c("div",{className:"bdt-st",children:_ctS})]})
     ]}),
-    status&&(function(){/* bandeau du haut : prochain arrêt bien lisible + compte à rebours à la seconde + mini-ligne avec le véhicule */
-  if(status.k==="run"){try{var _pv=stops[liveIdx],_nx2=stops[liveIdx+1];var _pa=_pv&&(_pv.departure||_pv.arrival),_nb=_nx2&&(_nx2.arrival||_nx2.departure);var _ta2=_pa?new Date(_pa).getTime()+((_pv.delay)||0)*60000:null,_tb2=_nb?new Date(_nb).getTime()+((_nx2.delay)||0)*60000:null;
-    var _pp=(_ta2!=null&&_tb2!=null&&_tb2>_ta2)?Math.min(1,Math.max(0,(now-_ta2)/(_tb2-_ta2))):0;var _sec=_tb2!=null?Math.round((_tb2-now)/1000):null;
-    var _cd=_sec==null?"":(_sec<=0?"à l’arrêt":(_sec<60?"dans "+_sec+" s":"dans "+Math.floor(_sec/60)+" min "+String(_sec%60).padStart(2,"0")+" s"));
-    var _lc2=getLineColor(getLineForStop(_nx2)),_ln2=getLineForStop(_nx2);var _isDest=(liveIdx+1)===_destIdx;
-    return p("div",{className:"bdt-status bdt-run bd-st2",style:{"--lc":_lc2},children:[
-     p("div",{className:"bd-st2-top",children:[c("span",{className:"bd-st2-k",children:_isDest?"Prochain arrêt · destination":"Prochain arrêt"}),c("span",{className:"bd-st2-cd",children:_cd})]}),
-     p("div",{className:"bd-st2-name",children:[chipEl(_ln2),c("span",{children:nm(_nx2)})]}),
-     p("div",{className:"bd-st2-track",children:[c("span",{className:"bd-st2-bar",children:c("i",{style:{width:(_pp*100).toFixed(1)+"%"}})}),c("span",{className:"bd-st2-veh",style:{left:(_pp*100).toFixed(1)+"%"}})]}),
-     p("div",{className:"bd-st2-ends",children:[c("span",{children:"Après "+nm(_pv)}),c("span",{children:"arrivée "+fm(_tb2)})]})]})}catch(e){}}
-  return p("div",{className:"bdt-status bdt-"+status.k+" bd-st2",children:[p("div",{className:"bd-st2-top",children:[c("span",{className:"bd-st2-k",children:status.k==="done"?"Trajet terminé":"Départ"}),c("span",Object.assign({className:"bd-st2-cd",children:status.t},status.d||{}))]}),c("div",{className:"bd-st2-name",children:c("span",{children:status.s})})]})})()
+    stops.length&&(function(){/* bandeau du haut : arrêt où se trouve le véhicule + prochain arrêt (retards compris, à la seconde) */
+  try{var _arrT=function(x){var t=x&&(x.arrival||x.departure);return t?new Date(t).getTime()+((x.delay)||0)*60000:null},_depT=function(x){var t=x&&(x.departure||x.arrival);return t?new Date(t).getTime()+((x.delay)||0)*60000:null};
+   var _n=stops.length,_j=-1;for(var _q=0;_q<_n;_q++){var _at=_arrT(stops[_q]);if(_at!=null&&_at<=now)_j=_q}
+   var _veh=bdIsTrain(getLineForStop(stops[Math.max(0,_j)]))?"train":"bus";
+   var _A=null,_B=null,_kA="",_pp=0,_tB=null,_mode="";
+   if(_j<0){_A=null;_B=stops[0];_kA="Pas encore parti";_tB=_depT(stops[0]);_mode="before"}
+   else if(_j>=_n-1){_A=stops[_n-1];_B=null;_kA="Arrivé au terminus";_mode="end"}
+   else{var _dj=_depT(stops[_j]);if(_dj!=null&&_dj>now){_A=stops[_j];_B=stops[_j+1];_kA="À l’arrêt";_pp=0;_tB=_arrT(_B);_mode="at"}
+    else{_A=stops[_j];_B=stops[_j+1];_kA="Vient de quitter";_tB=_arrT(_B);var _ta=_dj;if(_ta!=null&&_tB!=null&&_tB>_ta)_pp=Math.min(1,Math.max(0,(now-_ta)/(_tB-_ta)));_mode="run"}}
+   var _sec=_tB!=null?Math.round((_tB-now)/1000):null;
+   var _cd=_mode==="end"?"terminé":(_sec==null?"":(_sec<=0?"à l’instant":(_sec<60?"dans "+_sec+" s":"dans "+Math.floor(_sec/60)+" min "+String(_sec%60).padStart(2,"0")+" s")));
+   if(_mode==="at"){var _ds=Math.round((_depT(_A)-now)/1000);_cd="repart dans "+(_ds<60?_ds+" s":Math.floor(_ds/60)+" min "+String(_ds%60).padStart(2,"0")+" s")}
+   var _ln=getLineForStop(_B||_A),_lc=getLineColor(_ln);
+   var _col=function(k,st,t,right){return p("div",{className:"bd-st3-col"+(right?" r":""),children:[c("span",{className:"bd-st3-k",children:k}),c("span",{className:"bd-st3-n",children:st?nm(st):"—"}),t!=null?c("span",{className:"bd-st3-t",children:fm(t)}):null]})};
+   return p("div",{className:"bdt-status bd-st3 bdt-"+(_mode==="run"?"run":(_mode==="end"?"done":"wait")),style:{"--lc":_lc},children:[
+    p("div",{className:"bd-st2-top",children:[p("span",{className:"bd-st2-k",style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[chipEl(_ln),"Position du "+_veh]}),c("span",{className:"bd-st2-cd",children:_cd})]}),
+    p("div",{className:"bd-st2-track",children:[c("span",{className:"bd-st2-bar",children:c("i",{style:{width:(_pp*100).toFixed(1)+"%"}})}),c("span",{className:"bd-st2-veh",style:{left:(_pp*100).toFixed(1)+"%"}})]}),
+    p("div",{className:"bd-st3-cols",children:[_col(_kA,_A,_A?(_mode==="at"?_depT(_A):(_mode==="run"?_depT(_A):_arrT(_A))):null,false),_col(_mode==="end"?"":"Prochain arrêt",_B,_tB,true)]})]})}catch(e){return null}})()
    ]}),
    p("div",{className:"bdt-card",children:[
     null,
@@ -5126,6 +5133,16 @@ html.dark .bdt-veh{background:#18181b}
 html.dark .bd-st2-veh{background:#18181b}
 .bd-st2-ends{display:flex;justify-content:space-between;gap:10px;margin-top:4px;font-size:11px;color:var(--mu);font-weight:600}
 .bd-st2-ends span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bd-st2-ends span:last-child{white-space:nowrap;font-variant-numeric:tabular-nums}
+</style>
+<style id="bd-st3-css">
+.bd-st3{display:block!important;padding:12px 14px!important;border-radius:16px!important}
+.bd-st3-cols{display:flex;justify-content:space-between;gap:12px;margin-top:6px}
+.bd-st3-col{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 0}
+.bd-st3-col.r{text-align:right;align-items:flex-end}
+.bd-st3-k{font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--mu)}
+.bd-st3-n{font-size:15px;font-weight:800;line-height:1.2;overflow-wrap:anywhere}
+.bd-st3-t{font-size:11px;font-weight:700;color:var(--mu);font-variant-numeric:tabular-nums}
+.bd-st3 .bd-st2-track{margin-top:12px}
 </style>
 <style id="bd-mode-pill-css">
 /* info-bulle « Mode parcours » / « Mode direct » à droite de « Prochains parcours » */
