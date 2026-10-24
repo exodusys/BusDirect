@@ -2621,7 +2621,8 @@ var rows=visibleStops.map(function(obj,vi){
  if(dotBg){ dotStyle.background=dotBg; dotStyle.borderColor=dotBg; }
  /* Arrêt de destination : point à la couleur du bus / train */
  if(i===_arrIdx){ dotStyle.background=lc; dotStyle.borderColor=lc; dotStyle.boxShadow="0 0 0 3px "+lc+"40"; }
- var cls="bdt-row is-first"+(((isLast||i===_nmE)&&!_fin)?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
+ var _apr=false;try{if(mine&&liveIdx<i){var _tMi=ms(x,false);_apr=liveIdx===i-1||(_tMi!=null&&_tMi-now<=120000)}}catch(e){}
+ var cls="bdt-row is-first"+(_apr?" bd-apr":"")+(((isLast||i===_nmE)&&!_fin)?" is-last":"")+(live?" is-live":"")+(isChange?" is-change":"")+(isFirst||isLast?" is-end":"")+(mine?" is-mine":"");
  /* véhicule en direct : position précise entre cet arrêt (départ) et le suivant (arrivée), retards compris, mise à jour chaque seconde */
  var _vp=0,_vAt=false;if(live){try{var _nxS=stops[i+1],_a0=x.departure||x.arrival,_b0=_nxS&&(_nxS.arrival||_nxS.departure);var _ta=_a0?new Date(_a0).getTime()+(x.delay||0)*60000:null,_tb=_b0?new Date(_b0).getTime()+((_nxS&&_nxS.delay)||0)*60000:null;if(_ta!=null&&_tb!=null&&_tb>_ta){_vp=Math.min(1,Math.max(0,(now-_ta)/(_tb-_ta)));_vAt=now>=_tb}}catch(e){_vp=0}}
  var _vIco=bdIsTrain(curLineRaw)?c("svg",{viewBox:"0 0 24 24",width:"12",height:"12",fill:"none",stroke:"currentColor",strokeWidth:"2.4",strokeLinecap:"round",strokeLinejoin:"round",children:[c("rect",{x:"5",y:"3",width:"14",height:"14",rx:"3"}),c("path",{d:"M5 11h14M9 21l-2-3M15 21l2-3"}),c("circle",{cx:"9",cy:"14",r:".6"}),c("circle",{cx:"15",cy:"14",r:".6"})]}):c("svg",{viewBox:"0 0 24 24",width:"12",height:"12",fill:"none",stroke:"currentColor",strokeWidth:"2.4",strokeLinecap:"round",strokeLinejoin:"round",children:[c("rect",{x:"4",y:"3",width:"16",height:"15",rx:"3"}),c("path",{d:"M4 11h16M7 21v-3M17 21v-3"}),c("circle",{cx:"8",cy:"14.5",r:".6"}),c("circle",{cx:"16",cy:"14.5",r:".6"})]});
@@ -2748,9 +2749,11 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
       var S=78,P0=40,P=P0+(_mode==="before"?S:0),_tot=P+P0+(_N-1)*S,_xb=P+_fi*S;
       var _els=[c("span",{className:"bd-st5-line",style:{left:P+"px",width:((_N-1)*S)+"px"}},"ln"),c("span",{className:"bd-st5-fill",style:{left:P+"px",width:Math.max(0,_xb-P).toFixed(1)+"px"}},"fl")];
       if(_mode==="before"){_els.push(c("span",{className:"bd-st5-appr",style:{left:P0+"px",width:S+"px"}},"ap"));_els.push(c("span",{className:"bd-st5-appf",style:{left:P0+"px",width:Math.max(0,_xb-P0).toFixed(1)+"px"}},"apf"))}
-      for(var _k=0;_k<_N;_k++){var _x=P+_k*S,_past=_k<=_j&&_mode!=="before",_me=_k===Math.max(0,mineIdx),_de=_k===_last;
-       _els.push(c("span",{className:"bd-st4-dot"+(_past?" past":"")+(_me?" me":"")+(_de?" dest":""),style:{left:_x+"px"}},"d"+_k));
-       _els.push(c("span",{className:"bd-st5-lbl"+((_me||_de)?" me":""),style:{left:_x+"px"},children:nm(stops[_k])},"l"+_k))}
+      /* le véhicule s'approche de mon arrêt de départ (prochain arrêt, ou moins de 2 min) : l'arrêt clignote en rouge */
+      var _mI3=Math.max(0,mineIdx),_tM=_arrT(stops[_mI3]),_near=_mode!=="end"&&_j<_mI3&&(_j===_mI3-1||(_tM!=null&&_tM-now<=120000));
+      for(var _k=0;_k<_N;_k++){var _x=P+_k*S,_past=_k<=_j&&_mode!=="before",_me=_k===_mI3,_de=_k===_last;
+       _els.push(c("span",{className:"bd-st4-dot"+(_past?" past":"")+(_me?" me":"")+(_de?" dest":"")+(_me&&_near?" blink":""),style:{left:_x+"px"}},"d"+_k));
+       _els.push(c("span",{className:"bd-st5-lbl"+((_me||_de)?" me":"")+(_me&&_near?" blink":""),style:{left:_x+"px"},children:nm(stops[_k])},"l"+_k))}
       _els.push(c("span",{className:"bd-st2-veh bd-st5-veh",style:{left:_xb.toFixed(1)+"px"}},"veh"));
       return c("div",{className:"bd-st5",children:c("div",{className:"bd-st5-in",style:{width:_tot+"px",left:"clamp(min(0px, calc(100% - "+_tot+"px)), calc(50% - "+_xb.toFixed(1)+"px), 0px)"},children:_els})})})(),
     p("div",{className:"bd-st3-cols",children:[_col(_kA,_A,_A?(_mode==="at"?_depT(_A):(_mode==="run"?_depT(_A):_arrT(_A))):null,false),_col(_mode==="end"?"":"Prochain arrêt",_B,_tB,true)]})]})}catch(e){return null}})()
@@ -5185,6 +5188,13 @@ html.dark .bd-st2-veh{background:#18181b}
 .bd-st5-lbl{position:absolute;top:24px;width:72px;margin-left:-36px;font-size:9px;font-weight:700;line-height:1.15;text-align:center;color:var(--mu);overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .bd-st5-lbl.me{font-weight:900;color:inherit}
 .bd-st5-veh{top:3px!important;transition:left 1s linear}
+/* arrêt de départ : clignote en rouge quand le véhicule approche */
+@keyframes bdBlinkRed{0%,100%{background:#ef4444;border-color:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.7)}50%{background:var(--card,#18181b);border-color:#ef4444;box-shadow:0 0 0 7px rgba(239,68,68,0)}}
+@keyframes bdBlinkTxt{0%,100%{color:#ef4444}50%{color:inherit}}
+.bd-st4-dot.blink{animation:bdBlinkRed 1s ease-in-out infinite!important}
+.bd-st5-lbl.blink{animation:bdBlinkTxt 1s ease-in-out infinite;color:#ef4444}
+.bdt-row.bd-apr .bdt-dot{animation:bdBlinkRed 1s ease-in-out infinite!important}
+.bdt-row.bd-apr .bdt-name{animation:bdBlinkTxt 1s ease-in-out infinite}
 .bd-st5-appr{position:absolute;top:11px;height:2px;background:repeating-linear-gradient(90deg,var(--lc,#ef4444) 0 5px,transparent 5px 10px);opacity:.55}
 .bd-st5-appf{position:absolute;top:10px;height:4px;border-radius:4px;background:var(--lc,#ef4444);opacity:.85;transition:width 1s linear}
 </style>
