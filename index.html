@@ -190,10 +190,8 @@ r.classList.toggle("dark", isDark);
 r.style.colorScheme=isDark?"dark":"light";
 r.dataset.theme=s;
 }catch(e){}})();</script><script>(function(){
-/* localisation activée par défaut (une fois) : si le téléphone l’a refusée, elle sera désactivée au lancement */
-try{if(!localStorage.getItem("bd_geo_default_on1")){localStorage.setItem("bd_settings_geoloc","1");localStorage.setItem("bd_geo_default_on1","1")}}catch(e){}
-/* premier lancement : on retient les demandes de localisation jusqu’à la réponse sur la page d’information */
-try{if(!localStorage.getItem("bd_geo_info_seen")&&localStorage.getItem("bd_geo_perm")!=="granted")window.__bdGeoHold=true}catch(e){}
+/* localisation activée par défaut à chaque démarrage de la page (« Service de localisation activé » dans Paramètres) */
+try{localStorage.setItem("bd_settings_geoloc","1")}catch(e){}
 /* V131 : popup de présentation avant la demande native de localisation */
 try{
 var g=navigator.geolocation;if(!g||g.__bdWrapped)return;
@@ -229,21 +227,10 @@ function modal(denied){
  if(denied)fail();
 }
 function fail(){var q=queue;queue=[];q.forEach(function(c){try{c.err&&c.err({code:1,message:"User denied Geolocation",PERMISSION_DENIED:1})}catch(e){}})}
-/* synchro : réponse du téléphone (autoriser / refuser) → « Service de localisation » dans Paramètres */
-function setGeo(on){var v=on?"1":"0",prev=null;try{prev=localStorage.getItem("bd_settings_geoloc");localStorage.setItem("bd_settings_geoloc",v);localStorage.setItem("bd_geo_perm",on?"granted":"denied");if(on)localStorage.setItem("bd-geo-ok","1");else localStorage.removeItem("bd-geo-ok")}catch(e){}
- try{var cb=document.getElementById("bd-set-geo");if(cb&&cb.checked!==on){cb.checked=on;window.__bdGeoUi&&window.__bdGeoUi()}}catch(e){}
- if(prev!==v){try{window.dispatchEvent(new Event("bd-geo-mode-change"))}catch(e){}}}
-window.__bdSetGeo=setGeo;
-function wS(f){return function(p){setGeo(true);f&&f(p)}}
-function wE(f){return function(e){if(e&&e.code===1)setGeo(false);else if(e&&(e.code===2||e.code===3)){try{localStorage.setItem("bd_geo_perm","granted")}catch(x){}}f&&f(e)}}
-/* demande native (le téléphone ouvre sa demande d’autorisation) */
-window.__bdGeoRaw=function(ok2,err,opt){rGet(ok2,err,opt)};
-/* premier lancement : les demandes de l’app attendent la page d’information */
-var held=[];window.__bdGeoRelease=function(){window.__bdGeoHold=false;var h=held;held=[];h.forEach(function(c){ask(c)})};
 function run(){var q=queue;queue=[];q.forEach(function(c){
- if(c.watch){map[c.id]=rWatch(wS(c.ok),wE(c.err),c.opt)}else rGet(wS(c.ok),wE(c.err),c.opt)})}
+ var wrapS=function(p){try{localStorage.setItem("bd-geo-ok","1")}catch(e){}c.ok&&c.ok(p)};
+ if(c.watch){map[c.id]=rWatch(wrapS,c.err,c.opt)}else rGet(wrapS,c.err,c.opt)})}
 function ask(c){
- if(window.__bdGeoHold){held.push(c);return}
  if(function(){try{return localStorage.getItem("bd_settings_geoloc")==="0"}catch(e){return false}}()){try{c.err&&c.err({code:1,message:"Localisation désactivée dans les paramètres",PERMISSION_DENIED:1})}catch(e){}return}
  if(ok()){go(c);return}
  queue.push(c);
@@ -254,10 +241,10 @@ function ask(c){
  };
  try{navigator.permissions.query({name:"geolocation"}).then(function(r){start(r.state)},function(){start("prompt")})}catch(e){start("prompt")}
 }
-function go(c){if(c.watch){map[c.id]=rWatch(wS(c.ok),wE(c.err),c.opt)}else rGet(wS(c.ok),wE(c.err),c.opt)}
+function go(c){if(c.watch){map[c.id]=rWatch(c.ok,c.err,c.opt)}else rGet(c.ok,c.err,c.opt)}
 g.getCurrentPosition=function(ok2,err,opt){ask({watch:false,ok:ok2,err:err,opt:opt})};
 g.watchPosition=function(ok2,err,opt){var id=++wid;ask({watch:true,id:id,ok:ok2,err:err,opt:opt});return id};
-g.clearWatch=function(id){queue=queue.filter(function(c){return c.id!==id});held=held.filter(function(c){return c.id!==id});if(map[id]!=null){try{rClear(map[id])}catch(e){}delete map[id]}};
+g.clearWatch=function(id){queue=queue.filter(function(c){return c.id!==id});if(map[id]!=null){try{rClear(map[id])}catch(e){}delete map[id]}};
 g.__bdWrapped=true;
 }catch(e){}})();</script>
 <script id="bd-geo-interval">
@@ -833,82 +820,7 @@ html.modal-open .bd-v101-overlay.open{touch-action:pan-y}
 <style id="bd-sms-master-css">.bd-v104-sms-sheet.bd-sms-off #bd-auto-detect-sms,.bd-v104-sms-sheet.bd-sms-off .bd-v104-sms-actions,.bd-v104-sms-sheet.bd-sms-off > .bd-v104-sms-note{display:none!important}.bd-sms-master-row{margin:4px 0 10px}.bd-sms-hidden{display:none!important}</style>
 <style id="bd-sms-nopage">#bd-v101-sms{display:none!important}</style>
 <style id="bd-menu-moved">#bd-v101-lang,#bd-v101-src,#bd-v101-src2{display:none!important}</style>
-<style id="bd-geo-info-css">
-#bd-geo-info{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-family:Inter,system-ui,-apple-system,sans-serif}
-#bd-geo-info .bx{width:100%;max-width:440px;max-height:90dvh;overflow:auto;background:#fafaf9;color:#18181b;border-radius:28px;padding:24px 22px;box-shadow:0 25px 70px rgba(0,0,0,.35)}
-html.dark #bd-geo-info .bx{background:#18181b;color:#fafafa}
-#bd-geo-info .ic{width:56px;height:56px;border-radius:18px;background:#22c55e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:14px}
-#bd-geo-info h2{margin:0 0 8px;font-size:20px;font-weight:900;letter-spacing:-.02em}
-#bd-geo-info p{margin:0 0 10px;font-size:14px;line-height:1.45;color:#52525b}html.dark #bd-geo-info p{color:#a1a1aa}
-#bd-geo-info ul{margin:0 0 14px;padding:0;list-style:none;font-size:13.5px;line-height:1.4}
-#bd-geo-info li{padding:5px 0 5px 24px;position:relative}#bd-geo-info li:before{content:"✓";position:absolute;left:4px;color:#22c55e;font-weight:900}
-#bd-geo-info .how{display:none;background:rgba(120,120,120,.1);border-radius:16px;padding:12px 14px;margin:0 0 14px;font-size:13px;line-height:1.5}
-#bd-geo-info .how.on{display:block}#bd-geo-info .how b{font-weight:800}
-#bd-geo-info button{width:100%;height:50px;border-radius:999px;font-weight:800;font-size:15px;border:0;cursor:pointer;margin-top:8px}
-#bd-geo-info .yes{background:#22c55e;color:#fff}
-#bd-geo-info .no{background:transparent;color:inherit;border:1px solid rgba(120,120,120,.35)}
-</style>
-<script id="bd-geo-info-js">
-/* Localisation : tous les cas du téléphone
-   - Demander (jamais répondu) : page d’information au premier lancement → « Activer » ouvre la demande du téléphone
-   - Autoriser : le service est activé dans « Paramètres »
-   - Refuser : le service est désactivé ; la page s’affiche à chaque lancement tant que la localisation est désactivée */
-(function(){
- function LS(k){try{return localStorage.getItem(k)}catch(e){return null}}
- function standalone(){try{return window.navigator.standalone===true||matchMedia("(display-mode: standalone)").matches}catch(e){return false}}
- /* état réel du téléphone : granted / denied / prompt (mémorisé si le navigateur ne le dit pas) */
- function state(cb){var fb=function(){cb(LS("bd_geo_perm")||"prompt")};try{navigator.permissions.query({name:"geolocation"}).then(function(r){cb(r.state)},fb)}catch(e){fb()}}
- function setGeo(on){if(window.__bdSetGeo)window.__bdSetGeo(on);else try{localStorage.setItem("bd_settings_geoloc",on?"1":"0")}catch(e){}}
- function release(){if(window.__bdGeoHold&&window.__bdGeoRelease)window.__bdGeoRelease()}
- /* demande au téléphone (doit partir d’un toucher pour que l’iPhone ouvre sa fenêtre) */
- function request(done){
-  if(!("geolocation" in navigator)){done&&done(false);return}
-  var raw=window.__bdGeoRaw||function(a,b,c){navigator.geolocation.getCurrentPosition(a,b,c)};
-  var fin=function(ok){try{localStorage.setItem("bd_geo_info_seen","1")}catch(e){}setGeo(ok);release();done&&done(ok)};
-  raw(function(){fin(true)},function(e){fin(!(e&&e.code===1))},{enableHighAccuracy:true,timeout:15000,maximumAge:0});
- }
- function hide(){var o=document.getElementById("bd-geo-info");if(o)o.remove()}
- function show(denied){
-  if(!document.body){document.addEventListener("DOMContentLoaded",function(){show(denied)});return}
-  var old=document.getElementById("bd-geo-info");if(old){if(denied){var h0=document.getElementById("bd-geo-info-how");if(h0)h0.classList.add("on")}return}
-  var o=document.createElement("div");o.id="bd-geo-info";o.setAttribute("role","dialog");o.setAttribute("aria-modal","true");
-  var path=standalone()?"<b>Réglages</b> › <b>Confidentialité et sécurité</b> › <b>Service de localisation</b> › <b>Sites web Safari</b> › <b>Lorsque l’app est active</b>":"<b>Réglages</b> › <b>Applications</b> › <b>Safari</b> › <b>Localisation</b> › <b>Demander</b> ou <b>Autoriser</b> (ou « aA » dans la barre d’adresse › <b>Réglages du site web</b> › <b>Localisation</b>)";
-  o.innerHTML='<div class="bx"><div class="ic">📍</div><h2 id="bd-geo-info-t">'+(denied?"Localisation désactivée":"Activer la localisation")+'</h2>'
-   +'<p>BusDirect utilise ta position uniquement pour faciliter tes déplacements :</p>'
-   +'<ul><li>Trouver les arrêts et les départs proches de toi</li><li>Détecter automatiquement tes parcours</li><li>Suivre ton bus ou ton train en direct</li><li>Afficher la distance et la direction jusqu’à l’arrêt</li></ul>'
-   +'<p>Ton téléphone va te demander l’autorisation. Sans localisation, tu peux toujours chercher un départ et une destination à la main.</p>'
-   +'<div class="how'+(denied?' on':'')+'" id="bd-geo-info-how">Si le téléphone n’affiche plus la demande, la localisation est bloquée. Pour l’autoriser : '+path+', puis reviens dans BusDirect.</div>'
-   +'<button type="button" class="yes" id="bd-geo-info-yes">Activer la localisation</button>'
-   +'<button type="button" class="no" id="bd-geo-info-no">Continuer sans localisation</button></div>';
-  document.body.appendChild(o);
-  document.getElementById("bd-geo-info-no").onclick=function(){try{localStorage.setItem("bd_geo_info_seen","1")}catch(e){}if(LS("bd_geo_perm")!=="granted"||window.__bdGeoHold)setGeo(false);release();hide()};
-  document.getElementById("bd-geo-info-yes").onclick=function(){var b=this;b.disabled=true;b.textContent="Réponds à la demande du téléphone…";
-   request(function(ok){if(ok){hide();return}b.disabled=false;b.textContent="Réessayer";var t=document.getElementById("bd-geo-info-t");if(t)t.textContent="Localisation refusée";var h=document.getElementById("bd-geo-info-how");if(h)h.classList.add("on")})};
- }
- window.bdGeoInfo={show:show,hide:hide,request:function(done){state(function(st){if(st==="granted"){setGeo(true);done&&done(true);return}request(done)})}};
- /* au lancement */
- function start(){
-  if(!("geolocation" in navigator)){release();return}
-  state(function(st){
-   var first=!LS("bd_geo_info_seen"),off=LS("bd_settings_geoloc")==="0";
-   if(st==="granted"){
-    try{localStorage.setItem("bd_geo_perm","granted")}catch(e){}
-    if(first){try{localStorage.setItem("bd_geo_info_seen","1")}catch(e){}setGeo(true);release();return}
-    if(off){show(false)}  /* autorisée mais désactivée dans Paramètres */
-    release();return}
-   if(st==="denied"){setGeo(false);release();show(true);return}
-   /* « Demander » : jamais répondu (ou demande à chaque fois) */
-   if(first||off){show(false);return}
-   release();
-  });
- }
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start);else start();
- /* l’autorisation change (retour depuis les Réglages du téléphone) */
- try{navigator.permissions.query({name:"geolocation"}).then(function(r){r.onchange=function(){if(r.state==="granted"){try{localStorage.setItem("bd_geo_info_seen","1")}catch(e){}setGeo(true);release();hide()}else if(r.state==="denied"){setGeo(false)}}})}catch(e){}
- document.addEventListener("visibilitychange",function(){if(document.visibilityState!=="visible"||!document.getElementById("bd-geo-info"))return;state(function(st){if(st==="granted"){try{localStorage.setItem("bd_geo_info_seen","1")}catch(e){}setGeo(true);release();hide()}})});
- window.addEventListener("bd-geo-mode-change",function(){if(LS("bd_settings_geoloc")!=="0")hide()});
-})();
-</script></head>
+</head>
 <body>
   <div id="root"></div>
   
@@ -4755,10 +4667,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
    var fk=window.__bd_gf&&window.__bd_gf.conf;setSt('bd-st-veh',fk?'ok':'wait',fk?'Suivi depuis '+Math.max(1,Math.round((Date.now()-fk.since)/1000))+' s':'Non détecté')}
   function upd(){var M=window.__bdMotion;var sb=document.getElementById('bd-set-msub');if(sb)sb.classList.toggle('off',!mc.checked);mp.style.display=(M&&M.supported&&mc.checked&&M.needsPermission&&M.permission()!=='granted')?'block':'none';geoUpd();motUpd()}
   mc.onchange=function(){var M=window.__bdMotion;try{localStorage.setItem('bd_settings_motion',mc.checked?'1':'0')}catch(e){}if(M){if(mc.checked){M.request(true).then(upd)}else{M.stop()}}upd()};
-  document.getElementById('bd-set-geo-cont').onchange=function(){try{localStorage.setItem('bd_settings_geo_continuous',this.checked?'1':'0')}catch(e){}gcUpd();geoGate();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}};window.__bdGeoUi=function(){try{geoGate();geoUpd()}catch(e){}};document.getElementById('bd-set-geo').addEventListener('change',function(){var cb=this,fin=function(){geoGate();geoUpd();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}};
-   if(!cb.checked){try{localStorage.setItem('bd_settings_geoloc','0')}catch(e){}fin();return}
-   /* activation : le téléphone ouvre sa demande d’autorisation (sauf si déjà autorisée) */
-   if(window.bdGeoInfo){window.bdGeoInfo.request(function(ok){cb.checked=ok;fin();if(!ok)window.bdGeoInfo.show(true)})}else{try{localStorage.setItem('bd_settings_geoloc','1')}catch(e){}fin()}});var gi=document.getElementById('bd-set-geo-int');gi.oninput=function(){if(gi.value!==''&&parseInt(gi.value,10)<1)gi.value='1'};gi.onblur=function(){var v=parseInt(gi.value,10);if(isNaN(v)||v<1)gi.value=String(isNaN(v)&&gi.value===''?10:1)};
+  document.getElementById('bd-set-geo-cont').onchange=function(){try{localStorage.setItem('bd_settings_geo_continuous',this.checked?'1':'0')}catch(e){}gcUpd();geoGate();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}};document.getElementById('bd-set-geo').addEventListener('change',function(){try{localStorage.setItem('bd_settings_geoloc',this.checked?'1':'0')}catch(e){}geoGate();geoUpd();try{window.dispatchEvent(new Event('bd-geo-mode-change'))}catch(e){}});var gi=document.getElementById('bd-set-geo-int');gi.oninput=function(){if(gi.value!==''&&parseInt(gi.value,10)<1)gi.value='1'};gi.onblur=function(){var v=parseInt(gi.value,10);if(isNaN(v)||v<1)gi.value=String(isNaN(v)&&gi.value===''?10:1)};
   mp.onclick=function(){if(window.__bdMotion)window.__bdMotion.request(true).then(upd)};
   window.__bdSetMotionUpd=upd;setInterval(function(){if(o.classList.contains('open'))upd()},1500)}
  function flag(k){try{return localStorage.getItem(k)!=='0'}catch(e){return true}}
