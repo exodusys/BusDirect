@@ -672,7 +672,7 @@ html body .bd-v101-hamb.bd-hamb-docked{position:absolute!important;right:0!impor
  function save(){try{localStorage.setItem(KEY,JSON.stringify(C))}catch(e){}}
  function norm(x){return String(x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim()}
  function srcList(){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'null');return Array.isArray(L)?L:null}catch(e){return null}}
- function active(id){try{if(window.__bdSrcFor){if(id==='opendata-ch'){var _c=window.__bdSrcFor('coords');return (_c&&_c.id==='opendata-ch')||!!window.__bdSrcFor('arrets')}if(id==='photon'||id==='nominatim')return !!window.__bdSrcFor('coords')}}catch(e){}var L=srcList();if(!L)return true;var s=L.find(function(x){return x.id===id});return !s||s.active!==false}
+ function active(id){try{if(window.__bdSrcFor){if(id==='opendata-ch')return !!window.__bdSrcFor('arrets');if(id==='photon'||id==='nominatim')return !!window.__bdSrcFor('coords')}}catch(e){}var L=srcList();if(!L)return true;var s=L.find(function(x){return x.id===id});return !s||s.active!==false}
  function kindOf(u){u=String(u||'').toLowerCase();if(/transport\.opendata\.ch/.test(u))return'opendata';if(/photon/.test(u))return'photon';if(/nominatim/.test(u))return'nominatim';if(/mobilitydatabase/.test(u))return'';if(/stops\.txt|\.csv(\?|$)/.test(u))return'gtfs-stops';if(/\.(geo)?json(\?|$)/.test(u))return'json';if(/\.zip(\?|$)/.test(u))return'';return'api'}
  /* sources ajoutées par l'utilisateur (actives), utilisées en plus des sources intégrées */
  function extra(){var L=srcList()||[];return L.filter(function(s){return s&&s.active!==false&&s.url&&!/^(opendata-ch|photon|nominatim|mobilitydb|pluscode)$/.test(s.id)}).map(function(s){var c=Array.isArray(s.caps)?s.caps:null,k=c?(c.indexOf('stops')>=0?(/\.(geo)?json(\?|$)/i.test(s.url)?'json':'gtfs-stops'):(c.indexOf('photon')>=0?'photon':(c.indexOf('nominatim')>=0?'nominatim':(c.indexOf('opendata')>=0?'opendata':'')))):kindOf(s.url);return{s:s,k:k}}).filter(function(x){return x.k})}
@@ -731,7 +731,7 @@ html body .bd-v101-hamb.bd-hamb-docked{position:absolute!important;right:0!impor
   {id:'lieux',label:'Recherche de lieux (et Plus Code)',def:'pluscode',kinds:['pluscode','photon','nominatim']},
   {id:'adresses',label:'Recherche d’adresses (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
   {id:'position',label:'Adresse de votre position (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
-  {id:'coords',label:'Coordonnées précises des arrêts (Google Maps, Boussole)',def:'nominatim',kinds:['nominatim','photon','stops','opendata','pluscode']},
+  {id:'coords',label:'Coordonnées précises des arrêts (Google Maps, boussole)',def:'nominatim',kinds:['nominatim','photon','stops']},
   {id:'catalogue',label:'Recherche de nouvelles sources',def:'mobilitydb',kinds:['mobilitydb']}
  ];
  function srcList(){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'null');return Array.isArray(L)?L:[]}catch(e){return[]}}
@@ -812,23 +812,6 @@ html.dark .bd-v101-sheet{background:#18181b!important;color:#fafafa!important}
 .bd-v101-sheet #bd-v101-list .bd-v101-source:last-child{border-bottom:0}
 .bd-v101-sheet .bd-src-routes{margin:0;padding:0;border:0}
 html.modal-open .bd-v101-overlay.open{touch-action:pan-y}
-@media (max-width:480px){
- .bd-v101-overlay{padding:10px!important}
- .bd-v101-sheet{max-width:100%!important;max-height:94dvh!important;border-radius:20px!important;padding:14px 12px 18px!important}
- .bd-v101-sheet .bd-v101-head h2{font-size:17px!important;line-height:1.25!important}
- .bd-v101-sheet .bd-v101-head div:last-child{font-size:10px!important}
- .bd-v101-sheet .bd-distance-settings-group h3{font-size:12px!important}
- .bd-v101-sheet .bd-v101-add{grid-template-columns:1fr!important}
- .bd-v101-sheet .bd-v101-add button{width:100%!important;min-height:44px}
- .bd-v101-sheet .bd-v101-actions{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
- .bd-v101-sheet .bd-v101-actions .bd-v101-action{width:100%!important;min-height:44px;font-size:13px!important}
- .bd-v101-sheet .bd-auto-detect-btn{width:100%!important;min-height:44px;font-size:13px!important}
- .bd-v101-sheet .bd-src-rt{display:block!important}
- .bd-v101-sheet .bd-src-rt>span{display:block!important;width:100%!important;margin-bottom:6px!important;font-size:12.5px!important;line-height:1.35!important}
- .bd-v101-sheet .bd-src-rt select{width:100%!important;min-height:44px!important;font-size:14px!important;padding:10px 12px!important;border-radius:12px!important}
- .bd-v101-sheet .bd-v101-source{padding:10px 0!important}
- .bd-v101-sheet .bd-v101-source *{word-break:break-word!important;overflow-wrap:anywhere!important}
-}
 </style>
 <style id="bd-del-trip-css">/* « Mon parcours » : les éléments ne sont plus écrasés quand la fenêtre défile (iPhone) */.px-5.pb-5.flex-col.overflow-y-auto>*{flex-shrink:0!important}.bd-del-trip{min-height:52px;margin-top:6px!important;letter-spacing:.01em}.bd-del-trip svg{width:18px!important;height:18px!important}.bd-del-trip{border:1px solid rgba(220,38,38,.35)!important;background:rgba(220,38,38,.06)!important;color:#dc2626!important;box-shadow:none!important;margin-top:2px}html.dark .bd-del-trip{border-color:rgba(248,113,113,.35)!important;background:rgba(248,113,113,.10)!important;color:#f87171!important}.bd-del-trip svg{stroke:currentColor}</style>
 <style id="bd-direct-sw-css">.bd-direct-sw{display:inline-flex;align-items:center;gap:8px;background:none;border:0;padding:4px 0;cursor:pointer;color:inherit}.bd-direct-lbl{font-size:13px;font-weight:700}.bd-direct-track{position:relative;width:46px;height:28px;border-radius:999px;background:#d4d4d8;transition:background .2s}html.dark .bd-direct-track{background:#3f3f46}.bd-direct-track.on{background:#22c55e!important}.bd-direct-knob{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}.bd-direct-track.on .bd-direct-knob{transform:translateX(18px)}</style>
