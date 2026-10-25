@@ -1946,7 +1946,8 @@ function bdAnyNearbySection(){try{
   }
   if(!near||!near.name)return p("div",{className:"bd-any-board flex flex-col gap-2 mt-2 px-1",children:c("div",{className:"text-[12px] text-zinc-500",children:mode==="route"?"Recherche d’un arrêt de vos parcours à proximité…":"Recherche de l’arrêt le plus proche…"})});
   var targets=[],seenT={};
-  bdActiveTiles().forEach(function(t){
+  /* V197 : même source que les boutons « Rejoindre » — tous les parcours enregistrés (pas seulement le live sélectionné), pour que la liste s’affiche aussi en basculement auto */
+  ((typeof fn!=="undefined"&&fn)||window.__bd_tiles||[]).filter(function(t){return t&&!t.hidden&&t.from&&t.to}).forEach(function(t){
     var lines=[];try{lines=bdItemLines(t).map(function(z){return String(z||"").trim()}).filter(Boolean)}catch(e){}
     [t&&t.from,t&&t.to].forEach(function(x){x=String(x||"").trim();var k=bdNorm(x);if(!x||!k||k===bdNorm(near.name))return;
       var q=seenT[k];if(!q){q={name:x,lines:[]};seenT[k]=q;targets.push(q)}
