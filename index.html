@@ -1940,7 +1940,7 @@ function bdCardFn(S,_ix){let _del=S.from.delay||0;let _hasDelay=_del>0;let _bar=
 ]}),c("div",{className:"w-full text-[11px] font-bold tabular-nums "+((S._arriveSec||0)>=300?"bd-arr-w":""),style:(S._arriveSec||0)<60?{color:"#ef4444"}:((S._arriveSec||0)<300?{color:"#eab308"}:void 0),children:window.__bdTL.text(S,"list"),"data-bd-kind":"list","data-bd-dep":String(window.__bdTL.attrs(S,"list")["data-bd-dep"]),"data-bd-dhm":(S.from&&S.from.time)||"","data-bd-ahm":(S.to&&S.to.time)||"","data-bd-train":window.__bdTL.attrs(S,"list")["data-bd-train"]})]}),p("div",{className:"mt-2 text-[11px] text-zinc-500",children:[bdCardName(S),...bdStopRows(S).map(function(r,ri){return p("div",{key:ri,className:"flex items-center gap-2 leading-snug",children:[c("span",{className:"w-[78px] shrink-0 text-[10px] uppercase tracking-wide text-zinc-400",children:r.k}),c("span",{className:(r.k==="Départ"||r.k==="Arrivée"?"font-medium text-zinc-700 dark:text-zinc-300 ":"")+"truncate",children:r.n}),(ri===0)?p("span",{className:"bd-cp-wrap ml-auto shrink-0 flex flex-col items-end gap-1",children:[p("span",{className:"bd-cp-lbl",children:[c("span",{className:"bd-cp-lk",children:"Arrêt à proximité"}),c("span",{className:"bd-cp-ln",children:String((S.from&&S.from.station)||S._fromStop||"")})]}),true?c("span",{className:"bd-compass","data-stop":String((S.from&&S.from.station)||S._fromStop||""),"data-lat":String(((S.passList||[]).find(function(x){return x&&x.type==="stop"})||{}).lat||""),"data-lon":String(((S.passList||[]).find(function(x){return x&&x.type==="stop"})||{}).lon||"")}):null,null]}):null]})})]}),/* numéro de voie : en bas à droite de la carte */(S.from.platform&&bdIsTrain((S.products||[])[0]))?c("span",{className:"bd-card-plat tabular-nums",style:{position:"absolute",right:"14px",bottom:"14px",fontWeight:800,fontSize:"11px",color:"#fff",background:"#18181b",border:"1px solid rgba(255,255,255,.18)",padding:"2px 8px",borderRadius:"999px",zIndex:2},children:[B.platform," ",S.from.platform]}):null]},S.id)}
 function bdZurichHour(){try{var s=new Intl.DateTimeFormat("fr-CH",{timeZone:"Europe/Zurich",hour:"2-digit",hour12:false}).format(new Date());var m=String(s).match(/(\d{1,2})/);var h=m?parseInt(m[1],10):NaN;if(isNaN(h))h=(new Date()).getHours();if(h===24)h=0;return h}catch(e){return (new Date()).getHours()}}
 function bdIsNightHour(){var h=bdZurichHour();return h>=22||h<6}
-function bdNearbyDur(){try{return Math.max(15,parseInt(localStorage.getItem("bd_settings_nearby_dur")||"60",10)||60)}catch(e){return 60}}
+function bdNearbyDur(){try{var v=parseInt(localStorage.getItem("bd_settings_nearby_dur")||"60",10);if(isNaN(v)||v<15)v=60;return v}catch(e){return 60}}
 function bdJoinDur(){try{return Math.max(15,parseInt(localStorage.getItem("bd_settings_join_dur")||"120",10)||120)}catch(e){return 120}}
 function bdParcoursEnds(){var o=[],seen={};try{(window.__bd_tiles||fn||[]).forEach(function(t){if(!t||t.hidden)return;[t.from,t.to].forEach(function(n){n=typeof n==="string"?n:(n&&n.name)||"";var k=bdNorm(n);if(!k||seen[k])return;seen[k]=1;o.push(n)})})}catch(e){}return o}
 function bdParcoursDests(){return bdParcoursEnds()}
@@ -1975,7 +1975,7 @@ window.__bd_remNear={pk:pk,st:sts[0]||null,list:sts};window.__bd_remNearBusy=nul
   var near=N&&N.pk===pk?N.st:null;if(!near||!near.name)return p("div",{className:"bd-any-board flex flex-col gap-2 mt-2 px-1",children:c("div",{className:"text-[12px] text-zinc-500",children:"Recherche de l’arrêt le plus proche…"})});
   var B=window.__bd_anyBoard||null,bk=bdNorm(near.name);
   if(!B||B.key!==bk||Date.now()-B.at>45000){if(window.__bd_anyBoardBusy!==bk){window.__bd_anyBoardBusy=bk;
-    (async function(){try{var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit=50";
+    (async function(){try{var _lim=Math.min(100,Math.max(30,Math.ceil(bdNearbyDur()/2)+20));var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit="+_lim;
       var r=await fetch(url);if(!r.ok)throw 0;var j=await r.json();
       var now=Date.now(),list=[];
       (j.stationboard||[]).forEach(function(b,idx){
@@ -1992,9 +1992,12 @@ window.__bd_remNear={pk:pk,st:sts[0]||null,list:sts};window.__bd_remNearBusy=nul
       list.sort(function(a,b){return a.dep-b.dep});
       window.__bd_anyBoard={key:bk,at:Date.now(),list:list,stop:near.name};window.__bd_anyBoardBusy=null;rer();
     }catch(e){window.__bd_anyBoardBusy=null}})()}}
-  var _baseDur=bdNearbyDur();var horiz=parseInt(window.__bd_boardHorizon||String(_baseDur),10);if(!(horiz>=15))horiz=_baseDur;
+  /* durée = Paramètres « Durée liste sans bouton » — identique Mode parcours et Mode direct */
+  var _baseDur=bdNearbyDur();
+  var horiz=parseInt(window.__bd_boardHorizon,10);
+  if(isNaN(horiz)||horiz<_baseDur)horiz=_baseDur;
   var now=Date.now(),until=now+horiz*60000;
-  var all=((B&&B.key===bk?B.list:[])||[]).filter(function(S){return S.dep>=now-60000});
+  var all=((B&&B.key===bk?B.list:[])||[]).filter(function(S){return S&&S.dep!=null&&S.dep>=now-60000}).sort(function(a,b){return a.dep-b.dep});
   var list=all.filter(function(S){return S.dep<=until}).slice(0,10);
   var nextLater=all.find(function(S){return S.dep>until});
   var cards=list.map(function(S){
