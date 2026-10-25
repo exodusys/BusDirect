@@ -1974,7 +1974,7 @@ function bdAnyNearbySection(){try{bdBindListSettings();
         if(mode==="route"&&target.lines.length){var nn=bdNorm(num),okLine=target.lines.some(function(z){var nz=bdNorm(z);return nn===nz||nn.endsWith(nz)||nz.endsWith(nn)});if(!okLine)return}
         var arr=x.to&&x.to.arrival?new Date(x.to.arrival).getTime():null;var nums=[];(x.sections||[]).forEach(function(_s){var _j=_s&&_s.journey;if(!_j)return;var _n=String(_j.number||"").trim()||String(_j.category||"").trim();if(_n&&nums.indexOf(_n)<0)nums.push(_n)});if(!nums.length&&num)nums=[num];var dur=(arr!=null&&arr>=dep)?Math.max(0,Math.round((arr-dep)/60000)):null;all.push({id:"nb_"+ti+"_"+ix+"_"+dep,num:num,nums:nums,cat:jn.category||"",to:target.name,time:new Date(dep).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}),arrTime:arr!=null?new Date(arr).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"",dur:dur,dep:dep,del:(x.from&&typeof x.from.delay==="number")?x.from.delay:0,raw:x})})}catch(e){}
     }
-    all.sort(function(a,b){return a.dep-b.dep});var uniq=[],u={};all.forEach(function(x){var k=x.dep+"|"+bdNorm(x.to)+"|"+x.num;if(!u[k]){u[k]=1;uniq.push(x)}});
+    all.sort(function(a,b){return a.dep-b.dep});var uniq=[],u={};all.forEach(function(x){var _ln=(x.nums&&x.nums.length?x.nums:[x.num]).map(function(n){var m=String(n||"").match(/\d+/);return m?m[0]:bdNorm(n)}).filter(Boolean).sort().join(",");var k=Math.round(x.dep/60000)+"|"+Math.round((x.raw&&x.raw.to&&x.raw.to.arrival?new Date(x.raw.to.arrival).getTime():0)/60000)+"|"+bdNorm(x.to)+"|"+_ln;if(!u[k]){u[k]=1;uniq.push(x)}});
     window.__bd_anyBoard={key:key,at:Date.now(),list:uniq,stop:near.name};window.__bd_anyBoardBusy=null;rer();
   }catch(e){window.__bd_anyBoardBusy=null}})()}}
   var now=Date.now(),_hMin=bdLocalWindow("nearby",key).minutes,_hEnd=now+_hMin*60000;
@@ -2027,7 +2027,19 @@ function bdListBase(){try{var n=parseInt(localStorage.getItem("bd_settings_list_
 function bdListInc(){try{var n=parseInt(localStorage.getItem("bd_settings_list_increment"),10);return Number.isFinite(n)&&n>=5?n:30}catch(e){return 30}}
 function bdResetList(){var n=bdListBase();window.__bd_horizon=n;setBdHorizon(n)}
 function bdFilterList(L,start,minutes){var end=start+minutes*60000;return(L||[]).filter(function(S){var t=S._sort!=null?S._sort:(S.from&&S.from.actualMs);return Number.isFinite(t)&&t>=start&&t<=end})}
-function bdShownEt(){return bdFilterList(bdShownEtRaw(),bdTripDTMs(),bdHorizon)}
+function bdShownEt(){
+  /* Anti-doublon final : une même course ne doit jamais être affichée deux fois, même si elle remonte de plusieurs parcours/sources. */
+  var L=bdFilterList(bdShownEtRaw(),bdTripDTMs(),bdHorizon),seen={},out=[];
+  (L||[]).forEach(function(S){
+    var dep=S&&S._sort!=null?S._sort:(S&&S.from&&S.from.actualMs);
+    if(!Number.isFinite(dep)&&S&&S.from&&S.from.departure)dep=new Date(S.from.departure).getTime();
+    var arr=S&&S.to&&S.to.actualMs;if(!Number.isFinite(arr)&&S&&S.to&&S.to.arrival)arr=new Date(S.to.arrival).getTime();
+    var lines=[];try{lines=(S.products||[]).map(function(x){var m=String(x||"").match(/\d+/);return m?m[0]:bdNorm(x)}).filter(Boolean).sort()}catch(e){}
+    var k=Math.round((dep||0)/60000)+"|"+Math.round((arr||0)/60000)+"|"+bdNorm(S&&S.from&&S.from.station)+"|"+bdNorm(S&&S.to&&S.to.station)+"|"+lines.join(",");
+    if(seen[k])return;seen[k]=1;out.push(S);
+  });
+  return out
+}
 function bdLocalWindow(type,key){var base=bdListBase(),all=window.__bd_listWindows||(window.__bd_listWindows={}),w=all[type];if(!w||w.base!==base||w.key!==key)w=all[type]={base:base,key:key,minutes:base};return w}
 function bdWindowFooter(w,rer){var inc=bdListInc(),end=Date.now()+w.minutes*60000;return p("div",{className:"flex flex-col items-start gap-2 pt-2",children:[c("div",{className:"text-[11px] text-zinc-500",children:"Départs jusqu’à "+new Date(end).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"})}),p("div",{className:"flex items-center gap-2",children:[c("button",{type:"button",className:"h-10 px-5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black font-bold text-[12px]",onClick:function(){w.minutes+=inc;rer()},children:"+ "+inc+" min"}),w.minutes>w.base?c("button",{type:"button",className:"h-10 px-4 rounded-full border border-[#e7e5e4] dark:border-white/10 font-bold text-[12px]",onClick:function(){w.minutes=w.base;rer()},children:"Revenir à "+w.base+" min"}):null]})]})}
 function bdBindListSettings(){if(window.__bd_settingsListBound)return;window.__bd_settingsListBound=true;window.addEventListener("bd-list-settings",function(){setBdPrev(function(p0){return Object.assign({},p0)})})}
