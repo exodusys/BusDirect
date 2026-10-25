@@ -1529,6 +1529,41 @@ async function bdEndpoint(name){
   }catch(e){return [bdExact(name)]}
 }
 try{window.bdEndpoint=bdEndpoint}catch(e){}
+
+/* Correctif ciblé : départs directs vers Veyrier, douane depuis l'arrêt détecté.
+   Le tableau des départs complète le planificateur, qui peut préférer la marche. */
+async function bdDouaneDepartures(fromName,toName){
+  if(bdNorm(toName)!=="veyrier douane")return [];
+  var near=bdNearStopName();
+  if(!near||!bdSameName(fromName,near))return [];
+  try{
+    var base=bdTripDTMs(),dt=new Date(base).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);
+    var r=await fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(bdExact(fromName))+"&limit=100&datetime="+encodeURIComponent(dt));
+    if(!r.ok)return [];
+    var j=await r.json(),out=[];
+    (j.stationboard||[]).forEach(function(b){
+      var start=b.stop,pl=b.passList||[];
+      if(!start||!start.departure)return;
+      var stops=[start];
+      pl.forEach(function(x){if(x&&x.station){var last=stops[stops.length-1];if(last.station&&bdSameName(last.station.name,x.station.name)&&last.departure===x.departure)return;stops.push(x)}});
+      var end=-1;
+      for(var k=1;k<stops.length;k++){if(bdNorm(stops[k].station&&stops[k].station.name)===bdNorm(toName)){end=k;break}}
+      if(end<0)return;
+      var arrival=stops[end];if(!arrival.arrival)return;
+      var ms=new Date(start.departure).getTime(),am=new Date(arrival.arrival).getTime();
+      if(!Number.isFinite(ms)||!Number.isFinite(am)||am<ms)return;
+      var secs=Math.round((am-ms)/1000),hh=String(Math.floor(secs/3600)).padStart(2,"0"),mm=String(Math.floor(secs%3600/60)).padStart(2,"0"),ss=String(secs%60).padStart(2,"0");
+      var journey=Object.assign({},b,{passList:stops.slice(0,end+1)});delete journey.stop;
+      out.push({from:start,to:arrival,duration:"00d"+hh+":"+mm+":"+ss,products:[String(b.category||"B")+" "+String(b.number||"")],transfers:0,sections:[{departure:start,arrival:arrival,journey:journey}]});
+    });return out;
+  }catch(e){return []}
+}
+function bdDouaneKey(S){
+  var f=S.from||{},t=S.to||{},line=String(S._leg||(S.products||[])[0]||"");
+  var n=line.match(/\d+/);var ms=new Date(f.departure).getTime();
+  return bdNorm(f.station)+"|"+(Number.isFinite(ms)?ms:String(f.departure||""))+"|"+(n?n[0]:bdNorm(line))+"|"+bdNorm(t.station);
+}
+
 async function bdGetConns(fromName,toName,onErr,wide,via){
   var failed=false,out=[];
   /* Adresse / lieu avec coordonnées connues : on ne laisse JAMAIS le service d'horaires interpréter le texte (« Conthey » compris comme « Monthey »).
@@ -1544,6 +1579,7 @@ async function bdGetConns(fromName,toName,onErr,wide,via){
   if(!out.length&&(!FP||!TP)&&(FE[0]!==fe||TE[0]!==te)){failed=false;out=keep(await bdGetConns0(fe,te,function(){failed=true},wide,via))}
   var fr=FP?fe:fromName,tr=TP?te:toName;
   if(!out.length&&(!FP||!TP)&&(fe!==fr||te!==tr)){failed=false;out=keep(await bdGetConns0(fr,tr,function(){failed=true},wide,via))}
+  if(!(via||[]).length){var direct=await bdDouaneDepartures(fromName,toName);if(direct.length)out=out.concat(direct);}
   if(failed&&!out.length&&onErr)onErr();
   return out;
 }
@@ -2015,7 +2051,7 @@ function bdFieldEnd(it){try{if(!it)return"";var L=window.__bd_tiles||fn||[];var 
 function bdLiveList(){var out=[],seen={};try{bdActiveTiles().forEach(function(t){bdOrientedItems(t).forEach(function(it){var n=bdAutoName(it.from,it.via,it.to);if(seen[n])return;seen[n]=1;out.push({it:it,name:n})})})}catch(e){}return out}
 /* Un départ correspond à un parcours « Live : » si départ, arrêts via (dans l'ordre) et destination correspondent. */
 function bdLiveMatch(S,list){try{var fr=String((S.from&&S.from.station)||S._fromStop||""),de=[S.destQuery,S.to&&S.to.station];var st=(S._fullPass||S.passList||[]).filter(function(x){return x&&x.type==="stop"}).map(function(x){return String(x.station||"")});for(var n=0;n<list.length;n++){var it=list[n].it;if(!bdSameName(fr,it.from)&&!bdSameName(S._fromStop,it.from)&&!(S._oFromStop&&bdSameName(S._oFromStop,it.from)))continue;if(!de.some(function(d){return d&&bdSameName(d,it.to)}))continue;var pos=0,ok=true;for(var q0=0;q0<st.length;q0++){if(bdSameName(st[q0],it.from)){pos=q0;break}}(it.via||[]).forEach(function(v){if(!ok)return;v=String(typeof v==="string"?v:(v&&v.name)||"");if(!v)return;var f=-1;for(var q=pos;q<st.length;q++){if(bdSameName(st[q],v)){f=q;break}}if(f<0&&st.length)ok=false;else if(f>=0)pos=f});if(ok&&bdRouteOK(S,it))return list[n]}}catch(e){}return null}
-function bdShownEt(){/* « Détecter n’importe où » : seuls les boutons « Rejoindre » et leurs trajets les plus rapides */if(bdDetectMode()==="any")return[];var i=bdDirInfo();if(i&&!bdDir)return[];if(i&&i.search){var _n=Date.now(),_sn=i.search,_o=[],_sk={};var _src=bdDir==="back"?(i.rev||[]):(et||[]).map(function(S){var R=bdRebase(S,_sn.stop);return R===S?null:R}).filter(Boolean);_src.forEach(function(R){if(R._sort<_n-60000)return;var k=bdNorm(R.from&&R.from.station)+"|"+(R.from&&R.from.departure)+"|"+(R.products||[]).join(",");if(_sk[k])return;_sk[k]=1;_o.push(R)});_o.sort(function(a,b){return(a._sort||0)-(b._sort||0)});return _o}var near=bdNearStopName(),now=Date.now(),seen={},out=[];var LL=bdActiveTiles().length?bdLiveList():[];(et||[]).forEach(function(S){var R=near?bdRebase(S,near):S;if(R!==S&&R._sort<now-60000)return;if(LL.length){var m=bdLiveMatch(R,LL);if(!m)return;if(R===S)R=Object.assign({},S);R._liveName=m.name;R._endField=bdFieldEnd(m.it)}if(i&&i.match(R)!==bdDir)return;var _lg=String(R._leg||(R.products||[])[0]||"").match(/\d+/);var k=bdNorm(R.from&&R.from.station)+"|"+(R.from&&R.from.departure)+"|"+(_lg?_lg[0]:(R.products||[]).join(","));if(seen[k])return;seen[k]=1;out.push(R)});out.sort(function(a,b){return(a._sort||0)-(b._sort||0)});return out}
+function bdShownEt(){/* « Détecter n’importe où » : seuls les boutons « Rejoindre » et leurs trajets les plus rapides */if(bdDetectMode()==="any")return[];var i=bdDirInfo();if(i&&!bdDir)return[];if(i&&i.search){var _n=Date.now(),_sn=i.search,_o=[],_sk={};var _src=bdDir==="back"?(i.rev||[]):(et||[]).map(function(S){var R=bdRebase(S,_sn.stop);return R===S?null:R}).filter(Boolean);_src.forEach(function(R){if(R._sort<_n-60000)return;var k=bdNorm(R.from&&R.from.station)+"|"+(R.from&&R.from.departure)+"|"+(R.products||[]).join(",");if(_sk[k])return;_sk[k]=1;_o.push(R)});_o.sort(function(a,b){return(a._sort||0)-(b._sort||0)});return _o}var near=bdNearStopName(),now=Date.now(),seen={},out=[];var LL=bdActiveTiles().length?bdLiveList():[];(et||[]).forEach(function(S){var R=near?bdRebase(S,near):S;if(R!==S&&R._sort<now-60000)return;if(LL.length){var m=bdLiveMatch(R,LL);if(!m)return;if(R===S)R=Object.assign({},S);R._liveName=m.name;R._endField=bdFieldEnd(m.it)}if(i&&i.match(R)!==bdDir)return;var _lg=String(R._leg||(R.products||[])[0]||"").match(/\d+/);var k=bdNorm(R.from&&R.from.station)+"|"+(R.from&&R.from.departure)+"|"+(_lg?_lg[0]:(R.products||[]).join(","));if(bdNorm(R.to&&R.to.station)==="veyrier douane")k=bdDouaneKey(R);if(seen[k])return;seen[k]=1;out.push(R)});out.sort(function(a,b){return(a._sort||0)-(b._sort||0)});return out}
 function bdDirBar(){if(bdDetectMode()==="any")return null;var i=bdDirInfo();if(!i)return null;var _all=(function(){var near=bdNearStopName(),LL=bdLiveList();return(et||[]).map(function(S){var R=near?bdRebase(S,near):S;var m=LL.length?bdLiveMatch(R,LL):null;return m?Object.assign({},R,{_liveName:m.name,_endField:bdFieldEnd(m.it)}):R})})();var lines=function(g){var o=[];_all.forEach(function(S){if(i.match(S)!==g.key)return;(S.products||[]).forEach(function(x){x=String(x||"").trim();if(x&&o.indexOf(x)<0)o.push(x)})});return o.length?o:g.lines};var btn=function(g){var k=g.key,on=bdDir===k,ls=lines(g),lbl=c("span",{className:"flex flex-col",children:[c("span",{className:"text-[10px] font-semibold uppercase tracking-wider",style:{opacity:.6},children:i.cap}),c("span",{className:"text-[13px] font-bold break-words",style:{whiteSpace:"pre-line"},children:g.text})]}),col=ls.length?getLineColor(ls[0]):"#a1a1aa";return p("button",{type:"button",onClick:function(){setBdDir(bdDir===k?"":k)},style:{minHeight:44,borderLeft:"5px solid "+col,boxShadow:on?"0 0 0 2px "+col:"none"},className:"px-3 py-2 rounded-[14px] font-bold text-[12px] leading-tight text-left transition active:scale-95 flex flex-col gap-1.5 "+(on?"bg-zinc-900 text-white dark:bg-white dark:text-black":"bg-white text-zinc-900 border border-[#e7e5e4] dark:bg-zinc-900 dark:text-zinc-100 dark:border-white/10"),children:[lbl,ls.length?c("span",{className:"flex flex-wrap gap-1",children:ls.slice(0,6).map(function(x){return c("span",{className:"px-2 py-0.5 rounded-full text-white text-[10px] font-bold",style:{background:getLineColor(x)},children:x},x)})}):null]},k)};return p("div",{className:"flex flex-col gap-2 px-1",children:[c("div",{className:"text-[11px] text-zinc-500 bd-dir-where",/* texte « Arrêt d’un parcours détecté » masqué visuellement */style:{whiteSpace:"pre-line",display:"none"},children:i.where+(bdDir?"":" — choisissez le sens")}),c("div",{className:"grid grid-cols-2 gap-2",children:i.groups.map(btn)})]})}
 /* Dalle détectée près de sa destination : les parcours « Live » sont retournés pour partir de cet arrêt (destination → départ), mêmes lignes. */
 function bdEndItems(t){try{if(!t||t.hidden||t._alt||t._mid)return[];if((window.__bd_endStop||{})[t.id]!=="to")return[];if((window.__bd_midStop||{})[t.id])return[];var _rt=bdReturnTile(t);if(_rt)return bdLiveItems(_rt);var out=[],seen={};bdLiveItems(t).forEach(function(it,ix){var dg={};var addP=function(x){var m=String(x||"").match(/\d+/);var k=m?m[0]:String(x||"").trim().toLowerCase();if(k)dg[k]=1};bdTileRoutes(it).forEach(function(r){(r.products||[]).forEach(addP)});String(it.linesPref||"").split(",").forEach(addP);var lp=Object.keys(dg);var v=(it.via||[]).map(function(x){return String(typeof x==="string"?x:(x&&x.name)||"").trim()}).filter(Boolean).reverse();var nm=bdAutoName(it.to,v,it.from);if(seen[nm])return;seen[nm]=1;var id=t.id+"_endr"+ix;(window.__bd_migrating=window.__bd_migrating||{})[id]=1;out.push({id:id,parent:t.id,name:nm,from:it.to,to:it.from,via:v,color:t.color,routes:[],routePrefs:"",lines:[],linesPref:lp.join(","),_seqs:bdTileRoutes(it).map(function(r){return(r.products||[]).slice().reverse()}).filter(function(q){return q.length}),_mid:true})});return out}catch(e){return[]}}
