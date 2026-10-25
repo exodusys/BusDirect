@@ -1921,7 +1921,7 @@ all.sort(function(a,b){return(a._sort||0)-(b._sort||0)});window.__bd_joinR={key:
     /* coordonnées du lieu exact de « Mon parcours » (arrêt mémorisé du parcours, sinon lieu choisi) */
     var _jXY=(R&&R.key===k&&R.xy)||bdJoinXY(J.target);
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
-    var _jUntil=now+bdJoinDur()*60000;var list=(R&&R.key===k?R.list:[]).filter(function(S){var t=+(S._sort||(S.from&&S.from.actualMs)||0);return isFinite(t)&&t>=now-60000&&t<=_jUntil}).sort(function(a,b){return(+(a._sort||0))-(+(b._sort||0))}).slice(0,10);
+    var _jDur=bdJoinDur();var list=(R&&R.key===k?R.list:[]).filter(function(S){var t=+(S._sort||(S.from&&S.from.actualMs)||0);if(!isFinite(t))return false;var mins=(t-now)/60000;return mins>=-1&&mins<=_jDur+0.01}).sort(function(a,b){return(+(a._sort||0))-(+(b._sort||0))}).slice(0,10);
     body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?("Aucun trajet dans les "+bdJoinDur()+" min depuis cet arrêt."):"Recherche des prochains parcours…"});}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */
   return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body]});}catch(e){try{console.warn("bdJoinSection",e)}catch(x){}return null}}
@@ -1949,17 +1949,19 @@ function bdLabelParcoursDest(lineTo){try{var dests=bdParcoursEnds();if(!dests.le
   for(var i=0;i<dests.length;i++){if(bdSameName(to,dests[i])||bdNorm(to).indexOf(bdNorm(dests[i]))>=0||bdNorm(dests[i]).indexOf(bdNorm(to))>=0)return dests[i]}
   return to}catch(e){return lineTo||""}}
 /* départ stationboard vers un bout de « Mes parcours » ? */
-function bdBoardTowardParcours(b,num){try{var ends=bdParcoursEnds(),lines=bdParcoursLines();if(!ends.length)return{ok:true,to:b.to||""};
-  if(lines.length&&num){var hit=lines.some(function(L){return String(L)===String(num)||String(num).indexOf(String(L))>=0||String(L).indexOf(String(num))>=0});if(!hit)return{ok:false,to:""}}
+function bdBoardTowardParcours(b,num){try{var ends=bdParcoursEnds(),lines=bdParcoursLines();
   var to=String(b.to||""),found="";
   var pl=b.passList||[];
-  for(var pi=0;pi<pl.length;pi++){var pn=(pl[pi]&&pl[pi].station&&(pl[pi].station.name||pl[pi].station))||pl[pi]&&pl[pi].name||"";if(!pn)continue;
+  for(var pi=0;pi<pl.length;pi++){var pn=(pl[pi]&&pl[pi].station&&(pl[pi].station.name||pl[pi].station))||(pl[pi]&&pl[pi].name)||"";if(!pn)continue;
     for(var di=0;di<ends.length;di++){if(bdSameName(pn,ends[di])){found=ends[di];break}}if(found)break}
   if(!found){for(var di=0;di<ends.length;di++){if(bdSameName(to,ends[di])||bdNorm(to).indexOf(bdNorm(ends[di]))>=0||bdNorm(ends[di]).indexOf(bdNorm(to))>=0){found=ends[di];break}}}
   if(found)return{ok:true,to:found};
-  /* même ligne, terminus inconnu : garder et afficher le 1er bout du parcours plausible */
-  if(lines.length&&num)return{ok:true,to:bdLabelParcoursDest(to)||to||ends[0]};
-  return{ok:false,to:""}}catch(e){return{ok:true,to:(b&&b.to)||""}}}
+  /* Filtre ligne de Mes parcours si connue */
+  if(lines.length&&num){var hit=lines.some(function(L){return String(L)===String(num)||String(num).indexOf(String(L))>=0||String(L).indexOf(String(num))>=0});
+    if(hit)return{ok:true,to:bdLabelParcoursDest(to)||to||(ends[0]||"")};
+    return{ok:false,to:""}}
+  /* pas de lignes mémorisées : garder le départ, libellé parcours si possible */
+  return{ok:true,to:bdLabelParcoursDest(to)||to}}catch(e){return{ok:true,to:(b&&b.to)||""}}}
 function bdAnyNearbySection(){try{/* V201 : départs vers départ/destination Mes parcours */
   var _mode="duration";try{_mode=String(localStorage.getItem("bd_settings_nearby_board")||"duration").trim()}catch(e){}
   if(_mode==="off")return null;
@@ -1998,12 +2000,15 @@ window.__bd_remNear={pk:pk,st:sts[0]||null,list:sts};window.__bd_remNearBusy=nul
   /* durée = Paramètres « Durée liste sans bouton » — identique Mode parcours et Mode direct */
   var _baseDur=bdNearbyDur();
   var horiz=parseInt(window.__bd_boardHorizon,10);
-  if(isNaN(horiz)||horiz<_baseDur)horiz=_baseDur;
-  var now=Date.now(),until=now+horiz*60000;
+  /* par défaut = durée Paramètres ; __bd_boardHorizon seulement si +30 min */
+  if(isNaN(horiz)||horiz<_baseDur){horiz=_baseDur;window.__bd_boardHorizon=String(_baseDur)}
+  if(horiz>_baseDur+360)horiz=_baseDur;
+  var now=Date.now();
   var all=((B&&B.key===bk?B.list:[])||[]).filter(function(S){var d=+S.dep;return isFinite(d)&&d>=now-60000}).sort(function(a,b){return +a.dep-+b.dep});
-  /* uniquement depuis maintenant jusqu'à la durée Paramètres */
-  var list=all.filter(function(S){var d=+S.dep;return d>=now-60000&&d<=until}).slice(0,10);
-  var nextLater=all.find(function(S){return +S.dep>until});
+  /* strict : minutes restantes <= durée (depuis maintenant) */
+  var list=all.filter(function(S){var mins=(+S.dep-now)/60000;return mins>=-1&&mins<=horiz+0.01}).slice(0,10);
+  var until=now+horiz*60000;
+  var nextLater=all.find(function(S){return ((+S.dep-now)/60000)>horiz+0.01});
   var cards=list.map(function(S){
     var mins=Math.max(0,Math.round((S.dep-Date.now())/60000));
     var col=getLineColor(S.num||S.cat||"");
