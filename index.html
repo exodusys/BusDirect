@@ -1939,7 +1939,7 @@ function bdAnyNearbySection(){try{/* V194 : 10 prochains départs ; masquée si 
   var near=N&&N.pk===pk?N.st:null;if(!near||!near.name)return p("div",{className:"bd-any-board flex flex-col gap-2 mt-2 px-1",children:c("div",{className:"text-[12px] text-zinc-500",children:"Recherche de l’arrêt le plus proche…"})});
   var B=window.__bd_anyBoard||null,bk=bdNorm(near.name);
   if(!B||B.key!==bk||Date.now()-B.at>45000){if(window.__bd_anyBoardBusy!==bk){window.__bd_anyBoardBusy=bk;
-    (async function(){try{var _nowCH=new Date().toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit=40&datetime="+encodeURIComponent(_nowCH);
+    (async function(){try{/* Heure actuelle réelle : ne pas envoyer l'heure locale suisse dans `datetime` (elle peut être interprétée comme UTC et décaler la liste d'1 h). Sans `datetime`, stationboard démarre à maintenant. */var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit=40";
       var r=await fetch(url);if(!r.ok)throw 0;var j=await r.json();
       var now=Date.now(),list=[];
       (j.stationboard||[]).forEach(function(b,idx){
