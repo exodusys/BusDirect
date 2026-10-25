@@ -1969,10 +1969,14 @@ function bdAnyNearbySection(){try{bdBindListSettings();
     var qs="&date="+parts[0]+"&time="+parts[1],all=[];
     for(var ti=0;ti<targets.length;ti++){
       var target=targets[ti],url="https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(near.id||near.name)+"&to="+encodeURIComponent(bdExact(target.name))+"&limit=16"+qs;
-      try{var r=await fetch(url);if(!r.ok)continue;var j=await r.json();(j.connections||[]).forEach(function(x,ix){var dep=x.from&&x.from.departure?new Date(x.from.departure).getTime():null;if(dep==null||dep<Date.now()-60000)return;var sec=(x.sections||[]).find(function(z){return z&&z.journey})||{},jn=sec.journey||{},num=String(jn.number||"").trim()||String((x.products||[])[0]||jn.category||"").replace(/^\S+\s+/,"").trim();
+      try{var r=await fetch(url);if(!r.ok)continue;var j=await r.json();(j.connections||[]).forEach(function(x,ix){/* Horaires réels du véhicule à l’arrêt à proximité : on utilise le départ de la première section avec ligne, pas le début d’un éventuel tronçon à pied. */
+        var sec=(x.sections||[]).find(function(z){return z&&z.journey&&z.departure&&z.departure.departure})||null;if(!sec)return;var sd=sec.departure,jn=sec.journey||{};
+        var dep=sd.departure?new Date(sd.departure).getTime():null;if(dep==null||dep<Date.now()-60000)return;
+        var _sn=String((sd.station&&(sd.station.name||""))||"");if(_sn&&!bdSameName(_sn,near.name)&&bdNorm(_sn)!==bdNorm(near.name))return;
+        var num=String(jn.number||"").trim()||String((x.products||[])[0]||jn.category||"").replace(/^\S+\s+/,"").trim();
         /* Mode parcours : uniquement la/les lignes explicitement sélectionnées dans « Mes parcours ». Mode n'importe où : toutes les lignes restent autorisées. */
         if(mode==="route"&&target.lines.length){var nn=bdNorm(num),okLine=target.lines.some(function(z){var nz=bdNorm(z);return nn===nz||nn.endsWith(nz)||nz.endsWith(nn)});if(!okLine)return}
-        all.push({id:"nb_"+ti+"_"+ix+"_"+dep,num:num,cat:jn.category||"",to:target.name,time:new Date(dep).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}),dep:dep,del:(x.from&&typeof x.from.delay==="number")?x.from.delay:0,plat:(x.from&&x.from.platform)||"",raw:x})})}catch(e){}
+        all.push({id:"nb_"+ti+"_"+ix+"_"+dep,num:num,cat:jn.category||"",to:target.name,time:new Date(dep).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}),dep:dep,del:(typeof sd.delay==="number")?sd.delay:0,plat:sd.platform||"",raw:x})})}catch(e){}
     }
     all.sort(function(a,b){return a.dep-b.dep});var uniq=[],u={};all.forEach(function(x){var k=x.dep+"|"+bdNorm(x.to)+"|"+x.num;if(!u[k]){u[k]=1;uniq.push(x)}});
     window.__bd_anyBoard={key:key,at:Date.now(),list:uniq,stop:near.name};window.__bd_anyBoardBusy=null;rer();
