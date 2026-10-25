@@ -2031,7 +2031,7 @@ function bdLiveMatch(S,list){try{var fr=String((S.from&&S.from.station)||S._from
 function bdListBase(){try{var n=parseInt(localStorage.getItem("bd_settings_list_display"),10);return Number.isFinite(n)&&n>=5?n:60}catch(e){return 60}}
 function bdListInc(){try{var n=parseInt(localStorage.getItem("bd_settings_list_increment"),10);return Number.isFinite(n)&&n>=5?n:30}catch(e){return 30}}
 function bdResetList(){var n=bdListBase();window.__bd_horizon=n;setBdHorizon(n)}
-function bdFilterList(L,start,minutes){var end=start+minutes*60000,out=(L||[]).filter(function(S){var t=S._sort!=null?S._sort:(S.from&&S.from.actualMs);return Number.isFinite(t)&&t>=start&&t<=end});try{if(localStorage.getItem("bd_settings_list_five")==="1")return out.slice(0,5)}catch(e){}return out}
+function bdFilterList(L,start,minutes){var five=false;try{five=localStorage.getItem("bd_settings_list_five")==="1"}catch(e){}var end=start+minutes*60000,out=(L||[]).filter(function(S){var t=S._sort!=null?S._sort:(S.from&&S.from.actualMs);return Number.isFinite(t)&&t>=start&&(five||t<=end)});out.sort(function(a,b){var ta=a._sort!=null?a._sort:(a.from&&a.from.actualMs)||0,tb=b._sort!=null?b._sort:(b.from&&b.from.actualMs)||0;return ta-tb});return five?out.slice(0,5):out}
 function bdShownEt(){
   /* Anti-doublon final : une même course ne doit jamais être affichée deux fois, même si elle remonte de plusieurs parcours/sources. */
   var L=bdFilterList(bdShownEtRaw(),bdTripDTMs(),bdHorizon),seen={},out=[];
@@ -5488,3 +5488,19 @@ label.bd-distance-settings-label:has(+ label.bd-set-toggle #bd-set-detect-route)
 </style>
 </body>
 </html>
+<script id="bd-list-five-global-rule">
+/* « Afficher les 5 prochains parcours » : règle globale pour toutes les listes
+   (listes ouvertes par les boutons + « Prochains départs à proximité »).
+   Quand actif, la fenêtre en minutes est ignorée : on garde les 5 prochains départs futurs. */
+(function(){
+ function active(){try{return localStorage.getItem('bd_settings_list_five')==='1'}catch(e){return false}}
+ window.__bdListFiveActive=active;
+ window.__bdApplyListRule=function(list,start,minutes){
+   list=Array.isArray(list)?list:[]; start=Number(start)||Date.now();
+   var five=active(), end=start+(Number(minutes)||60)*60000;
+   var out=list.filter(function(x){var t=x&&x._sort!=null?Number(x._sort):Number(x&&x.from&&x.from.actualMs);return Number.isFinite(t)&&t>=start&&(five||t<=end)});
+   out.sort(function(a,b){var ta=a&&a._sort!=null?Number(a._sort):Number(a&&a.from&&a.from.actualMs)||0;var tb=b&&b._sort!=null?Number(b._sort):Number(b&&b.from&&b.from.actualMs)||0;return ta-tb});
+   return five?out.slice(0,5):out;
+ };
+})();
+</script>
