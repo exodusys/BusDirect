@@ -5443,5 +5443,48 @@ label.bd-distance-settings-label:has(+ label.bd-set-toggle #bd-set-detect-route)
 </script>
 <style id="bd-vappearance-css">#bd-appearance-page.open{display:block!important}#bd-distance-settings-sheet.bd-appearance-mode>.bd-distance-settings-head,#bd-distance-settings-sheet.bd-appearance-mode>.bd-distance-settings-group:not(#bd-appearance-entry),#bd-distance-settings-sheet.bd-appearance-mode>.bd-distance-settings-save,#bd-distance-settings-sheet.bd-appearance-mode>.bd-distance-settings-note{display:none!important}#bd-distance-settings-sheet.bd-appearance-mode>#bd-appearance-entry{display:none!important}#bd-distance-settings-sheet.bd-appearance-mode>#bd-appearance-page{display:block!important}</style>
 <script id="bd-vappearance-js">(function(){function bind(){var sh=document.getElementById('bd-distance-settings-sheet'),op=document.getElementById('bd-appearance-open'),bk=document.getElementById('bd-appearance-back'),pg=document.getElementById('bd-appearance-page');if(!sh||!op||!bk||!pg||op.__bd)return;op.__bd=1;op.onclick=function(){sh.classList.add('bd-appearance-mode');pg.classList.add('open');sh.scrollTop=0};bk.onclick=function(){sh.classList.remove('bd-appearance-mode');pg.classList.remove('open');sh.scrollTop=0}}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();new MutationObserver(bind).observe(document.documentElement,{childList:true,subtree:true})})();</script>
+
+<script id="bd-near-countdown-under-status-v1">
+(function(){
+ function txt(e){return (e&&e.textContent||'').replace(/\s+/g,' ').trim()}
+ function isNearCard(card){
+   var e=card, n=0;
+   while(e&&n++<7){
+     var t=txt(e);
+     if(/Prochains départs à proximité/i.test(t)) return true;
+     e=e.parentElement;
+   }
+   return false;
+ }
+ function sync(){
+   var all=document.querySelectorAll('div,span,p');
+   for(var i=0;i<all.length;i++){
+     var st=all[i], t=txt(st);
+     if(!/^(?:À|A) l[’']heure$/i.test(t)) continue;
+     var card=st.closest('.rounded-\\[20px\\],.rounded-\\[16px\\],.rounded-\\[14px\\]')||st.parentElement&&st.parentElement.parentElement;
+     if(!card||!isNearCard(card)) continue;
+     var els=card.querySelectorAll('div,span,p');
+     var cd=null;
+     for(var j=0;j<els.length;j++){
+       var q=txt(els[j]);
+       if(/^dans\s+(?:\d+\s*(?:j|h|min|m|s)\s*)+$/i.test(q)){cd=els[j];break}
+     }
+     if(!cd||cd===st||st.contains(cd)||cd.contains(st)) continue;
+     var holder=st.parentElement;
+     if(!holder) continue;
+     if(cd.parentElement!==holder || cd.previousElementSibling!==st){
+       cd.classList.add('bd-near-countdown-under-status');
+       holder.insertBefore(cd,st.nextSibling);
+     }
+   }
+ }
+ var raf=0;function schedule(){if(!raf)raf=requestAnimationFrame(function(){raf=0;sync()})}
+ if(document.body){sync();new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true})}
+ else document.addEventListener('DOMContentLoaded',function(){sync();new MutationObserver(schedule).observe(document.body,{subtree:true,childList:true,characterData:true})});
+})();
+</script>
+<style id="bd-near-countdown-under-status-css">
+.bd-near-countdown-under-status{display:block!important;margin-top:3px!important;font-size:12px!important;line-height:1.15!important;text-align:left!important}
+</style>
 </body>
 </html>
