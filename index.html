@@ -1444,7 +1444,7 @@ function bdStopLines(name,done){
   if(c[k]&&c[k].v)return c[k].v;
   if(c[k]&&(c[k].p||Date.now()-c[k].t<600000))return null;
   c[k]={p:true,t:Date.now()};
-  fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(name)+"&limit=30").then(function(r){return r.json()}).then(function(j){
+  fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(name)+"&limit=30&datetime="+encodeURIComponent(new Date().toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16))).then(function(r){return r.json()}).then(function(j){
     var seen={},out=[];
     (j.stationboard||[]).forEach(function(b){var l=String(b.number||"").trim()||String(b.name||"").replace(/^\S+\s+/,"").trim();if(l&&!seen[l]){seen[l]=1;out.push(l)}});
     out.sort(function(a,b){var x=parseInt(a,10),y=parseInt(b,10);if(!isNaN(x)&&!isNaN(y))return x-y;return String(a).localeCompare(String(b))});
@@ -1939,7 +1939,7 @@ function bdAnyNearbySection(){try{/* V194 : 10 prochains départs ; masquée si 
   var near=N&&N.pk===pk?N.st:null;if(!near||!near.name)return p("div",{className:"bd-any-board flex flex-col gap-2 mt-2 px-1",children:c("div",{className:"text-[12px] text-zinc-500",children:"Recherche de l’arrêt le plus proche…"})});
   var B=window.__bd_anyBoard||null,bk=bdNorm(near.name);
   if(!B||B.key!==bk||Date.now()-B.at>45000){if(window.__bd_anyBoardBusy!==bk){window.__bd_anyBoardBusy=bk;
-    (async function(){try{var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit=40";
+    (async function(){try{var _nowCH=new Date().toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);var url="https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(near.name)+"&limit=40&datetime="+encodeURIComponent(_nowCH);
       var r=await fetch(url);if(!r.ok)throw 0;var j=await r.json();
       var now=Date.now(),list=[];
       (j.stationboard||[]).forEach(function(b,idx){
