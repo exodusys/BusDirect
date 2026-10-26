@@ -1578,15 +1578,15 @@ return{ok:true,names:idx.map(function(i){return seq[i].name}),kinds:idx.map(func
 function bdIsBusSection(sec){
   if(!sec||!sec.journey)return false;
   var j=sec.journey,cat=String(j.category||"").toUpperCase().trim();
-  var name=String(j.name||"").toUpperCase();
+  var name=String(j.name||j.category||"").toUpperCase();
   var num=String(j.number||"").trim();
-  /* train / tram / métro / bateau exclus */
-  if(/^(IR|IC|RE|R|S|T|M|BAT|FAE|D|FUN|CC)/.test(cat))return false;
-  if(/\b(TRAM|TRAIN|METRO|MÉTRO|BOAT|BATEAU)\b/.test(name))return false;
-  /* bus : B, NFB, BUS, ou numéro de ligne local sans catégorie train */
+  if(/^(IR|IC|RE|R|S|T|M|BAT|FAE|D|FUN|CC|TGV|EC|NJ)/.test(cat))return false;
+  if(/\b(TRAM|TRAIN|METRO|MÉTRO|BOAT|BATEAU|SHIP)\b/.test(name))return false;
   if(/^(B|NFB|BUS)$/.test(cat)||cat.indexOf("BUS")>=0)return true;
+  /* TPG etc. : numéro de ligne (ex. 8, 22) sans catégorie train */
+  if(num&&!/^\d{4,}$/.test(num)&&(!cat||cat==="B"||cat==="NFB"||/BUS/i.test(cat)))return true;
   if(!cat&&num&&!/^\d{4,}$/.test(num))return true;
-  return cat==="B"||/^B\s*\d/.test(cat+" "+num);
+  return false;
 }
 function bdIsBusConn(F){
   var secs=(F&&F.sections)||[];
@@ -1694,33 +1694,61 @@ async function bdResolveStrict(q){
   try{
     var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
     if(src&&src.active===false)return null;
-    var mm=bdMemoFor(q);
-    /* arrêt connu en mémoire : strict */
+    var mm=bdMemoFor(q),qq=String(q||"").trim();
+    /* 1) arrêt déjà mémorisé */
     if(mm&&mm.kind==="stop"&&(mm.id||mm.stopId)){
-      return{id:String(mm.id||mm.stopId),name:mm.name||String(q),lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};
+      return{id:String(mm.id||mm.stopId),name:mm.name||qq,lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};
     }
-    /* V2026k : adresse / POI → premier arrêt à proximité pour établir la liste */
-    var isAddr=!!(mm&&mm.kind&&mm.kind!=="stop")||/\d/.test(String(q||""))||!!(window.bdPlusCode&&window.bdPlusCode.parse(String(q||"")));
-    var pt=null;
-    try{pt=await bdGeoPointMP(q)}catch(e){}
-    if(!pt&&mm&&mm.lat!=null&&isFinite(+mm.lat))pt={lat:+mm.lat,lon:+mm.lon};
-    if(pt||isAddr){
-      if(!pt)return null;
-      var L=await bdNearStationsMP(pt,q);
-      var s=L&&L[0];
-      if(!s)return null;
-      return{id:String(s.id),name:s.name,lat:+s.coordinate.x,lon:+s.coordinate.y,_fromAddr:true};
-    }
-    /* nom d'arrêt : correspondance texte exacte / préfixe uniquement */
-    var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(q))+"&type=station");
-    if(!r.ok)return null;
-    var st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
-    if(!st.length)return null;
-    var n=bdNorm(q);
+    /* 2) recherche texte : arrêt exact ? */
+    var st=[];
+    try{
+      var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(qq))+"&type=station");
+      if(r.ok)st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
+    }catch(e){}
+    var n=bdNorm(qq);
     var ex=st.find(function(s){return bdNorm(s.name)===n});
-    if(!ex)ex=st.find(function(s){var ns=bdNorm(s.name);return ns===n||ns.indexOf(n)===0||n.indexOf(ns)===0});
-    if(!ex)return null;
-    return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
+    if(!ex)ex=st.find(function(s){var ns=bdNorm(s.name);return ns.indexOf(n)===0||n.indexOf(ns)===0});
+    if(ex&&mm&&mm.kind==="stop"){
+      return{id:String(ex.id),name:ex.name,lat:ex.coordinate?+ex.coordinate.x:null,lon:ex.coordinate?+ex.coordinate.y:null};
+    }
+    if(ex&&!mm&&!/\d/.test(qq)&&qq.indexOf(",")<0){
+      /* nom d'arrêt saisi sans indice d'adresse */
+      return{id:String(ex.id),name:ex.name,lat:ex.coordinate?+ex.coordinate.x:null,lon:ex.coordinate?+ex.coordinate.y:null};
+    }
+    /* 3) V2026l : adresse / POI → coordonnées puis PREMIER arrêt à proximité */
+    var pt=null;
+    if(mm&&mm.lat!=null&&isFinite(+mm.lat)&&mm.lon!=null)pt={lat:+mm.lat,lon:+mm.lon};
+    if(!pt){try{pt=await bdGeoPointMP(qq)}catch(e){}}
+    if(!pt){
+      /* photon même sans chiffre (POI type « Jardin botanique Genève ») */
+      try{
+        var g=await fetch("https://photon.komoot.io/api/?limit=5&lang=fr&q="+encodeURIComponent(qq)).then(function(r){return r.json()});
+        var f=(g&&g.features&&g.features[0])||null;
+        if(f&&f.geometry&&f.geometry.coordinates)pt={lat:+f.geometry.coordinates[1],lon:+f.geometry.coordinates[0]};
+      }catch(e){}
+    }
+    if(!pt){
+      /* dernier recours : si un arrêt texte existe, l'utiliser */
+      if(ex)return{id:String(ex.id),name:ex.name,lat:ex.coordinate?+ex.coordinate.x:null,lon:ex.coordinate?+ex.coordinate.y:null};
+      return null;
+    }
+    var L=await bdNearStationsMP(pt,qq);
+    var s=L&&L[0];
+    if(!s||!s.id){
+      /* opendata x/y parfois sans id : requête directe */
+      try{
+        var r2=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");
+        if(r2.ok){
+          var j2=await r2.json();
+          var ss=(j2.stations||[]).filter(function(x){return x&&x.id&&x.name});
+          s=ss[0];
+        }
+      }catch(e){}
+    }
+    if(!s||!s.id)return null;
+    var lat=s.coordinate?+s.coordinate.x:(s.lat!=null?+s.lat:pt.lat);
+    var lon=s.coordinate?+s.coordinate.y:(s.lon!=null?+s.lon:pt.lon);
+    return{id:String(s.id),name:s.name,lat:lat,lon:lon,_fromAddr:true};
   }catch(e){return null}
 }
 async function bdResolveAll(i,m,via,strict){
