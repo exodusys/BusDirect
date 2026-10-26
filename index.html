@@ -3088,7 +3088,10 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
       var _els=[c("span",{className:"bd-st5-line",style:{left:P+"px",width:((_N-1)*S)+"px"}},"ln"),c("span",{className:"bd-st5-fill",style:{left:P+"px",width:Math.max(0,_xb-P).toFixed(1)+"px"}},"fl")];
       if(_mode==="before"){_els.push(c("span",{className:"bd-st5-appr",style:{left:P0+"px",width:S+"px"}},"ap"));_els.push(c("span",{className:"bd-st5-appf",style:{left:P0+"px",width:Math.max(0,_xb-P0).toFixed(1)+"px"}},"apf"))}
       /* le véhicule s'approche de mon arrêt de départ (prochain arrêt, ou moins de 2 min) : l'arrêt clignote en rouge */
-      var _mI3=Math.max(0,mineIdx),_tM=_arrT(stops[_mI3]),_near=_mode!=="end"&&_j<_mI3&&(_j===_mI3-1||(_tM!=null&&_tM-now<=120000));
+      var _mI3=Math.max(0,mineIdx);
+      try{var _dn3=cur&&cur.from&&(typeof cur.from.station==="string"?cur.from.station:((cur.from.station&&cur.from.station.name)||""));
+      if(_dn3){for(var _di3=0;_di3<stops.length;_di3++){if(bdSameName(nm(stops[_di3]),_dn3)){_mI3=_di3;break}}}}catch(e){}
+      var _tM=_arrT(stops[_mI3]),_near=_mode!=="end"&&_j<_mI3&&(_j===_mI3-1||(_tM!=null&&_tM-now<=120000));
       for(var _k=0;_k<_N;_k++){var _x=P+_k*S,_past=_k<=_j&&_mode!=="before",_me=_k===_mI3,_de=_k===_last;
        _els.push(c("span",{className:"bd-st4-dot"+(_past?" past":"")+(_me?" me":"")+(_de?" dest":"")+(_me&&_near?" blink":""),style:{left:_x+"px"}},"d"+_k));
        _els.push(c("span",{className:"bd-st5-lbl"+((_me||_de)?" me":"")+(_me&&_near?" blink":""),style:{left:_x+"px"},children:nm(stops[_k])},"l"+_k))}
