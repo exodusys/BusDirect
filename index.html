@@ -1946,7 +1946,30 @@ function bdAnyNearbySection(){try{bdBindListSettings();
   var mode=bdDetectMode(), rer=function(){try{setBdPrev(function(p0){return Object.assign({},p0)})}catch(e){}};
   var near=null,pk=mode+"|"+me.lat.toFixed(4)+","+me.lon.toFixed(4);
   if(mode==="route"){
+    /* V197b : ne pas afficher « Prochains départs à proximité » près du départ ou de la destination de Mes parcours (uniquement aux arrêts intermédiaires). */
     var rn=bdNearStopName();
+    var hideEnd=false;
+    try{
+      var _allT=(window.__bd_tiles||fn||[]),_tsA=bdActiveTiles(),_chk=_tsA.length?_tsA:_allT;
+      for(var _hi=0;_hi<_chk.length;_hi++){
+        var _ht=_chk[_hi];if(!_ht||!_ht.id)continue;
+        if((window.__bd_endStop||{})[_ht.id]){hideEnd=true;break}
+      }
+      if(!hideEnd&&rn){
+        for(var _hi=0;_hi<_chk.length;_hi++){
+          var _ht=_chk[_hi];if(!_ht)continue;
+          if((bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))&&!(window.__bd_midStop||{})[_ht.id]){hideEnd=true;break}
+        }
+      }
+      if(!hideEnd){
+        var _anyMid=false;
+        for(var _hi=0;_hi<_allT.length;_hi++){var _ht=_allT[_hi];if(_ht&&_ht.id&&(window.__bd_midStop||{})[_ht.id]){_anyMid=true;break}}
+        if(!_anyMid&&rn){
+          for(var _hi=0;_hi<_allT.length;_hi++){var _ht=_allT[_hi];if(_ht&&(bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))){hideEnd=true;break}}
+        }
+      }
+    }catch(e){}
+    if(hideEnd)return null;
     if(rn){near={name:rn,id:rn,d:null};try{var A=bdTSAll(),best=null;Object.keys(A).forEach(function(k){(A[k]||[]).forEach(function(z){if(z&&bdNorm(z.n)===bdNorm(rn)&&z.lat!=null&&z.lon!=null){var d=Math.round(zt(me,{lat:+z.lat,lon:+z.lon})*1000);if(best==null||d<best)best=d}})});near.d=best}catch(e){}}
   }else{
     var N=window.__bd_boardNear;
