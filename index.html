@@ -1695,9 +1695,23 @@ async function bdResolveStrict(q){
     var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
     if(src&&src.active===false)return null;
     var mm=bdMemoFor(q);
+    /* arrêt connu en mémoire : strict */
     if(mm&&mm.kind==="stop"&&(mm.id||mm.stopId)){
       return{id:String(mm.id||mm.stopId),name:mm.name||String(q),lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};
     }
+    /* V2026k : adresse / POI → premier arrêt à proximité pour établir la liste */
+    var isAddr=!!(mm&&mm.kind&&mm.kind!=="stop")||/\d/.test(String(q||""))||!!(window.bdPlusCode&&window.bdPlusCode.parse(String(q||"")));
+    var pt=null;
+    try{pt=await bdGeoPointMP(q)}catch(e){}
+    if(!pt&&mm&&mm.lat!=null&&isFinite(+mm.lat))pt={lat:+mm.lat,lon:+mm.lon};
+    if(pt||isAddr){
+      if(!pt)return null;
+      var L=await bdNearStationsMP(pt,q);
+      var s=L&&L[0];
+      if(!s)return null;
+      return{id:String(s.id),name:s.name,lat:+s.coordinate.x,lon:+s.coordinate.y,_fromAddr:true};
+    }
+    /* nom d'arrêt : correspondance texte exacte / préfixe uniquement */
     var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(q))+"&type=station");
     if(!r.ok)return null;
     var st=((await r.json()).stations||[]).filter(function(s){return s&&s.id&&s.name});
@@ -1705,7 +1719,6 @@ async function bdResolveStrict(q){
     var n=bdNorm(q);
     var ex=st.find(function(s){return bdNorm(s.name)===n});
     if(!ex)ex=st.find(function(s){var ns=bdNorm(s.name);return ns===n||ns.indexOf(n)===0||n.indexOf(ns)===0});
-    /* pas de repli sur st[0] ni sur l'arrêt le plus proche */
     if(!ex)return null;
     return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
   }catch(e){return null}
