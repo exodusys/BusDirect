@@ -1710,9 +1710,19 @@ async function bdResolveStrict(q){
     return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
   }catch(e){return null}
 }
+/* V2026k : adresse / POI -> arrêt le plus proche uniquement ; nom d'arrêt saisi -> arrêt strictement identique. */
+async function bdResolveHybrid(q){
+  try{
+    var mm=bdMemoFor(q),pt=null;
+    try{pt=await bdGeoPointMP(q)}catch(e){}
+    if(pt)return await bdResolve(q);
+    if(mm&&mm.kind&&mm.kind!=="stop")return await bdResolve(q);
+    return await bdResolveStrict(q);
+  }catch(e){return null}
+}
 async function bdResolveAll(i,m,via,strict){
   var vs=(via||[]).map(function(x){return String(x||"").trim()}).filter(Boolean);
-  var res=strict?bdResolveStrict:bdResolve;
+  var res=bdResolveHybrid;
   var all=await Promise.all([res(i),res(m)].concat(vs.map(res)));
   if(all.some(function(x){return!x}))return null;
   return{f:all[0],t:all[1],v:all.slice(2),names:[all[0].name].concat(all.slice(2).map(function(x){return x.name}),[all[1].name])};
