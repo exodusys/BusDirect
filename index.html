@@ -5583,56 +5583,5 @@ run();setInterval(run,600)})();</script><script id="bd-where-js">
 <script id="bd-favorite-stop-migration">(function(){try{var a=JSON.parse(localStorage.getItem("bd-tiles-v2")||"[]");if(Array.isArray(a)){var ch=false;a=a.map(function(t){if(!t.favoriteStop){var st=String(t.from||t.to||"").trim();if(st){t.favoriteStop=st;t.name=st;t.from=st;t.to=st;t.via=[];t.routes=[];t.routePrefs="";t.lines=[];t.linesPref="";ch=true}}return t});if(ch)localStorage.setItem("bd-tiles-v2",JSON.stringify(a))}}catch(e){}})();</script>
 <script id="bd-favorite-position-v2">/* V2 : nom = saisie exacte ; Prochains parcours = position GPS → arrêt favori ; tri selon temps, marche et changements. */</script>
 <script id="bd-proximity-reasoning-v3">/* Règle centrale : heure de départ = condition principale. Puis distance d’affichage, arrêt de départ le plus proche, durée, marche et changements selon les réglages. */</script>
-<style id="bd-user-request-20261026">
-/* Une seule ligne de pastilles de transport, visibles même sans bouton actif. */
-#bd-user-transport-pills{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;white-space:nowrap!important;max-width:100%;scrollbar-width:none}
-#bd-user-transport-pills::-webkit-scrollbar{display:none}
-#bd-user-transport-pills>*{flex:0 0 auto!important}
-/* Pages demandées en plein écran. */
-#bd-user-fullscreen-page{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;border-radius:0!important;z-index:1000000!important;background:var(--background,#fff);overflow:auto!important}
-/* Suppression de l'ancienne info-bulle mode. */
-#bd-mode-tip{display:none!important}
-</style>
-<script id="bd-user-request-20261026-js">
-(function(){
- const norm=s=>(s||'').replace(/\s+/g,' ').trim();
- function txt(el){return norm(el&&el.textContent)}
- function clickableByText(label){return Array.from(document.querySelectorAll('button,a,[role="button"]')).find(e=>txt(e)===label||txt(e).includes(label));}
- function hideMyTripsBottom(){
-   Array.from(document.querySelectorAll('button,a,section,div')).forEach(e=>{
-     const t=txt(e); if(t==='Mes parcours' && !e.closest('header')){
-       const r=e.getBoundingClientRect(); if(r.top>innerHeight*.55){const box=e.matches('section')?e:(e.closest('section')||e); box.style.display='none';}
-     }
-   });
- }
- function addFav(){
-   const title=Array.from(document.querySelectorAll('h1,h2,h3,div,span')).find(e=>txt(e)==='Prochains parcours'); if(!title||title.querySelector('.bd-user-fav'))return;
-   const b=document.createElement('button'); b.className='bd-user-fav'; b.type='button'; b.title='Mes parcours'; b.setAttribute('aria-label','Mes parcours');
-   b.innerHTML='<svg viewBox="0 0 24 24" width="20" height="20" fill="#9ca3af" aria-hidden="true"><path d="M12 17.3l-5.18 3.1 1.4-5.9-4.57-3.95 6.02-.51L12 4.5l2.33 5.54 6.02.51-4.57 3.95 1.4 5.9z"/></svg>';
-   b.style.cssText='margin-left:auto;border:0;background:transparent;padding:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer';
-   b.onclick=()=>{const x=clickableByText('Mes parcours'); if(x)x.click()}; title.style.display='flex'; title.style.alignItems='center'; title.appendChild(b);
- }
- function globalsEnabled(){const c=document.querySelector('#bd-set-global-lists');return c?!!c.checked:(localStorage.getItem('bd-global-lists')==='true');}
- function allowNone(){
-   if(!globalsEnabled())return;
-   const buttons=Array.from(document.querySelectorAll('button')).filter(b=>/bus|tram|train|métro|metro|bateau|transport/i.test(txt(b)));
-   buttons.forEach(b=>{if(b.dataset.bdNone)return;b.dataset.bdNone='1';b.addEventListener('click',()=>setTimeout(()=>{const active=buttons.filter(x=>x.getAttribute('aria-pressed')==='true'||x.classList.contains('active')||x.classList.contains('selected'));if(!active.length){const near=Array.from(document.querySelectorAll('section,div')).find(e=>/Prochains départs à proximité/i.test(txt(e)));if(near)near.style.display='';}},0),true)});
- }
- function pills(){
-   const buttons=Array.from(document.querySelectorAll('button')).filter(b=>/bus|tram|train|métro|metro|bateau/i.test(txt(b))).slice(0,12); if(!buttons.length)return;
-   let host=document.querySelector('#bd-user-transport-pills'); if(!host){host=document.createElement('div');host.id='bd-user-transport-pills';host.style.cssText='gap:6px;margin:6px 0';buttons[0].parentElement.insertAdjacentElement('afterend',host)}
-   host.innerHTML='';buttons.forEach((b,i)=>{const p=document.createElement('span');p.textContent=txt(b);p.style.cssText='display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;background:#f3f4f6;color:#374151;font:700 11px system-ui';const c=getComputedStyle(b).backgroundColor;if(c&&c!=='rgba(0, 0, 0, 0)')p.style.borderLeft='4px solid '+c;host.appendChild(p)});
- }
- function fullPages(){
-   const names=['Mes parcours','Mon parcours','Langues','Gestion des sources'];
-   names.forEach(n=>Array.from(document.querySelectorAll('h1,h2,h3')).filter(h=>txt(h)===n).forEach(h=>{const p=h.closest('[role="dialog"],section,.modal,.sheet')||h.parentElement;if(p)p.id='bd-user-fullscreen-page'}));
- }
- function cleanTipText(){Array.from(document.querySelectorAll('h1,h2,h3,p,div')).forEach(e=>{if(txt(e)==='Info-bulle du bouton de mode'||txt(e).startsWith('Bulle d’explication affichée 5 secondes')){const box=e.closest('section')||e.parentElement;if(box)box.style.display='none'}})}
- function run(){addFav();hideMyTripsBottom();allowNone();pills();fullPages();cleanTipText();}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
- new MutationObserver(()=>requestAnimationFrame(run)).observe(document.documentElement,{subtree:true,childList:true});
-})();
-</script>
-
 </body>
 </html>
