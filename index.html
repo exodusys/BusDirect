@@ -2974,7 +2974,7 @@ var rows=visibleStops.map(function(obj,vi){
     (i===_arrIdx)?p("span",{style:{display:"inline-flex",alignItems:"center",gap:"6px"},children:[isLast?null:chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me bdt-tag-dest",children:"Arrêt de destination"})]}):null,
     (function(){try{var vv=_lp.length>2?_lp.slice(1,-1):((cur._tileVia&&cur._tileVia.length)?cur._tileVia:((_tile&&_tile.via)||[]));/* arrêts intermédiaires du parcours suivi (via du nom « Live : » / de la dalle) ; pas sur votre arrêt ni sur la destination */if(mine||i===_arrIdx||i===_nmE)return null;var hit=vv.some(function(v){return bdSameName(name,typeof v==="string"?v:(v&&v.name)||"")});return hit?c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt intermédiaire"}):null}catch(e){return null}})(),
     /* V130 : les pastilles de changement sont affichees dans la carte Correspondance */null,
-    i===0&&!isLast&&!isChange?p(Vl,{children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt de départ"})]}):null,
+    mine&&!isLast&&!isChange?p(Vl,{children:[chipEl(curLineRaw),c("span",{className:"bdt-tag bdt-tag-me",children:"Arrêt de départ"})]}):null,
     x.platform&&bdIsTrain(x.category||x.line)&&c("span",{className:"bdt-plat",children:"Voie "+x.platform}),
     null
    ]})
