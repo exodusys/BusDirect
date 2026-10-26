@@ -134,39 +134,16 @@ section.rounded-\[20px\].fixed.inset-0.z-\[80\] > div{width:100%;max-width:560px
 .bd-logo-loc{transition:filter .3s ease}
 .bd-logo-loc.loc-on{filter:brightness(1.1)}
 .bd-logo-loc.loc-off{filter:grayscale(1) opacity(.6)}
-
-/* Couleurs de fond tenues par une seule règle (plus de "black screen" ni de blanc sous la page) */
 html{background:#FAFAF9}
 html.dark{background:#0C0A09}
 body{background:transparent;color:#1C1917}
 html.dark body{color:#FAFAF9}
 .bdt-sheet{background:#FFFFFF}
 html.dark .bdt-sheet{background:#1C1917}
-
-/* Contours de sélection neutralisés, sans casser la classe h-6 utilisée ailleurs */
 .ring-2{box-shadow:none}
 .bd-keep.h-6{display:block!important;height:1.5rem}
 html.dark header.bd-head .bd-wheel{fill:#ffffff}
 
-/* V2026 — burger docké dans le header (remplace V101/V190 absolu) */
-.bd-head{padding-top:8px;padding-bottom:6px;}
-.bd-head-in{padding-right:0}
-html body .bd-v101-hamb,
-html body .bd-v101-hamb.bd-hamb-docked{
-  position:static!important;
-  top:auto!important;right:auto!important;left:auto!important;
-  transform:none!important;
-  margin:0 0 0 8px!important;
-  flex:0 0 auto!important;
-}
-.bd-v101-hamb{position:static;width:44px;height:44px;border-radius:14px;background:#18181b;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.18);font-size:22px;flex:none;cursor:pointer}
-html.dark .bd-v101-hamb{background:#fafafa;color:#09090b}
-/* V2026 — burger aligné sur les boutons langue/ville (h-9 = 36px) */
-.bd-head-in > .bd-v101-hamb{width:36px;height:36px;border-radius:50%;font-size:18px;margin-left:6px}
-html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!important}
-
-
-</style><style>@keyframes departBar{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}} .depart-bar-anim{animation:departBar 1.2s ease-in-out infinite}</style><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
