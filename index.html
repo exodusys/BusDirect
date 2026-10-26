@@ -1971,7 +1971,8 @@ function bdAnyNearbySection(){try{bdBindListSettings();
   var mode=bdDetectMode(), rer=function(){try{setBdPrev(function(p0){return Object.assign({},p0)})}catch(e){}};
   var near=null,pk=mode+"|"+me.lat.toFixed(4)+","+me.lon.toFixed(4);
   if(mode==="route"){
-    /* V197b : ne pas afficher « Prochains départs à proximité » près du départ ou de la destination de Mes parcours (uniquement aux arrêts intermédiaires). */
+    /* V197c : masquer « Prochains départs à proximité » au départ/destination d'un parcours,
+       SAUF si ce même arrêt est départ ou destination d'au moins 2 dalles (correspondance entre parcours). */
     var rn=bdNearStopName();
     var hideEnd=false;
     try{
@@ -1992,6 +1993,14 @@ function bdAnyNearbySection(){try{bdBindListSettings();
         if(!_anyMid&&rn){
           for(var _hi=0;_hi<_allT.length;_hi++){var _ht=_allT[_hi];if(_ht&&(bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))){hideEnd=true;break}}
         }
+      }
+      if(hideEnd&&rn){
+        var _share=0;
+        for(var _hi=0;_hi<_allT.length;_hi++){
+          var _ht=_allT[_hi];if(!_ht)continue;
+          if(bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))_share++;
+        }
+        if(_share>=2)hideEnd=false;
       }
     }catch(e){}
     if(hideEnd)return null;
@@ -2615,7 +2624,6 @@ fn.length===0?p("div",{className:"rounded-[16px] border border-dashed border-[#e
  p("div",{className:"mt-1",children:[p("div",{className:"text-[11px] text-zinc-500",children:[i.from," → ",i.to]}),(i.via&&i.via.length)?c("div",{className:"text-[10px] text-zinc-500 mt-0.5",children:"via "+i.via.join(", ")}):null,(i.linesPref||(i.lines&&i.lines.length))?p("div",{className:"flex flex-wrap gap-1 mt-1.5",children:(i.lines&&i.lines.length?i.lines:(i.linesPref||"").split(",")).map(function(x){return x.trim()}).filter(Boolean).map(function(ln){return c("span",{className:"inline-flex items-center px-2 py-0.5 rounded-full text-white text-[10px] font-bold shadow-sm",style:{background:getLineColor(ln)},children:ln},ln+"main")})}):null
 ]})
  ,p("div",{className:"flex gap-1.5 mt-2",children:[
-  p("button",{type:"button","aria-label":"Inverser le sens du parcours",title:"Inverser le sens",onClick:(m)=>{m.stopPropagation();bdInvertTile(i)},className:"flex-1 h-9 rounded-full bg-white border border-[#e7e5e4] dark:bg-zinc-700 dark:border-white/10 text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition",children:[c(wt,{className:"w-4 h-4"})," Inverser"]}),
   p("button",{type:"button","aria-label":"Modifier le parcours",title:"Modifier",onClick:(m)=>{m.stopPropagation();bdOpenEdit(i)},className:"flex-1 h-9 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-black text-[11px] font-bold flex items-center justify-center gap-1.5 active:scale-95 transition",children:[c(Cl,{className:"w-3.5 h-3.5"})," Modifier"]})
  ]})
 ]},i.id))})
