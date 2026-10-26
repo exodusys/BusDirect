@@ -1971,8 +1971,7 @@ function bdAnyNearbySection(){try{bdBindListSettings();
   var mode=bdDetectMode(), rer=function(){try{setBdPrev(function(p0){return Object.assign({},p0)})}catch(e){}};
   var near=null,pk=mode+"|"+me.lat.toFixed(4)+","+me.lon.toFixed(4);
   if(mode==="route"){
-    /* V197c : masquer « Prochains départs à proximité » au départ/destination d'un parcours,
-       SAUF si ce même arrêt est départ ou destination d'au moins 2 dalles (correspondance entre parcours). */
+    /* V197b : ne pas afficher « Prochains départs à proximité » près du départ ou de la destination de Mes parcours (uniquement aux arrêts intermédiaires). */
     var rn=bdNearStopName();
     var hideEnd=false;
     try{
@@ -1993,14 +1992,6 @@ function bdAnyNearbySection(){try{bdBindListSettings();
         if(!_anyMid&&rn){
           for(var _hi=0;_hi<_allT.length;_hi++){var _ht=_allT[_hi];if(_ht&&(bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))){hideEnd=true;break}}
         }
-      }
-      if(hideEnd&&rn){
-        var _share=0;
-        for(var _hi=0;_hi<_allT.length;_hi++){
-          var _ht=_allT[_hi];if(!_ht)continue;
-          if(bdSameName(_ht.from,rn)||bdSameName(_ht.to,rn))_share++;
-        }
-        if(_share>=2)hideEnd=false;
       }
     }catch(e){}
     if(hideEnd)return null;
