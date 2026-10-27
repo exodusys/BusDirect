@@ -2197,7 +2197,26 @@ function bdResetList(){var n=bdListBase();window.__bd_horizon=n;setBdHorizon(n)}
 function bdFilterList(L,start,minutes){var end=start+minutes*60000;return(L||[]).filter(function(S){var t=S._sort!=null?S._sort:(S.from&&S.from.actualMs);return Number.isFinite(t)&&t>=start&&t<=end})}
 /* Moteur unique des réglages « Parcours à proximité » : toutes les listes Prochains parcours passent ici. */
 function bdProxRadius(){try{return Math.max(1,parseInt(localStorage.getItem("bd_settings_tiles_distance")||"500",10)||500)}catch(e){return 500}}
-function bdWalkMeters(S){try{var v=Number(S&&S._walkMeters);if(isFinite(v)&&v>=0)return v;v=Number(S&&S.walkDistance);if(isFinite(v)&&v>=0)return v;if(S&&S.from&&isFinite(+S.from.distanceMeters))return +S.from.distanceMeters;var pl=(S&&S.passList)||[],fst=pl.find(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)});if(o&&o.lat!=null&&o.lon!=null&&fst)return Math.round(zt({lat:+o.lat,lon:+o.lon},{lat:+fst.lat,lon:+fst.lon})*1000);v=Number(S&&S._walk);if(isFinite(v)&&v>=0)return Math.round(v*80);return Infinity}catch(e){return Infinity}}
+function bdWalkMeters(S){try{
+/* « Le moins de distance à pied » = somme de TOUTE la marche du parcours :
+   position actuelle → arrêt de départ + toutes les sections à pied/correspondances +
+   dernière arrivée → destination exacte lorsqu’elle est géolocalisable. */
+var total=0,known=false,pl=(S&&S.passList)||[];
+var stops=pl.filter(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)});
+var first=stops[0],last=stops[stops.length-1];
+/* 1. approche depuis la position GPS actuelle */
+if(o&&o.lat!=null&&o.lon!=null&&first){total+=Math.round(zt({lat:+o.lat,lon:+o.lon},{lat:+first.lat,lon:+first.lon})*1000);known=true}
+else if(S&&S.from&&isFinite(+S.from.distanceMeters)){total+=+S.from.distanceMeters;known=true}
+/* 2. toutes les sections de marche fournies par l'itinéraire */
+pl.forEach(function(x){if(!x||x.type!=="walk")return;var m=Number(x.walkMeters);if(isFinite(m)&&m>=0){total+=m;known=true;return}var mn=Number(x.walkMin);if(isFinite(mn)&&mn>=0){total+=mn*80;known=true}});
+/* _walk est en secondes dans ce fichier : ne l'ajouter que si passList n'a pas déjà décrit les marches */
+if(!pl.some(function(x){return x&&x.type==="walk"})){var ws=Number(S&&S._walk);if(isFinite(ws)&&ws>0){total+=ws*(80/60);known=true}}
+/* 3. marche finale vers la destination exacte si ses coordonnées sont connues */
+var dxy=S&&(S._destXY||S.destXY||S._joinXY||S.joinXY);
+if(last&&dxy&&isFinite(+(dxy.lat!=null?dxy.lat:dxy.x))&&isFinite(+(dxy.lon!=null?dxy.lon:dxy.y))){var dla=+(dxy.lat!=null?dxy.lat:dxy.x),dlo=+(dxy.lon!=null?dxy.lon:dxy.y);total+=Math.round(zt({lat:+last.lat,lon:+last.lon},{lat:dla,lon:dlo})*1000);known=true}
+/* valeurs explicites déjà calculées : fallback seulement, jamais en double */
+if(!known){var v=Number(S&&S._walkMeters);if(isFinite(v)&&v>=0)return v;v=Number(S&&S.walkDistance);if(isFinite(v)&&v>=0)return v}
+return known?Math.round(total):Infinity}catch(e){return Infinity}}
 function bdDurationMs(S){try{if(S&&isFinite(+S._dur)&&+S._dur>=0)return +S._dur;var a=S&&S.from&&(S.from.actualMs||S.from.departureMs),b=S&&S.to&&(S.to.actualMs||S.to.arrivalMs);if(isFinite(+a)&&isFinite(+b)&&+b>=+a)return +b-+a;var m=String(S&&S.duration||"").match(/(\d+):(\d+)(?::(\d+))?/);if(m)return((+m[1]*60+ +m[2])*60+(+m[3]||0))*1000;return Infinity}catch(e){return Infinity}}
 function bdChanges(S){try{if(S&&isFinite(+S.transfers))return +S.transfers;var p=(S&&S.products)||[];return Math.max(0,p.filter(Boolean).length-1)}catch(e){return 999}}
 function bdDepartureMs(x){try{var v=x&&x._sort;if(isFinite(v)&&v>0)return +v;var d=x&&x.from&&(x.from.departure||x.from.departureTimestamp)||x&&x.departure||x&&x.when;if(typeof d==="number")return d<1e12?d*1000:d;var t=new Date(d).getTime();return isFinite(t)?t:0}catch(e){return 0}}
