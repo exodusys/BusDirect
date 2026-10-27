@@ -2273,7 +2273,7 @@ if(chgOn){var mc=Infinity;L.forEach(function(x){var c=bdChanges(x);if(isFinite(c
 var BD_NEAR_MAX_M=1000,BD_WALK_MPM=80;
 function bdMeXY(){try{var l=window.__bd_loc;if(l&&l.lat!=null&&isFinite(+l.lat))return{lat:+l.lat,lon:+l.lon}}catch(e){}return null}
 function bdStopsXY(S){return((S&&S.passList)||[]).filter(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)})}
-function bdAccessM(S){try{var me=bdMeXY(),f=bdStopsXY(S)[0];if(me&&f)return Math.round(zt(me,{lat:+f.lat,lon:+f.lon})*1000);var g=Number(S&&S._walkMeters);if(S&&S._gpsOrigin&&isFinite(g))return g;return bdAccessWalkMeters(S)}catch(e){return 0}}
+function bdAccessM(S){try{var me=bdMeXY(),f=bdStopsXY(S)[0];if(me&&f){/* distance à pied réelle (itinéraire piéton), sinon ligne droite en attendant le calcul */var fx={lat:+f.lat,lon:+f.lon},fw=null;try{fw=window.bdFootM?window.bdFootM(me,fx):null}catch(e){}return Math.round(fw!=null?fw:zt(me,fx)*1000)}var g=Number(S&&S._walkMeters);if(S&&S._gpsOrigin&&isFinite(g))return g;return bdAccessWalkMeters(S)}catch(e){return 0}}
 function bdLineKey(S){try{var x=String(S._leg||(S.products||[])[0]||"");return bdNormLine(x).toLowerCase()}catch(e){return""}}
 function bdBoardName(S){return bdNorm(S&&(S._fromStop||(S.from&&S.from.station)))}
 function bdTransportMs(S){try{var r=bdDurationMs(S);if(!isFinite(r))r=0;return bdTimeWalkMs(bdAccessM(S))+r+bdTimeWalkMs(bdFinalWalkMeters(S))}catch(e){return Infinity}}
@@ -2285,7 +2285,7 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
     /* 1. arrêt de départ à 1000 m maximum */
     L=L.filter(function(S){return bdAccessM(S)<=BD_NEAR_MAX_M});
     /* 2. arrêt atteignable à pied avant le départ */
-    L=L.filter(function(S){return bdDepartureMs(S)>=ref+bdTimeWalkMs(bdAccessM(S))});
+    /* marge : −2 min (départ gardé si on arrive à l'arrêt jusqu'à 2 min après l'heure de départ) */L=L.filter(function(S){return bdDepartureMs(S)>=ref+bdTimeWalkMs(bdAccessM(S))-120000});
     /* 3. même ligne : seulement l'arrêt le plus proche de ma position */
     var best={};L.forEach(function(S){var k=bdLineKey(S);if(!k)return;var d=bdAccessM(S);if(!best[k]||d<best[k].d)best[k]={d:d,st:bdBoardName(S)}});
     L=L.filter(function(S){var k=bdLineKey(S);return!k||!best[k]||bdBoardName(S)===best[k].st});
