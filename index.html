@@ -1543,7 +1543,7 @@ async function bdGeoPoint(name){
 }
 /* Arrêts les plus proches d'un point (1 ou 2, à moins de 1,5 km ; sinon le plus proche). */
 async function bdNearStations(pt,n){
-  var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5);if(__bdEP[k])return __bdEP[k];
+  var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5)+"|"+(n||2);if(__bdEP[k])return __bdEP[k];
   var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");if(!r.ok)return[];
   var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&(x.id||x.name)&&x.coordinate&&x.coordinate.x!=null});
   st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});
@@ -1998,6 +1998,10 @@ function bdBoardFix(S){try{if(!S||!S.passList)return S;var pl=S.passList,i=-1;fo
   var arr=S.to&&S.to.actualMs,dur=S.duration;if(ms&&arr&&arr>ms){var m=Math.round((arr-ms)/60000);dur=("0"+Math.floor(m/60)).slice(-2)+":"+("0"+(m%60)).slice(-2)}
   return Object.assign({},S,{passList:pl.slice(i),from:Object.assign({},S.from,{station:nm0,departure:dep,delay:dl,platform:f.platform||"",time:fm(ms),plannedTime:fm(dep?new Date(dep).getTime():null),actualMs:ms}),_fromStop:nm0,duration:dur,_sort:ms!=null?ms:S._sort,_boardFix:true})}catch(e){return S}}
 async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromName,target,xy);try{__r.full=(__r.full||[]).map(bdBoardFix)}catch(e){}return __r}
+/* Réseau complet : depuis la position GPS, interroger plusieurs arrêts de transport proches issus de la source active.
+   Aucun rayon « Mes parcours » ne bloque ces résultats : l’utilisateur peut être n’importe où sur le réseau. */
+async function bdJoinFetchMulti(stops,target,xy){try{var A=(stops||[]).filter(function(x){return x&&x.name}).slice(0,8);if(!A.length)return{full:[],xy:xy||null};var R=await Promise.all(A.map(function(st){return bdJoinFetch(st.name,target,xy).then(function(r){return{st:st,r:r}}).catch(function(){return{st:st,r:{full:[]}}})}));var out=[],seen={};R.forEach(function(z){(z.r.full||[]).forEach(function(S){var X=Object.assign({},S);X._gpsOrigin=z.st.name;X._walkMeters=Math.max(0,Math.round((z.st._d!=null?z.st._d:0)*1000));var k=bdNorm(X.from&&X.from.station)+"|"+bdDepartureMs(X)+"|"+(X.products||[]).join(",")+"|"+bdNorm(X.to&&X.to.station);if(!seen[k]){seen[k]=1;out.push(X)}})});out.sort(bdPrefSort);return{full:out,xy:xy||null}}catch(e){return{full:[],xy:xy||null}}}
+function bdApplyNetworkRules(list,start,minutes){try{var L=(list||[]).slice();if(start!=null&&minutes!=null)L=bdFilterList(L,start,minutes);L=bdQualityFilter(L);L.sort(bdPrefSort);return L}catch(e){return(list||[]).slice().sort(bdPrefSort)}}
 /* le trajet arrive exactement à cet arrêt (dernier arrêt du dernier véhicule = arrêt du bouton) */
 function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});var l=pl[pl.length-1];var ln=l?(typeof l.station==="string"?l.station:((l.station&&l.station.name)||"")):((S.to&&S.to.station)||"");return!!ln&&k(ln)===k(name)}catch(e){return false}}
 /* « Détecter n'importe où » : seule destination utilisée = le lieu du bouton.
@@ -2022,8 +2026,8 @@ function bdBlendColors(cols){try{cols=(cols||[]).filter(Boolean);if(!cols.length
 function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc||lc.lat==null)return null;var me={lat:+lc.lat,lon:+lc.lon};
   var tiles=(fn||[]).filter(function(t){return t&&!t.hidden&&t.from&&t.to});if(!tiles.length)return null;
   var pk=me.lat.toFixed(3)+","+me.lon.toFixed(3),N=window.__bd_joinNear;
-  if(!N||N.pk!==pk){if(window.__bd_joinNearBusy!==pk){window.__bd_joinNearBusy=pk;bdNearStations(me,1).then(function(L){var x=L&&L[0];window.__bd_joinNear={pk:pk,st:x?{name:x.name,id:String(x.id||x.name),lat:+x.coordinate.x,lon:+x.coordinate.y,d:Math.round(zt(me,{lat:+x.coordinate.x,lon:+x.coordinate.y})*1000)}:null};window.__bd_joinNearBusy=null;setBdPrev(function(p0){return Object.assign({},p0)})}).catch(function(){window.__bd_joinNearBusy=null})}}
-  var near=N&&N.pk===pk?N.st:null;var J=window.__bd_join||null;
+  if(!N||N.pk!==pk){if(window.__bd_joinNearBusy!==pk){window.__bd_joinNearBusy=pk;bdNearStations(me,8).then(function(L){var x=L&&L[0];var all=(L||[]).map(function(q){return{name:q.name,id:String(q.id||q.name),lat:+q.coordinate.x,lon:+q.coordinate.y,d:Math.round(zt(me,{lat:+q.coordinate.x,lon:+q.coordinate.y})*1000),_d:q._d}});window.__bd_joinNear={pk:pk,st:x?all[0]:null,all:all};window.__bd_joinNearBusy=null;setBdPrev(function(p0){return Object.assign({},p0)})}).catch(function(){window.__bd_joinNearBusy=null})}}
+  var near=N&&N.pk===pk?N.st:null;var nearAll=N&&N.pk===pk&&N.all&&N.all.length?N.all:(near?[near]:[]);var J=window.__bd_join||null;
   var rer=function(){setBdPrev(function(p0){return Object.assign({},p0)})};
   /* boutons sans doublon : un seul bouton par arrêt (départ ou destination de vos parcours) */
   var _rad=Math.max(1,parseInt(localStorage.getItem("bd_settings_tiles_distance")||"500",10)||500);
@@ -2050,14 +2054,14 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
   var groups=[c("div",{className:"grid grid-cols-2 gap-2",children:tg.slice(0,16).map(btn)},"jgrid")];
   var head=p("div",{className:"flex flex-col gap-1 px-1 mt-1",children:[c("h2",{className:"font-bold tracking-[-0.02em] text-[18px]",children:"Rejoindre mon parcours"}),near?p("div",{className:"flex items-center gap-2 text-[11px] text-zinc-500",children:[c("span",{className:"flex-1 min-w-0",children:"Depuis l’arrêt le plus proche de vous : "+near.name+" ("+near.d+" m)"}),c("span",{className:"bd-compass","data-stop":near.name,"data-lat":String(near.lat),"data-lon":String(near.lon)})]}):null]});
   var body=null,footer=null;
-  if(J&&near){if(bdSameName(near.name,J.target)){body=c("div",{className:"text-[12px] text-zinc-500 px-1",children:"Vous êtes déjà à cet arrêt."})}else{var k=bdNorm(near.name)+"|"+bdNorm(J.target),R=window.__bd_joinR;
-    if(!R||R.key!==k||R.minutes!==bdLocalWindow("join",k).minutes||Date.now()-R.at>60000){if(window.__bd_joinBusy!==k){window.__bd_joinBusy=k;var requestedMinutes=bdLocalWindow("join",k).minutes;bdJoinFetch(near.name,J.target,bdJoinXY(J.target)).then(function(r){window.__bd_joinR={key:k,minutes:requestedMinutes,list:((r&&r.full)||[]).slice(),xy:(r&&r.xy)||null,at:Date.now()};window.__bd_joinBusy=null;rer()}).catch(function(){window.__bd_joinBusy=null})}}
+  if(J&&near){if(bdSameName(near.name,J.target)){body=c("div",{className:"text-[12px] text-zinc-500 px-1",children:"Vous êtes déjà à cet arrêt."})}else{var k=nearAll.map(function(x){return bdNorm(x.name)}).join(",")+"|"+bdNorm(J.target),R=window.__bd_joinR;
+    if(!R||R.key!==k||R.minutes!==bdLocalWindow("join",k).minutes||Date.now()-R.at>60000){if(window.__bd_joinBusy!==k){window.__bd_joinBusy=k;var requestedMinutes=bdLocalWindow("join",k).minutes;bdJoinFetchMulti(nearAll,J.target,bdJoinXY(J.target)).then(function(r){window.__bd_joinR={key:k,minutes:requestedMinutes,list:((r&&r.full)||[]).slice(),xy:(r&&r.xy)||null,at:Date.now()};window.__bd_joinBusy=null;rer()}).catch(function(){window.__bd_joinBusy=null})}}
     var now=Date.now();
     /* coordonnées du lieu exact de « Mon parcours » (arrêt mémorisé du parcours, sinon lieu choisi) */
     var _jXY=(R&&R.key===k&&R.xy)||bdJoinXY(J.target);
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var _jw=bdLocalWindow("join",k),_hEnd=now+_jw.minutes*60000;
-    var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyProximityRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});return o})();
+    var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyNetworkRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});return o})();
     footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun départ dans la période sélectionnée.":"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body,footer]})}catch(e){return null}}
 /* Marche du trajet (sans la marche jusqu'à l'arrêt de départ) : tronçons à pied du trajet + marche finale de l'arrêt d'arrivée jusqu'à l'adresse / au POI saisi dans « Mon parcours » */
@@ -5582,6 +5586,7 @@ run();setInterval(run,600)})();</script><script id="bd-where-js">
 </script>
 <script id="bd-favorite-stop-migration">(function(){try{var a=JSON.parse(localStorage.getItem("bd-tiles-v2")||"[]");if(Array.isArray(a)){var ch=false;a=a.map(function(t){if(!t.favoriteStop){var st=String(t.from||t.to||"").trim();if(st){t.favoriteStop=st;t.name=st;t.from=st;t.to=st;t.via=[];t.routes=[];t.routePrefs="";t.lines=[];t.linesPref="";ch=true}}return t});if(ch)localStorage.setItem("bd-tiles-v2",JSON.stringify(a))}}catch(e){}})();</script>
 <script id="bd-favorite-position-v2">/* V2 : nom = saisie exacte ; Prochains parcours = position GPS → arrêt favori ; tri selon temps, marche et changements. */</script>
+<script id="bd-network-position-v4">/* Position actuelle → jusqu’à 8 arrêts proches de toutes les lignes disponibles via les sources horaires ; listes visibles partout sur le réseau. */</script>
 <script id="bd-proximity-reasoning-v3">/* Règle centrale : heure de départ = condition principale. Puis distance d’affichage, arrêt de départ le plus proche, durée, marche et changements selon les réglages. */</script>
 </body>
 </html>
