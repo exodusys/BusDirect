@@ -1528,6 +1528,8 @@ function bdTripDTMs(){try{var d=window.__bd_tripDate,t=window.__bd_tripTime;if(d
    Évite que le service d'horaires interprète le texte librement (ex. « Rue Centrale 42, 1964 Conthey » compris comme Monthey). */
 var __bdEP={},__bdGP={};
 /* Coordonnées d'une adresse / d'un lieu : suggestion choisie, sinon texte tapé géocodé (adresse avec numéro, NPA ou virgule). null = arrêt ou nom d'arrêt. */
+/* Géocodage d'un lieu / adresse / POI : biaisé vers ma position, résultat en Suisse en priorité. */
+async function bdGeoNear(q){try{var l=window.__bd_loc,b=(l&&l.lat!=null)?"&lat="+l.lat+"&lon="+l.lon:"&lat=46.5&lon=6.6";var g=await fetch("https://photon.komoot.io/api/?limit=6&lang=fr"+b+"&q="+encodeURIComponent(q)).then(function(r){return r.json()});var F=(g&&g.features)||[];var f=F.find(function(x){var p=x.properties||{};return p.countrycode==="CH"||p.country==="Suisse"||p.country==="Switzerland"||p.country==="Schweiz"})||F[0];return f?{lat:+f.geometry.coordinates[1],lon:+f.geometry.coordinates[0]}:null}catch(e){return null}}
 async function bdGeoPoint(name){
   try{
     var m=bdMemoFor(name);
@@ -1537,8 +1539,7 @@ async function bdGeoPoint(name){
     if(__bdGP[q]!==undefined)return __bdGP[q];
     var st=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
     var exact=st&&(st.stations||[]).find(function(x){return bdNorm(x.name)===bdNorm(q)});if(exact){__bdGP[q]=null;return null}
-    var g=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
-    var f=g&&g.features&&g.features[0];var pt=f?{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0]}:null;__bdGP[q]=pt;return pt;
+    var pt=await bdGeoNear(q);__bdGP[q]=pt;return pt;
   }catch(e){return null}
 }
 /* Arrêts les plus proches d'un point (1 ou 2, à moins de 1,5 km ; sinon le plus proche). */
@@ -2020,12 +2021,13 @@ async function bdJoinFetch0(fromName,target,xy){
     if(!isPlace){var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
     if(!xy&&dm&&dm.lat!=null&&isFinite(+dm.lat))xy={lat:+dm.lat,lon:+dm.lon};
     if(!xy){try{xy=await bdGeoPoint(target)}catch(e){}}
-    if(!xy){try{var g=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(target)).then(function(r){return r.json()});var f=g&&g.features&&g.features[0];if(f)xy={lat:+f.geometry.coordinates[1],lon:+f.geometry.coordinates[0]}}catch(e){}}
+    if(!xy){xy=await bdGeoNear(target);/* mémorisé pour les prochaines recherches */if(xy){try{var _mm=bdMemoStore();_mm[bdMemoKey(target)]={title:target,addr:target,lat:xy.lat,lon:xy.lon,kind:"poi"};bdMemoSave()}catch(e){}}}
     if(!xy)return{full:await run(target),xy:null};
     var C=[];try{C=await bdNearStations(xy,1)}catch(e){C=[]}
     /* un seul arrêt : le plus proche du lieu */C=(C||[]).filter(function(x){return x&&x.name}).slice(0,1);if(!C.length)return{full:await run(target),xy:xy};
     var R=await Promise.all(C.map(function(st){var w=Math.max(0,Math.round((st._d||0)*1000*1.3/80));return run(st.name).then(function(L){return L.filter(function(S){return bdJoinEndsAt(S,st.name)}).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0,_destXY:xy})})})}));
     var out=[],seen={};R.forEach(function(L){L.forEach(function(S){var k=bdDepartureMs(S)+"|"+(S.products||[]).join(",")+"|"+bdNorm(S.to&&S.to.station);if(!seen[k]){seen[k]=1;out.push(S)}})});
+    window.__bd_placeStop=window.__bd_placeStop||{};window.__bd_placeStop[bdNorm(target)]=C[0].name;
     return{full:out,xy:xy};
   }catch(e){return{full:[],xy:xy||null}}
 }
@@ -2072,7 +2074,7 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var _jw=bdLocalWindow("join",k),_hEnd=now+_jw.minutes*60000;
     var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyNetworkRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});o=_jw.cm?o.slice(0,_jw.count):o;if(R&&R.key===k){(window.__bd_btnLines=window.__bd_btnLines||{})[bdNorm(J.target)]={at:Date.now(),l:bdLinesOf(o)}}return bdWithWalk(o,String(J.target),_jXY)})();
-    footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun départ dans la période sélectionnée.":"Recherche des prochains parcours…"})}}
+    footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?("Aucun départ dans la période sélectionnée."+((window.__bd_placeStop||{})[bdNorm(J.target)]?" (arrêt le plus proche du lieu : "+window.__bd_placeStop[bdNorm(J.target)]+")":"")):"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body,footer]})}catch(e){return null}}
 /* Marche du trajet (sans la marche jusqu'à l'arrêt de départ) : tronçons à pied du trajet + marche finale de l'arrêt d'arrivée jusqu'à l'adresse / au POI saisi dans « Mon parcours » */
 function bdTripWalkMin(S){try{var w=0;(S.passList||[]).forEach(function(x){if(x&&x.type==="walk")w+=(+x.walkMin||0)});
