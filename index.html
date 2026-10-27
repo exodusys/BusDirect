@@ -2030,6 +2030,11 @@ async function bdJoinFetch0(fromName,target,xy){
   }catch(e){return{full:[],xy:xy||null}}
 }
 function bdBlendColors(cols){try{cols=(cols||[]).filter(Boolean);if(!cols.length)return"#a1a1aa";if(cols.length===1)return cols[0];var r=0,g=0,b=0,n=0;cols.forEach(function(c){var m=String(c).match(/^#?([0-9a-f]{6})$/i);if(!m)return;var h=m[1];r+=parseInt(h.slice(0,2),16);g+=parseInt(h.slice(2,4),16);b+=parseInt(h.slice(4,6),16);n++});if(!n)return cols[0];r=Math.round(r/n);g=Math.round(g/n);b=Math.round(b/n);return"#"+[r,g,b].map(function(x){return("0"+x.toString(16)).slice(-2)}).join("")}catch(e){return"#a1a1aa"}}
+/* Lignes affichées dans la liste de chaque bouton (cache), avec pré-chargement en arrière-plan, un bouton à la fois. */
+function bdLinesOf(L){var o=[],sn={};(L||[]).forEach(function(S){if(!S||S._isWalk)return;(S.products||[]).forEach(function(z){z=String(z||"").trim();var k=bdNormLine(z).toLowerCase();if(z&&k&&!sn[k]){sn[k]=1;o.push(bdLineLabel(z))}})});return o}
+function bdBtnLines(nm,nearAll){try{var C=window.__bd_btnLines||(window.__bd_btnLines={}),k=bdNorm(nm),e=C[k];
+  if((!e||Date.now()-e.at>180000)&&!window.__bd_btnBusy&&nearAll&&nearAll.length){window.__bd_btnBusy=k;var mins=bdListBase();bdJoinFetchMulti(nearAll,nm,bdJoinXY(nm)).then(function(r){var L=bdApplyNetworkRules(((r&&r.full)||[]).slice(),Date.now(),mins);C[k]={at:Date.now(),l:bdLinesOf(L)};window.__bd_btnBusy=null;setBdPrev(function(p0){return Object.assign({},p0)})}).catch(function(){C[k]={at:Date.now(),l:[]};window.__bd_btnBusy=null})}
+  return e?e.l.slice():[]}catch(x){return[]}}
 function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc||lc.lat==null)return null;var me={lat:+lc.lat,lon:+lc.lon};
   var tiles=(fn||[]).filter(function(t){return t&&!t.hidden&&t.from&&t.to});if(!tiles.length)return null;
   var pk=me.lat.toFixed(3)+","+me.lon.toFixed(3),N=window.__bd_joinNear;
@@ -2051,15 +2056,8 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
   var _glob=bdGlobalOn();if(!J&&tg.length&&!_glob){J=window.__bd_join={id:tg[0].t.id,side:tg[0].side,target:tg[0].name}}
   var btn=function(x){var t=x.t,side=x.side,nm=x.name,on=!!(J&&bdNorm(J.target)===bdNorm(nm));
   /* pastilles = toutes les lignes des parcours / trajets qui mènent jusqu’à cet arrêt */
-  var ls=[],seenL={};function addL(z){z=String(z||"").trim();if(!z)return;var k=bdNormLine(z).toLowerCase();if(!k||seenL[k])return;seenL[k]=1;ls.push(bdLineLabel(z))}
-  try{tiles.forEach(function(tt){if(!tt)return;if(!(bdNorm(tt.from)===bdNorm(nm)||bdNorm(tt.to)===bdNorm(nm)||bdSameName(tt.from,nm)||bdSameName(tt.to,nm)))return;try{bdItemLines(tt).forEach(addL)}catch(e){}if(tt.lines)tt.lines.forEach(addL);String(tt.linesPref||"").split(",").forEach(addL);try{bdTileRoutes(tt).forEach(function(r){(r.products||[]).forEach(addL)})}catch(e){}})}catch(e){}
-  try{(et||[]).forEach(function(S){var toN=S&&S.to?(typeof S.to.station==="string"?S.to.station:((S.to.station&&S.to.station.name)||"")):"";if(toN&&(bdNorm(toN)===bdNorm(nm)||bdSameName(toN,nm))){(S.products||[]).forEach(addL)}})}catch(e){}
-  try{var R=window.__bd_joinR;if(R&&R.list)R.list.forEach(function(S){var toN=S&&S.to?(typeof S.to.station==="string"?S.to.station:((S.to.station&&S.to.station.name)||"")):"";if(!toN||bdNorm(toN)===bdNorm(nm)||bdSameName(toN,nm)||bdNorm(J&&J.target)===bdNorm(nm)){(S.products||[]).forEach(addL)}})}catch(e){}
-  /* V303 : pastilles des lignes toujours visibles (bouton actif ou non) : lignes trouvées depuis l’arrêt proche vers cet arrêt, mises en cache */
-  try{var TL=window.__bd_tgtLines||(window.__bd_tgtLines={}),tk=(near?bdNorm(near.name):"")+">"+bdNorm(nm);
-   if(J&&bdNorm(J.target)===bdNorm(nm)&&ls.length)TL[tk]={at:Date.now(),l:ls.slice()};
-   if(TL[tk]&&TL[tk].l)TL[tk].l.forEach(addL);
-   if(near&&(!TL[tk]||Date.now()-TL[tk].at>600000)&&!TL[tk+"_busy"]){TL[tk+"_busy"]=1;fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(near.id||near.name)+"&to="+encodeURIComponent(nm)+"&limit=6").then(function(r){return r.ok?r.json():{}}).then(function(j){var o=[],sn={};(j.connections||[]).forEach(function(x){(x.products||[]).forEach(function(z){z=String(z||"").trim();var k=bdNormLine(z).toLowerCase();if(z&&!sn[k]){sn[k]=1;o.push(bdLineLabel(z))}})});TL[tk]={at:Date.now(),l:o};delete TL[tk+"_busy"];if(o.length)rer()}).catch(function(){TL[tk]={at:Date.now(),l:[]};delete TL[tk+"_busy"]})}}catch(e){}
+  /* pastilles = uniquement les lignes présentes dans la liste « Prochains parcours » de ce bouton */
+  var ls=bdBtnLines(nm,nearAll);
   var cols=ls.map(function(ln){return getLineColor(ln)});
   var col=bdBlendColors(cols);
   return p("button",{type:"button",onClick:function(){bdResetList();if(window.__bd_listWindows)delete window.__bd_listWindows.join;if(on&&!bdGlobalOn())return;window.__bd_join=on?null:{id:t.id,side:side,target:nm};rer()},style:{minHeight:44,borderLeft:"5px solid "+col,boxShadow:on?"0 0 0 2px "+col:"none"},className:"px-3 py-2 rounded-[14px] font-bold text-[12px] leading-tight text-left transition active:scale-95 flex flex-col gap-1.5 overflow-hidden "+(on?"bg-zinc-900 text-white dark:bg-white dark:text-black":"bg-white text-zinc-900 border border-[#e7e5e4] dark:bg-zinc-900 dark:text-zinc-100 dark:border-white/10"),children:[c("span",{className:"text-[13px] font-bold break-words",children:nm}),ls.length?c("span",{className:"flex flex-nowrap gap-1 mt-0.5 overflow-hidden",style:{maxHeight:"22px"},children:ls.map(function(ln){return c("span",{className:"px-2 py-0.5 rounded-full text-white text-[10px] font-bold shrink-0",style:{background:getLineColor(ln)},children:ln},ln)})}):null]},"jb"+bdNorm(nm))};
@@ -2073,7 +2071,7 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
     var _jXY=(R&&R.key===k&&R.xy)||bdJoinXY(J.target);
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var _jw=bdLocalWindow("join",k),_hEnd=now+_jw.minutes*60000;
-    var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyNetworkRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});o=_jw.cm?o.slice(0,_jw.count):o;return bdWithWalk(o,String(J.target),_jXY)})();
+    var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyNetworkRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});o=_jw.cm?o.slice(0,_jw.count):o;if(R&&R.key===k){(window.__bd_btnLines=window.__bd_btnLines||{})[bdNorm(J.target)]={at:Date.now(),l:bdLinesOf(o)}}return bdWithWalk(o,String(J.target),_jXY)})();
     footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?"Aucun départ dans la période sélectionnée.":"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body,footer]})}catch(e){return null}}
 /* Marche du trajet (sans la marche jusqu'à l'arrêt de départ) : tronçons à pied du trajet + marche finale de l'arrêt d'arrivée jusqu'à l'adresse / au POI saisi dans « Mon parcours » */
@@ -2477,9 +2475,9 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
        seule la réponse du ticket le plus récent est publiée dans l'UI. */
     window.__bd_liveTicket=window.__bd_liveTicket||0;
     window.__bd_liveApplied=window.__bd_liveApplied||0;
-    var _ticket=++window.__bd_liveTicket;
+    /* recherches des boutons « Rejoindre » (free) : jamais annulées par le verrou, elles tournent en parallèle */if(!free){var _ticket=++window.__bd_liveTicket;
     if(_ticket<window.__bd_liveApplied) return null;
-    window.__bd_liveApplied=_ticket;
+    window.__bd_liveApplied=_ticket;}
     return {win:_no60?all.slice():all.filter(function(c){return c._sort<=_hMs;}),full:all,rc:Object.keys(_rc),rl:Object.keys(_rl)};
   }catch(e){ return null; }
 }
