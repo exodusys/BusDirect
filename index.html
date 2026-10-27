@@ -5317,6 +5317,9 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
    svg.style.opacity='1';svg.style.transform='rotate('+Math.round(rot)+'deg)';
    var fw=bdFootM({lat:+loc.lat,lon:+loc.lon},xy);if(fw!=null)d=fw;var dt=d<15?'Vous y êtes':(d>=1000?(d/1000).toFixed(2).replace('.',',')+' km':Math.round(d)+' m');
    t.textContent=dt;
+   /* couleur pastel selon la distance à pied jusqu'à l'arrêt : vert ≤ 250 m, jaune ≤ 500 m, orange ≤ 750 m, rouge au-delà */
+   var P=d<=250?['#dcfce7','#86efac']:d<=500?['#fef9c3','#fde047']:d<=750?['#ffedd5','#fdba74']:['#fee2e2','#fca5a5'];
+   el.style.setProperty('background',P[0],'important');el.style.setProperty('border-color',P[1],'important');el.style.setProperty('color','#1f2937','important');
    el.title='Direction et distance jusqu’à '+name+(hd==null?' (flèche par rapport au nord : boussole indisponible)':'');});}
  setInterval(tick,400);
  /* clic sur la boussole ou la distance : Google Maps à pied jusqu'à l'arrêt (sans ouvrir la carte du parcours) */
