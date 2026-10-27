@@ -721,7 +721,7 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  window.addEventListener('bd-sources-change',function(){C={};save();tables={}});
  window.bdStopXYAsync=function(name,lat,lon){var k=norm(name);if(C[k])return Promise.resolve(C[k]);return locate(name,lat!=null?{lat:+lat,lon:+lon}:null).then(function(r){if(r){C[k]=r;save()}return r})};
  /* liens Google Maps avec un nom d'arrêt : remplacé par les coordonnées précises avant l'ouverture */
- function fix(a){try{var u=new URL(a.href);var ch=false;['origin','destination'].forEach(function(p){var v=u.searchParams.get(p);if(!v||/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(v))return;var xy=window.bdStopXY(v,null,null,null);if(xy){u.searchParams.set(p,xy.lat+','+xy.lon);ch=true}});if(ch)a.href=u.toString()}catch(e){}}
+ function fix(a){try{var u=new URL(a.href);var ch=false;if(u.searchParams.has('destination')&&u.searchParams.get('travelmode')!=='walking'&&/pied|walk/i.test((a.textContent||'')+' '+(a.className||'')+' '+((a.parentElement&&a.parentElement.textContent)||''))){u.searchParams.set('travelmode','walking');ch=true}['origin','destination'].forEach(function(p){var v=u.searchParams.get(p);if(!v||/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(v))return;var xy=window.bdStopXY(v,null,null,null);if(xy){u.searchParams.set(p,xy.lat+','+xy.lon);ch=true}});if(ch)a.href=u.toString()}catch(e){}}
  ['pointerdown','touchstart','mousedown'].forEach(function(ev){window.addEventListener(ev,function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href*="google.com/maps"],a[href*="maps.google.com"]');if(a)fix(a)},true)});
 })();
 </script>
@@ -2253,7 +2253,7 @@ function bdDepartureMs(x){try{var v=x&&x._sort;if(isFinite(v)&&v>0)return +v;var
    Conversion de marche utilisée pour comparer les parcours : 80 m/min. */
 function bdTimeWalkMs(m){m=Number(m);return isFinite(m)&&m>=0?m/80*60000:0}
 function bdAccessWalkMeters(S){try{var pl=(S&&S.passList)||[],st=pl.filter(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)}),first=st[0];if(o&&o.lat!=null&&o.lon!=null&&first)return Math.round(zt({lat:+o.lat,lon:+o.lon},{lat:+first.lat,lon:+first.lon})*1000);var v=Number(S&&S.from&&S.from.distanceMeters);if(isFinite(v)&&v>=0)return v;return 0}catch(e){return 0}}
-function bdFinalWalkMeters(S){try{var pl=(S&&S.passList)||[],st=pl.filter(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)}),last=st[st.length-1],dxy=S&&(S._destXY||S.destXY||S._joinXY||S.joinXY);/* Une destination exacte géocodée correspond à l’adresse / au POI choisi. */if(last&&dxy&&isFinite(+(dxy.lat!=null?dxy.lat:dxy.x))&&isFinite(+(dxy.lon!=null?dxy.lon:dxy.y))){var la=+(dxy.lat!=null?dxy.lat:dxy.x),lo=+(dxy.lon!=null?dxy.lon:dxy.y);return Math.round(zt({lat:+last.lat,lon:+last.lon},{lat:la,lon:lo})*1000)}return 0}catch(e){return 0}}
+function bdFinalWalkMeters(S){try{var pl=(S&&S.passList)||[],st=pl.filter(function(x){return x&&x.lat!=null&&x.lon!=null&&(x.type==="stop"||!x.type)}),last=st[st.length-1],dxy=S&&(S._destXY||S.destXY||S._joinXY||S.joinXY);/* Une destination exacte géocodée correspond à l’adresse / au POI choisi. */if(last&&dxy&&isFinite(+(dxy.lat!=null?dxy.lat:dxy.x))&&isFinite(+(dxy.lon!=null?dxy.lon:dxy.y))){var la=+(dxy.lat!=null?dxy.lat:dxy.x),lo=+(dxy.lon!=null?dxy.lon:dxy.y),_a={lat:+last.lat,lon:+last.lon},_b={lat:la,lon:lo},_fw=null;try{_fw=window.bdFootM?window.bdFootM(_a,_b,'p'+_a.lat.toFixed(5)+','+_a.lon.toFixed(5)):null}catch(e){}return Math.round(_fw!=null?_fw:zt(_a,_b)*1000)}return 0}catch(e){return 0}}
 function bdTotalTimeMs(S){try{var ride=bdDurationMs(S);if(!isFinite(ride))ride=0;return ride+bdTimeWalkMs(bdAccessWalkMeters(S))+bdTimeWalkMs(bdFinalWalkMeters(S))}catch(e){return Infinity}}
 function bdPrefSort(a,b){try{return bdDepartureMs(a)-bdDepartureMs(b)}catch(e){return 0}try{var d;/* Quand « Le moins de temps » est activé, la durée totale porte-à-porte devient le critère principal. */if(localStorage.getItem("bd_sort_time")!=="0"){d=bdTotalTimeMs(a)-bdTotalTimeMs(b);if(isFinite(d)&&d)return d}/* À durée totale égale, départ le plus tôt. */d=bdDepartureMs(a)-bdDepartureMs(b);if(isFinite(d)&&d)return d;if(localStorage.getItem("bd_sort_walk")==="1"){d=bdWalkMeters(a)-bdWalkMeters(b);if(isFinite(d)&&d)return d}if(localStorage.getItem("bd_sort_change")==="1"){d=bdChanges(a)-bdChanges(b);if(isFinite(d)&&d)return d}return 0}catch(e){return bdDepartureMs(a)-bdDepartureMs(b)}}
 function bdNearestDepartureOnly(list){return list||[];try{if(localStorage.getItem("bd_sort_nearest")!=="1"||!list||!list.length)return list;var bestName="",best=Infinity;list.forEach(function(x){var n=String(x&&x.from&&x.from.station||x&&x._fromStop||"").trim();if(!n)return;var w=bdWalkMeters(x);if(isFinite(w)&&w<best){best=w;bestName=n}});if(!bestName)return list;var key=bdNorm(bestName);return list.filter(function(x){return bdNorm(x&&x.from&&x.from.station||x&&x._fromStop||"")===key})}catch(e){return list}}
@@ -2285,7 +2285,7 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
     /* 1. arrêt de départ à 1000 m maximum */
     L=L.filter(function(S){return bdAccessM(S)<=BD_NEAR_MAX_M});
     /* 2. arrêt atteignable à pied avant le départ */
-    /* marge : −2 min (départ gardé si on arrive à l'arrêt jusqu'à 2 min après l'heure de départ) */L=L.filter(function(S){return bdDepartureMs(S)>=ref+bdTimeWalkMs(bdAccessM(S))-120000});
+    /* tolérance : le départ reste affiché 1 minute de plus (arrivée à l'arrêt jusqu'à 1 min après l'heure de départ) */L=L.filter(function(S){return bdDepartureMs(S)>=ref+bdTimeWalkMs(bdAccessM(S))-60000});
     /* 3. même ligne : seulement l'arrêt le plus proche de ma position */
     var best={};L.forEach(function(S){var k=bdLineKey(S);if(!k)return;var d=bdAccessM(S);if(!best[k]||d<best[k].d)best[k]={d:d,st:bdBoardName(S)}});
     L=L.filter(function(S){var k=bdLineKey(S);return!k||!best[k]||bdBoardName(S)===best[k].st});
@@ -2293,6 +2293,8 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
   /* 4. uniquement les trajets les plus rapides (tolérance 1 min pour les arrondis d'horaire) */
   var mn=Infinity;L.forEach(function(S){var t=bdTransportMs(S);if(t<mn)mn=t});
   if(_fast&&isFinite(mn))L=L.filter(function(S){return bdTransportMs(S)<=mn+60000});
+  /* 4b. un même bus en double (même heure prévue, même ligne, même arrêt) : on garde la version avec l'horaire réel (retard connu) */
+  (function(){var P=function(S){var d=S&&S.from&&S.from.departure;var t=d?new Date(d).getTime():NaN;if(!isFinite(t)){t=bdDepartureMs(S)-((S.from&&S.from.delay)||0)*60000}return Math.round(t/60000)};var g={},o=[];L.forEach(function(S){var k=P(S)+"|"+bdLineKey(S)+"|"+bdBoardName(S)+"|"+bdNorm(S.to&&S.to.station);var x=g[k];if(x==null){g[k]=o.length;o.push(S);return}var cur=o[x],dc=Math.abs((cur.from&&cur.from.delay)||0),dn=Math.abs((S.from&&S.from.delay)||0);if(dn>dc)o[x]=S});L=o})();
   /* 5. tri strict par heure de départ */
   L.sort(function(a,b){return bdDepartureMs(a)-bdDepartureMs(b)});
   /* « Les plus rapides » activé : fenêtre horaire, complétée par les départs suivants les plus rapides (au moins le double du nombre réglé, min. 6) */
@@ -2303,7 +2305,7 @@ function bdWithWalk(list,destName,destXY){try{var L=(list||[]).filter(function(S
   var mn=Infinity,fast=null;L.forEach(function(S){var t=bdTransportMs(S);if(t<mn){mn=t;fast=S}});
   var xy=destXY&&isFinite(+destXY.lat)?{lat:+destXY.lat,lon:+destXY.lon}:null,nm=destName||"";
   if(!xy&&fast){var st=bdStopsXY(fast),l=st[st.length-1];if(l){xy={lat:+l.lat,lon:+l.lon};nm=nm||String((typeof l.station==="string"?l.station:(l.station&&l.station.name))||(fast.to&&fast.to.station)||"")}}
-  if(!xy)return L;var m=Math.round(zt(me,xy)*1000),wMs=bdTimeWalkMs(m);
+  if(!xy)return L;var _fw=null;try{_fw=window.bdFootM?window.bdFootM(me,xy):null}catch(e){}var m=Math.round(_fw!=null?_fw:zt(me,xy)*1000),wMs=bdTimeWalkMs(m);
   var show=fast?wMs<mn:(wMs<=60*60000);if(!show)return L;var now=Date.now();
   var W={_isWalk:true,_sort:now,_walkM:m,_walkMs:wMs,_transportMs:isFinite(mn)?mn:null,_destName:nm||"Destination",_destXY:xy,_me:me,products:[],from:{station:"Ma position",actualMs:now,delay:0},to:{station:nm,actualMs:now+wMs}};
   return[W].concat(L)}catch(e){return(list||[]).slice()}}
@@ -4745,7 +4747,8 @@ html.dark #bd-v148-dt{background:#18181b;color:#fafafa;border-color:rgba(255,255
   try{ var u=new URL(href, location.origin); var o=u.searchParams.get('origin'), d=u.searchParams.get('destination')||u.searchParams.get('query'); function parse(s){ if(!s) return null; var parts=s.split(','); if(parts.length>=2){ var la=parseFloat(parts[0]), lo=parseFloat(parts[1]); if(!isNaN(la)&&!isNaN(lo)) return {lat:la,lon:lo}; } return null; } return {origin:parse(o),dest:parse(d)}; }catch(e){return {origin:null,dest:null};}
  }
 
- function openHyperPopup(href, meta){
+ function bdWalkUrl(href){try{var u=new URL(href,location.origin),q=u.searchParams;var o=q.get('origin')||q.get('saddr')||'',d=q.get('destination')||q.get('daddr')||q.get('query')||q.get('q')||'';if(!d){var m=u.pathname.match(/\/dir\/([^/]*)\/([^/]+)/);if(m){o=o||decodeURIComponent(m[1]);d=decodeURIComponent(m[2])}}if(!d)return href;var r='https://www.google.com/maps/dir/?api=1'+(o?'&origin='+encodeURIComponent(o):'')+'&destination='+encodeURIComponent(d)+'&travelmode=walking';if(!o)r+='&dir_action=navigate';return r}catch(e){return href}}
+ function openHyperPopup(href, meta){/* page avec carte Google supprimée : Google Maps s'ouvre directement en mode piéton */var _u=bdWalkUrl(href),_w=null;try{_w=window.open(_u,'_blank','noopener')}catch(e){}if(!_w)location.href=_u;return;
   injectHyperCSS();
   var old=document.getElementById('bd-v172-popup'); if(old) old.remove();
   var old155=document.getElementById('bd-v155-maps'); if(old155) old155.remove();
@@ -5294,7 +5297,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
  /* Vraie distance à pied (itinéraire piéton OpenStreetMap). Recalculée quand on s'est déplacé de plus de 10 m ;
     entre deux calculs : distance de l'itinéraire − distance déjà parcourue vers l'arrêt. */
  var FW={};
- function bdFootM(me,to){var k=to.lat.toFixed(6)+','+to.lon.toFixed(6),c=FW[k],now=Date.now();
+ function bdFootM(me,to,tag){var k=(tag||'me')+'|'+to.lat.toFixed(6)+','+to.lon.toFixed(6),c=FW[k],now=Date.now();
   if((!c||(dist(c.from,me)>10&&now-c.at>4000))&&!(c&&c.busy)){var o=c||(FW[k]={});o.busy=1;
    fetch('https://routing.openstreetmap.de/routed-foot/route/v1/foot/'+me.lon+','+me.lat+';'+to.lon+','+to.lat+'?overview=false').then(function(r){return r.json()}).then(function(j){var R=j&&j.routes&&j.routes[0];if(R&&isFinite(R.distance)){var wa=j.waypoints||[];var extra=0;/* + segments jusqu'au réseau piéton */if(wa[0]&&isFinite(wa[0].distance))extra+=wa[0].distance;if(wa[1]&&isFinite(wa[1].distance))extra+=wa[1].distance;FW[k]={m:R.distance+extra,from:me,crow:dist(me,to),at:Date.now()}}else{o.busy=0;o.at=Date.now();o.from=me}}).catch(function(){o.busy=0;o.at=Date.now();o.from=me})}
   c=FW[k];if(!c||c.m==null)return null;/* ajustement entre deux calculs : variation de la distance à vol d'oiseau */return Math.max(0,c.m+(dist(me,to)-c.crow))}
@@ -5398,7 +5401,7 @@ html.bd-glass .bdt-sheet{--card:transparent}
 (function(){function d(a,b){var r=Math.PI/180,x=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)*r/2),y=(b.lat-a.lat)*r;return Math.sqrt(x*x+y*y)*6371000}
  function tick(){try{var els=document.querySelectorAll('.bd-walk-tot');if(!els.length)return;var L=window.__bd_loc;
   els.forEach(function(el){var w=parseInt(el.getAttribute('data-fix')||'0',10)||0,la=parseFloat(el.getAttribute('data-lat')),lo=parseFloat(el.getAttribute('data-lon'));
-   var m=null;if(L&&L.lat!=null&&isFinite(la)&&isFinite(lo)){m=d({lat:+L.lat,lon:+L.lon},{lat:la,lon:lo});if(m>30)w+=Math.max(1,Math.round(m*1.3/80))}
+   var m=null;if(L&&L.lat!=null&&isFinite(la)&&isFinite(lo)){var _me={lat:+L.lat,lon:+L.lon},_to={lat:la,lon:lo},_fw=null;try{_fw=window.bdFootM?window.bdFootM(_me,_to):null}catch(e){}/* vrai chemin piéton (sinon ligne droite × 1,3 en attendant) */m=_fw!=null?_fw:d(_me,_to);if(m>30)w+=Math.max(1,Math.round((_fw!=null?m:m*1.3)/80))}
    /* couleur pastel selon l'éloignement de l'arrêt : vert ≤ 250 m, jaune ≤ 500 m, orange ≤ 750 m, rouge au-delà */
    var dist=m==null?'':(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m)+' m');
    var t='\uD83D\uDEB6 '+w+' min';if(el.textContent!==t)el.textContent=t;
