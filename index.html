@@ -2011,18 +2011,22 @@ function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLower
    Arrêt → uniquement les trajets qui arrivent exactement à cet arrêt.
    Adresse / POI → uniquement les trajets qui arrivent à l'arrêt le plus proche de ce lieu (puis marche). */
 async function bdJoinFetch0(fromName,target,xy){
+  /* Destination de « Mes parcours » = arrêt, adresse ou POI.
+     Arrêt → trajets qui arrivent exactement à cet arrêt.
+     Adresse / POI (ou arrêt introuvable) → trajets vers l'arrêt le plus proche du lieu (un seul), puis marche jusqu'au lieu. */
   try{
-    var dm=bdMemoFor(target),isPlace=!!(dm&&dm.kind&&dm.kind!=="stop");
-    if(!dm){var inTS=false;try{var A=bdTSAll();inTS=Object.keys(A).some(function(id){return(A[id]||[]).some(function(z){return z&&bdNorm(z.n)===bdNorm(target)})})}catch(e){}
-      if(!inTS){var gp=null;try{gp=await bdGeoPoint(target)}catch(e){}if(gp){isPlace=true;xy=xy||gp}}}
+    var dm=bdMemoFor(target),isPlace=!!(dm&&dm.kind&&dm.kind!=="stop")||bdLooksAddress(target);
     var run=function(dest){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],dest,null,"",true,true).then(function(r){return((r&&r.full)||[]).slice()}).catch(function(){return[]})};
-    if(!isPlace){var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});return{full:L,xy:xy||bdJoinXY(target)}}
+    if(!isPlace){var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
     if(!xy&&dm&&dm.lat!=null&&isFinite(+dm.lat))xy={lat:+dm.lat,lon:+dm.lon};
-    var C=[];if(xy){try{C=await bdNearStations(xy,1)}catch(e){C=[]}}
-    if(!C||!C.length||!C[0].name){return{full:await run(target),xy:xy}}
-    var st=C[0],w=Math.max(0,Math.round((st._d||0)*1000*1.3/80));
-    var L3=(await run(st.name)).filter(function(S){return bdJoinEndsAt(S,st.name)}).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0})});
-    return{full:L3,xy:xy};
+    if(!xy){try{xy=await bdGeoPoint(target)}catch(e){}}
+    if(!xy){try{var g=await fetch("https://photon.komoot.io/api/?limit=1&lang=fr&q="+encodeURIComponent(target)).then(function(r){return r.json()});var f=g&&g.features&&g.features[0];if(f)xy={lat:+f.geometry.coordinates[1],lon:+f.geometry.coordinates[0]}}catch(e){}}
+    if(!xy)return{full:await run(target),xy:null};
+    var C=[];try{C=await bdNearStations(xy,1)}catch(e){C=[]}
+    /* un seul arrêt : le plus proche du lieu */C=(C||[]).filter(function(x){return x&&x.name}).slice(0,1);if(!C.length)return{full:await run(target),xy:xy};
+    var R=await Promise.all(C.map(function(st){var w=Math.max(0,Math.round((st._d||0)*1000*1.3/80));return run(st.name).then(function(L){return L.filter(function(S){return bdJoinEndsAt(S,st.name)}).map(function(S){var a=(S.to&&S.to.actualMs)||0;return Object.assign({},S,{_placeWalk:w,_placeArr:a?a+w*60000:0,_destXY:xy})})})}));
+    var out=[],seen={};R.forEach(function(L){L.forEach(function(S){var k=bdDepartureMs(S)+"|"+(S.products||[]).join(",")+"|"+bdNorm(S.to&&S.to.station);if(!seen[k]){seen[k]=1;out.push(S)}})});
+    return{full:out,xy:xy};
   }catch(e){return{full:[],xy:xy||null}}
 }
 function bdBlendColors(cols){try{cols=(cols||[]).filter(Boolean);if(!cols.length)return"#a1a1aa";if(cols.length===1)return cols[0];var r=0,g=0,b=0,n=0;cols.forEach(function(c){var m=String(c).match(/^#?([0-9a-f]{6})$/i);if(!m)return;var h=m[1];r+=parseInt(h.slice(0,2),16);g+=parseInt(h.slice(2,4),16);b+=parseInt(h.slice(4,6),16);n++});if(!n)return cols[0];r=Math.round(r/n);g=Math.round(g/n);b=Math.round(b/n);return"#"+[r,g,b].map(function(x){return("0"+x.toString(16)).slice(-2)}).join("")}catch(e){return"#a1a1aa"}}
@@ -5273,6 +5277,14 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
 (function(){
  function brg(a,b){var r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lon-a.lon)*r);return(Math.atan2(y,x)/r+360)%360}
  function dist(a,b){var r=Math.PI/180,x=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)*r/2),y=(b.lat-a.lat)*r;return Math.sqrt(x*x+y*y)*6371000}
+ /* Vraie distance à pied (itinéraire piéton OpenStreetMap). Recalculée quand on s'est déplacé de plus de 10 m ;
+    entre deux calculs : distance de l'itinéraire − distance déjà parcourue vers l'arrêt. */
+ var FW={};
+ function bdFootM(me,to){var k=to.lat.toFixed(6)+','+to.lon.toFixed(6),c=FW[k],now=Date.now();
+  if((!c||(dist(c.from,me)>10&&now-c.at>4000))&&!(c&&c.busy)){var o=c||(FW[k]={});o.busy=1;
+   fetch('https://routing.openstreetmap.de/routed-foot/route/v1/foot/'+me.lon+','+me.lat+';'+to.lon+','+to.lat+'?overview=false').then(function(r){return r.json()}).then(function(j){var R=j&&j.routes&&j.routes[0];if(R&&isFinite(R.distance)){var wa=j.waypoints||[];var extra=0;/* + segments jusqu'au réseau piéton */if(wa[0]&&isFinite(wa[0].distance))extra+=wa[0].distance;if(wa[1]&&isFinite(wa[1].distance))extra+=wa[1].distance;FW[k]={m:R.distance+extra,from:me,crow:dist(me,to),at:Date.now()}}else{o.busy=0;o.at=Date.now();o.from=me}}).catch(function(){o.busy=0;o.at=Date.now();o.from=me})}
+  c=FW[k];if(!c||c.m==null)return null;/* ajustement entre deux calculs : variation de la distance à vol d'oiseau */return Math.max(0,c.m+(dist(me,to)-c.crow))}
+ window.bdFootM=bdFootM;
  var css=document.createElement('style');css.textContent='.bd-compass{cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;border-radius:999px;position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,.18));-webkit-backdrop-filter:blur(14px) saturate(180%);backdrop-filter:blur(14px) saturate(180%);border:1px solid rgba(255,255,255,.65);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),inset 0 -1px 2px rgba(0,0,0,.06),0 6px 18px rgba(15,23,42,.14);color:#0f172a;font:800 11px/1 system-ui,-apple-system,sans-serif;white-space:nowrap}.bd-compass::before{content:\"\";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(120% 70% at 20% 0%,rgba(255,255,255,.75),rgba(255,255,255,0) 55%);pointer-events:none;z-index:-1}html.dark .bd-compass{background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.05));border-color:rgba(255,255,255,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 6px 18px rgba(0,0,0,.45);color:#fff}html.dark .bd-compass::before{background:radial-gradient(120% 70% at 20% 0%,rgba(255,255,255,.22),rgba(255,255,255,0) 55%)}.bd-compass .bd-cp-d{width:26px;height:26px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 25%,rgba(147,197,253,.95),rgba(37,99,235,.92) 60%,rgba(30,64,175,.95));border:1px solid rgba(255,255,255,.55);box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -2px 3px rgba(0,0,0,.18),0 2px 6px rgba(37,99,235,.35)}.bd-compass:active{transform:scale(.96)}.bd-cp-wrap{margin:-14px 0 -4px auto;padding-left:8px;align-self:center}.bd-next-list .bd-compass{padding:3px 9px 3px 3px;gap:6px}.bd-next-list .bd-compass .bd-cp-d{width:22px;height:22px}.bd-next-list .bd-compass svg{width:14px;height:14px}.bd-compass svg{transition:transform .35s ease}.bd-compass .bd-cp-n{font-size:9px;opacity:.65;font-weight:700}\nhtml.bd-nomotion .bd-compass .bd-cp-d{display:none!important}html.bd-nomotion .bd-compass{padding:5px 10px!important}\n.bd-cp-wrap{position:relative;top:-52px}\n.bd-cp-lbl{position:absolute;right:0;bottom:calc(100% + 3px);display:flex;flex-direction:column;align-items:flex-end;text-align:right;line-height:1.15;width:max-content;max-width:160px;pointer-events:none}\n.bd-cp-lk{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#71717a}\n.bd-cp-ln{font-size:11px;font-weight:700;color:#3f3f46;white-space:normal;overflow-wrap:anywhere}\nhtml.dark .bd-cp-ln{color:#d4d4d8}';document.head.appendChild(css);
  function bdMotGate(){try{var M=window.__bdMotion;var off=!M||!M.isOn()||M.permission()==='denied'||M.permission()==='unsupported';document.documentElement.classList.toggle('bd-nomotion',off)}catch(e){}}bdMotGate();setInterval(bdMotGate,1000);function tick(){var els=document.querySelectorAll('.bd-compass');if(!els.length)return;var loc=window.__bd_loc,M=window.__bdMotion,hd=null;try{hd=M&&M.headingNow?M.headingNow():null}catch(e){}
   els.forEach(function(el){var name=el.getAttribute('data-stop')||'',lat=parseFloat(el.getAttribute('data-lat')),lon=parseFloat(el.getAttribute('data-lon'));var xy=null;try{xy=window.bdStopXY?window.bdStopXY(name,isFinite(lat)?lat:null,isFinite(lon)?lon:null,null):null}catch(e){}if(!xy&&isFinite(lat))xy={lat:lat,lon:lon};
@@ -5281,7 +5293,7 @@ html.dark #bd-distance-settings-sheet{background:#18181b;color:#fafafa}.bd-dista
    if(!loc||loc.lat==null||!xy){t.textContent='Position…';svg.style.opacity='.35';return}
    var d=dist({lat:+loc.lat,lon:+loc.lon},xy),b=brg({lat:+loc.lat,lon:+loc.lon},xy),rot=hd!=null?b-hd:b;
    svg.style.opacity='1';svg.style.transform='rotate('+Math.round(rot)+'deg)';
-   var dt=d<15?'Vous y êtes':(d>=1000?(d/1000).toFixed(1).replace('.',',')+' km':Math.round(d/5)*5+' m');
+   var fw=bdFootM({lat:+loc.lat,lon:+loc.lon},xy);if(fw!=null)d=fw;var dt=d<15?'Vous y êtes':(d>=1000?(d/1000).toFixed(2).replace('.',',')+' km':Math.round(d)+' m');
    t.textContent=dt;
    el.title='Direction et distance jusqu’à '+name+(hd==null?' (flèche par rapport au nord : boussole indisponible)':'');});}
  setInterval(tick,400);
@@ -5375,7 +5387,7 @@ html.bd-glass .bdt-sheet{--card:transparent}
    var m=null;if(L&&L.lat!=null&&isFinite(la)&&isFinite(lo)){m=d({lat:+L.lat,lon:+L.lon},{lat:la,lon:lo});if(m>30)w+=Math.max(1,Math.round(m*1.3/80))}
    /* couleur pastel selon l'éloignement de l'arrêt : vert ≤ 250 m, jaune ≤ 500 m, orange ≤ 750 m, rouge au-delà */
    var dist=m==null?'':(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m)+' m');
-   var t='\uD83D\uDEB6 '+w+' min'+(dist?' \u00B7 '+dist:'');if(el.textContent!==t)el.textContent=t;
+   var t='\uD83D\uDEB6 '+w+' min';if(el.textContent!==t)el.textContent=t;
    var P=m==null?null:m<=250?['#dcfce7','#86efac']:m<=500?['#fef9c3','#fde047']:m<=750?['#ffedd5','#fdba74']:['#fee2e2','#fca5a5'];
    if(P){el.style.setProperty('background',P[0],'important');el.style.setProperty('border-color',P[1],'important');el.style.setProperty('color','#1f2937','important')}})}catch(e){}}
  setInterval(tick,1000);document.addEventListener('DOMContentLoaded',tick);
