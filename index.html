@@ -2302,7 +2302,7 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
     /* 1. arrêt de départ à 1000 m maximum */
     L=L.filter(function(S){return bdAccessM(S)<=BD_NEAR_MAX_M});
     /* 2. arrêt atteignable à pied avant le départ */
-    /* tolérance : le départ reste affiché 1 minute de plus (arrivée à l'arrêt jusqu'à 1 min après l'heure de départ) */L=L.filter(function(S){return bdDepartureMs(S)>=ref+bdTimeWalkMs(bdAccessM(S))-60000});
+    /* règle « arrêt atteignable » supprimée (et sa marge) */
     /* 3. même ligne : seulement l'arrêt le plus proche de ma position */
     var best={};L.forEach(function(S){var k=bdLineKey(S);if(!k)return;var d=bdAccessM(S);if(!best[k]||d<best[k].d)best[k]={d:d,st:bdBoardName(S)}});
     L=L.filter(function(S){var k=bdLineKey(S);return!k||!best[k]||bdBoardName(S)===best[k].st});
