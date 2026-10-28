@@ -2307,6 +2307,8 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
     var best={};L.forEach(function(S){var k=bdLineKey(S);if(!k)return;var d=bdAccessM(S);if(!best[k]||d<best[k].d)best[k]={d:d,st:bdBoardName(S)}});
     L=L.filter(function(S){var k=bdLineKey(S);return!k||!best[k]||bdBoardName(S)===best[k].st});
   }
+  /* 3b. pas de départ depuis un arrêt dont le véhicule passe ensuite par un arrêt plus proche de moi (même ligne) : mieux vaut monter à cet arrêt-là */
+  if(me){L=L.filter(function(S){try{var st=(S.passList||[]).filter(function(x){return x&&x.type==="stop"&&x.lat!=null&&x.lon!=null});if(st.length<2)return true;var f=st[0],sec=f.sectionIdx;var d0=zt(me,{lat:+f.lat,lon:+f.lon})*1000;for(var q=1;q<st.length;q++){var x=st[q];if(sec!=null&&x.sectionIdx!==sec)break;if(zt(me,{lat:+x.lat,lon:+x.lon})*1000<d0-20)return false}return true}catch(e){return true}})}
   /* 4. uniquement les trajets les plus rapides (tolérance 1 min pour les arrondis d'horaire) */
   var mn=Infinity;L.forEach(function(S){var t=bdTransportMs(S);if(t<mn)mn=t});
   if(_fast&&isFinite(mn))L=L.filter(function(S){return bdTransportMs(S)<=mn+60000});
