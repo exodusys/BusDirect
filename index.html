@@ -2062,7 +2062,7 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
     var F=window.__bd_fxy||(window.__bd_fxy={}),k=bdNorm(nm),xy=bdJoinXY(nm)||F[k]||null;
     if(!xy&&F[k]===undefined){F[k]=null;(async function(){try{var pt=null;try{pt=await bdGeoPoint(nm)}catch(e){}if(!pt){var r=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(nm));if(r.ok){var j=await r.json();var L=(j.stations||[]).filter(function(x){return x&&x.coordinate&&x.coordinate.x!=null});var x=L.find(function(y){return bdNorm(y.name)===k})||L.find(function(y){return bdSameName(y.name,nm)});if(x)pt={lat:+x.coordinate.x,lon:+x.coordinate.y}}}if(pt){F[k]=pt;rer()}}catch(e){}})()}
     return!!xy&&zt(me,xy)*1000<=_rad}catch(e){return false}};
-  var tg=[],seenT={};tiles.forEach(function(t){[["to",t.favoriteStop||t.to]].forEach(function(x){var kk=bdNorm(x[1]);if(!kk||seenT[kk])return;if(_here(x[1])){seenT[kk]=1;return}seenT[kk]=1;tg.push({side:x[0],name:x[1],t:t})})});
+  var tg=[],seenT={};tiles.forEach(function(t){[["to",t.favoriteStop||t.to]].forEach(function(x){var kk=bdNorm(x[1]);if(!kk||seenT[kk])return;/* bouton affiché même à proximité de l'arrêt */seenT[kk]=1;tg.push({side:x[0],name:x[1],t:t})})});
   if(J&&!tg.some(function(x){return bdNorm(x.name)===bdNorm(J.target)}))J=window.__bd_join=null;
   /* Affichage automatique : sans action de l’utilisateur, le premier arrêt favori devient la destination active afin que la liste soit visible immédiatement depuis la position actuelle. */
   var _glob=bdGlobalOn();if(!J&&tg.length&&!_glob){J=window.__bd_join={id:tg[0].t.id,side:tg[0].side,target:tg[0].name}}
