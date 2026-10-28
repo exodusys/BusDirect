@@ -2315,7 +2315,7 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
   if(_fast&&_end!=null){var need=Math.max(6,(bdListCount()||5)*2),W=L.filter(function(S){return bdDepartureMs(S)<=_end});if(W.length<need)W=L.slice(0,need);L=W}
   return L}
 /* Carte « À pied » ajoutée à l'affichage (jamais stockée dans les données de trajets). */
-function bdWithWalk(list,destName,destXY){try{var L=(list||[]).filter(function(S){return S&&!S._isWalk}),me=bdMeXY();if(!me)return L;
+function bdWithWalk(list,destName,destXY){/* carte « À pied » supprimée définitivement */return(list||[]).filter(function(S){return S&&!S._isWalk});try{var L=(list||[]).filter(function(S){return S&&!S._isWalk}),me=bdMeXY();if(!me)return L;
   var mn=Infinity,fast=null;L.forEach(function(S){var t=bdTransportMs(S);if(t<mn){mn=t;fast=S}});
   var xy=destXY&&isFinite(+destXY.lat)?{lat:+destXY.lat,lon:+destXY.lon}:null,nm=destName||"";
   if(!xy&&fast){var st=bdStopsXY(fast),l=st[st.length-1];if(l){xy={lat:+l.lat,lon:+l.lon};nm=nm||String((typeof l.station==="string"?l.station:(l.station&&l.station.name))||(fast.to&&fast.to.station)||"")}}
