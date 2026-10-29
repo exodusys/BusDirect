@@ -2316,13 +2316,12 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
   if(me){L=L.filter(function(S){try{var st=(S.passList||[]).filter(function(x){return x&&x.type==="stop"&&x.lat!=null&&x.lon!=null});if(st.length<2)return true;var f=st[0],sec=f.sectionIdx;var d0=zt(me,{lat:+f.lat,lon:+f.lon})*1000;for(var q=1;q<st.length;q++){var x=st[q];if(sec!=null&&x.sectionIdx!==sec)break;if(zt(me,{lat:+x.lat,lon:+x.lon})*1000<d0-20)return false}return true}catch(e){return true}})}
   /* 4. uniquement les trajets les plus rapides (tolérance 1 min pour les arrondis d'horaire) */
   var mn=Infinity;L.forEach(function(S){var t=bdTransportMs(S);if(t<mn)mn=t});
-  if(_fast&&isFinite(mn))L=L.filter(function(S){return bdTransportMs(S)<=mn+60000});
+  /* règle « seulement les plus rapides » supprimée définitivement */
   /* 4b. un même bus en double (même heure prévue, même ligne, même arrêt) : on garde la version avec l'horaire réel (retard connu) */
   (function(){var P=function(S){var d=S&&S.from&&S.from.departure;var t=d?new Date(d).getTime():NaN;if(!isFinite(t)){t=bdDepartureMs(S)-((S.from&&S.from.delay)||0)*60000}return Math.round(t/60000)};var g={},o=[];L.forEach(function(S){var k=P(S)+"|"+bdLineKey(S)+"|"+bdBoardName(S)+"|"+bdNorm(S.to&&S.to.station);var x=g[k];if(x==null){g[k]=o.length;o.push(S);return}var cur=o[x],dc=Math.abs((cur.from&&cur.from.delay)||0),dn=Math.abs((S.from&&S.from.delay)||0);if(dn>dc)o[x]=S});L=o})();
   /* 5. tri strict par heure de départ */
   L.sort(function(a,b){return bdDepartureMs(a)-bdDepartureMs(b)});
   /* « Les plus rapides » activé : fenêtre horaire, complétée par les départs suivants les plus rapides (au moins le double du nombre réglé, min. 6) */
-  if(_fast&&_end!=null){var need=Math.max(6,(bdListCount()||5)*2),W=L.filter(function(S){return bdDepartureMs(S)<=_end});if(W.length<need)W=L.slice(0,need);L=W}
   return L}
 /* Carte « À pied » ajoutée à l'affichage (jamais stockée dans les données de trajets). */
 function bdWithWalk(list,destName,destXY){/* carte « À pied » supprimée définitivement */return(list||[]).filter(function(S){return S&&!S._isWalk});try{var L=(list||[]).filter(function(S){return S&&!S._isWalk}),me=bdMeXY();if(!me)return L;
