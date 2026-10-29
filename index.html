@@ -1621,7 +1621,7 @@ function bdIsBusConn(F){
   for(var i=0;i<secs.length;i++){
     var s=secs[i];if(!s)continue;
     if(s.journey){if(!bdIsBusSection(s))return false}
-    else if(bdWalkSec(s)>30)return false; /* marche > 30s refusée */
+    /* marche acceptée sans limite */
   }
   return true;
 }
@@ -1631,7 +1631,7 @@ function bdStopsStrict(F,fId,tId,vIds){
   /* aucune marche : chaque section hors correspondance pure doit être un transport public */
   for(var i=0;i<_s.length;i++){
     var s=_s[i];if(!s)continue;
-    if(!s.journey){if(bdWalkSec(s)>30)return{ok:false};continue}
+    if(!s.journey)continue; /* marche acceptée sans limite */
     if(!bdIsBusSection(s))return{ok:false};
   }
   function add(st,tm){if(st&&st.id!=null&&st.name){var l=seq[seq.length-1];if(l&&String(l.id)===String(st.id)){if(tm&&!l.t)l.t=tm;return}seq.push({id:String(st.id),name:st.name,t:tm||null})}}
