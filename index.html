@@ -2396,10 +2396,10 @@ async function fetchLiveForTiles(tiles){
 }
 /* V2026x : trajets AVEC CHANGEMENT depuis l'arrêt le plus proche de ma position (ajoutés aux résultats). Désactivable : localStorage bd_xfer_near = "0". */
 async function bdNearestXferStop(){
-  try{if(localStorage.getItem("bd_xfer_near")==="0")return null}catch(e){}
-  var me=bdMeXY();if(!me)return null;
-  try{var L=await bdNearStations(me,1);var s0=L&&L[0];if(!s0||!s0.name)return null;
-    return {name:String(s0.name),selected:true,kind:"stop",distanceKm:s0._d||0,_xfer:true}}catch(e){return null}
+  try{if(localStorage.getItem("bd_xfer_near")==="0")return []}catch(e){}
+  var me=bdMeXY();if(!me)return [];
+  /* plusieurs arrêts proches (≤ 800 m) : la ligne utile (ex. le 8) ne part pas forcément de l'arrêt le plus proche */
+  try{var L=await bdNearStations(me,5);return (L||[]).filter(function(x){return x&&x.name&&x.id&&(x._d||0)<=0.8}).map(function(x){return {name:String(x.name),id:String(x.id),selected:true,kind:"stop",distanceKm:x._d||0,_xfer:true}})}catch(e){return []}
 }
 async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free){
   stops=stops||[];
@@ -2409,7 +2409,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
     let _dep=String(fallbackDep!=null?fallbackDep:(departReload||"")).trim();
     if(_dep.length>=2) selected=[{name:_dep,selected:true,kind:"stop",distanceKm:0,isAddr:true}];
   }
-  if(destName&&!tileOverride){ let _xs=await bdNearestXferStop(); if(_xs) selected=selected.concat([_xs]); }
+  if(destName&&!tileOverride){ let _xs=await bdNearestXferStop(); if(_xs.length) selected=selected.concat(_xs); }
   if(!destName||selected.length===0){ return {win:[],full:[],rc:[],rl:[]}; }
   /* Dalles reconnues : si départ + destination correspondent à une dalle, seules ses lignes sont conservées. */
   /* free : trajets les plus rapides, sans filtrer par les lignes de « Mes parcours » (mode « Détecter n’importe où ») */let _tiles=free?[]:(window.__bd_tiles||fn||[]).slice();
@@ -2420,8 +2420,16 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
     let offline=false;
     let promises = selected.map(async function(st){
       try{
-        let _conns=await bdGetConns(st.name,destName,function(){offline=true;},wide,(tileOverride&&tileOverride.via)||[]);
-        if(st._xfer) _conns=_conns.filter(function(c){return (c.transfers||0)>=1;});
+        let _conns;
+        if(st._xfer){
+          /* recherche depuis l'identifiant exact de l'arrêt (pas de géocodage qui renverrait vers un autre arrêt) ; on garde les trajets avec changement qui partent vraiment de cet arrêt en véhicule (pas « marcher jusqu'à un autre arrêt ») */
+          let _te=(await bdEndpoint(destName))[0];
+          _conns=(await bdGetConns0(st.id,_te,function(){},wide,[])).filter(function(c){
+            if((c.transfers||0)<1)return false;
+            let s0=(c.sections||[])[0];
+            return !!(s0&&s0.journey&&s0.departure&&s0.departure.station&&String(s0.departure.station.id)===st.id);
+          });
+        }else _conns=await bdGetConns(st.name,destName,function(){offline=true;},wide,(tileOverride&&tileOverride.via)||[]);
         if(_conns.length===0&&st.isAddr){ let _loc=window.__bd_loc, _mem=bdMemoFor(st.name), _lat=_mem&&_mem.lat!=null?_mem.lat:(_loc&&_loc.lat), _lon=_mem&&_mem.lon!=null?_mem.lon:(_loc&&_loc.lon); if(_lat!=null&&_lon!=null){ let _nr=await getNearbyStations(_lat,_lon); if(_nr&&_nr.length){ let _tries=_nr.slice(0,5); let _sets=await Promise.all(_tries.map(function(ns){return bdGetConns(ns.name,destName,function(){offline=true;},wide)})); _conns=[].concat.apply([],_sets); } } }
         return _conns.map(function(c,idx){
           c=bdTrimWalkEnd(c);
