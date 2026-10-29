@@ -1579,8 +1579,7 @@ async function bdGetConns(fromName,toName,onErr,wide,via){
   var failed=false,out=[];var _dirP=!(via||[]).length?bdDouaneDepartures(fromName,toName).catch(function(){return[]}):Promise.resolve([]);
   /* Adresse / lieu avec coordonnées connues : on ne laisse JAMAIS le service d'horaires interpréter le texte (« Conthey » compris comme « Monthey »).
      On cherche vers les arrêts proches (identifiant, puis nom exact de l'arrêt) et on écarte tout trajet qui arrive / part à plus de 5 km du point. */
-  var FP=null,TP=null;try{FP=await bdGeoPoint(fromName)}catch(e){}try{TP=await bdGeoPoint(toName)}catch(e){}
-  var FE=await bdEndpoint(fromName),TE=await bdEndpoint(toName);
+  /* recherches de coordonnées en parallèle (plus rapide) */var _g=await Promise.all([bdGeoPoint(fromName).catch(function(){return null}),bdGeoPoint(toName).catch(function(){return null}),bdEndpoint(fromName),bdEndpoint(toName)]);var FP=_g[0],TP=_g[1],FE=_g[2],TE=_g[3];
   var near=function(st,pt){try{if(!pt||!st)return true;var c=st.coordinate||{};if(c.x==null||c.y==null)return true;return zt(pt,{lat:+c.x,lon:+c.y})<=5}catch(e){return true}};
   var keep=function(L){return(L||[]).filter(function(c){return near(c.to&&c.to.station,TP)&&near(c.from&&c.from.station,FP)})};
   var tryAll=async function(A,B){for(var a=0;a<A.length&&!out.length;a++)for(var b=0;b<B.length&&!out.length;b++){out=keep(await bdGetConns0(A[a],B[b],function(){failed=true},wide,via))}};
@@ -2025,7 +2024,7 @@ async function bdJoinFetch(fromName,target,xy,via){var __r=await bdJoinFetch0(fr
 async function bdViaAll(stops,target){try{
   var W=window.__bd_viaA||(window.__bd_viaA={}),ck=(stops||[]).map(function(x){return bdNorm(x.name)}).join(",")+">"+bdNorm(target),c0=W[ck];if(c0&&c0.at&&Date.now()-c0.at<180000)return c0.L.slice();
   /* résultat expiré : on renvoie l'ancien tout de suite et on recalcule en arrière-plan (pas d'alternance avec/sans correspondances) */
-  if(c0&&c0.L&&c0.L.length&&!c0.p){c0.p=bdViaAll._run(stops,target,ck);return c0.L.slice()}if(c0&&c0.L&&c0.L.length)return c0.L.slice();if(c0&&c0.p)return c0.p;
+  if(c0&&c0.L&&c0.L.length&&!c0.p){c0.p=bdViaAll._run(stops,target,ck);return c0.L.slice()}if(c0&&c0.L&&c0.L.length)return c0.L.slice();if(c0&&c0.Lp&&c0.Lp.length)return c0.Lp.slice();if(c0&&c0.p)return c0.p;
   W[ck]={at:0,L:[],p:bdViaAll._run(stops,target,ck)};return W[ck].p}catch(e){return[]}}
 bdViaAll._run=async function(stops,target,ck){var W=window.__bd_viaA;try{
   var run=(async function(){
@@ -2046,12 +2045,13 @@ bdViaAll._run=async function(stops,target,ck){var W=window.__bd_viaA;try{
   ST.lines=order.map(function(k){return k.split("|")[0]+" ("+G[k].from+")"});
   /* 2. arrêts de correspondance candidats (toutes les lignes), les plus proches de la destination d'abord */
   var T=bdJoinXY(target);if(!T){try{var r0=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(target));var j0=await r0.json();var x0=(j0.stations||[]).find(function(x){return x&&x.coordinate&&x.coordinate.x!=null&&N(x.name)===TN})||(j0.stations||[])[0];if(x0&&x0.coordinate)T={lat:+x0.coordinate.x,lon:+x0.coordinate.y}}catch(e){}}
-  var V={};order.forEach(function(k){/* plus tous les arrêts du parcours : seulement les 5 arrêts de la ligne les plus proches de la destination (3 km max) */var _ok={};(function(){var b0=G[k].deps[0];if(!b0||!T)return;(b0.passList||[]).slice(1).map(function(x){var c=x&&x.station&&x.station.coordinate||{};return x&&x.station&&c.x!=null?{n:N(x.station.name),d:zt(T,{lat:+c.x,lon:+c.y})}:null}).filter(function(x){return x&&x.d<=3}).sort(function(a,b){return a.d-b.d}).slice(0,5).forEach(function(x){_ok[x.n]=1})})();G[k].deps.forEach(function(b){(b.passList||[]).slice(1).forEach(function(x){if(!x||!x.station||!_ok[N(x.station.name)])return;if(!x||!x.station||!x.station.name)return;var n=N(x.station.name);if(n===TN||n===N(G[k].from))return;var t=tms(x,false);if(!isFinite(t))return;var c=x.station.coordinate||{},d=(T&&c.x!=null)?zt(T,{lat:+c.x,lon:+c.y}):99;if(!V[n])V[n]={name:x.station.name,d:d,tmin:t};else if(t<V[n].tmin)V[n].tmin=t})})});
-  var VL=Object.keys(V).map(function(n){return V[n]}).sort(function(a,b){return a.d-b.d}).slice(0,15);ST.xfer=VL.length;
+  var V={};order.forEach(function(k){G[k].deps.forEach(function(b){(b.passList||[]).slice(1).forEach(function(x){if(!x||!x.station||!x.station.name)return;var n=N(x.station.name);if(n===TN||n===N(G[k].from))return;var t=tms(x,false);if(!isFinite(t))return;var c=x.station.coordinate||{},d=(T&&c.x!=null)?zt(T,{lat:+c.x,lon:+c.y}):99;if(!V[n])V[n]={name:x.station.name,d:d,tmin:t};else if(t<V[n].tmin)V[n].tmin=t})})});
+  var VL=Object.keys(V).map(function(n){return V[n]}).sort(function(a,b){return a.d-b.d}).slice(0,30);ST.xfer=VL.length;
   /* 3. tableaux des départs des arrêts de correspondance (3 à la fois) */
-  var VB={};for(var i=0;i<VL.length;i+=3){if(i)await new Promise(function(z){setTimeout(z,200)});await Promise.all(VL.slice(i,i+3).map(function(v){return sb(v.name,zdt(v.tmin),80).then(function(b){ST.xferOk++;VB[N(v.name)]=b}).catch(function(){ST.xferErr++})}))}
-  /* 4. assemblage des correspondances */
-  var out=[];
+  var VB={};var out=[];var _pub=function(){try{out=[];ST.found=0;ST.foundLines=[];assemble();var cur=window.__bd_viaA[ck];if(cur){cur.Lp=out.slice()}if(window.__bd_joinR)window.__bd_joinR.at=0;var BL=window.__bd_btnLines||{};Object.keys(BL).forEach(function(k2){BL[k2].at=0});setBdPrev(function(p0){return Object.assign({},p0)})}catch(e){}};
+  for(var i=0;i<VL.length;i+=6){await Promise.all(VL.slice(i,i+6).map(function(v){return sb(v.name,zdt(v.tmin),80).then(function(b){ST.xferOk++;VB[N(v.name)]=b}).catch(function(){ST.xferErr++})}));/* les plus proches de la destination d'abord : résultat affiché dès le premier groupe */_pub()}
+  out=[];ST.found=0;ST.foundLines=[];assemble();
+  function assemble(){
   order.forEach(function(k){var g=G[k];g.deps.forEach(function(b){var pl1=[b.stop].concat((b.passList||[]).slice(1)).filter(function(x){return x&&x.station});var dep1=tms(b.stop,true);if(!isFinite(dep1))return;var best=null;
     for(var q=1;q<pl1.length;q++){var x=pl1[q],n=N(x.station.name),bd=VB[n];if(!bd)continue;var arrX=tms(x,false);if(!isFinite(arrX))continue;
       bd.forEach(function(m){if(bdNormLine(lineOf(m)).toLowerCase()===bdNormLine(lineOf(b)).toLowerCase()&&N(m.to)===N(b.to))return;var depX=tms(m.stop,true);if(!isFinite(depX)||depX<arrX+60000)return;var pl2=[m.stop].concat((m.passList||[]).slice(1)).filter(function(y){return y&&y.station});var ti=-1;for(var z=1;z<pl2.length;z++){if(N(pl2[z].station.name)===TN){ti=z;break}}if(ti<0)return;var arrT=tms(pl2[ti],false);if(!isFinite(arrT))return;if(!best||arrT<best.arrT||(arrT===best.arrT&&depX>best.depX))best={q:q,m:m,ti:ti,arrT:arrT,depX:depX,pl2:pl2}})}
@@ -2061,7 +2061,7 @@ bdViaAll._run=async function(stops,target,ck){var W=window.__bd_viaA;try{
     var P=leg(pl1.slice(0,best.q+1),0,l1,b.category||"",String(b.number||"")).concat([{type:"transfer",station:"Correspondance",at:pl1[best.q].station.name,line:l2,category:best.m.category||"",departure:best.m.stop.departure,sectionIdx:0}]).concat(leg(best.pl2.slice(0,best.ti+1),2,l2,best.m.category||"",String(best.m.number||"")));P[P.length-1].isEnd=true;
     var fm=function(ms){return new Date(ms).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"})};var dm=Math.max(0,Math.round((best.arrT-dep1)/60000));var dl1=P[0].delay||0,last=best.pl2[best.ti];
     out.push({id:"vx_"+N(g.from)+"_"+b.stop.departure+"_"+l1+"_"+l2,from:{station:g.from,departure:b.stop.departure,delay:dl1,platform:(b.stop.prognosis&&b.stop.prognosis.platform)||b.stop.platform||"",time:fm(dep1),plannedTime:fm(new Date(b.stop.departure).getTime()),actualMs:dep1},to:{station:target,arrival:last.arrival,delay:P[P.length-1].delay||0,time:fm(best.arrT),plannedTime:fm(new Date(last.arrival||last.departure).getTime()),actualMs:best.arrT},duration:("0"+Math.floor(dm/60)).slice(-2)+":"+("0"+(dm%60)).slice(-2),products:[l1,l2],transfers:1,passList:P,_fromStop:g.from,originQuery:"",destQuery:target,_sort:dep1,_viaCombo:pl1[best.q].station.name});
-    ST.found++;var sq=l1+"→"+l2+" ("+pl1[best.q].station.name+")";if(ST.foundLines.indexOf(sq)<0)ST.foundLines.push(sq)})});
+    ST.found++;var sq=l1+"→"+l2+" ("+pl1[best.q].station.name+")";if(ST.foundLines.indexOf(sq)<0)ST.foundLines.push(sq)})})}
   /* les trajets « vx » sont aussi utilisés par la détection « Vous êtes dans ce bus » */
   try{var _tr=window.__bd_trips=window.__bd_trips||{};out.forEach(function(c){_tr[c.id]=c})}catch(e){}
   return out})();
