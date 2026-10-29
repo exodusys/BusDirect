@@ -1609,25 +1609,15 @@ for(var k=0;k<vIds.length;k++){var f=-1;for(var j=pos+1;j<last;j++){if(seq[j].id
 keys[last]="Arrivée";
 var idx=Object.keys(keys).map(Number).sort(function(a,b){return a-b});
 return{ok:true,names:idx.map(function(i){return seq[i].name}),kinds:idx.map(function(i){return keys[i]})}}
-/* V2026i : bus uniquement + passage strict par arrêts saisis (pas de marche / autre arrêt). */
+/* Tout le réseau : bus, tram, train, métro, bateau, funiculaire… (passage strict par arrêts saisis conservé). */
 function bdIsBusSection(sec){
-  if(!sec||!sec.journey)return false;
-  var j=sec.journey,cat=String(j.category||"").toUpperCase().trim();
-  var name=String(j.name||"").toUpperCase();
-  var num=String(j.number||"").trim();
-  /* train / tram / métro / bateau exclus */
-  if(/^(IR|IC|RE|R|S|T|M|BAT|FAE|D|FUN|CC)/.test(cat))return false;
-  if(/\b(TRAM|TRAIN|METRO|MÉTRO|BOAT|BATEAU)\b/.test(name))return false;
-  /* bus : B, NFB, BUS, ou numéro de ligne local sans catégorie train */
-  if(/^(B|NFB|BUS)$/.test(cat)||cat.indexOf("BUS")>=0)return true;
-  if(!cat&&num&&!/^\d{4,}$/.test(num))return true;
-  return cat==="B"||/^B\s*\d/.test(cat+" "+num);
+  return !!(sec&&sec.journey);
 }
 function bdIsBusConn(F){
   var secs=(F&&F.sections)||[];
   var js=secs.filter(function(s){return s&&s.journey});
   if(!js.length)return false;
-  /* toute section non-marche doit être un bus */
+  /* toute section non-marche doit être un transport public */
   for(var i=0;i<secs.length;i++){
     var s=secs[i];if(!s)continue;
     if(s.journey){if(!bdIsBusSection(s))return false}
@@ -1638,7 +1628,7 @@ function bdIsBusConn(F){
 function bdStopsStrict(F,fId,tId,vIds){
   var seq=[];var _s=(F&&F.sections)||[];
   if(!_s.length)return{ok:false};
-  /* aucune marche : chaque section hors correspondance pure doit être un trajet bus */
+  /* aucune marche : chaque section hors correspondance pure doit être un transport public */
   for(var i=0;i<_s.length;i++){
     var s=_s[i];if(!s)continue;
     if(!s.journey){if(bdWalkSec(s)>30)return{ok:false};continue}
