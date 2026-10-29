@@ -1599,17 +1599,22 @@ function bdNorm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/
 function bdRealStops(F,fromQ,toQ,via){var fn=(F.from&&F.from.station&&F.from.station.name)||fromQ,tn=(F.to&&F.to.station&&F.to.station.name)||toQ;var all=[];(F.sections||[]).forEach(function(s){var a=[];if(s.departure&&s.departure.station)a.push(s.departure.station.name);if(s.journey&&s.journey.passList)s.journey.passList.forEach(function(p){if(p&&p.station)a.push(p.station.name)});if(s.arrival&&s.arrival.station)a.push(s.arrival.station.name);a.forEach(function(n){if(n)all.push(n)})});var out=[fn],pos=1;(via||[]).map(function(x){return String(x||"").trim()}).filter(Boolean).forEach(function(v){var q=bdNorm(v),best=null,bi=-1;for(var k=pos;k<all.length;k++){var n=bdNorm(all[k]);if(n.length>=3&&q.length>=3&&(n===q||n.indexOf(q)>=0||q.indexOf(n)>=0)){best=all[k];bi=k;break}}if(best!=null){out.push(best);pos=bi}else out.push(v)});out.push(tn);return out}
 function bdSrcName(){try{if(window.__bdSrcFor){var x=window.__bdSrcFor("horaires");return x?x.name:null}}catch(e){}var s=(window.__bd_sources||[]).find(function(x){return x.id==="opendata-ch"});return s?(s.active===false?null:s.name):"transport.opendata.ch"}
 function bdWalkSec(x){try{var w=x&&x.walk;if(!w)return 0;var d=w.duration;if(typeof d==="number")return d;var m=String(d||"").match(/(?:(\d+)d)?(\d+):(\d+)(?::(\d+))?/);if(m)return(+m[1]||0)*86400+(+m[2])*3600+(+m[3])*60+(+m[4]||0);return 0}catch(e){return 0}}
-function bdStopsFromData(F,fId,tId,vIds){var seq=[],bounds=[];var _s=F.sections||[];/* marche courte (≤ 10 min) acceptée au début ou à la fin : ex. arrêt de tram « Genève, gare Cornavin » → train en gare de Genève */var _wOk=function(x){return !!(x&&x.journey)||bdWalkSec(x)<=600};if(_s.length&&(!_wOk(_s[0])||!_wOk(_s[_s.length-1])||!_s.some(function(x){return x&&x.journey})))return{ok:false};
-function add(s,tm){if(s&&s.id!=null&&s.name){var l=seq[seq.length-1];if(l&&String(l.id)===String(s.id)){if(tm&&!l.t)l.t=tm;return}seq.push({id:String(s.id),name:s.name,t:tm||null})}}
+function bdStopsFromData(F,fId,tId,vIds){var seq=[],bounds=[];var _s=F.sections||[];/* marche courte (≤ 10 min) acceptée au début ou à la fin : ex. arrêt de tram « Genève, gare Cornavin » → train en gare de Genève */var _wOk=function(x){return true};/* marche acceptée sans limite */if(_s.length&&(!_wOk(_s[0])||!_wOk(_s[_s.length-1])||!_s.some(function(x){return x&&x.journey})))return{ok:false};
+function add(s,tm){if(s&&s.id!=null&&s.name){var l=seq[seq.length-1];if(l&&String(l.id)===String(s.id)){if(tm&&!l.t)l.t=tm;return}var co=s.coordinate||{};seq.push({id:String(s.id),name:s.name,t:tm||null,lat:co.x,lon:co.y})}}
 _s.forEach(function(sec){add(sec.departure&&sec.departure.station,sec.departure&&sec.departure.departure);if(sec.journey&&sec.journey.passList)sec.journey.passList.forEach(function(p){add(p&&p.station,p&&(p.arrival||p.departure))});add(sec.arrival&&sec.arrival.station,sec.arrival&&sec.arrival.arrival);bounds.push(seq.length-1)});
 if(seq.length<2)return(vIds&&vIds.length)?{ok:false}:{ok:true,names:null,kinds:null};
-if(seq[0].id!==String(fId)||seq[seq.length-1].id!==String(tId))return{ok:false};
+if(!bdStopEq(seq[0],fId)||!bdStopEq(seq[seq.length-1],tId))return{ok:false};
 var last=seq.length-1,pos=0,keys={0:"Départ"};
-for(var k=0;k<vIds.length;k++){var f=-1;for(var j=pos+1;j<last;j++){if(seq[j].id===String(vIds[k])&&seq[j].t){f=j;break}}if(f<0)return{ok:false};pos=f;keys[f]="Intermédiaire"}
+for(var k=0;k<vIds.length;k++){var f=-1;for(var j=pos+1;j<last;j++){if(bdStopEq(seq[j],vIds[k])&&seq[j].t){f=j;break}}if(f<0)return{ok:false};pos=f;keys[f]="Intermédiaire"}
 keys[last]="Arrivée";
 var idx=Object.keys(keys).map(Number).sort(function(a,b){return a-b});
 return{ok:true,names:idx.map(function(i){return seq[i].name}),kinds:idx.map(function(i){return keys[i]})}}
-/* Tout le réseau : bus, tram, train, métro, bateau, funiculaire… (passage strict par arrêts saisis conservé). */
+/* Arrêt saisi ≈ arrêt du parcours : même identifiant, même nom, ou arrêt voisin (≤ 400 m).
+   Une gare (« Lausanne ») et l'arrêt de bus/tram devant elle (« Lausanne, gare ») ont des identifiants différents :
+   sans cette tolérance, aucun changement bus/tram ↔ train ne pouvait être reconnu. */
+function bdStopInfoPut(o){try{if(o&&o.id!=null)(window.__bd_stopInfo||(window.__bd_stopInfo={}))[String(o.id)]=o}catch(e){}}
+function bdStopEq(it,id){try{if(!it)return false;if(String(it.id)===String(id))return true;var o=(window.__bd_stopInfo||{})[String(id)];if(!o)return false;if(o.name&&it.name&&(bdNorm(o.name)===bdNorm(it.name)||bdSameName(o.name,it.name)))return true;if(o.lat!=null&&o.lon!=null&&it.lat!=null&&it.lon!=null&&isFinite(+o.lat)&&isFinite(+it.lat))return zt({lat:+o.lat,lon:+o.lon},{lat:+it.lat,lon:+it.lon})*1000<=400;return false}catch(e){return false}}
+/* Tout le réseau : bus, tram, train, métro, bateau, funiculaire… (passage par arrêts saisis conservé). */
 function bdIsBusSection(sec){
   return !!(sec&&sec.journey);
 }
@@ -1634,18 +1639,18 @@ function bdStopsStrict(F,fId,tId,vIds){
     if(!s.journey)continue; /* marche acceptée sans limite */
     if(!bdIsBusSection(s))return{ok:false};
   }
-  function add(st,tm){if(st&&st.id!=null&&st.name){var l=seq[seq.length-1];if(l&&String(l.id)===String(st.id)){if(tm&&!l.t)l.t=tm;return}seq.push({id:String(st.id),name:st.name,t:tm||null})}}
+  function add(st,tm){if(st&&st.id!=null&&st.name){var l=seq[seq.length-1];if(l&&String(l.id)===String(st.id)){if(tm&&!l.t)l.t=tm;return}var co=st.coordinate||{};seq.push({id:String(st.id),name:st.name,t:tm||null,lat:co.x,lon:co.y})}}
   _s.forEach(function(sec){
     add(sec.departure&&sec.departure.station,sec.departure&&sec.departure.departure);
     if(sec.journey&&sec.journey.passList)sec.journey.passList.forEach(function(p){add(p&&p.station,p&&(p.arrival||p.departure))});
     add(sec.arrival&&sec.arrival.station,sec.arrival&&sec.arrival.arrival);
   });
   if(seq.length<2)return{ok:false};
-  if(String(seq[0].id)!==String(fId)||String(seq[seq.length-1].id)!==String(tId))return{ok:false};
+  if(!bdStopEq(seq[0],fId)||!bdStopEq(seq[seq.length-1],tId))return{ok:false};
   var last=seq.length-1,pos=0,keys={0:"Départ"},vids=vIds||[];
   for(var k=0;k<vids.length;k++){
     var f=-1;
-    for(var j=pos+1;j<last;j++){if(String(seq[j].id)===String(vids[k])&&seq[j].t){f=j;break}}
+    for(var j=pos+1;j<last;j++){if(bdStopEq(seq[j],vids[k])&&seq[j].t){f=j;break}}
     if(f<0)return{ok:false};
     pos=f;keys[f]="Intermédiaire";
   }
@@ -1653,7 +1658,7 @@ function bdStopsStrict(F,fId,tId,vIds){
   var idx=Object.keys(keys).map(Number).sort(function(a,b){return a-b});
   return{ok:true,names:idx.map(function(i){return seq[i].name}),kinds:idx.map(function(i){return keys[i]})};
 }
-function bdRealStopsOk(F,via){var _s=F.sections||[];if(_s.length&&(!_s[0].journey||!_s[_s.length-1].journey))return false;var vs=(via||[]).map(function(x){return String(x||"").trim()}).filter(Boolean);if(!vs.length)return true;var all=[];_s.forEach(function(s){if(s.journey&&s.journey.passList)s.journey.passList.forEach(function(p){if(p&&p.station&&(p.arrival||p.departure))all.push(p.station.name)});if(s.departure&&s.departure.station)all.push(s.departure.station.name);if(s.arrival&&s.arrival.station)all.push(s.arrival.station.name)});var pos=0,ok=true;vs.forEach(function(v){var q=bdNorm(v),f=-1;for(var k=pos;k<all.length;k++){var n=bdNorm(all[k]);/* V2026f : passage obligatoire par l'arrêt saisi (égalité normalisée, pas un autre arrêt) */if(n&&q&&(n===q||n.indexOf(q)===0||q.indexOf(n)===0)){f=k;break}}if(f<0)ok=false;else pos=f+1});return ok}
+function bdRealStopsOk(F,via){var _s=F.sections||[];var vs=(via||[]).map(function(x){return String(x||"").trim()}).filter(Boolean);if(!vs.length)return true;var all=[];_s.forEach(function(s){if(s.journey&&s.journey.passList)s.journey.passList.forEach(function(p){if(p&&p.station&&(p.arrival||p.departure))all.push(p.station.name)});if(s.departure&&s.departure.station)all.push(s.departure.station.name);if(s.arrival&&s.arrival.station)all.push(s.arrival.station.name)});var pos=0,ok=true;vs.forEach(function(v){var q=bdNorm(v),f=-1;for(var k=pos;k<all.length;k++){var n=bdNorm(all[k]);/* V2026f : passage obligatoire par l'arrêt saisi (égalité normalisée, pas un autre arrêt) */if(n&&q&&(n===q||n.indexOf(q)===0||q.indexOf(n)===0)){f=k;break}}if(f<0)ok=false;else pos=f+1});return ok}
 /* « Mon parcours » : arrêts proches d'un point, avec nouvel essai si le service ne répond pas (pas de mise en cache d'un échec) ; arrêt à moins de 5 km sinon rien */
 var __bdEPm={};
 async function bdNearStationsMP(pt,q){
@@ -1711,7 +1716,7 @@ async function bdResolve(q){
     if(!st.length)return null;
     var n=bdNorm(q),ex=st.find(function(s){return bdNorm(s.name)===n})||st.find(function(s){return bdNorm(s.name).indexOf(n)===0});
     if(!ex)ex=st[0];
-    return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
+    var _o={id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};bdStopInfoPut(_o);return _o;
   }catch(e){return null}
 }
 /* V2026h : résolution stricte pour Parcours effectifs — arrêt saisi uniquement, jamais le plus proche. */
@@ -1721,7 +1726,7 @@ async function bdResolveStrict(q){
     if(src&&src.active===false)return null;
     var mm=bdMemoFor(q);
     if(mm&&mm.kind==="stop"&&(mm.id||mm.stopId)){
-      return{id:String(mm.id||mm.stopId),name:mm.name||String(q),lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};
+      var _m={id:String(mm.id||mm.stopId),name:mm.name||String(q),lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};bdStopInfoPut(_m);return _m;
     }
     var r=await fetch("https://transport.opendata.ch/v1/locations?query="+encodeURIComponent(bdExact(q))+"&type=station");
     if(!r.ok)return null;
@@ -1732,7 +1737,7 @@ async function bdResolveStrict(q){
     if(!ex)ex=st.find(function(s){var ns=bdNorm(s.name);return ns===n||ns.indexOf(n)===0||n.indexOf(ns)===0});
     /* pas de repli sur st[0] ni sur l'arrêt le plus proche */
     if(!ex)return null;
-    return{id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};
+    var _o={id:String(ex.id),name:ex.name,lat:ex.coordinate?ex.coordinate.x:null,lon:ex.coordinate?ex.coordinate.y:null};bdStopInfoPut(_o);return _o;
   }catch(e){return null}
 }
 async function bdResolveAll(i,m,via,strict){
@@ -1759,7 +1764,7 @@ async function ypNear(i,m,via,S,main,R){
     var note=function(s){return s.d?(s.d+" m de "+s.base):"arrêt saisi"};
     var sets=await Promise.all(reqs.map(async function(q){try{
       var vids=q.v.map(function(x){return x.id});
-      var cs=await bdDayConns(q.f.id,q.t.id,vids,3);return cs.filter(function(F){return F.from&&F.from.station&&String(F.from.station.id)===q.f.id&&F.to&&F.to.station&&String(F.to.station.id)===q.t.id&&bdStopsFromData(F,q.f.id,q.t.id,vids).ok}).map(function(F,K){
+      var cs=await bdDayConns(q.f.id,q.t.id,vids,3);return cs.filter(function(F){return bdStopsFromData(F,q.f.id,q.t.id,vids).ok}).map(function(F,K){
         var sd=bdStopsFromData(F,q.f.id,q.t.id,vids);
         return{id:"near_"+q.f.id+q.t.id+K,from:{time:te(F.from.departure?new Date(F.from.departure):null),departure:F.from.departure},to:{time:te(F.to.arrival?new Date(F.to.arrival):null)},duration:(F.duration||"").slice(3,8),products:F.products||[],transfers:F.transfers||0,stopsReal:sd.names||[F.from.station.name].concat(q.v.map(function(x){return x.name}),[F.to.station.name]),stopsKind:sd.kinds||void 0,stopsNote:[note(q.f)].concat(q.v.map(note),[note(q.t)]),_nk:bdNorm((sd.names||[F.from.station.name].concat(q.v.map(function(x){return x.name}),[F.to.station.name])).join(">"))+"|"+(F.products||[]).join(","),_walk:bdWalkM(F,(q.f.d||0)+(q.t.d||0)+q.v.reduce(function(a,x){return a+(x.d||0)},0)),_wb:[q.f.d||0].concat(q.v.map(function(x){return x.d||0}),[q.t.d||0,bdWalkM(F,0)]).filter(function(x){return x>0}).join(" + "),_dur:(F.to.arrival&&F.from.departure)?new Date(F.to.arrival)-new Date(F.from.departure):0,_sk:q.f.id+"|"+q.t.id+"|"+vids.join(",")+"|"+(F.products||[]).join(",")+"|"+(F.transfers||0)}})
     }catch(e){return[]}}));
@@ -2656,8 +2661,7 @@ if(!R){Ot([]);return}
 let vids=R.v.map(function(x){return x.id});
 let raw=await bdDayConns(R.f.id,R.t.id,vids,6);
 let $=raw.filter(function(F){
-  if(!(F.from&&F.from.station&&String(F.from.station.id)===String(R.f.id)))return false;
-  if(!(F.to&&F.to.station&&String(F.to.station.id)===String(R.t.id)))return false;
+  /* départ / arrivée vérifiés dans bdStopsStrict (même arrêt, même nom ou arrêt voisin) */
   if(!bdIsBusConn(F))return false;
   return bdStopsStrict(F,R.f.id,R.t.id,vids).ok;
 }).map((F,K)=>{let se=F.from?.delay||0,H=F.from?.departure?new Date(F.from.departure):null,te=(Y)=>Y?Y.toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--";return{id:"prev_"+K+"_"+F.from?.station?.name,from:{station:F.from?.station?.name||i,departure:F.from?.departure,delay:se,platform:F.from?.platform||"",time:te(H)},to:{station:F.to?.station?.name||m,arrival:F.to?.arrival,delay:F.to?.delay||0,time:F.to?.arrival?new Date(F.to.arrival).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"--:--"},duration:F.duration?.slice(3,8)||"",products:F.products||[],transfers:F.transfers||0,passList:[],stopsReal:(bdStopsStrict(F,R.f.id,R.t.id,vids).names||R.names),stopsKind:bdStopsStrict(F,R.f.id,R.t.id,vids).kinds,_nk:(function(){var sd=bdStopsStrict(F,R.f.id,R.t.id,vids);return bdNorm((sd.names||R.names||[]).join(">"))+"|"+(F.products||[]).join(",")})(),_walk:bdWalkM(F,0),_dur:(F.to&&F.to.arrival&&F.from&&F.from.departure)?new Date(F.to.arrival)-new Date(F.from.departure):0,_buses:((F.sections||[]).filter(function(s){return s&&s.journey}).length)||1,_sk:(R?R.f.id+"|"+R.t.id+"|"+R.v.map(function(x){return x.id}).join(","):"")+"|"+(F.products||[]).join(",")+"|"+(F.transfers||0),_k:(F.from&&F.from.departure)+"|"+(R?R.f.id+"|"+R.t.id:"")+"|"+(F.products||[]).join(",")}});if($.sort(function(F,K){/* V2026j : durée puis nombre de bus */var d=(F._dur||0)-(K._dur||0);if(d)return d;var b=(F._buses||99)-(K._buses||99);if(b)return b;return new Date(F.from.departure)-new Date(K.from.departure)}),Yl.current===S){bdGroupDays($);Ot($);ypNear(i,m,via,S,$,R)}}catch{if(Yl.current===S)Ot([])}finally{if(Yl.current===S)setTimeout(()=>rf(!1),300)}}V.useEffect(()=>{if(!navigator.geolocation)return;let _id=navigator.geolocation.watchPosition((p)=>{window.__bdGeoFix=Date.now();try{window.dispatchEvent(new Event("bd-geo-change"))}catch(e){}let F={lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy};try{window.__bd_loc=Object.assign({},window.__bd_loc||{},{lat:F.lat,lon:F.lon,acc:F.acc})}catch(e){}a((prev)=>{if(prev&&prev.street)return{...prev,lat:F.lat,lon:F.lon,acc:F.acc};return{...prev,...F,street:prev?.street||""}})},(e)=>{if(e&&e.code===1){window.__bdGeoFix=0;try{window.dispatchEvent(new Event("bd-geo-change"))}catch(x){}}},{enableHighAccuracy:!0,maximumAge:0,timeout:15000});return()=>{try{navigator.geolocation.clearWatch(_id)}catch{}}},[]),V.useEffect(()=>{var _bdEmpty=!((f||"").trim()||(departReload||"").trim()||(nearStops||[]).some(function(x){return x&&x.selected}));/* champs remplis par l'affichage d'une dalle (pas une recherche tapée) : la détection de position continue */if(!_bdEmpty){try{var _at=[window.__bd_activeTL].concat(window.__bd_activeTLs||[]).filter(Boolean);var _fv=(f||"").trim();if(_at.length&&_fv&&!(nearStops||[]).some(function(x){return x&&x.selected})&&_at.some(function(t){return bdSameName(_fv,t.to)||bdSameName(_fv,t.from)}))_bdEmpty=true}catch(e){}}if(!_bdEmpty){window.__bd_wasSearching=true;return}if(window.__bd_wasSearching){window.__bd_wasSearching=false;window.__bd_inside={}}if(!o||!o.lat||!o.lon||!fn||fn.length===0)return;let _inside=window.__bd_inside||(window.__bd_inside={});let _geo=window.__bd_geo||(window.__bd_geo={});(async()=>{if(window.__bd_scanBusy)return;window.__bd_scanBusy=true;try{/* mode de détection changé dans Paramètres : détection refaite de zéro */{let _dm=bdDetectMode();if(window.__bd_dmSeen!==undefined&&window.__bd_dmSeen!==_dm){for(let k in _inside)delete _inside[k];window.__bd_midStop={};window.__bd_endStop={};window.__bd_dirSig=null;window.__bd_liveSeq=(window.__bd_liveSeq||0)+1;window.__bd_activeTL=null;window.__bd_activeTLs=[];window.__bd_hasList=false;setBdTL(null);go([])}window.__bd_dmSeen=_dm}let _near=async function(name){let k=String(name||"").trim().toLowerCase();if(!k)return Infinity;let Ls=_geo[k];if(!Ls){try{/* position réelle de l'arrêt : arrêt mémorisé de la ligne, sinon lieu choisi, sinon meilleur résultat (arrêt du même nom en priorité) — et non le plus proche de tous les résultats */let _cs=null;try{let _all=bdTSAll();Object.keys(_all).some(function(id){let x=(_all[id]||[]).find(function(y){return y.lat!=null&&bdSameName(y.n,name)&&bdNorm(y.n)===bdNorm(name)});if(x){_cs={lat:+x.lat,lon:+x.lon};return true}return false})}catch(e){}if(!_cs){let _m=bdMemoFor(name);if(_m&&_m.lat!=null)_cs={lat:+_m.lat,lon:+_m.lon}}if(_cs)Ls=[_cs];else{let r=await Co(name);let _rs=(r||[]).filter(function(c){return c.lat&&c.lon});let _pk=_rs.find(function(c){return c.kind==="stop"&&bdNorm(c.name)===bdNorm(name)})||_rs.find(function(c){return c.kind==="stop"&&bdSameName(c.name,name)})||_rs[0];Ls=_pk?[{lat:_pk.lat,lon:_pk.lon}]:[]}if(Ls.length)_geo[k]=Ls}catch(e){Ls=[]}}let best=Infinity;(Ls||[]).forEach(function(c){let d=zt(o,{lat:c.lat,lon:c.lon});if(d<best)best=d});return best};let _fresh=[];let _nowIn=[];let _leftIds={};for(let _tile of fn){let _rad=Math.max(1,(function(){try{return parseInt(localStorage.getItem("bd_settings_tiles_distance")||"500",10)||500}catch(e){return 500}})())/1000;/* départ / destination réels : arrêts des parcours cochés (une adresse ou un quartier comme « Rive, 1207 Genève » n'est pas l'arrêt) */let _rr=[];try{bdLiveItems(_tile).forEach(function(it){bdTileRoutes(it).forEach(function(r){if(r.stopsReal&&r.stopsReal.length>=2)_rr.push(r.stopsReal)})})}catch(e){}let _fNs=[_tile.from].concat(_rr.map(function(x){return x[0]})),_tNs=[_tile.to].concat(_rr.map(function(x){return x[x.length-1]}));let _mf=async function(L){let b=Infinity,seen={};for(let n of L){let k=bdNorm(n);if(!k||seen[k])continue;seen[k]=1;let d=await _near(n);if(d<b)b=d}return b};let df=_rr.length?await _mf(_fNs.slice(1)):await _near(_tile.from),dt=_rr.length?await _mf(_tNs.slice(1)):await _near(_tile.to);let dv=Infinity,vn="";let _vs=[];/* points intermédiaires : via saisis et arrêts des parcours, sans le départ ni la destination (déjà traités) */let _ends=[_tile.from,_tile.to].concat(_fNs,_tNs).map(function(x){return bdNorm(x)});bdLiveItems(_tile).forEach(function(it){[it.from].concat(it.via||[],[it.to]).forEach(function(x){x=String(typeof x==="string"?x:(x&&x.name)||"").trim();if(x&&_vs.indexOf(x)<0&&_ends.indexOf(bdNorm(x))<0)_vs.push(x)})});for(let _v of _vs){let d=await _near(_v);if(d<dv){dv=d;vn=_v}}/* arrêts de toute la ligne (hors départ, destination et via saisis) : point intermédiaire uniquement si je ne suis dans aucun bus / train */let _inBus=!!(window.__bd_gf&&window.__bd_gf.conf&&Date.now()-(window.__bd_gf.conf.lastOk||0)<60000);bdTSDetect(_tile.id).forEach(function(x){if(x.lat==null||x.lon==null||_ends.indexOf(bdNorm(x.n))>=0)return;let d=zt(o,{lat:x.lat,lon:x.lon});if(d<dv){dv=d;vn=x.n}});bdTSPrefetch(_tile);let nf=df<=_rad,nT=dt<=_rad,nV=dv<=_rad;let _key=_tile.id;(window.__bd_midVirtual=window.__bd_midVirtual||{})[_key]=false;
