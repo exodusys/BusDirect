@@ -1537,7 +1537,10 @@ function bdTripDTParams(){try{var d=window.__bd_tripDate,t=window.__bd_tripTime;
 function bdTripDTMs(){try{var d=window.__bd_tripDate,t=window.__bd_tripTime;if(d&&t){var x=new Date(d+"T"+t+":00");if(!isNaN(x))return x.getTime()}}catch(e){}return Date.now()}
 /* Adresse ou lieu choisi (coordonnées connues) → arrêt le plus proche de ces coordonnées.
    Évite que le service d'horaires interprète le texte librement (ex. « Rue Centrale 42, 1964 Conthey » compris comme Monthey). */
-var __bdEP={},__bdGP={};
+var __bdEP={},__bdGP={};/* noms d'arrêts déjà connus (mémorisés sur l'appareil) : plus de vérification en ligne avant chaque recherche */
+try{var _gp=JSON.parse(localStorage.getItem("bd-gp")||"{}")||{};Object.keys(_gp).forEach(function(k){__bdGP[k]=_gp[k]})}catch(e){}
+var __bdGPT=0;function bdGPSave(){if(__bdGPT)return;__bdGPT=setTimeout(function(){__bdGPT=0;try{var o={},n=0;Object.keys(__bdGP).forEach(function(k){if(n<800&&__bdGP[k]!==undefined){o[k]=__bdGP[k];n++}});localStorage.setItem("bd-gp",JSON.stringify(o))}catch(e){}},1000)}
+function bdKnownStop(name){try{if(name&&__bdGP[String(name).trim()]===undefined){__bdGP[String(name).trim()]=null;bdGPSave()}}catch(e){}}
 /* Coordonnées d'une adresse / d'un lieu : suggestion choisie, sinon texte tapé géocodé (adresse avec numéro, NPA ou virgule). null = arrêt ou nom d'arrêt. */
 /* Géocodage d'un lieu / adresse / POI : biaisé vers ma position, résultat en Suisse en priorité. */
 async function bdGeoNear(q){try{var l=window.__bd_loc,b=(l&&l.lat!=null)?"&lat="+l.lat+"&lon="+l.lon:"&lat=46.5&lon=6.6";var g=await fetch("https://photon.komoot.io/api/?limit=6&lang=fr"+b+"&q="+encodeURIComponent(q)).then(function(r){return r.json()});var F=(g&&g.features)||[];var f=F.find(function(x){var p=x.properties||{};return p.countrycode==="CH"||p.country==="Suisse"||p.country==="Switzerland"||p.country==="Schweiz"})||F[0];return f?{lat:+f.geometry.coordinates[1],lon:+f.geometry.coordinates[0]}:null}catch(e){return null}}
@@ -1549,8 +1552,8 @@ async function bdGeoPoint(name){
     var q=String(name||"").trim();if(!q||!(/\d/.test(q)||/,/.test(q)))return null;
     if(__bdGP[q]!==undefined)return __bdGP[q];
     var st=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(q)).then(function(r){return r.json()}).catch(function(){return null});
-    var exact=st&&(st.stations||[]).find(function(x){return bdNorm(x.name)===bdNorm(q)});if(exact){__bdGP[q]=null;return null}
-    var pt=await bdGeoNear(q);__bdGP[q]=pt;return pt;
+    var exact=st&&(st.stations||[]).find(function(x){return bdNorm(x.name)===bdNorm(q)});if(exact){__bdGP[q]=null;bdGPSave();return null}
+    var pt=await bdGeoNear(q);__bdGP[q]=pt;bdGPSave();return pt;
   }catch(e){return null}
 }
 /* Arrêts les plus proches d'un point (1 ou 2, à moins de 1,5 km ; sinon le plus proche). */
@@ -1558,7 +1561,7 @@ async function bdNearStations(pt,n){
   var k=pt.lat.toFixed(5)+","+pt.lon.toFixed(5)+"|"+(n||2);if(__bdEP[k])return __bdEP[k];
   var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");if(!r.ok)return[];
   var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&(x.id||x.name)&&x.coordinate&&x.coordinate.x!=null});var _st2=st.filter(function(x){return x.id&&/^\d+$/.test(String(x.id))});if(_st2.length)st=_st2;
-  st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});
+  st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y});if(x.id&&/^\d+$/.test(String(x.id)))bdKnownStop(x.name)});st.sort(function(a,b){return a._d-b._d});
   var L=st.filter(function(x){return x._d<=1.5}).slice(0,n||2);if(!L.length&&st[0])L=[st[0]];__bdEP[k]=L;return L;
 }
 async function bdEndpoint(name){
@@ -1670,7 +1673,7 @@ async function bdNearStationsMP(pt,q){
   for(var a=0;a<3;a++){
     try{var r=await fetch("https://transport.opendata.ch/v1/locations?x="+pt.lat+"&y="+pt.lon+"&type=station");
       if(r.ok){var j=await r.json();var st=(j.stations||[]).filter(function(x){return x&&x.name&&x.coordinate&&x.coordinate.x!=null});
-        st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y})});st.sort(function(a,b){return a._d-b._d});st=st.filter(function(x){return x._d<=5});
+        st.forEach(function(x){x._d=zt(pt,{lat:+x.coordinate.x,lon:+x.coordinate.y});if(x.id&&/^\d+$/.test(String(x.id)))bdKnownStop(x.name)});st.sort(function(a,b){return a._d-b._d});st=st.filter(function(x){return x._d<=5});
         /* la recherche par coordonnées ne donne pas toujours l'identifiant : on le retrouve par le nom exact de l'arrêt */
         st=st.slice(0,3);for(var q2=0;q2<st.length;q2++){if(st[q2].id)continue;try{var r2=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(st[q2].name));if(r2.ok){var j2=await r2.json();var ex2=(j2.stations||[]).find(function(y){return y&&y.id&&bdNorm(y.name)===bdNorm(st[q2].name)});if(ex2)st[q2].id=ex2.id}}catch(e){}}
         st=st.filter(function(x){return x.id});
@@ -1940,7 +1943,7 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
     let lastMs=null;
     cs.forEach(function(c){ let dep=c.from&&c.from.departure; let ms=dep?new Date(dep).getTime():null; let k=dep+"|"+JSON.stringify(c.products||[])+"|"+(c.transfers||0); if(!seen[k]){seen[k]=1;out.push(c);} if(ms!=null&&(lastMs==null||ms>lastMs)) lastMs=ms; });
     /* wide : aucun départ dans la fenêtre → on pagine jusqu'à avoir assez de départs ultérieurs (même dans plusieurs heures). */
-    if(lastMs==null||(wide?out.length>=24:lastMs>=horizonMs)||page>=2) break;
+    /* rapide : 1 page suffit dès 6 trajets (le tableau des départs complète), 2 pages au maximum */if(lastMs==null||out.length>=6||(wide?false:lastMs>=horizonMs)||page>=1) break;
     let z=new Date(lastMs+60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"});
     tp="&date="+z.slice(0,10)+"&time="+z.slice(11,16);
   }
