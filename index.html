@@ -738,10 +738,10 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  var U={};try{U=JSON.parse(sessionStorage.getItem('bd-src-use')||'{}')||{}}catch(e){U={}}
  /* catégories d'usage : libellé, source par défaut, types de source compatibles */
  var CATS=[
-  {id:'horaires',label:'Horaires et correspondances (Prochains parcours, Live)',def:'opendata-ch',kinds:['opendata']},
-  {id:'departs',label:'Départs aux arrêts / détection du véhicule',def:'opendata-ch',kinds:['opendata']},
-  {id:'proximite',label:'Arrêts à proximité',def:'opendata-ch',kinds:['opendata']},
-  {id:'arrets',label:'Recherche d’arrêts',def:'opendata-ch',kinds:['opendata']},
+  {id:'horaires',label:'Horaires et correspondances (Prochains parcours, Live)',def:'opendata-ch',kinds:['opendata','searchch']},
+  {id:'departs',label:'Départs aux arrêts / détection du véhicule',def:'opendata-ch',kinds:['opendata','searchch']},
+  {id:'proximite',label:'Arrêts à proximité',def:'opendata-ch',kinds:['opendata','searchch']},
+  {id:'arrets',label:'Recherche d’arrêts',def:'opendata-ch',kinds:['opendata','searchch']},
   {id:'lieux',label:'Recherche de lieux (et Plus Code)',def:'pluscode',kinds:['pluscode','photon','nominatim']},
   {id:'adresses',label:'Recherche d’adresses (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
   {id:'position',label:'Adresse de votre position (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
@@ -749,9 +749,9 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
   {id:'catalogue',label:'Recherche de nouvelles sources',def:'mobilitydb',kinds:['mobilitydb']}
  ];
  function srcList(){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'null');return Array.isArray(L)?L:[]}catch(e){return[]}}
- function kindOf(s){var u=String(s&&s.url||'').toLowerCase(),id=s&&s.id;if(id==='opendata-ch'||/transport\.opendata\.ch|\/v1\/(connections|locations|stationboard)/.test(u))return'opendata';if(id==='photon'||/photon/.test(u))return'photon';if(id==='nominatim'||/nominatim/.test(u))return'nominatim';if(id==='pluscode'||/plus\.codes/.test(u))return'pluscode';if(id==='mobilitydb'||/mobilitydatabase/.test(u))return'mobilitydb';return'custom'}
+ function kindOf(s){var u=String(s&&s.url||'').toLowerCase(),id=s&&s.id;if(id==='searchch'||/search\.ch\/timetable/.test(u))return'searchch';if(id==='opendata-ch'||/transport\.opendata\.ch|\/v1\/(connections|locations|stationboard)/.test(u))return'opendata';if(id==='photon'||/photon/.test(u))return'photon';if(id==='nominatim'||/nominatim/.test(u))return'nominatim';if(id==='pluscode'||/plus\.codes/.test(u))return'pluscode';if(id==='mobilitydb'||/mobilitydatabase/.test(u))return'mobilitydb';return'custom'}
  /* types d'utilisation d'une source : détectés automatiquement (s.caps) ou déduits de son adresse */
- function kindsOf(s){if(s&&Array.isArray(s.caps)&&s.caps.length)return s.caps.slice();var k=kindOf(s);return k==='custom'?[]:[k]}
+ function kindsOf(s){if(s&&s.id==='searchch')return['searchch'];if(s&&Array.isArray(s.caps)&&s.caps.length)return s.caps.slice();var k=kindOf(s);return k==='custom'?[]:[k]}
  /* une seule fois : « Coordonnées précises des arrêts » remis sur OpenStreetMap (Nominatim) par défaut */
  try{if(!localStorage.getItem('bd_src_route_osm1')){var _r0=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{};delete _r0.coords;localStorage.setItem('bd_src_route',JSON.stringify(_r0));localStorage.setItem('bd_src_route_osm1','1');localStorage.removeItem('bd-stop-xy-v1')}}catch(e){}
  function routes(){try{return JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){return{}}}
@@ -781,8 +781,51 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
   var b=base(chosen);if(!b)return{cat:cat,src:nat,mode:'pass'};
   return{cat:cat,src:chosen,b:b,k:k,hk:hk,mode:k===hk?(new URL(b).hostname===u.hostname?'pass':'same'):(hk+'2'+k)}}
  function empty(hk,u){if(hk==='photon')return{type:'FeatureCollection',features:[]};if(hk==='nominatim')return/reverse/.test(u.pathname)?{}:[];if(hk==='opendata')return{stations:[],connections:[],stationboard:[]};return{}}
+ /* ===== search.ch : 2e source d'horaires (même format que transport.opendata.ch pour le reste de l'app) =====
+    - choisie dans « Gestion des sources » pour une catégorie → toutes ses requêtes y vont ;
+    - sinon secours automatique : si transport.opendata.ch est en panne / désactivé, la même requête part vers search.ch. */
+ var SCH='https://search.ch/timetable/api';
+ function schSrc(){return srcList().find(function(s){return s.id==='searchch'})||null}
+ function schOn(){var s=schSrc();return !!(s&&s.active!==false)}
+ function odSrc(){return srcList().find(function(s){return s.id==='opendata-ch'})||null}
+ function schPlan(u,cat){var c=CATS.find(function(x){return x.id===cat});if(!c||c.kinds.indexOf('searchch')<0)return'';var r=routes()[cat];var od=odSrc(),odOn=!od||od.active!==false;
+  if(r==='searchch'&&schOn())return'sch';if(!odOn&&schOn())return'sch';if(schOn())return'fail';return''}
+ /* « 2026-10-29 23:30:00 » (heure suisse) → ISO avec décalage, comme opendata */
+ function zIso(t){if(!t)return null;var m=String(t).match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/);if(!m)return null;var guess=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));
+  var off=function(ms){var d=new Date(ms),p={};new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Zurich',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d).forEach(function(x){p[x.type]=x.value});return(Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second)-ms)/60000};
+  var o=off(guess-off(guess)*60000),a=Math.abs(o);return m[1]+'-'+m[2]+'-'+m[3]+'T'+m[4]+':'+m[5]+':'+(m[6]||'00')+(o<0?'-':'+')+('0'+Math.floor(a/60)).slice(-2)+('0'+a%60).slice(-2)}
+ function dly(x){var n=parseInt(String(x==null?'':x).replace('+',''),10);return isFinite(n)?n:0}
+ function stn(o){if(!o)return null;var id=o.stopid||o.id||null;var la=o.lat!=null?+o.lat:null,lo=o.lon!=null?+o.lon:null;return{id:id!=null?String(id):null,name:o.name||o.label||'',coordinate:{type:'WGS84',x:la,y:lo}}}
+ function catOfLeg(l){return String(l['*G']||l.G||'').trim()}
+ function numOfLeg(l){return String(l['*L']||l.L||l.line||'').trim()}
+ function prodOf(cat,num){var tr=/^(ICE|ICN|IC|IRE|IR|EC|EN|NJ|RJX|RJ|TGV|TER|RE|RB|R|SN|S|PE|EXT|D)$/i.test(cat);if(tr)return(cat+' '+num).trim();return num||cat}
+ function isWalk(l){return /walk/i.test(String(l.type||''))||(!l.line&&!l['*L']&&!l.L&&!l['*G']&&!l.G&&l.exit)}
+ function schConn(c){var legs=(c.legs||[]).filter(function(l){return l&&l.exit});var secs=[],prods=[],nj=0;
+  legs.forEach(function(l){var ex=l.exit||{};var dep={station:stn(l),departure:zIso(l.departure),arrival:null,delay:dly(l.dep_delay),platform:l.track||'',prognosis:{platform:l.track||null}};var arr={station:stn(ex),arrival:zIso(ex.arrival),departure:null,delay:dly(ex.arr_delay),platform:ex.track||'',prognosis:{platform:ex.track||null}};
+   if(isWalk(l)){var sec=Math.max(0,Math.round(((new Date(arr.arrival||0))-(new Date(dep.departure||0)))/1000))||(+l.runningtime||0);secs.push({journey:null,walk:{duration:sec},departure:dep,arrival:arr});return}
+   nj++;var cat=catOfLeg(l),num=numOfLeg(l);prods.push(prodOf(cat,num));
+   var pl=[{station:dep.station,departure:dep.departure,arrival:null,delay:dep.delay,platform:dep.platform,prognosis:dep.prognosis}];(l.stops||[]).forEach(function(z){pl.push({station:stn(z),arrival:zIso(z.arr),departure:zIso(z.dep),delay:dly(z.dep_delay||z.arr_delay),platform:'',prognosis:{}})});pl.push({station:arr.station,arrival:arr.arrival,departure:null,delay:arr.delay,platform:arr.platform,prognosis:arr.prognosis});
+   secs.push({journey:{name:prodOf(cat,num),category:cat,number:num,operator:l.operator||'',to:(l.terminal&&(l.terminal.name||l.terminal))||'',passList:pl},walk:null,departure:dep,arrival:arr})});
+  if(!secs.length)return null;var f=secs[0].departure,t=secs[secs.length-1].arrival;var d=Math.max(0,Math.round((new Date(t.arrival)-new Date(f.departure))/1000))||(+c.duration||0);
+  var hh=Math.floor(d/3600),mm=Math.floor(d%3600/60),ss=d%60;
+  return{from:f,to:t,duration:'00d'+('0'+hh).slice(-2)+':'+('0'+mm).slice(-2)+':'+('0'+ss).slice(-2),transfers:Math.max(0,nj-1),products:prods,sections:secs,_src:'search.ch'}}
+ function jres(o){return new Response(JSON.stringify(o),{status:200,headers:{'Content-Type':'application/json'}})}
+ function schFetch(F,u){var q=u.searchParams,p=u.pathname,o;
+  var dt=function(o){var d=q.get('date'),t=q.get('time');if(d){var m=d.match(/(\d{4})-(\d\d)-(\d\d)/);if(m)o.searchParams.set('date',m[2]+'/'+m[3]+'/'+m[1])}if(t)o.searchParams.set('time',t.slice(0,5));if(q.get('isArrivalTime')==='1')o.searchParams.set('time_type','arrival')};
+  if(/\/v1\/connections/.test(p)){o=new URL(SCH+'/route.json');o.searchParams.set('from',q.get('from')||'');o.searchParams.set('to',q.get('to')||'');q.getAll('via[]').concat(q.getAll('via')).slice(0,5).forEach(function(v){o.searchParams.append('via[]',v)});dt(o);o.searchParams.set('num',String(Math.min(16,+(q.get('limit')||8)||8)));o.searchParams.set('show_delays','1');o.searchParams.set('show_trackchanges','1');
+   return F.call(window,o.toString()).then(function(r){return r.json()}).then(function(j){return jres({connections:(j.connections||[]).map(schConn).filter(Boolean),from:null,to:null,stations:{from:[],to:[]}})}).catch(function(){return jres({connections:[]})})}
+  if(/\/v1\/stationboard/.test(p)){o=new URL(SCH+'/stationboard.json');var st=q.get('id')||q.get('station')||'';o.searchParams.set('stop',st);o.searchParams.set('limit',String(Math.min(40,+(q.get('limit')||20)||20)));o.searchParams.set('show_delays','1');o.searchParams.set('show_tracks','1');o.searchParams.set('show_subsequent_stops','1');var d=q.get('datetime')||'';if(d){var m=d.match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d:\d\d)/);if(m){o.searchParams.set('date',m[2]+'/'+m[3]+'/'+m[1]);o.searchParams.set('time',m[4])}}else dt(o);
+   return F.call(window,o.toString()).then(function(r){return r.json()}).then(function(j){var S=stn(j.stop||{});return jres({station:S,stationboard:(j.connections||[]).map(function(c){var cat=catOfLeg(c),num=numOfLeg(c);var term=c.terminal||{};return{name:prodOf(cat,num),category:cat,number:num,operator:c.operator||'',to:term.name||'',stop:{station:S,departure:zIso(c.time),delay:dly(c.dep_delay),platform:c.track||'',prognosis:{platform:c.track||null}},passList:[{station:S,departure:zIso(c.time)}].concat((c.subsequent_stops||[]).map(function(z){return{station:stn(z),arrival:zIso(z.arr),departure:zIso(z.dep)}}))}})})}).catch(function(){return jres({stationboard:[]})})}
+  if(/\/v1\/locations/.test(p)){o=new URL(SCH+'/completion.json');var x=q.get('x'),y=q.get('y');if(x&&y){o.searchParams.set('latlon',x+','+y);o.searchParams.set('accuracy','50')}else o.searchParams.set('term',q.get('query')||'');o.searchParams.set('show_ids','1');o.searchParams.set('show_coordinates','1');
+   return F.call(window,o.toString()).then(function(r){return r.json()}).then(function(j){var L=(Array.isArray(j)?j:[]).filter(function(z){return z&&z.label&&(z.id!=null||/sl-icon-type-(bus|tram|train|strain|ship|cablecar|funicular|post|adr)?/.test(String(z.iconclass||'')))&&!/sl-icon-type-adr/.test(String(z.iconclass||''))});
+    var me=x&&y?{lat:+x,lon:+y}:null;return jres({stations:L.map(function(z){var la=z.lat!=null?+z.lat:null,lo=z.lon!=null?+z.lon:null;var d=z.dist!=null?+z.dist:(me&&la!=null?Math.round(Math.hypot((la-me.lat)*111320,(lo-me.lon)*111320*Math.cos(me.lat*Math.PI/180))):null);return{id:z.id!=null?String(z.id):null,name:z.label,score:null,coordinate:{type:'WGS84',x:la,y:lo},distance:d,icon:'train'}})})}).catch(function(){return jres({stations:[]})})}
+  return F.call(window,u.toString())}
+ /* opendata d'abord ; s'il répond par une erreur (ex. « The router is not reachable »), la même demande part vers search.ch */
+ function odWithFailover(F,u,init,cat){var go=function(){window.__bd_schUsed=Date.now();rec('search.ch (secours) '+u.pathname,cat);return schFetch(F,u)};
+  return F.call(window,u.toString(),init).then(function(r){if(!r.ok)return go();return r.clone().json().then(function(j){if(j&&j.errors&&j.errors.length)return go();return r}).catch(function(){return r})}).catch(function(){return go()})}
  var F=window.fetch;
  if(F&&!F.__bdUse){var W=function(input,init){var url=typeof input==='string'?input:(input&&input.url);try{var u=new URL(url,location.href);/* tests d'une source précise (état, détection) : jamais redirigés */if(init&&(init.__bdNoRoute||init.method==='HEAD'||init.mode==='no-cors')){rec(u.toString(),catOf(u));return F.apply(this,arguments)}if(/^https?:/.test(u.protocol)&&u.hostname!==location.hostname){var R=resolve(u),cat=R.cat;
+   if(hostKind(u)==='opendata'){var _sc=schPlan(u,cat);if(_sc==='sch'){rec('search.ch '+u.pathname,cat);return schFetch(F,u)}if(_sc==='fail'){rec(u.toString(),cat);return odWithFailover(F,u,init,cat)}}
    if(R.mode==='none')return Promise.resolve(json(empty(R.hk,u)));
    if(R.mode==='same'){var nu=R.b+u.pathname+u.search;rec(nu,cat);return F.call(this,nu,init)}
    if(R.mode==='photon2nominatim'){var n1=ph2nomReq(u,R.b);rec(n1,cat);return F.call(this,n1).then(function(r){return r.json()}).then(function(d){return json(nom2phRes(d))})}
@@ -1703,8 +1746,7 @@ async function bdGeoPointMP(name){
 }
 async function bdResolve(q){
   try{
-    var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
-    if(src&&src.active===false)return null;
+    if(window.__bdSrcFor&&!window.__bdSrcFor("arrets"))return null;
     /* adresse / lieu / Plus Code : UNIQUEMENT l'arrêt le plus proche de ses coordonnées (jamais une recherche par texte : « Rue Centrale … Conthey » ≠ « Monthey, place centrale ») */
     var _mm=bdMemoFor(q),_isStop=!!(_mm&&_mm.kind==="stop"),_addrQ=!_isStop&&((_mm&&_mm.lat!=null&&_mm.kind&&_mm.kind!=="stop")||/\d/.test(q)||!!(window.bdPlusCode&&window.bdPlusCode.parse(q)));
     var _pt=null;try{_pt=await bdGeoPointMP(q)}catch(e){}
@@ -1722,8 +1764,7 @@ async function bdResolve(q){
 /* V2026h : résolution stricte pour Parcours effectifs — arrêt saisi uniquement, jamais le plus proche. */
 async function bdResolveStrict(q){
   try{
-    var src=(window.__bd_sources||[]).find(function(s){return s.id==="opendata-ch"});
-    if(src&&src.active===false)return null;
+    if(window.__bdSrcFor&&!window.__bdSrcFor("arrets"))return null;
     var mm=bdMemoFor(q);
     if(mm&&mm.kind==="stop"&&(mm.id||mm.stopId)){
       var _m={id:String(mm.id||mm.stopId),name:mm.name||String(q),lat:mm.lat!=null?+mm.lat:null,lon:mm.lon!=null?+mm.lon:null};bdStopInfoPut(_m);return _m;
@@ -3290,6 +3331,7 @@ return p("div",{className:"fixed inset-0 z-[60] bdt-wrap",children:[
 (function(){
 var DEFAULTS=[
 {id:'opendata-ch',name:'transport.opendata.ch',type:'Horaires / connexions',url:'https://transport.opendata.ch',active:true,status:'ok',core:true},
+{id:'searchch',name:'search.ch (horaires CFF / TPG)',type:'Horaires / connexions — secours automatique',url:'https://search.ch/timetable/api',active:true,status:'ok',core:true},
 {id:'photon',name:'Photon / Komoot',type:'Recherche lieux',url:'https://photon.komoot.io',active:true,status:'ok',core:true},
 {id:'nominatim',name:'OpenStreetMap Nominatim',type:'Géocodage / localisation',url:'https://nominatim.openstreetmap.org',active:true,status:'ok',core:true},
 {id:'pluscode',name:'Plus Codes (Google Open Location Code)',type:'Recherche lieux / adresses par Plus Code',url:'https://plus.codes',active:true,status:'ok',core:true},
