@@ -2394,6 +2394,13 @@ async function fetchLiveFromNearbyStops(stops, destName, tileOverride, fallbackD
 async function fetchLiveForTiles(tiles){
   return bdLiveRun((tiles||[]).map(function(t){return {stops:[{name:t.from,selected:true,kind:"stop",distanceKm:0}],destName:t.to,tileOverride:t}}));
 }
+/* V2026x : trajets AVEC CHANGEMENT depuis l'arrêt le plus proche de ma position (ajoutés aux résultats). Désactivable : localStorage bd_xfer_near = "0". */
+async function bdNearestXferStop(){
+  try{if(localStorage.getItem("bd_xfer_near")==="0")return null}catch(e){}
+  var me=bdMeXY();if(!me)return null;
+  try{var L=await bdNearStations(me,1);var s0=L&&L[0];if(!s0||!s0.name)return null;
+    return {name:String(s0.name),selected:true,kind:"stop",distanceKm:s0._d||0,_xfer:true}}catch(e){return null}
+}
 async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free){
   stops=stops||[];
   /* Par défaut : adresse/localisation du champ départ. Si des arrêts à proximité sont cochés : uniquement ceux-là. */
@@ -2402,6 +2409,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
     let _dep=String(fallbackDep!=null?fallbackDep:(departReload||"")).trim();
     if(_dep.length>=2) selected=[{name:_dep,selected:true,kind:"stop",distanceKm:0,isAddr:true}];
   }
+  if(destName&&!tileOverride){ let _xs=await bdNearestXferStop(); if(_xs) selected=selected.concat([_xs]); }
   if(!destName||selected.length===0){ return {win:[],full:[],rc:[],rl:[]}; }
   /* Dalles reconnues : si départ + destination correspondent à une dalle, seules ses lignes sont conservées. */
   /* free : trajets les plus rapides, sans filtrer par les lignes de « Mes parcours » (mode « Détecter n’importe où ») */let _tiles=free?[]:(window.__bd_tiles||fn||[]).slice();
@@ -2413,6 +2421,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
     let promises = selected.map(async function(st){
       try{
         let _conns=await bdGetConns(st.name,destName,function(){offline=true;},wide,(tileOverride&&tileOverride.via)||[]);
+        if(st._xfer) _conns=_conns.filter(function(c){return (c.transfers||0)>=1;});
         if(_conns.length===0&&st.isAddr){ let _loc=window.__bd_loc, _mem=bdMemoFor(st.name), _lat=_mem&&_mem.lat!=null?_mem.lat:(_loc&&_loc.lat), _lon=_mem&&_mem.lon!=null?_mem.lon:(_loc&&_loc.lon); if(_lat!=null&&_lon!=null){ let _nr=await getNearbyStations(_lat,_lon); if(_nr&&_nr.length){ let _tries=_nr.slice(0,5); let _sets=await Promise.all(_tries.map(function(ns){return bdGetConns(ns.name,destName,function(){offline=true;},wide)})); _conns=[].concat.apply([],_sets); } } }
         return _conns.map(function(c,idx){
           c=bdTrimWalkEnd(c);
@@ -2445,6 +2454,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
             transfers:c.transfers||0,
             passList:passList,
             _fromStop:st.name,
+            _xfer:!!st._xfer,
             _tileVia:(tileOverride&&tileOverride._alt)?(tileOverride.via||[]):null,
             _tileRef:(tileOverride&&tileOverride.hidden)?tileOverride.id:null,
             _dir:(tileOverride&&/_(midr|endr\d*)$/.test(String(tileOverride.id)))?"back":"fwd",
@@ -2456,6 +2466,8 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
       }catch(e){ offline=true; return []; }
     });
     let results=await Promise.all(promises);
+    /* doublons : un trajet avec changement déjà trouvé par la recherche principale n'est pas répété */
+    (function(){var _k=function(c){return (c.from&&c.from.departure)+"|"+(c.products||[]).join(",");};var _seen={};results.forEach(function(arr){(arr||[]).forEach(function(c){if(!c._xfer)_seen[_k(c)]=1;});});results=results.map(function(arr){return (arr||[]).filter(function(c){return !c._xfer||!_seen[_k(c)];});});})();
     results.forEach(function(arr){ all=all.concat(arr); });
     all.sort(function(a,b){ return (a._sort||0)-(b._sort||0); });
     /* Uniquement la fenêtre demandée (1 h par défaut, +30 min par clic). */
@@ -2489,6 +2501,7 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
       delete window.__bd_migrating[_t.id];
     }
     all=all.filter(function(conn){
+      if(conn._xfer) return true;
       let starts=[conn._fromStop,conn.from&&conn.from.station];
       let mine=_tiles.filter(function(t){
         if(_n(t.to)!==_dn&&!_same(t.to,destName)) return false;
