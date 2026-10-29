@@ -864,7 +864,7 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  /* chaîne automatique : chaque source active est essayée dans l'ordre jusqu'à obtenir des résultats */
  function chain(F,u,list,cat){var i=0,last=null;var next=function(){if(i>=list.length)return Promise.resolve(last||jres({connections:[],stationboard:[],stations:[]}));var k=list[i++];rec(k+' '+u.pathname,cat);
    var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):trFetch(F,u));
-   return pr.then(function(r){if(!r||!r.ok)return next();return r.clone().json().then(function(j){if(emptyOf(j,u.pathname)){last=r;return next()}if(k!=='opendata')window.__bd_altSrc={k:k,at:Date.now()};return r}).catch(function(){return next()})}).catch(function(){return next()})};return next()}
+   return pr.then(function(r){if(!r||!r.ok)return next();return r.clone().json().then(function(j){if(emptyOf(j,u.pathname)){last=r;return next()}if(k!=='opendata')window.__bd_altSrc={k:k,at:Date.now()};if(cat==='horaires'){window.__bd_curSrc={k:k,at:Date.now()};try{window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}}return r}).catch(function(){return next()})}).catch(function(){return next()})};return next()}
  function srcChain(cat){var od=odSrc(),r=routes()[cat],L=[];if(!od||od.active!==false)L.push('opendata');if(schOn())L.push('searchch');if(trOn())L.push('transitous');var pref=r==='searchch'?'searchch':(r==='transitous'?'transitous':null);if(pref&&L.indexOf(pref)>=0){L.splice(L.indexOf(pref),1);L.unshift(pref)}return L}
  var F=window.fetch;
  if(F&&!F.__bdUse){var W=function(input,init){var url=typeof input==='string'?input:(input&&input.url);try{var u=new URL(url,location.href);/* tests d'une source précise (état, détection) : jamais redirigés */if(init&&(init.__bdNoRoute||init.method==='HEAD'||init.mode==='no-cors')){rec(u.toString(),catOf(u));return F.apply(this,arguments)}if(/^https?:/.test(u.protocol)&&u.hostname!==location.hostname){var R=resolve(u),cat=R.cat;
@@ -5894,5 +5894,17 @@ html:root body #bd-v101-overlay section.bd-v101-sheet.bd-v101-sheet{width:100%!i
 run();setInterval(run,600)})();
 </script>
 <script id="bd-v305-veh-tiles-off">/* V305 : option « Détection de « Mes parcours » » supprimée et désactivée */try{localStorage.setItem("bd_veh_tiles","0")}catch(e){}</script>
+<div id="bd-cur-src" style="text-align:center;font:600 11px/1.4 system-ui,-apple-system,sans-serif;color:#71717a;padding:14px 12px calc(96px + env(safe-area-inset-bottom))"></div>
+<script id="bd-cur-src-js">(function(){
+ var N={opendata:'transport.opendata.ch',searchch:'search.ch',transitous:'Transitous'};
+ function act(id){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'[]');var s=L.find(function(x){return x.id===id});return id==='opendata-ch'?!(s&&s.active===false):!!(s&&s.active!==false)}catch(e){return false}}
+ function first(){var r={};try{r=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){}var L=[];if(act('opendata-ch'))L.push('opendata');if(act('searchch'))L.push('searchch');if(act('transitous'))L.push('transitous');var pf=r.horaires;if((pf==='searchch'||pf==='transitous')&&L.indexOf(pf)>=0)return pf;return L[0]||null}
+ function draw(){var el=document.getElementById('bd-cur-src');if(!el)return;var c=window.__bd_curSrc,k=c&&c.k||first();
+  if(!k){el.textContent='Source des horaires : aucune active (Gestion des sources)';return}
+  var t=c?new Date(c.at).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Zurich'}):'';
+  el.innerHTML='Source des horaires : <b style="color:'+(k==='opendata'?'#16a34a':'#f59e0b')+'">'+N[k]+'</b>'+(c?' · dernière recherche '+t:'')+(k!=='opendata'&&c?' (secours)':'');}
+ window.addEventListener('bd-cur-src',draw);window.addEventListener('bd-sources-change',draw);
+ document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);draw();
+})();</script>
 </body>
 </html>
