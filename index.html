@@ -2009,7 +2009,7 @@ async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromNa
 async function bdJoinFetchMulti(stops,target,xy){try{var A=(stops||[]).filter(function(x){return x&&x.name&&(x._d==null||x._d<=BD_NEAR_MAX_M/1000)}).slice(0,20);if(!A.length)return{full:[],xy:xy||null};var R=await Promise.all(A.map(function(st){return bdJoinFetch(st.name,target,xy).then(function(r){return{st:st,r:r}}).catch(function(){return{st:st,r:{full:[]}}})}));var out=[],seen={};R.forEach(function(z){(z.r.full||[]).forEach(function(S){var X=Object.assign({},S);X._gpsOrigin=z.st.name;X._walkMeters=Math.max(0,Math.round((z.st._d!=null?z.st._d:0)*1000));var k=bdNorm(X.from&&X.from.station)+"|"+bdDepartureMs(X)+"|"+(X.products||[]).join(",")+"|"+bdNorm(X.to&&X.to.station);if(!seen[k]){seen[k]=1;out.push(X)}})});out.sort(bdPrefSort);return{full:out,xy:xy||null}}catch(e){return{full:[],xy:xy||null}}}
 function bdApplyNetworkRules(list,start,minutes){try{/* Toutes les listes Prochains parcours, y compris celles détectées n’importe où sur le réseau, appliquent exactement les critères de Proximité et alertes. */return bdApplyProximityRules(list,start,minutes)}catch(e){return(list||[]).slice().sort(bdPrefSort)}}
 /* le trajet arrive exactement à cet arrêt (dernier arrêt du dernier véhicule = arrêt du bouton) */
-function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});var l=pl[pl.length-1];var ln=l?(typeof l.station==="string"?l.station:((l.station&&l.station.name)||"")):((S.to&&S.to.station)||"");return!!ln&&k(ln)===k(name)}catch(e){return false}}
+function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var pl=(S.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)});var l=pl[pl.length-1];var ln=l?(typeof l.station==="string"?l.station:((l.station&&l.station.name)||"")):((S.to&&S.to.station)||"");if(ln&&(k(ln)===k(name)||bdSameName(ln,name)))return true;/* tout le réseau : un train/tram peut s’arrêter à un quai voisin, puis marche jusqu’à l’arrêt favori */var to=(S.to&&S.to.station)||"";to=typeof to==="string"?to:(to.name||"");return!!to&&(k(to)===k(name)||bdSameName(to,name))}catch(e){return false}}
 /* « Détecter n'importe où » : seule destination utilisée = le lieu du bouton.
    Arrêt → uniquement les trajets qui arrivent exactement à cet arrêt.
    Adresse / POI → uniquement les trajets qui arrivent à l'arrêt le plus proche de ce lieu (puis marche). */
@@ -2295,7 +2295,7 @@ function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function
   var ref=start!=null?Math.max(start,Date.now()-60000):Date.now(),me=bdMeXY();
   if(me){
     /* 1. arrêt de départ à 1000 m maximum */
-    L=L.filter(function(S){return bdAccessM(S)<=BD_NEAR_MAX_M});
+    /* plus de limite de distance à pied jusqu’au premier véhicule (gares, trams) */
     /* 2. arrêt atteignable à pied avant le départ */
     /* règle « arrêt atteignable » supprimée (et sa marge) */
     /* 3. même ligne : seulement l'arrêt le plus proche de ma position */
