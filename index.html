@@ -2034,11 +2034,11 @@ async function bdViaCombos(fromName,target){try{
   var rb=await fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(bdExact(fromName))+"&limit=60&datetime="+encodeURIComponent(dt));if(!rb.ok)return[];var jb=await rb.json();
   var G={};(jb.stationboard||[]).forEach(function(b){var n=String(b.number||"").trim(),ln=(n&&!/^\d{4,}$/.test(n))?n:String(b.name||((b.category||"")+" "+n)).trim();var key=bdNormLine(ln).toLowerCase()+"|"+bdNorm(b.to);if(G[key])return;var pl=(b.passList||[]).slice(1).filter(function(x){return x&&x.station&&x.station.name&&x.station.coordinate&&x.station.coordinate.x!=null});
     if(pl.some(function(x){return bdNorm(x.station.name)===bdNorm(target)}))return;/* ligne directe : déjà couverte */
-    var cand=pl.map(function(x){return{n:x.station.name,d:zt(T,{lat:+x.station.coordinate.x,lon:+x.station.coordinate.y})}}).filter(function(x){return x.d<=2}).sort(function(a,b){return a.d-b.d}).slice(0,2);
+    var cand=pl.map(function(x){return{n:x.station.name,d:zt(T,{lat:+x.station.coordinate.x,lon:+x.station.coordinate.y})}}).filter(function(x){return x.d<=2.5}).sort(function(a,b){return a.d-b.d}).slice(0,5);/* jusqu'à 5 arrêts de correspondance par ligne (ex. Rive pour le 8) */
     if(cand.length)G[key]={line:bdNormLine(ln).toLowerCase(),via:cand.map(function(x){return x.n})}});
-  var jobs=[];Object.keys(G).slice(0,6).forEach(function(k){G[k].via.forEach(function(v){jobs.push({line:G[k].line,via:v})})});
+  var jobs=[];Object.keys(G).slice(0,10).forEach(function(k){G[k].via.forEach(function(v){jobs.push({line:G[k].line,via:v})})});
   var seenV={},out=[];
-  await Promise.all(jobs.map(async function(jo){var vk=jo.via;if(seenV[vk])return;seenV[vk]=1;try{var tov={id:"via_"+bdNorm(fromName)+"_"+bdNorm(vk),from:"__via__",to:"__via__",via:[vk],hidden:true,routes:[],lines:[]};var r=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,tov,"",false,true);((r&&r.full)||[]).forEach(function(S){if(bdJoinEndsAt(S,target))out.push(Object.assign({},S,{_tileRef:null,_viaCombo:vk}))})}catch(e){}}));
+  jobs=jobs.filter(function(jo){if(seenV[jo.via])return false;seenV[jo.via]=1;return true}).slice(0,14);seenV={};await Promise.all(jobs.map(async function(jo){var vk=jo.via;if(seenV[vk])return;seenV[vk]=1;try{var tov={id:"via_"+bdNorm(fromName)+"_"+bdNorm(vk),from:"__via__",to:"__via__",via:[vk],hidden:true,routes:[],lines:[]};var r=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,tov,"",false,true);((r&&r.full)||[]).forEach(function(S){if(bdJoinEndsAt(S,target))out.push(Object.assign({},S,{_tileRef:null,_viaCombo:vk}))})}catch(e){}}));
   W[ck]={at:Date.now(),L:out};return out.slice()}catch(e){return[]}}
 async function bdJoinFetch0(fromName,target,xy){
   /* Destination de « Mes parcours » = arrêt, adresse ou POI.
