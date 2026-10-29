@@ -2023,6 +2023,23 @@ function bdJoinEndsAt(S,name){try{var k=function(x){return String(x||"").toLower
 /* « Détecter n'importe où » : seule destination utilisée = le lieu du bouton.
    Arrêt → uniquement les trajets qui arrivent exactement à cet arrêt.
    Adresse / POI → uniquement les trajets qui arrivent à l'arrêt le plus proche de ce lieu (puis marche). */
+/* Correspondances que la recherche d'itinéraires ne propose pas (ex. 8 puis 7 / 17 à Rive) :
+   pour chaque ligne qui part de l'arrêt et ne dessert pas la destination, on cherche les trajets « via » ses arrêts
+   les plus proches de la destination (2 par ligne, à 2 km max), puis on garde ceux qui commencent bien par cette ligne. */
+async function bdViaCombos(fromName,target){try{
+  var W=window.__bd_viaC||(window.__bd_viaC={}),ck=bdNorm(fromName)+">"+bdNorm(target),c0=W[ck];if(c0&&Date.now()-c0.at<120000)return c0.L.slice();
+  var T=bdJoinXY(target);if(!T){try{var r0=await fetch("https://transport.opendata.ch/v1/locations?type=station&query="+encodeURIComponent(target));var j0=await r0.json();var x0=(j0.stations||[]).find(function(x){return x&&x.coordinate&&x.coordinate.x!=null&&bdNorm(x.name)===bdNorm(target)})||(j0.stations||[])[0];if(x0&&x0.coordinate)T={lat:+x0.coordinate.x,lon:+x0.coordinate.y}}catch(e){}}
+  if(!T)return[];
+  var dt=new Date(bdTripDTMs()).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);
+  var rb=await fetch("https://transport.opendata.ch/v1/stationboard?station="+encodeURIComponent(bdExact(fromName))+"&limit=60&datetime="+encodeURIComponent(dt));if(!rb.ok)return[];var jb=await rb.json();
+  var G={};(jb.stationboard||[]).forEach(function(b){var n=String(b.number||"").trim(),ln=(n&&!/^\d{4,}$/.test(n))?n:String(b.name||((b.category||"")+" "+n)).trim();var key=bdNormLine(ln).toLowerCase()+"|"+bdNorm(b.to);if(G[key])return;var pl=(b.passList||[]).slice(1).filter(function(x){return x&&x.station&&x.station.name&&x.station.coordinate&&x.station.coordinate.x!=null});
+    if(pl.some(function(x){return bdNorm(x.station.name)===bdNorm(target)}))return;/* ligne directe : déjà couverte */
+    var cand=pl.map(function(x){return{n:x.station.name,d:zt(T,{lat:+x.station.coordinate.x,lon:+x.station.coordinate.y})}}).filter(function(x){return x.d<=2}).sort(function(a,b){return a.d-b.d}).slice(0,2);
+    if(cand.length)G[key]={line:bdNormLine(ln).toLowerCase(),via:cand.map(function(x){return x.n})}});
+  var jobs=[];Object.keys(G).slice(0,6).forEach(function(k){G[k].via.forEach(function(v){jobs.push({line:G[k].line,via:v})})});
+  var seenV={},out=[];
+  await Promise.all(jobs.map(async function(jo){var vk=jo.via;if(seenV[vk])return;seenV[vk]=1;try{var tov={id:"via_"+bdNorm(fromName)+"_"+bdNorm(vk),from:"__via__",to:"__via__",via:[vk],hidden:true,routes:[],lines:[]};var r=await bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],target,tov,"",false,true);((r&&r.full)||[]).forEach(function(S){if(bdJoinEndsAt(S,target))out.push(Object.assign({},S,{_tileRef:null,_viaCombo:vk}))})}catch(e){}}));
+  W[ck]={at:Date.now(),L:out};return out.slice()}catch(e){return[]}}
 async function bdJoinFetch0(fromName,target,xy){
   /* Destination de « Mes parcours » = arrêt, adresse ou POI.
      Arrêt → trajets qui arrivent exactement à cet arrêt.
@@ -2030,7 +2047,7 @@ async function bdJoinFetch0(fromName,target,xy){
   try{
     var dm=bdMemoFor(target),isPlace=!!(dm&&dm.kind&&dm.kind!=="stop")||bdLooksAddress(target);
     var run=function(dest){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],dest,null,"",true,true).then(function(r){return((r&&r.full)||[]).slice()}).catch(function(){return[]})};
-    if(!isPlace){var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
+    if(!isPlace){var _vc=bdViaCombos(fromName,target);var L=(await run(target)).filter(function(S){return bdJoinEndsAt(S,target)});try{L=L.concat(await _vc)}catch(e){}if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
     if(!xy&&dm&&dm.lat!=null&&isFinite(+dm.lat))xy={lat:+dm.lat,lon:+dm.lon};
     if(!xy){try{xy=await bdGeoPoint(target)}catch(e){}}
     if(!xy){xy=await bdGeoNear(target);/* mémorisé pour les prochaines recherches */if(xy){try{var _mm=bdMemoStore();_mm[bdMemoKey(target)]={title:target,addr:target,lat:xy.lat,lon:xy.lon,kind:"poi"};bdMemoSave()}catch(e){}}}
