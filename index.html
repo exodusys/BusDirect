@@ -1735,7 +1735,7 @@ async function bdGetConns(fromName,toName,onErr,wide,via){
   var FP=null,TP=null;try{FP=await bdGeoPoint(fromName)}catch(e){}try{TP=await bdGeoPoint(toName)}catch(e){}
   var FE=await bdEndpoint(fromName),TE=await bdEndpoint(toName);
   var near=function(st,pt){try{if(!pt||!st)return true;var c=st.coordinate||{};if(c.x==null||c.y==null)return true;return zt(pt,{lat:+c.x,lon:+c.y})<=5}catch(e){return true}};
-  var keep=function(L){return(L||[]).filter(function(c){try{c._dbgDest=toName}catch(e){}(window.bdDbg||function(){})(c);var ok=near(c.to&&c.to.station,TP)&&near(c.from&&c.from.station,FP);if(!ok)(window.bdDbg||function(){})(c,'départ ou arrivée à plus de 5 km du lieu');return ok})};
+  var keep=function(L){return(L||[]).filter(function(c){return near(c.to&&c.to.station,TP)&&near(c.from&&c.from.station,FP)})};
   var tryAll=async function(A,B){for(var a=0;a<A.length&&!out.length;a++)for(var b=0;b<B.length&&!out.length;b++){out=keep(await bdGetConns0(A[a],B[b],function(){failed=true},wide,via))}};
   await tryAll(FE,TE);
   if(!out.length&&(FP||TP)){var _nm=async function(pt,E){if(!pt)return E;try{var L=await bdNearStations(pt,2);var n=L.map(function(x){return x.name}).filter(Boolean);return n.length?n:E}catch(e){return E}};failed=false;await tryAll(await _nm(FP,FE),await _nm(TP,TE))}
@@ -2164,10 +2164,6 @@ function bdBoardFix(S){try{if(!S||!S.passList)return S;var pl=S.passList,i=-1;fo
 async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromName,target,xy);try{__r.full=(__r.full||[]).map(bdBoardFix)}catch(e){}return __r}
 /* Réseau complet : depuis la position GPS, interroger plusieurs arrêts de transport proches issus de la source active.
    Aucun rayon « Mes parcours » ne bloque ces résultats : l’utilisateur peut être n’importe où sur le réseau. */
-/* ===== Relevé temporaire : pourquoi un trajet reçu n'apparaît pas dans la liste du bouton ===== */
-function bdDbgKey(c){try{var d=(c.from&&(c.from.departure||c.from.actualMs))||"";var t=new Date(typeof d==="number"?d:d).getTime();return Math.round(t/60000)+"|"+(c.products||[]).map(function(x){return String(x).replace(/\s+/g,"")}).join(">")}catch(e){return""}}
-function bdDbg(c,why,extra,dest){try{if(!window.__bd_dbgOn)return;dest=bdNorm(dest||c._dbgDest||c.destQuery||'');if(!dest)return;var A=window.__bd_dbg||(window.__bd_dbg={});var D=A[dest]||(A[dest]={});var k=bdDbgKey(c);if(!k)return;var o=D[k];if(!o){var d=c.from&&c.from.departure;o=D[k]={t:d?new Date(d).toLocaleTimeString("fr-CH",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Zurich"}):"?",p:(c.products||[]).join(" › "),from:(c.from&&c.from.station&&(c.from.station.name||c.from.station))||"",last:bdLastVehStop(c),why:null}}if(why&&!o.why){o.why=why+(extra?" ("+extra+")":"")}}catch(e){}}
-window.__bd_dbgOn=true;window.bdDbg=bdDbg;window.bdDbgKey=bdDbgKey;
 async function bdJoinFetchMulti(stops,target,xy){try{var A=(stops||[]).filter(function(x){return x&&x.name&&(x._d==null||x._d<=BD_NEAR_MAX_M/1000)}).slice(0,4);if(!A.length)return{full:[],xy:xy||null};var R=await Promise.all(A.map(function(st){return bdJoinFetch(st.name,target,xy).then(function(r){return{st:st,r:r}}).catch(function(){return{st:st,r:{full:[]}}})}));var out=[],seen={};R.forEach(function(z){(z.r.full||[]).forEach(function(S){var X=Object.assign({},S);X._gpsOrigin=z.st.name;X._walkMeters=Math.max(0,Math.round((z.st._d!=null?z.st._d:0)*1000));var k=bdNorm(X.from&&X.from.station)+"|"+bdDepartureMs(X)+"|"+(X.products||[]).join(",")+"|"+bdNorm(X.to&&X.to.station);if(!seen[k]){seen[k]=1;out.push(X)}})});out.sort(bdPrefSort);return{full:out,xy:xy||null}}catch(e){return{full:[],xy:xy||null}}}
 function bdApplyNetworkRules(list,start,minutes){var _r=bdApplyNetworkRules0(list,start,minutes);try{if(!_r.length&&(list||[]).length&&start!=null&&minutes!=null){_r=bdApplyNetworkRules0(list,start,7*1440).slice(0,3)}}catch(e){}return _r}
 function bdApplyNetworkRules0(list,start,minutes){try{/* Toutes les listes Prochains parcours, y compris celles détectées n’importe où sur le réseau, appliquent exactement les critères de Proximité et alertes. */return bdApplyProximityRules(list,start,minutes)}catch(e){return(list||[]).slice().sort(bdPrefSort)}}
@@ -2200,7 +2196,7 @@ async function bdJoinFetch0(fromName,target,xy){
   try{
     var dm=bdMemoFor(target),isPlace=!!(dm&&dm.kind&&dm.kind!=="stop")||bdLooksAddress(target);
     var run=function(dest){return bdLiveCore([{name:fromName,selected:true,kind:"stop",distanceKm:0}],dest,null,"",true,true).then(function(r){return((r&&r.full)||[]).slice()}).catch(function(){return[]})};
-    /* arrêt saisi dans « Mes parcours » : uniquement les trajets qui arrivent à cet arrêt */if(!isPlace){var L=bdDestFilter(await run(target),target,function(S,w,x){(window.bdDbg||function(){})(S,w,x)});if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
+    /* arrêt saisi dans « Mes parcours » : uniquement les trajets qui arrivent à cet arrêt */if(!isPlace){var L=bdDestFilter(await run(target),target);if(L.length||(dm&&dm.kind==="stop"))return{full:L,xy:xy||bdJoinXY(target)}}
     if(!xy&&dm&&dm.lat!=null&&isFinite(+dm.lat))xy={lat:+dm.lat,lon:+dm.lon};
     if(!xy){try{xy=await bdGeoPoint(target)}catch(e){}}
     if(!xy){xy=await bdGeoNear(target);/* mémorisé pour les prochaines recherches */if(xy){try{var _mm=bdMemoStore();_mm[bdMemoKey(target)]={title:target,addr:target,lat:xy.lat,lon:xy.lon,kind:"poi"};bdMemoSave()}catch(e){}}}
@@ -2272,8 +2268,7 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
     /* « Prochains parcours » vers l'arrêt choisi : cartes complètes (heure de départ en grand), triées par heure de départ */
     var _jw=bdLocalWindow("join",k),_hEnd=now+_jw.minutes*60000;
     var list=(function(){var L=(R&&R.key===k?R.list:[]).map(function(S){try{S._walk=bdTripWalkMin(S);S._walkMeters=bdWalkMeters(S)}catch(e){}return S});L=bdApplyNetworkRules(L,now,_jw.minutes);var u={},o=[];L.forEach(function(S){var ms=S._sort||(S.from&&S.from.actualMs)||0,min=Math.round(ms/60000),lg=String((S.products||[])[0]||"").replace(/[^\dA-Za-z]/g,""),fr=bdNorm(S.from&&S.from.station),to=bdNorm((S.to&&S.to.station)||J.target),kk=min+"|"+lg+"|"+fr+"|"+to;if(u[kk])return;u[kk]=1;o.push(S)});o=_jw.cm?o.slice(0,_jw.count):o;if(R&&R.key===k){(window.__bd_btnLines=window.__bd_btnLines||{})[bdNorm(J.target)]={at:Date.now(),l:bdArrLinesOf(o),v:4}}return bdWithWalk(o,String(J.target),_jXY)})();
-    footer=(function(){var f0=bdWindowFooter(_jw,rer);if(!window.__bd_dbgOn)return f0;var D=(window.__bd_dbg||{})[bdNorm(J.target)]||{},shown={};list.forEach(function(S){shown[(window.bdDbgKey||function(){return''})(S)]=1});var ks=Object.keys(D).sort();if(!ks.length)return f0;
-      return p("div",{children:[f0,p("div",{className:"mt-3 p-3 rounded-[14px] border border-dashed border-amber-500/60 text-[11px] leading-snug",children:[c("div",{className:"font-bold mb-1",children:"Relevé temporaire — trajets reçus vers « "+J.target+" » ("+ks.length+")"}),ks.slice(0,80).map(function(k){var o=D[k],ok=shown[k];return c("div",{style:{color:ok?"#16a34a":(o.why?"#f59e0b":"#a1a1aa")},children:(ok?"✓ affiché":"✗ "+(o.why||"écarté (autre)"))+" · "+o.t+" · "+o.p+" · depuis « "+o.from+" » · descend à « "+o.last+" »"},k)})]})]})})();body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?("Aucun départ dans la période sélectionnée."+((window.__bd_placeStop||{})[bdNorm(J.target)]?" (arrêt le plus proche du lieu : "+window.__bd_placeStop[bdNorm(J.target)]+")":"")):"Recherche des prochains parcours…"})}}
+    footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k)?("Aucun départ dans la période sélectionnée."+((window.__bd_placeStop||{})[bdNorm(J.target)]?" (arrêt le plus proche du lieu : "+window.__bd_placeStop[bdNorm(J.target)]+")":"")):"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body,footer]})}catch(e){return null}}
 /* Marche du trajet (sans la marche jusqu'à l'arrêt de départ) : tronçons à pied du trajet + marche finale de l'arrêt d'arrivée jusqu'à l'adresse / au POI saisi dans « Mon parcours » */
 function bdTripWalkMin(S){try{var w=0;(S.passList||[]).forEach(function(x){if(x&&x.type==="walk")w+=(+x.walkMin||0)});
@@ -2480,8 +2475,7 @@ function bdBoardName(S){return bdNorm(S&&(S._fromStop||(S.from&&S.from.station))
 function bdTransportMs(S){try{var r=bdDurationMs(S);if(!isFinite(r))r=0;return bdTimeWalkMs(bdAccessM(S))+r+bdTimeWalkMs(bdFinalWalkMeters(S))}catch(e){return Infinity}}
 /* « Les plus rapides » désactivé complètement */function bdFastOn(){return false}
 function bdFastBtn(){try{bdBindListSettings()}catch(e){}var on=bdFastOn();return c("button",{type:"button","aria-label":"Les plus rapides","aria-pressed":on?"true":"false",title:on?"Les plus rapides : activé":"Les plus rapides : désactivé",onClick:function(){try{localStorage.setItem("bd_fastest",on?"0":"1")}catch(e){}try{window.dispatchEvent(new Event("bd-list-settings"))}catch(e){}},style:{marginLeft:"auto",marginRight:8,boxShadow:on?"0 0 0 2px #f59e0b":"none"},className:"bd-fav-glass"+(on?"":" bd-fav-grey"),children:c("span",{style:{fontSize:17,lineHeight:1,filter:on?"none":"grayscale(1)",opacity:on?1:.55},children:"⚡️"})})}
-function bdApplyV400(list,start,minutes,noFast){var _in=(list||[]).slice(),_out=bdApplyV400_0(list,start,minutes,noFast);try{if(window.__bd_dbgOn){var ok={};_out.forEach(function(S){ok[(window.bdDbgKey||function(){return''})(S)]=1});var _end=start!=null&&minutes!=null?start+minutes*60000:null;_in.forEach(function(S){var k=(window.bdDbgKey||function(){return''})(S);if(ok[k])return;var t=bdDepartureMs(S);(window.bdDbg||function(){})(S,(_end!=null&&(t>_end||t<start-60000))?'hors de la période affichée':'même ligne prise à un arrêt plus proche, ou doublon')})}}catch(e){}return _out}
-function bdApplyV400_0(list,start,minutes,noFast){var L=(list||[]).filter(function(S){return S&&!S._isWalk}),_fast=!noFast&&bdFastOn(),_end=(start!=null&&minutes!=null)?start+minutes*60000:null;/* « Les plus rapides » activé : pas de coupure de fenêtre ici (complétée plus bas) */if(start!=null&&minutes!=null){/* le départ reste 1 min après l'heure, pour afficher « Le bus arrive » en rouge à la fin du décompte */var _st=start-60000;L=(_fast||(noFast&&bdFastOn()))?L.filter(function(S){var t=bdDepartureMs(S);return t>=_st}):bdFilterList(L,_st,minutes+1)}
+function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function(S){return S&&!S._isWalk}),_fast=!noFast&&bdFastOn(),_end=(start!=null&&minutes!=null)?start+minutes*60000:null;/* « Les plus rapides » activé : pas de coupure de fenêtre ici (complétée plus bas) */if(start!=null&&minutes!=null){/* le départ reste 1 min après l'heure, pour afficher « Le bus arrive » en rouge à la fin du décompte */var _st=start-60000;L=(_fast||(noFast&&bdFastOn()))?L.filter(function(S){var t=bdDepartureMs(S);return t>=_st}):bdFilterList(L,_st,minutes+1)}
   var ref=start!=null?Math.max(start,Date.now()-60000):Date.now(),me=bdMeXY();
   if(me){
     /* 1. arrêt de départ à 1000 m maximum */
@@ -2640,9 +2634,9 @@ async function bdLiveCore(stops, destName, tileOverride, fallbackDep, wide, free
     all.sort(function(a,b){ return (a._sort||0)-(b._sort||0); });
     /* Uniquement la fenêtre demandée (1 h par défaut, +30 min par clic). */
     let _baseMs=bdTripDTMs(), _hMs=_baseMs+(window.__bd_horizon||60)*60000;
-    all=all.filter(function(c){var ok=c._sort>=_baseMs-60000;if(!ok)(window.bdDbg||function(){})(c,'déjà parti');return ok;});
+    all=all.filter(function(c){return c._sort>=_baseMs-60000;});
     /* destination = arrêt saisi : le dernier véhicule doit s'arrêter à cet arrêt (adresse / POI : arrêt le plus proche, contrôlé ailleurs) */
-    if(!bdIsPlaceDest(destName)){all=bdDestFilter(all,destName,function(c,w,x){(window.bdDbg||function(){})(c,w,x||('descend à « '+bdLastVehStop(c)+' »'))})}
+    if(!bdIsPlaceDest(destName)){all=bdDestFilter(all,destName)}
     /* Filtre strict : uniquement les lignes (bus/train) sélectionnées dans la ou les dalles reconnues. */
     let _n=function(x){return String(x||"").trim().toLowerCase().replace(/\s+/g," ");};
     let _same=function(a,b){a=_n(a);b=_n(b);if(!a||!b)return false;return a===b||(a.length>=3&&b.length>=3&&(a.indexOf(b)>=0||b.indexOf(a)>=0));};
@@ -2869,7 +2863,7 @@ var prep=function(k,c){
   var h=G.pp[k];if(h&&h.ref===c.passList)return h.P;
   var st=(c.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)&&x.lat!=null&&x.lon!=null});
   var P=[];
-  st.forEach(function(x){var dl=(x.delay||0)*60000;var a=x.arrival?new Date(x.arrival).getTime()+dl:null;var d=x.departure?new Date(x.departure).getTime()+dl:null;if(a==null)a=d;if(d==null)d=a;if(a==null||isNaN(a)||isNaN(d))return;P.push({lat:x.lat,lon:x.lon,a:a,d:Math.max(a,d)})});
+  var _cd=0;st.forEach(function(x){if(x.delay)_cd=x.delay;var dl=(x.delay||_cd||0)*60000;var a=x.arrival?new Date(x.arrival).getTime()+dl:null;var d=x.departure?new Date(x.departure).getTime()+dl:null;if(a==null)a=d;if(d==null)d=a;if(a==null||isNaN(a)||isNaN(d))return;P.push({lat:x.lat,lon:x.lon,a:a,d:Math.max(a,d)})});
   P=P.length>=2?P:null;G.pp[k]={ref:c.passList,P:P};return P};
 var posAt=function(P,t){
   var n=P.length;if(t<P[0].d-45000||t>P[n-1].a+45000)return null;
@@ -2886,11 +2880,11 @@ var discover=async function(u){
     var r=await fetch("https://transport.opendata.ch/v1/locations?x="+u.lat+"&y="+u.lon+"&type=station");if(!r.ok)return;
     var j=await r.json();
     var sts=(j.stations||[]).filter(function(s){return s&&s.id&&(s.distance==null||s.distance<=900)}).slice(0,3);
-    var dt=new Date(Date.now()-10*60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);
+    var dt=new Date(Date.now()-30*60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"}).slice(0,16);
     var D0=window.__bd_disc||(window.__bd_disc={});
     await Promise.all(sts.map(async function(s){
       try{
-        var r2=await fetch("https://transport.opendata.ch/v1/stationboard?id="+encodeURIComponent(s.id)+"&limit=40&datetime="+encodeURIComponent(dt));if(!r2.ok)return;
+        var r2=await fetch("https://transport.opendata.ch/v1/stationboard?id="+encodeURIComponent(s.id)+"&limit=80&datetime="+encodeURIComponent(dt));if(!r2.ok)return;
         var jb=await r2.json();
         (jb.stationboard||[]).forEach(function(b){
           var raw=b.passList||[];if(raw.length<2)return;
@@ -2941,7 +2935,7 @@ var ev=function(){
           /* capteur d'orientation : quand le bus tourne (≥ 30°), le téléphone doit tourner pareil (± 60°), sinon ce n'est pas ce véhicule */
           var _hAgree=false;try{var M2=window.__bdMotion,_tu=localStorage.getItem("bd_motion_turn")!=="0";if(_tu&&mo&&mo.enabled&&M2&&M2.heading&&w.length>=5){var tA=u0.t,tD=uN.t,tB=tA+(tD-tA)/3,tC=tA+2*(tD-tA)/3;var pA=posAt(P,tA),pB=posAt(P,tB),pC=posAt(P,tC),pD=posAt(P,tD);if(pA&&pB&&pC&&pD&&D(pA,pB)>=30&&D(pC,pD)>=30){var brg=function(a,b){var r=Math.PI/180,y=Math.sin((b.lon-a.lon)*r)*Math.cos(b.lat*r),x=Math.cos(a.lat*r)*Math.sin(b.lat*r)-Math.sin(a.lat*r)*Math.cos(b.lat*r)*Math.cos((b.lon-a.lon)*r);return(Math.atan2(y,x)/r+360)%360};var an=function(a,b){return((a-b+540)%360)-180};var vT=an(brg(pC,pD),brg(pA,pB));var h1=M2.heading(tA,tB),h2=M2.heading(tC,tD);if(h1!=null&&h2!=null&&Math.abs(vT)>=30){var hT=an(h2,h1);if(Math.abs(an(hT,vT))>60)return;_hAgree=true}}}}catch(e){}/* hors « Mes parcours » seulement si l'option « tous les trajets » est activée (et vitesse de véhicule) *//* activée : n'importe quel bus, tram ou train repéré peut être détecté */
           var bs=null;
-          [0,-30000,30000,-60000,60000,-90000,90000,-120000,120000].forEach(function(sh){
+          [0,-30000,30000,-60000,60000,-90000,90000,-120000,120000,-180000,180000,-240000,240000,-300000,300000,-360000,360000].forEach(function(sh){
             var ds=[],ok=0,bad=!1;
             for(var i=0;i<w.length;i++){var vp=posAt(P,w[i].t+sh);if(!vp){bad=!0;break}var d=D(w[i],vp);var ti=Math.min(Math.max(tol,1.5*w[i].acc),2.5*tol);ds.push(d);if(d<=ti)ok++}
             if(bad||ok/w.length<.75)return;
@@ -2952,8 +2946,20 @@ var ev=function(){
         })
       }
     }
+    /* Méthode 2 (robuste aux retards et au tracé) : suite des arrêts que je longe en roulant.
+       Deux arrêts successifs d'un même trajet, passés dans le bon ordre, à vitesse de véhicule, à ± 8 min de l'horaire → je suis dans ce véhicule. */
+    if(!best){try{var _lf2=fx[fx.length-1];if(_lf2&&now-_lf2.t<=25000&&(_lf2.acc||0)<=150){
+      var _nm=function(x){return String(x.station&&x.station.name?x.station.name:(x.station||"")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim()};var near=null,nd=Infinity;
+      Object.keys(all).forEach(function(k){(all[k].passList||[]).forEach(function(x){if(!x||(x.type&&x.type!=="stop")||x.lat==null)return;var d=D(_lf2,{lat:+x.lat,lon:+x.lon});if(d<nd){nd=d;near={n:_nm(x),lat:+x.lat,lon:+x.lon}}})});
+      G.passed=(G.passed||[]).filter(function(q){return now-q.t<=600000});
+      if(near&&nd<=Math.max(70,Math.min(120,_lf2.acc||0))){var lp=G.passed[G.passed.length-1];if(!lp||lp.n!==near.n)G.passed.push({n:near.n,t:_lf2.t,lat:near.lat,lon:near.lon});else lp.t2=_lf2.t}
+      var PS=G.passed;if(PS.length>=2){var q1=PS[PS.length-2],q2=PS[PS.length-1];var t1=q1.t2||q1.t,t2=q2.t;var dd=D(q1,q2),sp=dd/Math.max(1,(t2-t1)/1000)*3.6;
+        if(t2>t1&&now-t2<=180000&&dd>=150&&sp>=9&&sp<=160){var pb=null;
+          Object.keys(all).forEach(function(k){var L=(all[k].passList||[]).filter(function(x){return x&&(!x.type||x.type==="stop")});var cd=0,T=L.map(function(x){if(x.delay)cd=x.delay;var tt=x.departure||x.arrival;return tt?new Date(tt).getTime()+(x.delay||cd||0)*60000:null});
+            for(var i=0;i<L.length;i++){if(_nm(L[i])!==q1.n)continue;for(var j=i+1;j<=Math.min(L.length-1,i+4);j++){if(_nm(L[j])!==q2.n)continue;if(T[i]==null||T[j]==null)continue;var e1=Math.abs(T[i]-t1),e2=Math.abs(T[j]-t2);if(e1>480000||e2>480000)continue;var sc=(e1+e2)/2000+(j-i-1)*30;if(!pb||sc<pb.s)pb={k:k,s:sc}}}});
+          if(pb)best=pb}}}}catch(e){}}
     /* sorti du véhicule : ma position s'éloigne nettement du trajet du bus → bandeau retiré tout de suite */
-    if(!best&&G.conf&&all[G.conf.k]&&fx.length){try{var _P=prep(G.conf.k,all[G.conf.k]),_lf=fx[fx.length-1],_vp=null,_dm=Infinity;if(_P)[0,-60000,60000,-120000,120000].forEach(function(sh){var q=posAt(_P,_lf.t+sh);if(q){var dd=D(_lf,q);if(dd<_dm)_dm=dd}});if(_P&&isFinite(_dm)&&_dm>Math.max(2.5*tol,3*(_lf.acc||0)))G.conf=null}catch(e){}}
+    if(!best&&G.conf&&all[G.conf.k]&&fx.length){try{var _P=prep(G.conf.k,all[G.conf.k]),_lf=fx[fx.length-1],_vp=null,_dm=Infinity;if(_P)[0,-60000,60000,-120000,120000,-240000,240000,-360000,360000].forEach(function(sh){var q=posAt(_P,_lf.t+sh);if(q){var dd=D(_lf,q);if(dd<_dm)_dm=dd}});if(_P&&isFinite(_dm)&&_dm>Math.max(2.5*tol,3*(_lf.acc||0)))G.conf=null}catch(e){}}
     if(best){G.conf={k:best.k,since:(G.conf&&G.conf.k===best.k)?G.conf.since:w[0].t,lastOk:now}}
     else if(G.conf&&(now-G.conf.lastOk>((mo&&mo.enabled&&mo.state==="vehicle")?120000:90000)||!all[G.conf.k]))G.conf=null;
     setBdFollowK(function(p){var c=G.conf;if(!c)return p?null:p;return(p&&p.k===c.k)?p:{k:c.k,since:c.since}});
