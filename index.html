@@ -863,16 +863,12 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  function emptyOf(j,p){if(!j)return true;if(j.errors&&j.errors.length)return true;if(/connections/.test(p))return !(j.connections&&j.connections.length);if(/stationboard/.test(p))return !(j.stationboard&&j.stationboard.length);if(/locations/.test(p))return !(j.stations&&j.stations.length);return false}
  /* chaîne automatique : chaque source active est essayée dans l'ordre jusqu'à obtenir des résultats */
  function chain(F,u,list,cat){var i=0,last=null;var next=function(){if(i>=list.length)return Promise.resolve(last||jres({connections:[],stationboard:[],stations:[]}));var k=list[i++];rec(k+' '+u.pathname,cat);
-   var pr=k==='opendata'?F.call(window,u.toString()):(k.indexOf('od@')===0?F.call(window,k.slice(3)+u.pathname+u.search):(k==='searchch'?schFetch(F,u):trFetch(F,u)));
+   var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):trFetch(F,u));
    return pr.then(function(r){if(!r||!r.ok)return next();return r.clone().json().then(function(j){if(emptyOf(j,u.pathname)){last=r;return next()}if(k!=='opendata')window.__bd_altSrc={k:k,at:Date.now()};if(cat==='horaires'){window.__bd_curSrc={k:k,at:Date.now()};try{window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}}return r}).catch(function(){return next()})}).catch(function(){return next()})};return next()}
- function srcChain(cat){/* toutes les sources horaires en direct actives de « Gestion des sources » */var od=odSrc(),r=routes()[cat],L=[];if(!od||od.active!==false)L.push('opendata');
-  srcList().forEach(function(x){if(!x||x.active===false||x.id==='opendata-ch'||x.catalog)return;var ks=kindsOf(x);if(ks.indexOf('opendata')>=0){var b=base(x);if(b&&!/transport\.opendata\.ch/.test(b)&&L.indexOf('od@'+b)<0)L.push('od@'+b)}});
-  if(schOn())L.push('searchch');if(trOn())L.push('transitous');
-  var pref=null;if(r==='searchch'||r==='transitous')pref=r;else if(r&&r!=='opendata-ch'){var px=srcList().find(function(x){return x.id===r});var pb=px&&base(px);if(pb&&L.indexOf('od@'+pb)>=0)pref='od@'+pb}
-  if(pref){L.splice(L.indexOf(pref),1);L.unshift(pref)}return L}
+ function srcChain(cat){var od=odSrc(),r=routes()[cat],L=[];if(!od||od.active!==false)L.push('opendata');if(schOn())L.push('searchch');if(trOn())L.push('transitous');var pref=r==='searchch'?'searchch':(r==='transitous'?'transitous':null);if(pref&&L.indexOf(pref)>=0){L.splice(L.indexOf(pref),1);L.unshift(pref)}return L}
  /* recherche simultanée sur toutes les sources actives, résultats fusionnés (doublons retirés, ordre de priorité conservé) */
  function parallel(F,u,list,cat){var p=u.pathname;
-  var one=function(k){var pr=k==='opendata'?F.call(window,u.toString()):(k.indexOf('od@')===0?F.call(window,k.slice(3)+u.pathname+u.search):(k==='searchch'?schFetch(F,u):trFetch(F,u)));var t=new Promise(function(z){setTimeout(function(){z(null)},20000)});
+  var one=function(k){var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):trFetch(F,u));var t=new Promise(function(z){setTimeout(function(){z(null)},20000)});
    return Promise.race([pr,t]).then(function(r){if(!r||!r.ok)return null;return r.clone().json().then(function(j){return emptyOf(j,p)?null:{k:k,j:j}}).catch(function(){return null})}).catch(function(){return null})};
   list.forEach(function(k){rec(k+' '+p,cat)});
   return Promise.all(list.map(one)).then(function(R){R=R.filter(Boolean);var used=R.map(function(x){return x.k});
@@ -3424,45 +3420,6 @@ function deletedIds(){try{localStorage.removeItem('bd_sources_deleted')}catch(e)
 function load(){var del=deletedIds();try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)){DEFAULTS.forEach(function(d){if(del.indexOf(d.id)<0&&!a.some(function(x){return x.id===d.id}))a.push(d)});return a}}catch(e){}return DEFAULTS.filter(function(d){return del.indexOf(d.id)<0}).map(function(x){return Object.assign({},x)})}
 var sources=load(); function save(){try{localStorage.setItem('bd_sources_v1',JSON.stringify(sources))}catch(e){}window.__bd_sources=sources;window.dispatchEvent(new CustomEvent('bd-sources-change',{detail:sources}));}
 window.__bd_sources=sources;
-/* ===== Découverte automatique : data.public-transport.earth (flux GTFS / NeTEx officiels par pays) =====
-   Pays détectés là où vous utilisez les transports (position GPS + arrêts de « Mes parcours ») → sources ajoutées automatiquement. */
-(function(){
- var PTE='https://eu.data.public-transport.earth/',ST='https://data.public-transport.earth/';
- var CN={ch:'Suisse',fr:'France',de:'Allemagne',it:'Italie',es:'Espagne',nl:'Pays-Bas',be:'Belgique',at:'Autriche',lu:'Luxembourg',gb:'Royaume-Uni',ie:'Irlande',dk:'Danemark',se:'Suède',no:'Norvège',fi:'Finlande',pl:'Pologne',cz:'Tchéquie',pt:'Portugal',ee:'Estonie',lv:'Lettonie',lt:'Lituanie',si:'Slovénie',sk:'Slovaquie',hu:'Hongrie',hr:'Croatie',gr:'Grèce',ro:'Roumanie',bg:'Bulgarie'};
- function rd(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}}
- function wr(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
- /* points où j'utilise les transports */
- function points(){var P=[];try{var l=window.__bd_loc;if(l&&l.lat!=null)P.push({lat:+l.lat,lon:+l.lon})}catch(e){}
-  try{var I=window.__bd_stopInfo||{};Object.keys(I).forEach(function(k){var o=I[k];if(o&&o.lat!=null&&isFinite(+o.lat))P.push({lat:+o.lat,lon:+o.lon})})}catch(e){}
-  try{var M=JSON.parse(localStorage.getItem('bd-memo')||'{}')||{};Object.keys(M).forEach(function(k){var o=M[k];if(o&&o.lat!=null&&isFinite(+o.lat))P.push({lat:+o.lat,lon:+o.lon})})}catch(e){}
-  var seen={},o=[];P.forEach(function(p){var k=p.lat.toFixed(1)+','+p.lon.toFixed(1);if(!seen[k]){seen[k]=1;o.push(p)}});return o.slice(0,25)}
- /* pays d'un point (OpenStreetMap Nominatim, mis en cache sur l'appareil) */
- async function ccOf(p){var C=rd('bd_pte_cc',{}),k=p.lat.toFixed(1)+','+p.lon.toFixed(1);if(C[k])return C[k];
-  try{var r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=3&lat='+p.lat+'&lon='+p.lon,{headers:{'Accept':'application/json'}});if(!r.ok)return null;var j=await r.json();var cc=j&&j.address&&String(j.address.country_code||'').toLowerCase();if(cc){C[k]=cc;wr('bd_pte_cc',C)}return cc||null}catch(e){return null}}
- /* tableau des flux du site (fournisseur, licence, URL stable) ; si le site ne répond pas, adresses stables construites par pays */
- async function catalog(){var c=rd('bd_pte_cat',null);if(c&&Date.now()-c.at<7*86400000)return c.rows;
-  try{var r=await fetch(PTE,{mode:'cors'});if(!r.ok)throw 0;var h=await r.text();var d=new DOMParser().parseFromString(h,'text/html');var rows=[];
-   Array.prototype.forEach.call(d.querySelectorAll('table'),function(tb){var head=Array.prototype.map.call(tb.querySelectorAll('th'),function(x){return x.textContent.trim().toLowerCase()});var iC=head.findIndex(function(x){return/country|pays/.test(x)}),iP=head.findIndex(function(x){return/provider|attribution/.test(x)}),iL=head.findIndex(function(x){return/licen/.test(x)});
-    Array.prototype.forEach.call(tb.querySelectorAll('tbody tr, tr'),function(tr){var td=tr.querySelectorAll('td');if(!td.length)return;var links=Array.prototype.map.call(tr.querySelectorAll('a[href]'),function(a){return a.href});var stable=links.find(function(u){return/data\.public-transport\.earth\/(gtfs|netex)\//.test(u)});if(!stable)return;var m=stable.match(/\/(gtfs|netex)\/([a-z0-9_-]+)/i);if(!m)return;
-     rows.push({fmt:m[1].toLowerCase(),key:m[2].toLowerCase(),cc:m[2].slice(0,2).toLowerCase(),country:iC>=0&&td[iC]?td[iC].textContent.trim():'',provider:iP>=0&&td[iP]?td[iP].textContent.trim().replace(/\s+/g,' ').slice(0,80):'',license:iL>=0&&td[iL]?td[iL].textContent.trim().slice(0,40):'',url:stable})})});
-   if(rows.length){wr('bd_pte_cat',{at:Date.now(),rows:rows});return rows}}catch(e){}
-  return null}
- async function run(force){try{var last=rd('bd_pte_last',0);if(!force&&Date.now()-last<6*3600000)return 0;wr('bd_pte_last',Date.now());
-  var P=points();if(!P.length)return 0;var ccs=[];for(var i=0;i<P.length;i++){var c=await ccOf(P[i]);if(c&&ccs.indexOf(c)<0)ccs.push(c)}
-  if(!ccs.length)return 0;var rows=await catalog();var add=[];
-  ccs.forEach(function(cc){var R=rows?rows.filter(function(r){return r.cc===cc}):[{fmt:'gtfs',key:cc,cc:cc,url:ST+'gtfs/'+cc},{fmt:'netex',key:cc,cc:cc,url:ST+'netex/'+cc}];
-   R.forEach(function(r){var id='pte-'+r.fmt+'-'+r.key;if(sources.some(function(s){return s.id===id}))return;
-    add.push({id:id,name:(r.fmt==='gtfs'?'GTFS ':'NeTEx ')+(CN[cc]||cc.toUpperCase())+(r.provider?' — '+r.provider:''),type:'Fichier horaires '+r.fmt.toUpperCase()+' (public-transport.earth)'+(r.license?' · '+r.license:''),url:r.url,active:true,status:'ok',catalog:true,auto:true,cc:cc.toUpperCase(),checkedAt:Date.now()})})});
-  if(add.length){add.forEach(function(x){sources.push(x)});save();try{renderSources()}catch(e){}}
-  return add.length}catch(e){return 0}}
- window.bdPteDiscover=run;
- /* au démarrage, puis quand la position ou les parcours changent (au plus toutes les 6 h) */
- setTimeout(function(){run(false)},8000);
- window.addEventListener('bd-pos',function(){run(false)});
- /* bouton dans Gestion des sources */
- setInterval(function(){var box=document.getElementById('bd-v101-list');if(!box||document.getElementById('bd-pte-btn'))return;var b=document.createElement('button');b.id='bd-pte-btn';b.type='button';b.textContent='Ajouter les sources des pays où j’utilise les transports (public-transport.earth)';b.style.cssText='display:block;width:100%;margin:10px 0;min-height:40px;padding:8px 12px;border-radius:12px;background:#16a34a;color:#fff;font:800 12px system-ui,-apple-system,sans-serif';
-  b.onclick=async function(){var o=b.textContent;b.textContent='Recherche…';var n=await run(true);b.textContent=n?(n+' source(s) ajoutée(s)'):'Aucune nouvelle source';setTimeout(function(){b.textContent=o},2500)};box.parentNode.insertBefore(b,box)},900);
-})();
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');var use=(window.__bdSrcUsage&&s.url)?window.__bdSrcUsage(s.url):{},now=Date.now(),ps=Object.keys(use).sort(function(a,b){return use[b]-use[a]}),lastT=ps.length?use[ps[0]]:0,recent=ps.filter(function(p){return now-use[p]<=120000});
   var ago=function(t){var x=Math.round((now-t)/1000);return x<60?'il y a '+x+' s':(x<3600?'il y a '+Math.round(x/60)+' min':'il y a '+Math.round(x/3600)+' h')};
@@ -5965,14 +5922,13 @@ run();setInterval(run,600)})();
 <div id="bd-cur-src" style="text-align:center;font:600 11px/1.4 system-ui,-apple-system,sans-serif;color:#71717a;padding:14px 12px calc(96px + env(safe-area-inset-bottom))"></div>
 <script id="bd-cur-src-js">(function(){
  var N={opendata:'transport.opendata.ch',searchch:'search.ch',transitous:'Transitous'};
- function nm(k){if(N[k])return N[k];if(String(k).indexOf('od@')===0){try{return new URL(k.slice(3)).hostname}catch(e){return k.slice(3)}}return k}
  function act(id){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'[]');var s=L.find(function(x){return x.id===id});return id==='opendata-ch'?!(s&&s.active===false):!!(s&&s.active!==false)}catch(e){return false}}
  function first(){var r={};try{r=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){}var L=[];if(act('opendata-ch'))L.push('opendata');if(act('searchch'))L.push('searchch');if(act('transitous'))L.push('transitous');var pf=r.horaires;if((pf==='searchch'||pf==='transitous')&&L.indexOf(pf)>=0)return pf;return L[0]||null}
  function draw(){var el=document.getElementById('bd-cur-src');if(!el)return;var c=window.__bd_curSrc,k=c&&c.k||first();
   if(!k){el.textContent='Source des horaires : aucune active (Gestion des sources)';return}
   var t=c?new Date(c.at).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Zurich'}):'';
-  var A=c&&c.all;if(c&&A&&!A.length){el.innerHTML='Sources des horaires : <b style="color:#ef4444">aucune réponse</b> · '+t;return}if(A&&A.length){el.innerHTML='Sources des horaires (recherche simultanée) : '+A.map(function(x){return'<b style="color:'+(x==='opendata'?'#16a34a':'#f59e0b')+'">'+nm(x)+'</b>'}).join(' + ')+' · '+t;return}
-  el.innerHTML='Source des horaires : <b style="color:'+(k==='opendata'?'#16a34a':'#f59e0b')+'">'+nm(k)+'</b>'+(c?' · dernière recherche '+t:'');}
+  var A=c&&c.all;if(c&&A&&!A.length){el.innerHTML='Sources des horaires : <b style="color:#ef4444">aucune réponse</b> · '+t;return}if(A&&A.length){el.innerHTML='Sources des horaires (recherche simultanée) : '+A.map(function(x){return'<b style="color:'+(x==='opendata'?'#16a34a':'#f59e0b')+'">'+N[x]+'</b>'}).join(' + ')+' · '+t;return}
+  el.innerHTML='Source des horaires : <b style="color:'+(k==='opendata'?'#16a34a':'#f59e0b')+'">'+N[k]+'</b>'+(c?' · dernière recherche '+t:'');}
  window.addEventListener('bd-cur-src',draw);window.addEventListener('bd-sources-change',draw);
  document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);draw();
 })();</script>
