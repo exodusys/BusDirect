@@ -883,7 +883,7 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
    /* arrêts : identifiants propres à chaque source, on garde la première source qui répond (ordre de priorité) */
    return jres(R[0].j)})}
  var F=window.fetch;
- if(F&&!F.__bdUse){var W=function(input,init){var url=typeof input==='string'?input:(input&&input.url);try{var u=new URL(url,location.href);/* transport.opendata.ch : tous les modes (train, tram, bus, bateau, téléphérique), jamais seulement les bus */if(/transport\.opendata\.ch$/.test(u.hostname)&&/\/v1\/(connections|stationboard)/.test(u.pathname)){var _tp=u.searchParams;['transportations[]','transportations'].forEach(function(n){_tp.delete(n)});['train','tram','bus','ship','cableway'].forEach(function(m){_tp.append('transportations[]',m)});input=u.toString();url=input;arguments[0]=input}/* tests d'une source précise (état, détection) : jamais redirigés */if(init&&(init.__bdNoRoute||init.method==='HEAD'||init.mode==='no-cors')){rec(u.toString(),catOf(u));return F.apply(this,arguments)}if(/^https?:/.test(u.protocol)&&u.hostname!==location.hostname){var R=resolve(u),cat=R.cat;
+ if(F&&!F.__bdUse){var W=function(input,init){var url=typeof input==='string'?input:(input&&input.url);try{var u=new URL(url,location.href);/* tests d'une source précise (état, détection) : jamais redirigés */if(init&&(init.__bdNoRoute||init.method==='HEAD'||init.mode==='no-cors')){rec(u.toString(),catOf(u));return F.apply(this,arguments)}if(/^https?:/.test(u.protocol)&&u.hostname!==location.hostname){var R=resolve(u),cat=R.cat;
    if(hostKind(u)==='opendata'&&!(init&&init.signal&&init.signal.aborted)){var _c=CATS.find(function(x){return x.id===cat});if(_c&&_c.kinds.indexOf('transitous')>=0){var _L=srcChain(cat);if(!_L.length)return Promise.resolve(json(empty('opendata',u)));if(!(_L.length===1&&_L[0]==='opendata'))return chain(F,u,_L,cat)}}
    if(R.mode==='none')return Promise.resolve(json(empty(R.hk,u)));
    if(R.mode==='same'){var nu=R.b+u.pathname+u.search;rec(nu,cat);return F.call(this,nu,init)}
@@ -3420,6 +3420,45 @@ function deletedIds(){try{localStorage.removeItem('bd_sources_deleted')}catch(e)
 function load(){var del=deletedIds();try{var a=JSON.parse(localStorage.getItem('bd_sources_v1')||'null');if(Array.isArray(a)){DEFAULTS.forEach(function(d){if(del.indexOf(d.id)<0&&!a.some(function(x){return x.id===d.id}))a.push(d)});return a}}catch(e){}return DEFAULTS.filter(function(d){return del.indexOf(d.id)<0}).map(function(x){return Object.assign({},x)})}
 var sources=load(); function save(){try{localStorage.setItem('bd_sources_v1',JSON.stringify(sources))}catch(e){}window.__bd_sources=sources;window.dispatchEvent(new CustomEvent('bd-sources-change',{detail:sources}));}
 window.__bd_sources=sources;
+/* ===== Découverte automatique : data.public-transport.earth (flux GTFS / NeTEx officiels par pays) =====
+   Pays détectés là où vous utilisez les transports (position GPS + arrêts de « Mes parcours ») → sources ajoutées automatiquement. */
+(function(){
+ var PTE='https://eu.data.public-transport.earth/',ST='https://data.public-transport.earth/';
+ var CN={ch:'Suisse',fr:'France',de:'Allemagne',it:'Italie',es:'Espagne',nl:'Pays-Bas',be:'Belgique',at:'Autriche',lu:'Luxembourg',gb:'Royaume-Uni',ie:'Irlande',dk:'Danemark',se:'Suède',no:'Norvège',fi:'Finlande',pl:'Pologne',cz:'Tchéquie',pt:'Portugal',ee:'Estonie',lv:'Lettonie',lt:'Lituanie',si:'Slovénie',sk:'Slovaquie',hu:'Hongrie',hr:'Croatie',gr:'Grèce',ro:'Roumanie',bg:'Bulgarie'};
+ function rd(k,d){try{return JSON.parse(localStorage.getItem(k)||'null')||d}catch(e){return d}}
+ function wr(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+ /* points où j'utilise les transports */
+ function points(){var P=[];try{var l=window.__bd_loc;if(l&&l.lat!=null)P.push({lat:+l.lat,lon:+l.lon})}catch(e){}
+  try{var I=window.__bd_stopInfo||{};Object.keys(I).forEach(function(k){var o=I[k];if(o&&o.lat!=null&&isFinite(+o.lat))P.push({lat:+o.lat,lon:+o.lon})})}catch(e){}
+  try{var M=JSON.parse(localStorage.getItem('bd-memo')||'{}')||{};Object.keys(M).forEach(function(k){var o=M[k];if(o&&o.lat!=null&&isFinite(+o.lat))P.push({lat:+o.lat,lon:+o.lon})})}catch(e){}
+  var seen={},o=[];P.forEach(function(p){var k=p.lat.toFixed(1)+','+p.lon.toFixed(1);if(!seen[k]){seen[k]=1;o.push(p)}});return o.slice(0,25)}
+ /* pays d'un point (OpenStreetMap Nominatim, mis en cache sur l'appareil) */
+ async function ccOf(p){var C=rd('bd_pte_cc',{}),k=p.lat.toFixed(1)+','+p.lon.toFixed(1);if(C[k])return C[k];
+  try{var r=await fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=3&lat='+p.lat+'&lon='+p.lon,{headers:{'Accept':'application/json'}});if(!r.ok)return null;var j=await r.json();var cc=j&&j.address&&String(j.address.country_code||'').toLowerCase();if(cc){C[k]=cc;wr('bd_pte_cc',C)}return cc||null}catch(e){return null}}
+ /* tableau des flux du site (fournisseur, licence, URL stable) ; si le site ne répond pas, adresses stables construites par pays */
+ async function catalog(){var c=rd('bd_pte_cat',null);if(c&&Date.now()-c.at<7*86400000)return c.rows;
+  try{var r=await fetch(PTE,{mode:'cors'});if(!r.ok)throw 0;var h=await r.text();var d=new DOMParser().parseFromString(h,'text/html');var rows=[];
+   Array.prototype.forEach.call(d.querySelectorAll('table'),function(tb){var head=Array.prototype.map.call(tb.querySelectorAll('th'),function(x){return x.textContent.trim().toLowerCase()});var iC=head.findIndex(function(x){return/country|pays/.test(x)}),iP=head.findIndex(function(x){return/provider|attribution/.test(x)}),iL=head.findIndex(function(x){return/licen/.test(x)});
+    Array.prototype.forEach.call(tb.querySelectorAll('tbody tr, tr'),function(tr){var td=tr.querySelectorAll('td');if(!td.length)return;var links=Array.prototype.map.call(tr.querySelectorAll('a[href]'),function(a){return a.href});var stable=links.find(function(u){return/data\.public-transport\.earth\/(gtfs|netex)\//.test(u)});if(!stable)return;var m=stable.match(/\/(gtfs|netex)\/([a-z0-9_-]+)/i);if(!m)return;
+     rows.push({fmt:m[1].toLowerCase(),key:m[2].toLowerCase(),cc:m[2].slice(0,2).toLowerCase(),country:iC>=0&&td[iC]?td[iC].textContent.trim():'',provider:iP>=0&&td[iP]?td[iP].textContent.trim().replace(/\s+/g,' ').slice(0,80):'',license:iL>=0&&td[iL]?td[iL].textContent.trim().slice(0,40):'',url:stable})})});
+   if(rows.length){wr('bd_pte_cat',{at:Date.now(),rows:rows});return rows}}catch(e){}
+  return null}
+ async function run(force){try{var last=rd('bd_pte_last',0);if(!force&&Date.now()-last<6*3600000)return 0;wr('bd_pte_last',Date.now());
+  var P=points();if(!P.length)return 0;var ccs=[];for(var i=0;i<P.length;i++){var c=await ccOf(P[i]);if(c&&ccs.indexOf(c)<0)ccs.push(c)}
+  if(!ccs.length)return 0;var rows=await catalog();var add=[];
+  ccs.forEach(function(cc){var R=rows?rows.filter(function(r){return r.cc===cc}):[{fmt:'gtfs',key:cc,cc:cc,url:ST+'gtfs/'+cc},{fmt:'netex',key:cc,cc:cc,url:ST+'netex/'+cc}];
+   R.forEach(function(r){var id='pte-'+r.fmt+'-'+r.key;if(sources.some(function(s){return s.id===id}))return;
+    add.push({id:id,name:(r.fmt==='gtfs'?'GTFS ':'NeTEx ')+(CN[cc]||cc.toUpperCase())+(r.provider?' — '+r.provider:''),type:'Fichier horaires '+r.fmt.toUpperCase()+' (public-transport.earth)'+(r.license?' · '+r.license:''),url:r.url,active:true,status:'ok',catalog:true,auto:true,cc:cc.toUpperCase(),checkedAt:Date.now()})})});
+  if(add.length){add.forEach(function(x){sources.push(x)});save();try{renderSources()}catch(e){}}
+  return add.length}catch(e){return 0}}
+ window.bdPteDiscover=run;
+ /* au démarrage, puis quand la position ou les parcours changent (au plus toutes les 6 h) */
+ setTimeout(function(){run(false)},8000);
+ window.addEventListener('bd-pos',function(){run(false)});
+ /* bouton dans Gestion des sources */
+ setInterval(function(){var box=document.getElementById('bd-v101-list');if(!box||document.getElementById('bd-pte-btn'))return;var b=document.createElement('button');b.id='bd-pte-btn';b.type='button';b.textContent='Ajouter les sources des pays où j’utilise les transports (public-transport.earth)';b.style.cssText='display:block;width:100%;margin:10px 0;min-height:40px;padding:8px 12px;border-radius:12px;background:#16a34a;color:#fff;font:800 12px system-ui,-apple-system,sans-serif';
+  b.onclick=async function(){var o=b.textContent;b.textContent='Recherche…';var n=await run(true);b.textContent=n?(n+' source(s) ajoutée(s)'):'Aucune nouvelle source';setTimeout(function(){b.textContent=o},2500)};box.parentNode.insertBefore(b,box)},900);
+})();
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');var use=(window.__bdSrcUsage&&s.url)?window.__bdSrcUsage(s.url):{},now=Date.now(),ps=Object.keys(use).sort(function(a,b){return use[b]-use[a]}),lastT=ps.length?use[ps[0]]:0,recent=ps.filter(function(p){return now-use[p]<=120000});
   var ago=function(t){var x=Math.round((now-t)/1000);return x<60?'il y a '+x+' s':(x<3600?'il y a '+Math.round(x/60)+' min':'il y a '+Math.round(x/3600)+' h')};
