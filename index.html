@@ -863,12 +863,16 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  function emptyOf(j,p){if(!j)return true;if(j.errors&&j.errors.length)return true;if(/connections/.test(p))return !(j.connections&&j.connections.length);if(/stationboard/.test(p))return !(j.stationboard&&j.stationboard.length);if(/locations/.test(p))return !(j.stations&&j.stations.length);return false}
  /* chaîne automatique : chaque source active est essayée dans l'ordre jusqu'à obtenir des résultats */
  function chain(F,u,list,cat){var i=0,last=null;var next=function(){if(i>=list.length)return Promise.resolve(last||jres({connections:[],stationboard:[],stations:[]}));var k=list[i++];rec(k+' '+u.pathname,cat);
-   var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):trFetch(F,u));
+   var pr=k==='opendata'?F.call(window,u.toString()):(k.indexOf('od@')===0?F.call(window,k.slice(3)+u.pathname+u.search):(k==='searchch'?schFetch(F,u):trFetch(F,u)));
    return pr.then(function(r){if(!r||!r.ok)return next();return r.clone().json().then(function(j){if(emptyOf(j,u.pathname)){last=r;return next()}if(k!=='opendata')window.__bd_altSrc={k:k,at:Date.now()};if(cat==='horaires'){window.__bd_curSrc={k:k,at:Date.now()};try{window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}}return r}).catch(function(){return next()})}).catch(function(){return next()})};return next()}
- function srcChain(cat){var od=odSrc(),r=routes()[cat],L=[];if(!od||od.active!==false)L.push('opendata');if(schOn())L.push('searchch');if(trOn())L.push('transitous');var pref=r==='searchch'?'searchch':(r==='transitous'?'transitous':null);if(pref&&L.indexOf(pref)>=0){L.splice(L.indexOf(pref),1);L.unshift(pref)}return L}
+ function srcChain(cat){/* toutes les sources horaires en direct actives de « Gestion des sources » */var od=odSrc(),r=routes()[cat],L=[];if(!od||od.active!==false)L.push('opendata');
+  srcList().forEach(function(x){if(!x||x.active===false||x.id==='opendata-ch'||x.catalog)return;var ks=kindsOf(x);if(ks.indexOf('opendata')>=0){var b=base(x);if(b&&!/transport\.opendata\.ch/.test(b)&&L.indexOf('od@'+b)<0)L.push('od@'+b)}});
+  if(schOn())L.push('searchch');if(trOn())L.push('transitous');
+  var pref=null;if(r==='searchch'||r==='transitous')pref=r;else if(r&&r!=='opendata-ch'){var px=srcList().find(function(x){return x.id===r});var pb=px&&base(px);if(pb&&L.indexOf('od@'+pb)>=0)pref='od@'+pb}
+  if(pref){L.splice(L.indexOf(pref),1);L.unshift(pref)}return L}
  /* recherche simultanée sur toutes les sources actives, résultats fusionnés (doublons retirés, ordre de priorité conservé) */
  function parallel(F,u,list,cat){var p=u.pathname;
-  var one=function(k){var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):trFetch(F,u));var t=new Promise(function(z){setTimeout(function(){z(null)},20000)});
+  var one=function(k){var pr=k==='opendata'?F.call(window,u.toString()):(k.indexOf('od@')===0?F.call(window,k.slice(3)+u.pathname+u.search):(k==='searchch'?schFetch(F,u):trFetch(F,u)));var t=new Promise(function(z){setTimeout(function(){z(null)},20000)});
    return Promise.race([pr,t]).then(function(r){if(!r||!r.ok)return null;return r.clone().json().then(function(j){return emptyOf(j,p)?null:{k:k,j:j}}).catch(function(){return null})}).catch(function(){return null})};
   list.forEach(function(k){rec(k+' '+p,cat)});
   return Promise.all(list.map(one)).then(function(R){R=R.filter(Boolean);var used=R.map(function(x){return x.k});
@@ -5961,13 +5965,14 @@ run();setInterval(run,600)})();
 <div id="bd-cur-src" style="text-align:center;font:600 11px/1.4 system-ui,-apple-system,sans-serif;color:#71717a;padding:14px 12px calc(96px + env(safe-area-inset-bottom))"></div>
 <script id="bd-cur-src-js">(function(){
  var N={opendata:'transport.opendata.ch',searchch:'search.ch',transitous:'Transitous'};
+ function nm(k){if(N[k])return N[k];if(String(k).indexOf('od@')===0){try{return new URL(k.slice(3)).hostname}catch(e){return k.slice(3)}}return k}
  function act(id){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'[]');var s=L.find(function(x){return x.id===id});return id==='opendata-ch'?!(s&&s.active===false):!!(s&&s.active!==false)}catch(e){return false}}
  function first(){var r={};try{r=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){}var L=[];if(act('opendata-ch'))L.push('opendata');if(act('searchch'))L.push('searchch');if(act('transitous'))L.push('transitous');var pf=r.horaires;if((pf==='searchch'||pf==='transitous')&&L.indexOf(pf)>=0)return pf;return L[0]||null}
  function draw(){var el=document.getElementById('bd-cur-src');if(!el)return;var c=window.__bd_curSrc,k=c&&c.k||first();
   if(!k){el.textContent='Source des horaires : aucune active (Gestion des sources)';return}
   var t=c?new Date(c.at).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Zurich'}):'';
-  var A=c&&c.all;if(c&&A&&!A.length){el.innerHTML='Sources des horaires : <b style="color:#ef4444">aucune réponse</b> · '+t;return}if(A&&A.length){el.innerHTML='Sources des horaires (recherche simultanée) : '+A.map(function(x){return'<b style="color:'+(x==='opendata'?'#16a34a':'#f59e0b')+'">'+N[x]+'</b>'}).join(' + ')+' · '+t;return}
-  el.innerHTML='Source des horaires : <b style="color:'+(k==='opendata'?'#16a34a':'#f59e0b')+'">'+N[k]+'</b>'+(c?' · dernière recherche '+t:'');}
+  var A=c&&c.all;if(c&&A&&!A.length){el.innerHTML='Sources des horaires : <b style="color:#ef4444">aucune réponse</b> · '+t;return}if(A&&A.length){el.innerHTML='Sources des horaires (recherche simultanée) : '+A.map(function(x){return'<b style="color:'+(x==='opendata'?'#16a34a':'#f59e0b')+'">'+nm(x)+'</b>'}).join(' + ')+' · '+t;return}
+  el.innerHTML='Source des horaires : <b style="color:'+(k==='opendata'?'#16a34a':'#f59e0b')+'">'+nm(k)+'</b>'+(c?' · dernière recherche '+t:'');}
  window.addEventListener('bd-cur-src',draw);window.addEventListener('bd-sources-change',draw);
  document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);draw();
 })();</script>
