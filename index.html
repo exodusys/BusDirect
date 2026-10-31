@@ -2475,11 +2475,7 @@ function bdBoardName(S){return bdNorm(S&&(S._fromStop||(S.from&&S.from.station))
 function bdTransportMs(S){try{var r=bdDurationMs(S);if(!isFinite(r))r=0;return bdTimeWalkMs(bdAccessM(S))+r+bdTimeWalkMs(bdFinalWalkMeters(S))}catch(e){return Infinity}}
 /* « Les plus rapides » désactivé complètement */function bdFastOn(){return false}
 function bdFastBtn(){try{bdBindListSettings()}catch(e){}var on=bdFastOn();return c("button",{type:"button","aria-label":"Les plus rapides","aria-pressed":on?"true":"false",title:on?"Les plus rapides : activé":"Les plus rapides : désactivé",onClick:function(){try{localStorage.setItem("bd_fastest",on?"0":"1")}catch(e){}try{window.dispatchEvent(new Event("bd-list-settings"))}catch(e){}},style:{marginLeft:"auto",marginRight:8,boxShadow:on?"0 0 0 2px #f59e0b":"none"},className:"bd-fav-glass"+(on?"":" bd-fav-grey"),children:c("span",{style:{fontSize:17,lineHeight:1,filter:on?"none":"grayscale(1)",opacity:on?1:.55},children:"⚡️"})})}
-/* Trains directs de préférence : un trajet avec train régional (R, S, SN, RB…) est retiré s'il existe, à 30 min près au départ, un trajet en train direct (IC, IR, RE, EC…) sans train régional qui arrive au plus 10 min plus tard. */
-function bdTrainKind(x){x=String(x||"").trim().toUpperCase();if(/^(ICE|ICN|IC|IRE|IR|EC|EN|NJ|RJX|RJ|TGV|RE|EXT)(\s|\d|$)/.test(x))return"direct";if(/^(R|RB|S|SN|PE|TER)(\s|\d|$)/.test(x))return"regional";return""}
-function bdPreferDirect(L){try{var info=L.map(function(S){var P=(S.products||[]).map(bdTrainKind);var arr=(S.to&&S.to.actualMs)||(S.to&&S.to.arrival?new Date(S.to.arrival).getTime()+((S.to.delay||0)*60000):null);return{S:S,reg:P.indexOf("regional")>=0,dir:P.indexOf("direct")>=0,dep:bdDepartureMs(S),arr:arr}});
-  return info.filter(function(a){if(!a.reg||a.arr==null||a.dep==null)return true;return!info.some(function(b){return b!==a&&b.dir&&!b.reg&&b.arr!=null&&b.dep!=null&&Math.abs(b.dep-a.dep)<=1800000&&b.arr<=a.arr+600000})}).map(function(a){return a.S})}catch(e){return L}}
-function bdApplyV400(list,start,minutes,noFast){list=bdPreferDirect((list||[]).filter(function(S){return S&&!S._isWalk}));var L=(list||[]).filter(function(S){return S&&!S._isWalk}),_fast=!noFast&&bdFastOn(),_end=(start!=null&&minutes!=null)?start+minutes*60000:null;/* « Les plus rapides » activé : pas de coupure de fenêtre ici (complétée plus bas) */if(start!=null&&minutes!=null){/* le départ reste 1 min après l'heure, pour afficher « Le bus arrive » en rouge à la fin du décompte */var _st=start-60000;L=(_fast||(noFast&&bdFastOn()))?L.filter(function(S){var t=bdDepartureMs(S);return t>=_st}):bdFilterList(L,_st,minutes+1)}
+function bdApplyV400(list,start,minutes,noFast){var L=(list||[]).filter(function(S){return S&&!S._isWalk}),_fast=!noFast&&bdFastOn(),_end=(start!=null&&minutes!=null)?start+minutes*60000:null;/* « Les plus rapides » activé : pas de coupure de fenêtre ici (complétée plus bas) */if(start!=null&&minutes!=null){/* le départ reste 1 min après l'heure, pour afficher « Le bus arrive » en rouge à la fin du décompte */var _st=start-60000;L=(_fast||(noFast&&bdFastOn()))?L.filter(function(S){var t=bdDepartureMs(S);return t>=_st}):bdFilterList(L,_st,minutes+1)}
   var ref=start!=null?Math.max(start,Date.now()-60000):Date.now(),me=bdMeXY();
   if(me){
     /* 1. arrêt de départ à 1000 m maximum */
@@ -6020,16 +6016,25 @@ run();setInterval(run,600)})();
  window.addEventListener('bd-cur-src',draw);window.addEventListener('bd-sources-change',draw);
  document.addEventListener('DOMContentLoaded',draw);setInterval(draw,30000);draw();
 })();</script>
-<style id="bd-works-css">.bd-works-banner{display:flex;align-items:center;gap:6px;margin:0 0 8px;padding:6px 10px;border-radius:12px;background:rgba(245,158,11,.16);border:1px solid rgba(245,158,11,.55);color:#b45309;font:700 12px/1.3 system-ui,-apple-system,sans-serif}html.dark .bd-works-banner{color:#fbbf24}</style>
-<script id="bd-works-js">/* 🚧 Travaux : lignes de remplacement (EV = bus de remplacement CFF, EXB, SEV…) signalées dans les listes et le « Suivi en direct » */
+<style id="bd-works-css">.bd-next-list .bd-has-works .bd-cp-wrap{top:calc(14px + var(--bdwh,0px))!important}.bd-works-banner{display:flex;align-items:center;gap:6px;margin:0 0 8px;padding:6px 10px;border-radius:12px;background:rgba(245,158,11,.16);border:1px solid rgba(245,158,11,.55);color:#b45309;font:700 12px/1.3 system-ui,-apple-system,sans-serif}html.dark .bd-works-banner{color:#fbbf24}</style>
+<script id="bd-works-js">/* 🚧 Travaux : lignes de remplacement (EV = bus de remplacement CFF, EXB, SEV…) signalées dans les listes et le « Suivi en direct », avec la ligne concernée */
 (function(){
- var RX=/^(?:🚧\s*)?((?:EV|EXB|SEV|BEV|ERS)\s?\d*)$/i;
+ var RX=/^(?:🚧\s*)?((?:EV|EXB|SEV|BEV|ERS)\s?\d*)$/i,TR=/^(ICE|ICN|IC|IRE|IR|EC|EN|NJ|RJX|RJ|TGV|RE|R|RB|S|SN|PE|TER)\s?\d*[A-Z]?$/i;
  function card(el){return el.closest('.bdt-card')||el.closest('.bd-next-list > *')||el.closest('[class*="rounded-[20px]"]')||el.closest('[class*="rounded-[16px]"]')}
- function run(){try{var chips=document.querySelectorAll('span,div');var cards=new Map();
-  for(var i=0;i<chips.length;i++){var el=chips[i];if(el.children.length)continue;var t=(el.textContent||'').trim();if(t.length>10)continue;var m=t.match(RX);if(!m)continue;
-   if(t.indexOf('🚧')!==0)el.textContent='🚧 '+m[1];var cd=card(el);if(cd){var L=cards.get(cd)||[];if(L.indexOf(m[1])<0)L.push(m[1]);cards.set(cd,L)}}
-  cards.forEach(function(L,cd){var b=cd.querySelector(':scope > .bd-works-banner');var txt='🚧 Travaux sur la ligne : bus de remplacement ('+L.join(', ')+') sur une partie du trajet';if(!b){b=document.createElement('div');b.className='bd-works-banner';cd.insertBefore(b,cd.firstChild)}if(b.textContent!==txt)b.textContent=txt});
-  document.querySelectorAll('.bd-works-banner').forEach(function(b){var cd=b.parentNode;if(cd&&!cards.has(cd))b.remove()})}catch(e){}}
+ function run(){try{var leaves=document.querySelectorAll('span,div');var cards=new Map();
+  for(var i=0;i<leaves.length;i++){var el=leaves[i];if(el.children.length)continue;var t=(el.textContent||'').trim();if(t.length>10)continue;var m=t.match(RX);if(!m)continue;
+   if(t.indexOf('🚧')!==0)el.textContent='🚧 '+m[1];var cd=card(el);if(!cd)continue;var o=cards.get(cd)||{ev:[],lines:[]};if(o.ev.indexOf(m[1])<0)o.ev.push(m[1]);
+   /* ligne concernée : pastilles de train juste avant / après le bus de remplacement */
+   var row=el.parentNode,sib=row?Array.prototype.filter.call(row.children,function(x){return!x.children.length}):[],k=sib.indexOf(el);
+   [-1,1].forEach(function(dir){for(var q=k+dir;q>=0&&q<sib.length;q+=dir){var tt=(sib[q].textContent||'').replace('🚧','').trim();if(!/[A-Za-z0-9]/.test(tt)||/^(Voie|Quai)\b/i.test(tt))continue;if(TR.test(tt)&&o.lines.indexOf(tt)<0)o.lines.push(tt);break}});
+   /* « Suivi en direct » : correspondance vers le bus de remplacement (… → EV) → le bandeau se place juste avant ce changement de ligne */
+   var xf=el.closest('.bd-xfer-noicon');if(xf&&cd.classList.contains('bdt-card')){o.xf=o.xf||[];var before=sib.slice(0,k).some(function(x){var tt=(x.textContent||'').replace('🚧','').trim();return TR.test(tt)||/^\d+[A-Z]?$/.test(tt)});if(before&&o.xf.indexOf(xf)<0)o.xf.push(xf)}
+   cards.set(cd,o)}
+  var keepB=new Set();cards.forEach(function(o,cd){if(!o.xf||!o.xf.length)return;var txt='🚧 Travaux sur la ligne'+(o.lines.length?' '+o.lines.join(' / '):'')+' : bus de remplacement ('+o.ev.join(', ')+') sur une partie du trajet';o.xf.forEach(function(xf){var b=xf.previousElementSibling;if(!(b&&b.classList.contains('bd-works-banner'))){b=document.createElement('div');b.className='bd-works-banner bd-works-at';xf.parentNode.insertBefore(b,xf)}if(b.textContent!==txt)b.textContent=txt;keepB.add(b)});o.inline=true});
+  document.querySelectorAll('.bd-works-at').forEach(function(b){if(!keepB.has(b))b.remove()});
+  cards.forEach(function(o,cd){if(o.inline){var tb=cd.querySelector(':scope > .bd-works-banner:not(.bd-works-at)');if(tb){tb.remove();cd.classList.remove('bd-has-works')}return}var b=cd.querySelector(':scope > .bd-works-banner');var txt='🚧 Travaux sur la ligne'+(o.lines.length?' '+o.lines.join(' / '):'')+' : bus de remplacement ('+o.ev.join(', ')+') sur une partie du trajet';if(!b){b=document.createElement('div');b.className='bd-works-banner';cd.insertBefore(b,cd.firstChild)}if(b.textContent!==txt)b.textContent=txt;
+   cd.classList.add('bd-has-works');var h=(b.offsetHeight||0)+8+'px';if(cd.style.getPropertyValue('--bdwh')!==h)cd.style.setProperty('--bdwh',h)});
+  document.querySelectorAll('.bd-works-banner:not(.bd-works-at)').forEach(function(b){var cd=b.parentNode;if(cd&&(!cards.has(cd)||cards.get(cd).inline)){b.remove();cd.classList.remove('bd-has-works')}})}catch(e){}}
  var pend=0;new MutationObserver(function(){if(pend)return;pend=1;setTimeout(function(){pend=0;run()},250)}).observe(document.documentElement,{childList:true,subtree:true,characterData:true});
  setInterval(run,3000);document.addEventListener('DOMContentLoaded',run);
 })();</script>
