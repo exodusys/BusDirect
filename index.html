@@ -2475,10 +2475,16 @@ function bdBoardName(S){return bdNorm(S&&(S._fromStop||(S.from&&S.from.station))
 function bdTransportMs(S){try{var r=bdDurationMs(S);if(!isFinite(r))r=0;return bdTimeWalkMs(bdAccessM(S))+r+bdTimeWalkMs(bdFinalWalkMeters(S))}catch(e){return Infinity}}
 /* « Les plus rapides » désactivé complètement */function bdFastOn(){return false}
 function bdFastBtn(){try{bdBindListSettings()}catch(e){}var on=bdFastOn();return c("button",{type:"button","aria-label":"Les plus rapides","aria-pressed":on?"true":"false",title:on?"Les plus rapides : activé":"Les plus rapides : désactivé",onClick:function(){try{localStorage.setItem("bd_fastest",on?"0":"1")}catch(e){}try{window.dispatchEvent(new Event("bd-list-settings"))}catch(e){}},style:{marginLeft:"auto",marginRight:8,boxShadow:on?"0 0 0 2px #f59e0b":"none"},className:"bd-fav-glass"+(on?"":" bd-fav-grey"),children:c("span",{style:{fontSize:17,lineHeight:1,filter:on?"none":"grayscale(1)",opacity:on?1:.55},children:"⚡️"})})}
-/* Trains directs de préférence : un trajet avec train régional (R, S, SN, RB…) est retiré s'il existe, à 30 min près au départ, un trajet en train direct (IC, IR, RE, EC…) sans train régional qui arrive au plus 10 min plus tard. */
+/* Trajets directs de préférence (30 min près au départ, arrivée au plus 10 min plus tard) : trains directs (IC, IR, RE, EC…) plutôt que régionaux (R, S, SN, RB…) ; bus / tram avec moins de changements plutôt qu'avec correspondances. */
 function bdTrainKind(x){x=String(x||"").trim().toUpperCase();if(/^(ICE|ICN|IC|IRE|IR|EC|EN|NJ|RJX|RJ|TGV|RE|EXT)(\s|\d|$)/.test(x))return"direct";if(/^(R|RB|S|SN|PE|TER)(\s|\d|$)/.test(x))return"regional";return""}
 function bdPreferDirect(L){try{var info=L.map(function(S){var P=(S.products||[]).map(bdTrainKind);var arr=(S.to&&S.to.actualMs)||(S.to&&S.to.arrival?new Date(S.to.arrival).getTime()+((S.to.delay||0)*60000):null);return{S:S,reg:P.indexOf("regional")>=0,dir:P.indexOf("direct")>=0,dep:bdDepartureMs(S),arr:arr}});
-  return info.filter(function(a){if(!a.reg||a.arr==null||a.dep==null)return true;return!info.some(function(b){return b!==a&&b.dir&&!b.reg&&b.arr!=null&&b.dep!=null&&Math.abs(b.dep-a.dep)<=1800000&&b.arr<=a.arr+600000})}).map(function(a){return a.S})}catch(e){return L}}
+  info.forEach(function(a){a.tr=(a.S.products||[]).some(function(x){return!!bdTrainKind(x)||bdIsTrain(x)});a.nv=(a.S.products||[]).filter(Boolean).length||1});
+  return info.filter(function(a){if(a.arr==null||a.dep==null)return true;
+    /* trains : direct plutôt que régional */
+    if(a.reg&&info.some(function(b){return b!==a&&b.dir&&!b.reg&&b.arr!=null&&b.dep!=null&&Math.abs(b.dep-a.dep)<=1800000&&b.arr<=a.arr+600000}))return false;
+    /* bus et tram : ligne directe (moins de changements) plutôt que correspondances, mêmes marges */
+    if(!a.tr&&a.nv>1&&info.some(function(b){return b!==a&&!b.tr&&b.nv<a.nv&&b.arr!=null&&b.dep!=null&&Math.abs(b.dep-a.dep)<=1800000&&b.arr<=a.arr+600000}))return false;
+    return true}).map(function(a){return a.S})}catch(e){return L}}
 function bdApplyV400(list,start,minutes,noFast){list=bdPreferDirect((list||[]).filter(function(S){return S&&!S._isWalk}));var L=(list||[]).filter(function(S){return S&&!S._isWalk}),_fast=!noFast&&bdFastOn(),_end=(start!=null&&minutes!=null)?start+minutes*60000:null;/* « Les plus rapides » activé : pas de coupure de fenêtre ici (complétée plus bas) */if(start!=null&&minutes!=null){/* le départ reste 1 min après l'heure, pour afficher « Le bus arrive » en rouge à la fin du décompte */var _st=start-60000;L=(_fast||(noFast&&bdFastOn()))?L.filter(function(S){var t=bdDepartureMs(S);return t>=_st}):bdFilterList(L,_st,minutes+1)}
   var ref=start!=null?Math.max(start,Date.now()-60000):Date.now(),me=bdMeXY();
   if(me){
