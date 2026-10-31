@@ -3160,8 +3160,10 @@ try{
   var _deX=_de?(_XY(_de)||(_de.lat!=null?{lat:+_de.lat,lon:+_de.lon}:null)):null;
   /* texte saisi sans suggestion : c'est un lieu s'il ne correspond pas à l'arrêt et qu'il est à plus de 40 m de celui-ci */
   if(!_isPlace&&!(_dm&&_dm.kind==="stop")&&_endNm&&_de&&!bdSameName(nm(_de),_endNm)){var _gx=_pxy||bdJoinXY(_endNm);if(_gx&&_deX&&zt(_deX,_gx)*1000>40){_isPlace=true;_pxy=_gx}}
-  if(_isPlace&&_de){
-    if(_pxy&&_deX){var _km=zt(_deX,_pxy);_fin={addr:_endNm,lat:_pxy.lat,lon:_pxy.lon,fromLat:_deX.lat,fromLon:_deX.lon,walk:Math.max(1,Math.round(_km*1000*1.3/80))};var _gw=bdWalkGoogle(_deX,_pxy,function(){setBdPrev(function(p){return Object.assign({},p)})});if(_gw!=null)_fin.walk=_gw}
+  /* arrêt de « Mes parcours » atteint à pied depuis l'arrêt de descente le plus proche : marche finale affichée */
+  var _ew=0;if(!_isPlace&&_de&&_endNm&&!bdSameName(nm(_de),_endNm)&&!bdStopNameEq(nm(_de),_endNm)){try{_ew=Math.round(bdEndWalkSec(cur)/60)}catch(e){}var _sx=_pxy||bdJoinXY(_endNm);if(_ew>0||(_sx&&_deX&&zt(_deX,_sx)*1000>40)){_isPlace=true;if(!_pxy)_pxy=_sx;if(!_pxy&&_ew>0){_fin={addr:_endNm,walk:_ew,fromLat:_deX?_deX.lat:null,fromLon:_deX?_deX.lon:null,lat:null,lon:null}}}}
+  if(_isPlace&&_de&&!_fin){
+    if(_pxy&&_deX){var _km=zt(_deX,_pxy);_fin={addr:_endNm,lat:_pxy.lat,lon:_pxy.lon,fromLat:_deX.lat,fromLon:_deX.lon,walk:Math.max(1,Math.round(_km*1000*1.3/80))};var _gw=bdWalkGoogle(_deX,_pxy,function(){setBdPrev(function(p){return Object.assign({},p)})});if(_gw!=null)_fin.walk=_gw;if(_ew>0)_fin.walk=_ew}
     else _fin={addr:_endNm,noWalk:true,walk:0};
   }
 }catch(e){_fin=null}
@@ -3316,7 +3318,7 @@ if(_startWalk&&rows.length){
 if(_fin&&rows.length){
   var _lastLc=getLineColor(getLineForStop(stops[stops.length-1]));
   rows=rows.concat([
-    _fin.noWalk?null:p("a",{href:`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(_fin.fromLat+","+_fin.fromLon)}&destination=${encodeURIComponent(_fin.lat+","+_fin.lon)}&travelmode=walking`,target:"_blank",rel:"noopener noreferrer",className:"bdt-xfer bdt-walk",style:{textDecoration:"none",cursor:"pointer"},children:[c("span",{className:"bdt-xi",children:"🚶"}),c("span",{style:{flex:"1 1 auto"},children:"Marche à pied · "+_fin.walk+" min"}),c("span",{title:"Ouvrir Google Maps à pied",style:{fontSize:"17px",fontWeight:800},children:"↗"})]},"fin-walk"),
+    _fin.noWalk?null:p("a",{href:`https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(_fin.fromLat!=null?_fin.fromLat+","+_fin.fromLon:nm(stops[stops.length-1]))}&destination=${encodeURIComponent(_fin.lat!=null?_fin.lat+","+_fin.lon:_fin.addr)}&travelmode=walking`,target:"_blank",rel:"noopener noreferrer",className:"bdt-xfer bdt-walk",style:{textDecoration:"none",cursor:"pointer"},children:[c("span",{className:"bdt-xi",children:"🚶"}),c("span",{style:{flex:"1 1 auto"},children:"Marche à pied · "+_fin.walk+" min"}),c("span",{title:"Ouvrir Google Maps à pied",style:{fontSize:"17px",fontWeight:800},children:"↗"})]},"fin-walk"),
     p("div",{className:"bdt-row is-last is-end",style:{"--acc":_lastLc},children:[
       c("span",{className:"bdt-dot",style:{background:_lastLc,borderColor:_lastLc}}),
       p("div",{className:"bdt-main",children:[c("div",{className:"bdt-name",children:_fin.addr}),p("div",{className:"bdt-tags",children:[c("span",{className:"bdt-tag",style:{background:_lastLc,color:"#fff"},children:"Destination"})]})]})
