@@ -836,7 +836,7 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  var TRS='https://api.transitous.org/api/v1';/* V341 : itinéraires et départs = version actuelle de l'API Transitous (MOTIS /api/v6) ; /api/v1/plan n'existe plus */var TRS6='https://api.transitous.org/api/v6';
  function trSrc(){return srcList().find(function(s){return s.id==='transitous'})||null}
  function trOn(){var s=trSrc();return !!(s&&s.active!==false)}
- function trJ(F,url){return F.call(window,url).then(function(r){if(!r.ok)throw 0;return r.json()})}
+ function trJ(F,url){/* V342 : diagnostic — dernière réponse de Transitous affichée sous « Prochains parcours » en cas d'erreur */var _m=function(st){try{window.__bd_trLast={url:url,st:st,at:Date.now()};window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}};return F.call(window,url).then(function(r){_m(r.status);if(!r.ok)throw 0;return r.json()},function(e){_m('réseau/CORS');throw e})}
  var trGeo={};
  /* nom ou identifiant d'arrêt → {lat,lon,stopId,name} */
  function trPlace(F,v){v=String(v||'').trim();if(!v)return Promise.resolve(null);var m=v.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);if(m)return Promise.resolve({lat:+m[1],lon:+m[2],name:v});
@@ -6078,7 +6078,7 @@ run();setInterval(run,600)})();
  var N={opendata:'transport.opendata.ch',searchch:'search.ch',transitous:'Transitous',dbrest:'db.transport.rest',irail:'iRail'};
  function act(id){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'[]');var s=L.find(function(x){return x.id===id});return id==='opendata-ch'?!(s&&s.active===false):!!(s&&s.active!==false)}catch(e){return false}}
  function first(){var r={};try{r=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){}var L=[];if(act('opendata-ch'))L.push('opendata');if(act('searchch'))L.push('searchch');if(act('transitous'))L.push('transitous');var pf=r.horaires;if((pf==='searchch'||pf==='transitous')&&L.indexOf(pf)>=0)return pf;return L[0]||null}
- function draw(){var el=document.getElementById('bd-cur-src');if(!el)return;var c=window.__bd_curSrc,k=c&&c.k||first();
+ function draw(){var el=document.getElementById('bd-cur-src');if(!el)return;var _tl=window.__bd_trLast;if(_tl&&_tl.st!==200&&Date.now()-_tl.at<120000){var _p=String(_tl.url).replace(/^https?:\/\/[^/]+/,'').split('?')[0];el.innerHTML='<b style="color:#ef4444">Transitous : erreur '+_tl.st+'</b> · '+_p;return}var c=window.__bd_curSrc,k=c&&c.k||first();
   if(!k){el.textContent='Aucune source active (Gestion des sources)';return}
   var t=c?new Date(c.at).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:(window.BD_TZ||"Europe/Zurich")}):'';
   var A=c&&c.all;if(c&&A&&!A.length){el.innerHTML='<b style="color:#ef4444">aucune réponse</b> · '+t;return}if(A&&A.length){el.innerHTML=A.map(function(x){return'<b style="color:'+(x==='opendata'?'#16a34a':'#f59e0b')+'">'+N[x]+'</b>'}).join(' + ')+' · '+t;return}
