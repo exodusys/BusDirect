@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><style>
+<head><script id="bd-v306-limit">/* V306 : au plus 4 requêtes simultanées vers transport.opendata.ch (au-delà, le service répond 429 « trop de requêtes » et l'app attendait plusieurs secondes) */
+(function(){var F=window.fetch;if(!F||F.__bdLim)return;var MAX=4,act=0,Q=[];function nx(){while(act<MAX&&Q.length){var j=Q.shift();act++;F.apply(window,j.a).then(function(r){act--;nx();j.ok(r)},function(e){act--;nx();j.ko(e)})}}
+var g=function(u){var url=typeof u==="string"?u:(u&&u.url)||"";if(url.indexOf("transport.opendata.ch")<0)return F.apply(window,arguments);var a=arguments;return new Promise(function(ok,ko){Q.push({a:a,ok:ok,ko:ko});nx()})};g.__bdLim=1;window.fetch=g})();</script><style>
 @font-face {
   font-family: "Optimistic";
   font-style: normal;
@@ -2090,7 +2092,7 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
     let lastMs=null;
     cs.forEach(function(c){ let dep=c.from&&c.from.departure; let ms=dep?new Date(dep).getTime():null; let k=dep+"|"+JSON.stringify(c.products||[])+"|"+(c.transfers||0); if(!seen[k]){seen[k]=1;out.push(c);} if(ms!=null&&(lastMs==null||ms>lastMs)) lastMs=ms; });
     /* wide : aucun départ dans la fenêtre → on pagine jusqu'à avoir assez de départs ultérieurs (même dans plusieurs heures). */
-    if(lastMs==null||(wide?out.length>=48:lastMs>=horizonMs)) break;
+    /* V306 : une page suffit dès qu'on a 16 trajets ou la fenêtre horaire (avant : jusqu'à 48 trajets, 5 pages) */if(lastMs==null||(wide?(out.length>=16||lastMs>=horizonMs):lastMs>=horizonMs)) break;
     let z=new Date(lastMs+60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"});
     tp="&date="+z.slice(0,10)+"&time="+z.slice(11,16);
   }
@@ -2166,7 +2168,7 @@ function bdBoardFix(S){try{if(!S||!S.passList)return S;var pl=S.passList,i=-1;fo
 async function bdJoinFetch(fromName,target,xy){var __r=await bdJoinFetch0(fromName,target,xy);try{__r.full=(__r.full||[]).map(bdBoardFix)}catch(e){}return __r}
 /* Réseau complet : depuis la position GPS, interroger plusieurs arrêts de transport proches issus de la source active.
    Aucun rayon « Mes parcours » ne bloque ces résultats : l’utilisateur peut être n’importe où sur le réseau. */
-async function bdJoinFetchMulti(stops,target,xy){try{var A=(stops||[]).filter(function(x){return x&&x.name&&(x._d==null||x._d<=BD_NEAR_MAX_M/1000)}).slice(0,4);if(!A.length)return{full:[],xy:xy||null};var R=await Promise.all(A.map(function(st){return bdJoinFetch(st.name,target,xy).then(function(r){return{st:st,r:r}}).catch(function(){return{st:st,r:{full:[]}}})}));var out=[],seen={};R.forEach(function(z){(z.r.full||[]).forEach(function(S){var X=Object.assign({},S);X._gpsOrigin=z.st.name;X._walkMeters=Math.max(0,Math.round((z.st._d!=null?z.st._d:0)*1000));var k=bdNorm(X.from&&X.from.station)+"|"+bdDepartureMs(X)+"|"+(X.products||[]).join(",")+"|"+bdNorm(X.to&&X.to.station);if(!seen[k]){seen[k]=1;out.push(X)}})});out.sort(bdPrefSort);return{full:out,xy:xy||null}}catch(e){return{full:[],xy:xy||null}}}
+async function bdJoinFetchMulti(stops,target,xy){try{var A=(stops||[]).filter(function(x){return x&&x.name&&(x._d==null||x._d<=BD_NEAR_MAX_M/1000)}).slice(0,4);if(!A.length)return{full:[],xy:xy||null};var _one=function(st){return bdJoinFetch(st.name,target,xy).then(function(r){return{st:st,r:r}}).catch(function(){return{st:st,r:{full:[]}}})};/* V306 : d'abord les 2 arrêts les plus proches ; les suivants seulement s'ils ne donnent rien */var R=await Promise.all(A.slice(0,2).map(_one));if(!R.some(function(z){return(z.r.full||[]).length})&&A.length>2)R=R.concat(await Promise.all(A.slice(2).map(_one)));var out=[],seen={};R.forEach(function(z){(z.r.full||[]).forEach(function(S){var X=Object.assign({},S);X._gpsOrigin=z.st.name;X._walkMeters=Math.max(0,Math.round((z.st._d!=null?z.st._d:0)*1000));var k=bdNorm(X.from&&X.from.station)+"|"+bdDepartureMs(X)+"|"+(X.products||[]).join(",")+"|"+bdNorm(X.to&&X.to.station);if(!seen[k]){seen[k]=1;out.push(X)}})});out.sort(bdPrefSort);return{full:out,xy:xy||null}}catch(e){return{full:[],xy:xy||null}}}
 
 /* V409 : accélération — les recherches identiques lancées en même temps (une par arrêt de départ proche) partagent la même requête réseau */
 function bdShareP(f,name){if(typeof f!=="function"||f.__shared)return f;var P={};var g=function(){var k=name+"|"+JSON.stringify(Array.prototype.slice.call(arguments));if(P[k])return P[k];var pr=Promise.resolve(f.apply(this,arguments));pr.then(function(){setTimeout(function(){delete P[k]},1500)},function(){delete P[k]});P[k]=pr;return pr};g.__shared=1;return g}
