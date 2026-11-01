@@ -836,7 +836,12 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  var TRS='https://api.transitous.org/api/v1';/* V341 : itinéraires et départs = version actuelle de l'API Transitous (MOTIS /api/v6) ; /api/v1/plan n'existe plus */var TRS6='https://api.transitous.org/api/v6';
  function trSrc(){return srcList().find(function(s){return s.id==='transitous'})||null}
  function trOn(){var s=trSrc();return !!(s&&s.active!==false)}
- function trJ(F,url){/* V342 : diagnostic — dernière réponse de Transitous affichée sous « Prochains parcours » en cas d'erreur */var _m=function(st){try{window.__bd_trLast={url:url,st:st,at:Date.now()};window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}};return F.call(window,url).then(function(r){_m(r.status);if(!r.ok)throw 0;return r.json()},function(e){_m('réseau/CORS');throw e})}
+ /* V343 : Transitous limite le nombre de demandes (au-delà, réponse refusée sans autorisation CORS = « erreur réseau/CORS ») :
+   au plus 2 demandes à la fois, réponses identiques réutilisées 60 s, un nouvel essai après 2 s en cas d'échec, pas de trajet d'un arrêt vers lui-même */
+ var __trQ=[],__trA=0,__trC={};function trQ(fn){return new Promise(function(ok,ko){__trQ.push({fn:fn,ok:ok,ko:ko});trN()})}
+ function trN(){while(__trA<2&&__trQ.length){var j=__trQ.shift();__trA++;j.fn().then(function(v){__trA--;trN();j.ok(v)},function(e){__trA--;trN();j.ko(e)})}}
+ function trJ(F,url){try{var _m0=url.match(/fromPlace=([^&]*)&toPlace=([^&]*)/);if(_m0&&_m0[1]===_m0[2])return Promise.resolve({itineraries:[]})}catch(e){}var _c=__trC[url];if(_c&&Date.now()-_c.t<60000)return _c.p;var _p=trQ(function(){return trJ0(F,url)}).catch(function(){return new Promise(function(z){setTimeout(z,2000)}).then(function(){return trQ(function(){return trJ0(F,url)})})});__trC[url]={t:Date.now(),p:_p};_p.catch(function(){delete __trC[url]});return _p}
+ function trJ0(F,url){/* V342 : diagnostic — dernière réponse de Transitous affichée sous « Prochains parcours » en cas d'erreur */var _m=function(st){try{window.__bd_trLast={url:url,st:st,at:Date.now()};window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}};return F.call(window,url).then(function(r){_m(r.status);if(!r.ok)throw 0;return r.json()},function(e){_m('réseau/CORS');throw e})}
  var trGeo={};
  /* nom ou identifiant d'arrêt → {lat,lon,stopId,name} */
  function trPlace(F,v){v=String(v||'').trim();if(!v)return Promise.resolve(null);var m=v.match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);if(m)return Promise.resolve({lat:+m[1],lon:+m[2],name:v});
