@@ -1617,6 +1617,7 @@ async function getNearbyStationsRaw(lat,lon){
 /* V131 : temps de marche via Google Maps (Routes API, WALK). Clé : window.BD_GMAPS_KEY ou localStorage "bd-gmaps-key". Sans clé : estimation. */
 window.BD_GMAPS_KEY=window.BD_GMAPS_KEY||"";
 function bdGmapsKey(){try{return window.BD_GMAPS_KEY||localStorage.getItem("bd-gmaps-key")||""}catch(e){return window.BD_GMAPS_KEY||""}}
+try{window.bdWalkGoogle=bdWalkGoogle}catch(e){}
 function bdWalkGoogle(a,b,done){
   var key=bdGmapsKey();if(!key||!a||!b)return null;
   var k=[a.lat,a.lon,b.lat,b.lon].map(function(x){return Number(x).toFixed(5)}).join(",");
@@ -2299,7 +2300,7 @@ function bdJoinSection(){try{bdBindListSettings();var lc=window.__bd_loc;if(!lc|
     footer=bdWindowFooter(_jw,rer);body=list.length?c("div",{className:"bd-next-list grid grid-cols-1 gap-3",children:list.map(function(S,ix){if(S._isWalk)return bdCardFn(S,ix);var _ms=S._sort||(S.from&&S.from.actualMs)||0,_sec=Math.floor(Math.max(0,_ms-now)/1000),_mm=Math.floor(_sec/60),_ss=_sec%60;var X=Object.assign({},S,{_arriveTxt:_mm>0?(_mm+" min "+(_ss<10?"0":"")+_ss+" s"):((_ss<10?"0":"")+_ss+" s"),_arriveSec:_sec,/* destination finale = lieu exact de « Mon parcours » (et non l'arrêt où le trajet trouvé se termine) */_liveName:String((S.from&&S.from.station)||near.name)+" → "+String(J.target),_joinTarget:String(J.target),_joinXY:_jXY});return bdCardFn(X,ix)})}):c("div",{className:"text-[12px] text-zinc-500 px-1",children:(R&&R.key===k&&!window.__bd_footPending)?("Aucun départ dans la période sélectionnée."+((window.__bd_placeStop||{})[bdNorm(J.target)]?" (arrêt le plus proche du lieu : "+window.__bd_placeStop[bdNorm(J.target)]+")":"")):"Recherche des prochains parcours…"})}}
   /* titre, arrêt le plus proche et nom du parcours masqués : seulement les boutons et les trajets */return p("div",{className:"bd-join flex flex-col gap-2",children:[c("div",{className:"flex flex-col gap-3 px-1",children:groups}),body,footer]})}catch(e){return null}}
 /* Marche du trajet (sans la marche jusqu'à l'arrêt de départ) : tronçons à pied du trajet + marche finale de l'arrêt d'arrivée jusqu'à l'adresse / au POI saisi dans « Mon parcours » */
-function bdTripWalkMin(S){try{var w=0;(S.passList||[]).forEach(function(x){if(x&&x.type==="walk")w+=(+x.walkMin||0)});
+function bdTripWalkMin(S){try{var w=0;/* V307 : même calcul que « Suivi en direct » — marches entre deux véhicules ; la marche finale est comptée une seule fois (horaire, sinon jusqu'au lieu) */var _pl=S.passList||[],_si=-1,_li=-1;_pl.forEach(function(x,i){if(x&&(x.type==="stop"||!x.type)){if(_si<0)_si=i;_li=i}});_pl.forEach(function(x,i){if(x&&x.type==="walk"&&i>_si&&i<_li)w+=(+x.walkMin||0)});var _ew=0;try{_ew=Math.round(bdEndWalkSec(S)/60)}catch(e){}if(_ew>0)return w+_ew;
   var toN=S.to?(typeof S.to.station==="string"?S.to.station:((S.to.station&&S.to.station.name)||"")):"";
   var lp=String(S._liveName||"").split(" → ").map(function(x){return x.trim()}).filter(Boolean);
   var endNm=S._joinTarget||S._endField||(lp.length>=2?lp[lp.length-1]:"")||S.destQuery||"";
@@ -5684,7 +5685,7 @@ html.dark .bd-save-glass{color:#fafafa;background:linear-gradient(135deg,rgba(25
 (function(){function d(a,b){var r=Math.PI/180,x=(b.lon-a.lon)*r*Math.cos((a.lat+b.lat)*r/2),y=(b.lat-a.lat)*r;return Math.sqrt(x*x+y*y)*6371000}
  function tick(){try{var els=document.querySelectorAll('.bd-walk-tot');if(!els.length)return;var L=window.__bd_loc;/* dernière position connue (10 min) en attendant le GPS */if(!L||L.lat==null){try{var _ll=JSON.parse(localStorage.getItem('bd-last-loc')||'null');if(_ll&&Date.now()-_ll.at<600000)L=_ll}catch(e){}}
   els.forEach(function(el){var w=parseInt(el.getAttribute('data-fix')||'0',10)||0,la=parseFloat(el.getAttribute('data-lat')),lo=parseFloat(el.getAttribute('data-lon'));
-   var m=null;if(L&&L.lat!=null&&isFinite(la)&&isFinite(lo)){var _me={lat:+L.lat,lon:+L.lon},_to={lat:la,lon:lo},_fw=null;try{_fw=window.bdFootM?window.bdFootM(_me,_to):null}catch(e){}/* vrai chemin piéton (sinon ligne droite × 1,3 en attendant) */m=_fw!=null?_fw:d(_me,_to);if(m>30)w+=Math.max(1,Math.round((_fw!=null?m:m*1.3)/80))}
+   var m=null;if(L&&L.lat!=null&&isFinite(la)&&isFinite(lo)){var _me={lat:+L.lat,lon:+L.lon},_to={lat:la,lon:lo};/* V307 : même calcul que « Suivi en direct » : Google Maps à pied si disponible, sinon ligne droite × 1,3 à 80 m/min, au-delà de 30 m */m=d(_me,_to);if(m>30){var _gw=null;try{_gw=window.bdWalkGoogle?window.bdWalkGoogle(_me,_to,function(){}):null}catch(e){}w+=(_gw!=null?_gw:Math.max(1,Math.round(m*1.3/80)))}}
    /* couleur pastel selon l'éloignement de l'arrêt : vert ≤ 250 m, jaune ≤ 500 m, orange ≤ 750 m, rouge au-delà */
    var dist=m==null?'':(m>=1000?(m/1000).toFixed(1).replace('.',',')+' km':Math.round(m)+' m');
    var t='\uD83D\uDEB6 '+w+' min';if(el.textContent!==t)el.textContent=t;
