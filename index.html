@@ -933,10 +933,10 @@ html.bd-page-open #bd-v101-hamb{visibility:hidden!important;pointer-events:none!
  /* recherche simultanée sur toutes les sources actives, résultats fusionnés (doublons retirés, ordre de priorité conservé) */
  function parallel(F,u,list,cat){var p=u.pathname;
   var one=function(k){var pr=k==='opendata'?F.call(window,u.toString()):(k==='searchch'?schFetch(F,u):(k==='dbrest'?dbFetch(F,u):(k==='irail'?irFetch(F,u):trFetch(F,u))));var t=new Promise(function(z){setTimeout(function(){z(null)},20000)});
-   return Promise.race([pr,t]).then(function(r){if(!r||!r.ok)return null;return r.clone().json().then(function(j){return emptyOf(j,p)?null:{k:k,j:j}}).catch(function(){return null})}).catch(function(){return null})};
+   return Promise.race([pr,t]).then(function(r){if(!r||!r.ok)return null;return r.clone().json().then(function(j){return emptyOf(j,p)?{k:k,empty:1}:{k:k,j:j}}).catch(function(){return null})}).catch(function(){return null})};
   list.forEach(function(k){rec(k+' '+p,cat)});
-  return Promise.all(list.map(one)).then(function(R){R=R.filter(Boolean);var used=R.map(function(x){return x.k});
-   if(cat==='horaires'||/connections/.test(p)){window.__bd_curSrc={k:used[0]||null,all:used,at:Date.now()};try{window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}}
+  return Promise.all(list.map(one)).then(function(R){/* V350 : une source qui répond « aucun trajet » compte comme ayant répondu (« aucune réponse » seulement si les deux échouent) ; l'état n'est mis à jour que si au moins une a répondu ou si les deux ont échoué */var ok=R.filter(Boolean),used=ok.map(function(x){return x.k});R=ok.filter(function(x){return!x.empty});
+   if((cat==='horaires'||/connections/.test(p))&&(used.length||!window.__bd_curSrc||Date.now()-window.__bd_curSrc.at>60000)){window.__bd_curSrc={k:used[0]||null,all:used,at:Date.now()};try{window.dispatchEvent(new CustomEvent('bd-cur-src'))}catch(e){}}
    if(!R.length)return jres({connections:[],stationboard:[],stations:[]});
    var mn=function(t){var x=t?new Date(t).getTime():NaN;return isFinite(x)?Math.round(x/60000):''};
    var ln=function(x){return String(x||'').toUpperCase().replace(/^(B|BUS|NFB|T|TRAM|M)\s*(?=\d)/,'').replace(/\s+/g,'')};
