@@ -2078,22 +2078,24 @@ function bdGroupDays(list){var g={};list.forEach(function(x){var k=x._sk||"";var
 function bdDurTxt(i){var ms=i&&i._dur;if(!ms&&i&&i.duration)return i.duration;var m=Math.round((ms||0)/60000),h=Math.floor(m/60);return h>0?h+" h "+("0"+(m%60)).slice(-2)+" min":m+" min"}
 function bdViaQS(v){return (v||[]).map(function(x){return String(x||"").trim()}).filter(Boolean).slice(0,5).map(function(x){return "&via[]="+encodeURIComponent(bdExact(x))}).join("")}
 async function bdGetConns0(fromName,toName,onErr,wide,via){
-  let out=[],seen={},horizonMs=bdTripDTMs()+(window.__bd_horizon||60)*60000,tp="";
+  /* V309 : on ne cherche que ce que « Affichage des listes » demande : en nombre → N trajets (une petite requête) ; en minutes → jusqu'à la fin de la fenêtre */
+  let _W=(window.__bd_listWindows&&window.__bd_listWindows.join)||null,_cm=bdCountMode(),_need=_cm?Math.max(1,(_W&&_W.count)||bdListCount()):0,_min=_cm?0:((_W&&_W.minutes)||window.__bd_horizon||bdListBase()),_lim=_cm?Math.min(16,Math.max(4,_need+2)):16;
+  let out=[],seen={},horizonMs=bdTripDTMs()+(_cm?1440:_min)*60000,tp="";
   for(let page=0;page<5;page++){
     let ctrl=typeof AbortController!=="undefined"?new AbortController():null;
     let to=ctrl?setTimeout(function(){try{ctrl.abort()}catch(e){}},page===0?15000:8000):null;
     let r;
-    try{ r=await fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(fromName)+"&to="+encodeURIComponent(toName)+"&limit=16"+bdViaQS(via)+(tp||bdTripDTParams()), ctrl?{signal:ctrl.signal}:undefined); }catch(e){ if(to)clearTimeout(to); onErr(); break; }
+    try{ r=await fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(fromName)+"&to="+encodeURIComponent(toName)+"&limit="+_lim+bdViaQS(via)+(tp||bdTripDTParams()), ctrl?{signal:ctrl.signal}:undefined); }catch(e){ if(to)clearTimeout(to); onErr(); break; }
     if(to)clearTimeout(to);
     /* service saturé (trop de requêtes) : on attend puis on réessaie au lieu d'abandonner */
-    for(let _rt=0;_rt<3&&r&&(r.status===429||r.status>=500);_rt++){ await new Promise(function(z){setTimeout(z,1200*(_rt+1))}); try{ r=await fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(fromName)+"&to="+encodeURIComponent(toName)+"&limit=16"+bdViaQS(via)+(tp||bdTripDTParams())); }catch(e){ break; } }
+    for(let _rt=0;_rt<3&&r&&(r.status===429||r.status>=500);_rt++){ await new Promise(function(z){setTimeout(z,1200*(_rt+1))}); try{ r=await fetch("https://transport.opendata.ch/v1/connections?from="+encodeURIComponent(fromName)+"&to="+encodeURIComponent(toName)+"&limit="+_lim+bdViaQS(via)+(tp||bdTripDTParams())); }catch(e){ break; } }
     if(!r.ok){ onErr(); break; }
     let data; try{ data=await r.json(); }catch(e){ onErr(); break; }
     let cs=data.connections||[]; if(!cs.length) break;
     let lastMs=null;
     cs.forEach(function(c){ let dep=c.from&&c.from.departure; let ms=dep?new Date(dep).getTime():null; let k=dep+"|"+JSON.stringify(c.products||[])+"|"+(c.transfers||0); if(!seen[k]){seen[k]=1;out.push(c);} if(ms!=null&&(lastMs==null||ms>lastMs)) lastMs=ms; });
     /* wide : aucun départ dans la fenêtre → on pagine jusqu'à avoir assez de départs ultérieurs (même dans plusieurs heures). */
-    /* V306 : une page suffit dès qu'on a 16 trajets ou la fenêtre horaire (avant : jusqu'à 48 trajets, 5 pages) */if(lastMs==null||(wide?(out.length>=16||lastMs>=horizonMs):lastMs>=horizonMs)) break;
+    /* V306 : une page suffit dès qu'on a 16 trajets ou la fenêtre horaire (avant : jusqu'à 48 trajets, 5 pages) */if(lastMs==null||(_cm?out.length>=_need:lastMs>=horizonMs)||(wide&&out.length>=16)) break;
     let z=new Date(lastMs+60000).toLocaleString("sv-SE",{timeZone:"Europe/Zurich"});
     tp="&date="+z.slice(0,10)+"&time="+z.slice(11,16);
   }
