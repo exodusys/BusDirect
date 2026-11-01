@@ -2528,6 +2528,10 @@ function bdApplyV400(list,start,minutes,noFast){window.__bd_footPending=false;va
   if(_fast&&isFinite(mn))L=L.filter(function(S){return bdTransportMs(S)<=mn+60000});
   /* 4b. un même bus en double (même heure prévue, même ligne, même arrêt) : on garde la version avec l'horaire réel (retard connu) */
   (function(){var P=function(S){var d=S&&S.from&&S.from.departure;var t=d?new Date(d).getTime():NaN;if(!isFinite(t)){t=bdDepartureMs(S)-((S.from&&S.from.delay)||0)*60000}return Math.round(t/60000)};var g={},o=[];L.forEach(function(S){var k=P(S)+"|"+bdLineKey(S)+"|"+bdBoardName(S)+"|"+bdNorm(S.to&&S.to.station);var x=g[k];if(x==null){g[k]=o.length;o.push(S);return}var cur=o[x],dc=Math.abs((cur.from&&cur.from.delay)||0),dn=Math.abs((S.from&&S.from.delay)||0);if(dn>dc)o[x]=S});L=o})();
+  /* V414 : trajets plus courts préférés — un trajet est retiré s'il existe un autre trajet qui fait partir de chez moi au même moment ou plus tard ET arriver à destination au même moment ou plus tôt (porte à porte : marche + transport + marche) */
+  (function(){try{var T=L.map(function(S){var acc=bdTimeWalkMs(bdAccessM(S)),tr=bdTransportMs(S),lv=bdDepartureMs(S)-acc;return{S:S,lv:lv,ar:isFinite(tr)?lv+tr:Infinity}});
+    var keep=T.filter(function(x){if(!isFinite(x.lv)||!isFinite(x.ar))return true;return!T.some(function(y){if(y===x||!isFinite(y.lv)||!isFinite(y.ar))return false;/* tolérance 1 min pour les arrondis */return y.lv>=x.lv-60000&&y.ar<=x.ar&&(y.ar<x.ar-60000||y.lv>x.lv+60000)})});
+    if(keep.length)L=keep.map(function(x){return x.S})}catch(e){}})();
   /* 5. tri strict par heure de départ */
   L.sort(function(a,b){return bdDepartureMs(a)-bdDepartureMs(b)});
   /* « Les plus rapides » activé : fenêtre horaire, complétée par les départs suivants les plus rapides (au moins le double du nombre réglé, min. 6) */
