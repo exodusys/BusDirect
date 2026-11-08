@@ -2207,9 +2207,9 @@ function bdJoinEndsAt(S,name){return bdJoinEndsAt0(S,name)}
 function bdEndWalkSec(c){try{var ss=c&&c.sections;if(ss&&ss.length){var t=0;for(var i=ss.length-1;i>=0;i--){var x=ss[i];if(x&&x.journey)break;t+=bdWalkSec(x)||0}return t}var pl=c&&c.passList||[],w=0;for(var j=pl.length-1;j>=0;j--){var y=pl[j];if(!y)continue;if(y.type==="walk"){w+=(+y.walkMin||0)*60;continue}if(y.type==="stop"||!y.type)break}return w}catch(e){return 0}}
 /* Position d'un quai / d'une voie : quais et voies d'OpenStreetMap autour de l'arrêt (référence « C », « 1 »…), mise en cache sur l'appareil */
 var __bdQ=null;try{if(!localStorage.getItem("bd_quay_trs3")){localStorage.removeItem("bd-quay-xy");localStorage.setItem("bd_quay_trs3","1")}}catch(e){}
-function bdQuayXY(stop,base,pf,cb,when){try{pf=String(pf||"").replace(/!$/,"").trim();if(!pf||!base||base.lat==null)return null;if(!__bdQ){__bdQ={};try{localStorage.removeItem("bd-quay-xy")}catch(e){}}var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ[k];
+function bdQuayXY(stop,base,pf,cb,when){try{pf=String(pf||"").replace(/!$/,"").trim();if(!pf||!base||base.lat==null)return null;if(!__bdQ){try{__bdQ=JSON.parse(localStorage.getItem("bd-quay-xy")||"{}")||{}}catch(e){__bdQ={}}}var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ[k];
   /* trouvé : gardé 30 jours ; introuvable : nouvel essai après 15 min (un échec ne bloque plus le quai pendant 30 jours) */
-  if(v&&v.t&&Date.now()-v.t<(v.lat!=null?5*60000:2*60000))return v.lat!=null?{lat:v.lat,lon:v.lon}:null;
+  if(v&&v.t&&Date.now()-v.t<(v.lat!=null?30*86400000:15*60000))return v.lat!=null?{lat:v.lat,lon:v.lon}:null;
   var P=window.__bdQP||(window.__bdQP={});if(P[k])return null;P[k]=1;
   var want=pf.toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,"").trim(),wk=want.replace(/[^a-z0-9]/g,"");
   var A='(around:550,'+base.lat+','+base.lon+')';
@@ -2227,7 +2227,7 @@ function bdQuayXY(stop,base,pf,cb,when){try{pf=String(pf||"").replace(/!$/,"").t
     var seq=function(n){if(n>=reqs.length)return Promise.resolve(null);return fetch(reqs[n],{__bdNoRoute:1}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(d){var best=null,bd=1e9;((d&&d.stopTimes)||[]).forEach(function(st){var p=st.place||{};var tr=String(p.track||p.scheduledTrack||'').toLowerCase().replace(/^(quai|voie|gleis|kante)\s*/,'').trim();if(tr!==want&&tr!==wk)return;if(p.lat==null)return;var dd=zt(base,{lat:+p.lat,lon:+p.lon});if(dd<bd&&dd<0.8){bd=dd;best={lat:+p.lat,lon:+p.lon,src:'transitous'}}});return best||seq(n+1)})};return seq(0)}).catch(function(er){errs.push(typeof er==='string'?er:'Transitous : '+((er&&er.message)||er));return null})};
   /* Transitous uniquement (aucune autre source en secours) */
   trsQ().then(function(best){
-    if(best||!netFail){__bdQ[k]=best?{lat:best.lat,lon:best.lon,t:Date.now(),src:best.src||"osm"}:{t:Date.now()};}
+    if(best||!netFail){__bdQ[k]=best?{lat:best.lat,lon:best.lon,t:Date.now(),src:best.src||"osm"}:{t:Date.now()};try{localStorage.setItem("bd-quay-xy",JSON.stringify(__bdQ))}catch(e){}}
     try{window.__bdSrcMark&&window.__bdSrcMark(best&&best.src==="photon"?"https://photon.komoot.io":best&&best.src==="transitous"?"https://api.transitous.org":"https://www.openstreetmap.org","Position des quais et des voies")}catch(e){}
     try{(window.__bdQS||(window.__bdQS={}))[k]=best?"ok":(netFail?"net":"none");(window.__bdQE||(window.__bdQE={}))[k]=errs.join(", ")}catch(e){}
     if(cb)cb()}).catch(function(){}).then(function(){delete P[k]})}catch(e){}return null}
@@ -2479,7 +2479,6 @@ function bdVehKind(bc){try{var pl=(bc&&bc.passList||[]).filter(function(x){retur
  if(/^(M|METRO|MÉTRO)$/.test(cat)||/^M\s*\d/.test(ln))return"métro";
  return"bus"}catch(e){return"bus"}}
 try{window.bdVehKind=bdVehKind}catch(e){}
-
 /* nom de ligne comme les pastilles de la liste des parcours (jamais le numéro de course, ex. 001739) */
 window.bdNiceLine=function(stop,prods,sec){try{var D=/^\d{4,}$/;var p=String((prods||[])[sec||0]||'').trim();if(p&&!D.test(p))return p;stop=stop||{};var cat=String(stop.category||'').trim(),num=String(stop.num||stop.number||'').trim(),ln=String(stop.line||'').trim();if(num&&!D.test(num))return(cat&&num.indexOf(cat)!==0?cat+' '+num:num);if(ln&&!D.test(ln))return ln;var q=(prods||[]).filter(function(x){return x&&!D.test(String(x).trim())});return q[sec||0]||q[0]||cat||''}catch(e){return''}};
 function bdOKey(S){/* inclut le sens (terminus) : deux départs à la même minute dans les deux sens ne se confondent plus */var _t=S&&S.to?(typeof S.to.station==="string"?S.to.station:((S.to.station&&S.to.station.name)||"")):"";return(S._oFromStop||S._fromStop||"")+"|"+(S._oDep||(S.from&&S.from.departure))+"|"+(S.products||[]).join(",")+"|"+_t}
