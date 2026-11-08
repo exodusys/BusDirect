@@ -6205,6 +6205,9 @@ html.dark:not(.bd-glass) .bd-fav-glass,html.dark:not(.bd-glass) .bd-save-glass,h
 html:not(.bd-glass) #bd-distance-settings-sheet,html:not(.bd-glass) .bd-v101-sheet,html:not(.bd-glass) .bdt-sheet,html:not(.bd-glass) .bd-fullpage,html:not(.bd-glass) .bd-tiles-sec,html:not(.bd-glass) #bd-info-page,html:not(.bd-glass) .bd-v104-sms-sheet,html:not(.bd-glass) .bd172-email-sheet,html:not(.bd-glass) .bd172-sheet,html:not(.bd-glass) #bd-prox-sheet,html:not(.bd-glass) .bd-distance-settings-head,html:not(.bd-glass) .bd-v101-head,html:not(.bd-glass) .bd-tiles-head{background:#fafaf9!important}
 html.dark:not(.bd-glass) #bd-distance-settings-sheet,html.dark:not(.bd-glass) .bd-v101-sheet,html.dark:not(.bd-glass) .bdt-sheet,html.dark:not(.bd-glass) .bd-fullpage,html.dark:not(.bd-glass) .bd-tiles-sec,html.dark:not(.bd-glass) #bd-info-page,html.dark:not(.bd-glass) .bd-v104-sms-sheet,html.dark:not(.bd-glass) .bd172-email-sheet,html.dark:not(.bd-glass) .bd172-sheet,html.dark:not(.bd-glass) #bd-prox-sheet,html.dark:not(.bd-glass) .bd-distance-settings-head,html.dark:not(.bd-glass) .bd-v101-head,html.dark:not(.bd-glass) .bd-tiles-head{background:#18181b!important}
 </style><style id="bd-tabbar-css">
+#bd-tabbar button{position:relative}
+#bd-tabbar .bd-tab-badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:#ef4444;color:#fff!important;font:800 10.5px/17px system-ui,-apple-system,sans-serif;text-align:center;box-shadow:0 0 0 2px rgba(15,18,35,.9)}
+html:not(.dark) #bd-tabbar .bd-tab-badge{box-shadow:0 0 0 2px #fff}
 #bd-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:100200;display:flex;justify-content:space-around;gap:4px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:rgba(20,20,26,.41);-webkit-backdrop-filter:blur(21px) saturate(1.68);backdrop-filter:blur(21px) saturate(1.68);border-top:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
 html:not(.dark) #bd-tabbar{background:rgba(255,255,255,.41);border-top-color:#e7e5e4;box-shadow:none}
 #bd-tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:0;border-radius:16px;background:transparent;color:#a1a1aa;font:600 11px/1.1 system-ui,-apple-system,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
@@ -6222,8 +6225,8 @@ body{padding-bottom:calc(70px + env(safe-area-inset-bottom))!important}
 (function(){
 var T=[['horaires','Horaires','<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'],
 ['suivis','Suivis','<path d="M6 3h12v18l-6-4-6 4z"/>'],
-['parcours','Parcours','<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>'],
 ['tickets','Tickets','<path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M13 6v12" stroke-dasharray="2 2"/>'],
+['parcours','Parcours','<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>'],
 ['parametres','Paramètres','<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>']];
 var cur='horaires',bar,lock=0;
 function $(i){return document.getElementById(i)}
@@ -6260,7 +6263,7 @@ function build(){
  document.body.appendChild(bar);mark('horaires');
  /* panneau fermé (×, fond, retour) → retour sur « Horaires » */
  function sync(){var h=document.querySelector('header.bd-head');if(!h)return;var c=getComputedStyle(h);bar.style.background=c.backgroundColor;bar.style.backdropFilter=bar.style.webkitBackdropFilter=c.backdropFilter;bar.style.borderTop=c.borderBottom}sync();setInterval(sync,1000);
- setInterval(function(){var has=!!document.querySelector('section.bd-trk-sec'),b=bar.querySelector('[data-k=suivis]');b.style.display=has?'':'none';if(!has&&cur==='suivis')go('horaires')},600);
+ setInterval(function(){var sec=document.querySelector('section.bd-trk-sec'),has=!!sec,b=bar.querySelector('[data-k=suivis]');b.style.display=has?'':'none';var n=has?Math.max(0,sec.children.length-1):0,bg=b.querySelector('.bd-tab-badge');if(!bg){bg=document.createElement('span');bg.className='bd-tab-badge';b.appendChild(bg)}bg.textContent=n>99?'99+':String(n);bg.style.display=n>0?'':'none';if(!has&&cur==='suivis')go('horaires')},600);
  setInterval(function(){if(cur!=='horaires'&&cur!=='suivis'&&Date.now()-lock>1200&&!anyOpen())mark('horaires')},500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
