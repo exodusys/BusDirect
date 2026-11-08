@@ -2204,16 +2204,18 @@ function bdJoinEndsAt(S,name){return bdJoinEndsAt0(S,name)}
 /* marche finale après le dernier véhicule (secondes) */
 function bdEndWalkSec(c){try{var ss=c&&c.sections;if(ss&&ss.length){var t=0;for(var i=ss.length-1;i>=0;i--){var x=ss[i];if(x&&x.journey)break;t+=bdWalkSec(x)||0}return t}var pl=c&&c.passList||[],w=0;for(var j=pl.length-1;j>=0;j--){var y=pl[j];if(!y)continue;if(y.type==="walk"){w+=(+y.walkMin||0)*60;continue}if(y.type==="stop"||!y.type)break}return w}catch(e){return 0}}
 /* Position d'un quai / d'une voie : quais et voies d'OpenStreetMap autour de l'arrêt (référence « C », « 1 »…), mise en cache sur l'appareil */
-var __bdQ=null;try{if(!localStorage.getItem("bd_quay_osm3")){localStorage.removeItem("bd-quay-xy");localStorage.setItem("bd_quay_osm3","1")}}catch(e){}
+var __bdQ=null;try{if(!localStorage.getItem("bd_quay_osm4")){localStorage.removeItem("bd-quay-xy");localStorage.setItem("bd_quay_osm4","1")}}catch(e){}
 function bdQuayXY(stop,base,pf,cb){try{pf=String(pf||"").replace(/!$/,"").trim();if(!pf||!base||base.lat==null)return null;if(!__bdQ){try{__bdQ=JSON.parse(localStorage.getItem("bd-quay-xy")||"{}")||{}}catch(e){__bdQ={}}}var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ[k];
   /* trouvé : gardé 30 jours ; introuvable : nouvel essai après 15 min (un échec ne bloque plus le quai pendant 30 jours) */
   if(v&&v.t&&Date.now()-v.t<(v.lat!=null?30*86400000:15*60000))return v.lat!=null?{lat:v.lat,lon:v.lon}:null;
   var P=window.__bdQP||(window.__bdQP={});if(P[k])return null;P[k]=1;
   var want=pf.toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,"").trim(),wk=want.replace(/[^a-z0-9]/g,"");
   var A='(around:550,'+base.lat+','+base.lon+')';
-  var q='[out:json][timeout:20];(nwr'+A+'[public_transport=platform];node'+A+'[public_transport=stop_position];node'+A+'[highway=bus_stop];node'+A+'[railway=tram_stop];nwr'+A+'[railway=platform];);out center tags;';
-  var hosts=["https://overpass-api.de/api/interpreter","https://overpass.private.coffee/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
-  var ask=function(n){if(n>=hosts.length)return Promise.reject(0);return fetch(hosts[n],{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},__bdNoRoute:1}).then(function(r){if(!r.ok)throw 0;return r.json()}).catch(function(){return ask(n+1)})};
+  var vs=[want.toUpperCase(),want];if(vs[0]===vs[1])vs.pop();var rx=vs.map(function(v){return v.replace(/[^A-Za-z0-9]/g,'')}).join('|');
+  /* requête ciblée (rapide) : uniquement les éléments dont la référence du quai vaut la lettre / le numéro cherché */
+  var q='[out:json][timeout:15];(nwr'+A+'["local_ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["railway:track_ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["name"~"(Quai|Voie|Gleis|Kante) ('+rx+')$"];);out center tags;';
+  var hosts=["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
+  var ask=function(n){if(n>=hosts.length)return Promise.reject(0);var ac=window.AbortController?new AbortController():null,tm=setTimeout(function(){try{ac&&ac.abort()}catch(e){}},20000);return Promise.race([fetch(hosts[n],{method:"POST",body:"data="+encodeURIComponent(q),headers:{"Content-Type":"application/x-www-form-urlencoded"},signal:ac?ac.signal:void 0,__bdNoRoute:1}).then(function(r){if(!r.ok)throw 0;return r.json()}),new Promise(function(_,rej){setTimeout(function(){rej(0)},20500)})]).then(function(j){clearTimeout(tm);return j},function(){clearTimeout(tm);return ask(n+1)})};
   var netFail=false;
   /* quais / voies : OpenStreetMap (Overpass : ref, local_ref, railway:track_ref… et nom « Quai J »), puis Photon en secours */
   ask(0).then(function(j){var best=null,bd=1e9;
@@ -2225,10 +2227,12 @@ function bdQuayXY(stop,base,pf,cb){try{pf=String(pf||"").replace(/!$/,"").trim()
     try{window.__bdSrcMark&&window.__bdSrcMark(best&&best.src==="photon"?"https://photon.komoot.io":"https://www.openstreetmap.org","Position des quais et des voies")}catch(e){}
     try{(window.__bdQS||(window.__bdQS={}))[k]=best?"ok":(netFail?"net":"none")}catch(e){}
     if(cb)cb()}).catch(function(){}).then(function(){delete P[k]})}catch(e){}return null}
+window.__bdQuayXY=bdQuayXY;window.__bdQuayState=bdQuayState;
 /* état de la recherche d’un quai : "ok" | "none" (absent d’OpenStreetMap) | "net" (serveur injoignable) | null (en cours / inconnu) */
 function bdQuayState(stop,pf){try{pf=String(pf||"").replace(/!$/,"").trim();var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ&&__bdQ[k];if(v&&v.lat!=null)return"ok";return (window.__bdQS||{})[k]||(v?"none":null)}catch(e){return null}}
 /* 2e source : Photon / Komoot — quais et arrêts autour de l'arrêt dont le nom ou la référence contient la lettre / le numéro du quai */
-function bdQuayPhoton(stop,base,pf){try{var want=String(pf).toLowerCase(),sh=String(stop||"").split(",").pop().trim();var u="https://photon.komoot.io/api/?q="+encodeURIComponent(sh+" "+pf)+"&lat="+base.lat+"&lon="+base.lon+"&limit=15&osm_tag=highway:bus_stop&osm_tag=public_transport:platform&osm_tag=railway:platform&osm_tag=public_transport:stop_position";
+function bdQuayPhoton(stop,base,pf){return Promise.race([bdQuayPhoton0(stop,base,pf),new Promise(function(r){setTimeout(function(){r(null)},7000)})])}
+function bdQuayPhoton0(stop,base,pf){try{var want=String(pf).toLowerCase(),sh=String(stop||"").split(",").pop().trim();var u="https://photon.komoot.io/api/?q="+encodeURIComponent(sh+" "+pf)+"&lat="+base.lat+"&lon="+base.lon+"&limit=15&osm_tag=highway:bus_stop&osm_tag=public_transport:platform&osm_tag=railway:platform&osm_tag=public_transport:stop_position";
   return fetch(u).then(function(r){return r.json()}).then(function(j){var best=null,bd=1e9;(j.features||[]).forEach(function(f){var pr=f.properties||{},g=(f.geometry&&f.geometry.coordinates)||[];if(g.length<2)return;var p2={lat:+g[1],lon:+g[0]};var d=zt(base,p2)*1000;if(d>350)return;var txt=[pr.name,pr.ref,pr.local_ref,pr.housenumber].filter(Boolean).join(" ").toLowerCase();var hit=new RegExp("(^|[\\s,;/(-])("+want.replace(/[^a-z0-9]/g,"")+")([\\s,;/)]|$)").test(txt)||new RegExp("(quai|voie|gleis|perron|platform)\\s*"+want.replace(/[^a-z0-9]/g,"")+"\\b").test(txt);if(!hit)return;if(d<bd){bd=d;best={lat:p2.lat,lon:p2.lon,src:"photon"}}});return best}).catch(function(){return null})}catch(e){return Promise.resolve(null)}}
 /* Une route sépare-t-elle deux quais ? (routes OpenStreetMap qui coupent le segment entre les deux quais) — true / false, null tant que ce n'est pas connu */
 var __bdR={};function bdRoadBetween(a,b,cb){try{if(!a||!b)return null;var k=a.lat.toFixed(5)+","+a.lon.toFixed(5)+">"+b.lat.toFixed(5)+","+b.lon.toFixed(5);if(k in __bdR)return __bdR[k];__bdR[k]=null;
