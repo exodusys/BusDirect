@@ -6378,6 +6378,10 @@ html:not(.dark) #bd-map-close{background:#e4e4e7}
 @keyframes bdvp{0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,.45),0 2px 8px rgba(0,0,0,.5)}50%{box-shadow:0 0 0 12px rgba(239,68,68,0),0 2px 8px rgba(0,0,0,.5)}}
 .bd-me-ic{width:16px;height:16px;border-radius:99px;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.3)}
 html.bd-map-open #bd-tabbar{display:none!important}
+.bd-veh-pill{min-width:30px;height:24px;padding:0 9px;border-radius:99px;display:flex;align-items:center;justify-content:center;color:#fff;font:800 12px/1 system-ui,-apple-system,sans-serif;border:2.5px solid #fff;white-space:nowrap;animation:bdvp 1.6s infinite}
+#bd-map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner{display:none}
+#bd-map .maplibregl-ctrl-bottom-right{bottom:env(safe-area-inset-bottom)}
+
 </style>
 <script id="bd-map-js">
 /* Carte du parcours (OpenFreeMap + MapLibre, sans clé) : tracé par tronçon, tous les arrêts,
@@ -6414,27 +6418,29 @@ html.bd-map-open #bd-tabbar{display:none!important}
   loadML().then(function(ML){if(!document.getElementById('bd-map-page'))return;var el=document.getElementById('bd-map');el.innerHTML='';
    var dark=document.documentElement.classList.contains('dark');
    var bounds=new ML.LngLatBounds();st.forEach(function(s){bounds.extend([s.p.lon,s.p.lat])});
-   map=new ML.Map({container:el,style:'https://tiles.openfreemap.org/styles/'+(dark?'dark':'liberty'),bounds:bounds,fitBoundsOptions:{padding:50},attributionControl:{compact:true,customAttribution:'OpenFreeMap © OpenMapTiles · Données © OpenStreetMap'}});
+   map=new ML.Map({container:el,style:'https://tiles.openfreemap.org/styles/'+(dark?'dark':'liberty'),bounds:bounds,fitBoundsOptions:{padding:50},attributionControl:false});map.addControl(new ML.AttributionControl({compact:true,customAttribution:'OpenFreeMap'}),'bottom-right');
    map.on('load',function(){
     var secs={};st.forEach(function(s){(secs[s.sec]=secs[s.sec]||[]).push(s)});
     var lines=Object.keys(secs).map(function(k){var g=secs[k];return{type:'Feature',properties:{c:color(g[0].line)},geometry:{type:'LineString',coordinates:g.map(function(s){return[s.p.lon,s.p.lat]})}}});
     var walks=[];for(var i=0;i+1<st.length;i++)if(st[i].sec!==st[i+1].sec)walks.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[[st[i].p.lon,st[i].p.lat],[st[i+1].p.lon,st[i+1].p.lat]]}});
-    var pts=st.map(function(s,i){var end=i===0||i===st.length-1||s.sec!==(st[i-1]||{}).sec||s.sec!==(st[i+1]||{}).sec;return{type:'Feature',properties:{i:i,c:color(s.line),r:end?7:5},geometry:{type:'Point',coordinates:[s.p.lon,s.p.lat]}}});
+    var pts=st.map(function(s,i){var end=i===0||i===st.length-1||s.sec!==(st[i-1]||{}).sec||s.sec!==(st[i+1]||{}).sec;return{type:'Feature',properties:{i:i,c:color(s.line),r:end?7:5,n:s.n,e:end?1:0},geometry:{type:'Point',coordinates:[s.p.lon,s.p.lat]}}});
     map.addSource('bd-lines',{type:'geojson',data:{type:'FeatureCollection',features:lines}});
     /* remplace chaque ligne droite par le vrai tracé dès qu'il est connu (une demande à la fois) */
-    var ks=Object.keys(secs);(function nx(n){if(n>=ks.length||!map)return;var g=secs[ks[n]];if(g.length<2)return nx(n+1);shape(g).then(function(co){if(co&&map&&map.getSource('bd-lines')){lines[n].geometry.coordinates=co;map.getSource('bd-lines').setData({type:'FeatureCollection',features:lines})}nx(n+1)})})(0);
+    var ks=Object.keys(secs),shSt={};(function nx(n){if(n>=ks.length||!map)return;var g=secs[ks[n]];if(g.length<2){shSt[ks[n]]=1;return nx(n+1)}shape(g).then(function(co){if(co&&map&&map.getSource('bd-lines')){lines[n].geometry.coordinates=co;map.getSource('bd-lines').setData({type:'FeatureCollection',features:lines})}shSt[ks[n]]=1;try{upd()}catch(e){}nx(n+1)})})(0);
     map.addLayer({id:'bd-lines-casing',type:'line',source:'bd-lines',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':dark?'#000':'#fff','line-width':9,'line-opacity':.7}});
     map.addLayer({id:'bd-lines',type:'line',source:'bd-lines',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','c'],'line-width':5.5}});
     map.addSource('bd-walk',{type:'geojson',data:{type:'FeatureCollection',features:walks}});
     map.addLayer({id:'bd-walk',type:'line',source:'bd-walk',paint:{'line-color':'#a1a1aa','line-width':3,'line-dasharray':[1,2]}});
     map.addSource('bd-stops',{type:'geojson',data:{type:'FeatureCollection',features:pts}});
     map.addLayer({id:'bd-stops',type:'circle',source:'bd-stops',paint:{'circle-radius':['get','r'],'circle-color':['get','c'],'circle-stroke-color':'#fff','circle-stroke-width':2}});
+    /* noms des arrêts : toujours pour départ, correspondances et destination ; les autres dès qu'il y a de la place (zoom) */
+    try{map.addLayer({id:'bd-stop-names',type:'symbol',source:'bd-stops',layout:{'text-field':['get','n'],'text-font':['Noto Sans Bold'],'text-size':['case',['==',['get','e'],1],13,11.5],'text-offset':[0,1.1],'text-anchor':'top','text-max-width':9,'text-optional':true,'symbol-sort-key':['-',1,['get','e']],'text-allow-overlap':false},paint:{'text-color':dark?'#fafafa':'#18181b','text-halo-color':dark?'rgba(0,0,0,.85)':'rgba(255,255,255,.95)','text-halo-width':1.6}})}catch(e){}
     var hm=function(t){return t?new Date(t).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:(window.BD_TZ||'Europe/Zurich')}):'--:--'};
     map.on('click','bd-stops',function(e){var f=e.features&&e.features[0];if(!f)return;var s=st[f.properties.i];new ML.Popup({offset:10}).setLngLat([s.p.lon,s.p.lat]).setHTML('<b>'+esc(s.n)+'</b><br>'+(s.arr?'Arr. '+hm(s.arr)+' ':'')+(s.dep?'Dép. '+hm(s.dep):'')+(s.plat?'<br>'+(/^\d+[A-Z]?$/.test(s.plat)?'Voie ':'Quai ')+esc(s.plat):'')).addTo(map)});
     map.on('mouseenter','bd-stops',function(){map.getCanvas().style.cursor='pointer'});map.on('mouseleave','bd-stops',function(){map.getCanvas().style.cursor=''});
     var veh=null,vehEl=null,me=null,first=true;
-    var upd=function(){if(!map)return;var v=vehPos(st);if(v&&v.a){var ix=ks.indexOf(String(v.sec));var co=ix>=0&&lines[ix]&&lines[ix].geometry.coordinates;if(co&&co.length>2){var q=along(co,v);if(q)v.p=q}}
-     if(v){if(!veh){vehEl=document.createElement('div');vehEl.className='bd-veh-ic';veh=new ML.Marker({element:vehEl}).setLngLat([v.p.lon,v.p.lat]).addTo(map);mk.push(veh)}else veh.setLngLat([v.p.lon,v.p.lat]);vehEl.style.background=color(v.line);vehEl.title=(v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at);
+    var upd=function(){if(!map)return;var v=vehPos(st);/* tracé du tronçon pas encore reçu : véhicule pas encore affiché (évite le décalage) */if(v&&v.sec!=null&&!shSt[String(v.sec)])return;if(v&&v.a){var ix=ks.indexOf(String(v.sec));var co=ix>=0&&lines[ix]&&lines[ix].geometry.coordinates;if(co&&co.length>2){var q=along(co,v);if(q)v.p=q}}
+     if(v){if(!veh){vehEl=document.createElement('div');vehEl.className='bd-veh-pill';veh=new ML.Marker({element:vehEl}).setLngLat([v.p.lon,v.p.lat]).addTo(map);mk.push(veh)}else veh.setLngLat([v.p.lon,v.p.lat]);vehEl.style.background=color(v.line);vehEl.textContent=String(v.line||'').replace(/\s+\d{4,}$/,'')||'●';vehEl.title=(v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at);
       if(first){first=false;map.easeTo({center:[v.p.lon,v.p.lat],zoom:Math.max(map.getZoom(),14),duration:600})}}
      else if(veh){veh.remove();veh=null}
      var lo=window.__bd_loc;if(lo&&lo.lat!=null){if(!me){var d=document.createElement('div');d.className='bd-me-ic';me=new ML.Marker({element:d}).setLngLat([lo.lon,lo.lat]).addTo(map);mk.push(me)}else me.setLngLat([lo.lon,lo.lat])}};
