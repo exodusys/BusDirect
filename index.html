@@ -2109,7 +2109,7 @@ async function bdGetConns0(fromName,toName,onErr,wide,via){
     let lastMs=null;
     cs.forEach(function(c){ let dep=c.from&&c.from.departure; let ms=dep?new Date(dep).getTime():null; let k=dep+"|"+JSON.stringify(c.products||[])+"|"+(c.transfers||0); if(!seen[k]){seen[k]=1;out.push(c);} if(ms!=null&&(lastMs==null||ms>lastMs)) lastMs=ms; });
     /* wide : aucun départ dans la fenêtre → on pagine jusqu'à avoir assez de départs ultérieurs (même dans plusieurs heures). */
-    /* V306 : une page suffit dès qu'on a 16 trajets ou la fenêtre horaire (avant : jusqu'à 48 trajets, 5 pages) */if(lastMs==null||(_cm?out.length>=_need:lastMs>=horizonMs)||(wide&&out.length>=16)) break;
+    /* V306 : une page suffit dès qu'on a 16 trajets ou la fenêtre horaire (avant : jusqu'à 48 trajets, 5 pages) *//* V366 : en mode durée, la recherche va jusqu'au bout de la fenêtre (24 h max) — plus d'arrêt à 16 trajets */if(lastMs==null||(_cm?out.length>=_need:lastMs>=horizonMs)) break;
     let z=new Date(lastMs+60000).toLocaleString("sv-SE",{timeZone:(window.BD_TZ||"Europe/Zurich")});
     tp="&date="+z.slice(0,10)+"&time="+z.slice(11,16);
   }
