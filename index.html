@@ -3156,7 +3156,7 @@ function No(i){h(i.name),k(!1),z([]);L("Destination "+i.name);setTimeout(functio
   /* tronçons du trajet (sectionIdx) : véhicule en cours, ou attente d'une correspondance */
   var _tm=function(v){if(v==null)return null;var t=typeof v==="number"?(v<1e12?v*1000:v):Date.parse(v);return isFinite(t)?t:null};
   var _pl=(S0.passList||[]).filter(function(x){return x&&(x.type==="stop"||!x.type)}),_secs=[];_pl.forEach(function(x){var si=x.sectionIdx!=null?x.sectionIdx:0;var g=_secs[_secs.length-1];if(!g||g.i!==si){g={i:si,items:[]};_secs.push(g)}g.items.push(x)});
-  _secs.forEach(function(g){var f=g.items[0],l=g.items[g.items.length-1];g.start=_tm(f.departure)||_tm(f.departureTimestamp)||_tm(f.arrival);g.end=_tm(l.arrival)||_tm(l.arrivalTimestamp)||_tm(l.departure);g.line=String(f.line||((S0.products||[])[g.i])||f.category||"").trim();g.kind=(function(){try{return bdVehKind({passList:[f],products:S0.products||[]})}catch(e){return"bus"}})();g.plat=String(f.platform||"").replace(/!$/,"").trim()});
+  _secs.forEach(function(g){var f=g.items[0],l=g.items[g.items.length-1];g.start=_tm(f.departure)||_tm(f.departureTimestamp)||_tm(f.arrival);g.end=_tm(l.arrival)||_tm(l.arrivalTimestamp)||_tm(l.departure);g.line=String(((S0.products||[])[g.i])||f.line||f.category||"").trim();g.kind=(function(){try{return bdVehKind({passList:[f],products:S0.products||[]})}catch(e){return"bus"}})();g.plat=String(f.platform||"").replace(/!$/,"").trim()});
   var _cur=null,_next=null;for(var _q=0;_q<_secs.length;_q++){var g=_secs[_q];if(g.start!=null&&g.end!=null&&g.start<=_now&&_now<g.end){_cur=g;break}if(g.end!=null&&_now>=g.end&&_secs[_q+1]&&_secs[_q+1].start!=null&&_now<_secs[_q+1].start){_next=_secs[_q+1];break}}
   var _title,_sub;
   if(_next){var _sl=Math.max(0,Math.round((_next.start-_now)/1000));_title=c("span",{"data-bd-cd":String(_next.start),children:"Correspondance dans "+Math.floor(_sl/60)+"m "+(_sl%60)+"s"});
@@ -6381,8 +6381,21 @@ html.bd-map-open #bd-tabbar{display:none!important}
 .bd-veh-pill{min-width:30px;height:24px;padding:0 9px;border-radius:99px;display:flex;align-items:center;justify-content:center;color:#fff;font:800 12px/1 system-ui,-apple-system,sans-serif;border:2.5px solid #fff;white-space:nowrap;animation:bdvp 1.6s infinite}
 #bd-map .maplibregl-ctrl-attrib.maplibregl-compact:not(.maplibregl-compact-show) .maplibregl-ctrl-attrib-inner{display:none}
 #bd-map .maplibregl-ctrl-bottom-right{bottom:env(safe-area-inset-bottom)}
+#bd-map.bd-walkmap .maplibregl-ctrl-bottom-right{bottom:calc(118px + env(safe-area-inset-bottom))}
 
 </style>
+<script id="bd-map-gray">
+/* cartes OpenFreeMap en mode sombre : fond gris plus clair (terre, eau, parcs, bâtiments, routes) */
+window.bdLightenDark=function(map){try{if(!document.documentElement.classList.contains('dark'))return;var st=map.getStyle();(st.layers||[]).forEach(function(l){var id=l.id||'';try{
+ if(l.type==='background')map.setPaintProperty(id,'background-color','#3b3e45');
+ else if(l.type==='fill'&&/water/.test(id))map.setPaintProperty(id,'fill-color','#272b33');
+ else if(l.type==='fill'&&/building/.test(id))map.setPaintProperty(id,'fill-color','#4a4d55');
+ else if(l.type==='fill'&&/park|wood|grass|landcover|landuse|forest|cemetery|pitch/.test(id))map.setPaintProperty(id,'fill-color','#3f4a43');
+ else if(l.type==='line'&&/water|river|stream/.test(id))map.setPaintProperty(id,'line-color','#272b33');
+ else if(l.type==='line'&&/road|highway|street|path|bridge|tunnel|motorway|trunk|primary|secondary|tertiary|minor|service/.test(id)&&!/casing/.test(id))map.setPaintProperty(id,'line-color','#5d616a');
+ else if(l.type==='symbol'&&l.paint&&l.paint['text-color']!==undefined&&!/^bd-/.test(id)){map.setPaintProperty(id,'text-color','#d4d4d8');map.setPaintProperty(id,'text-halo-color','#2b2e34')}
+}catch(e){}})}catch(e){}};
+</script>
 <script id="bd-map-js">
 /* Carte du parcours (OpenFreeMap + MapLibre, sans clé) : tracé par tronçon, tous les arrêts,
    véhicule en direct (d'après les heures de passage, retards compris, chaque seconde) et ma position. Clair / sombre selon le thème. */
@@ -6394,7 +6407,7 @@ html.bd-map-open #bd-tabbar{display:none!important}
  function xy(x){var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null),lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);if(la==null||!isFinite(la)||!isFinite(lo))return null;return{lat:la,lon:lo}}
  function color(line){try{return window.getLineColor?window.getLineColor(line):'#ef4444'}catch(e){return'#ef4444'}}
  function esc(t){return String(t||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
- function stops(S){var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});return pl.map(function(x){var arr=tm(x.prognosis&&x.prognosis.arrival)||tm(x.arrival)||tm(x.arrivalTimestamp),dep=tm(x.prognosis&&x.prognosis.departure)||tm(x.departure)||tm(x.departureTimestamp);return{n:nm(x),p:xy(x),arr:arr,dep:dep,sec:x.sectionIdx!=null?x.sectionIdx:0,line:String(x.line||((S.products||[])[x.sectionIdx||0])||x.category||'').trim(),plat:String(x.platform||'').replace(/!$/,'')}}).filter(function(s){return s.p})}
+ function stops(S){var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});return pl.map(function(x){var arr=tm(x.prognosis&&x.prognosis.arrival)||tm(x.arrival)||tm(x.arrivalTimestamp),dep=tm(x.prognosis&&x.prognosis.departure)||tm(x.departure)||tm(x.departureTimestamp);return{n:nm(x),p:xy(x),arr:arr,dep:dep,sec:x.sectionIdx!=null?x.sectionIdx:0,line:String(((S.products||[])[x.sectionIdx||0])||x.line||x.category||'').trim(),plat:String(x.platform||'').replace(/!$/,'')}}).filter(function(s){return s.p})}
  function vehPos(st){var now=Date.now();for(var i=0;i<st.length;i++){var a=st[i],b=st[i+1];var ad=a.dep!=null?a.dep:a.arr,aa=a.arr!=null?a.arr:a.dep;if(aa!=null&&ad!=null&&now>=aa&&now<ad)return{p:a.p,line:a.line,at:a.n};if(b&&b.sec===a.sec&&ad!=null){var ba=b.arr!=null?b.arr:b.dep;if(ba!=null&&now>=ad&&now<ba){var f=(now-ad)/Math.max(1,ba-ad);return{p:{lat:a.p.lat+(b.p.lat-a.p.lat)*f,lon:a.p.lon+(b.p.lon-a.p.lon)*f},line:a.line,to:b.n,sec:a.sec,a:a,b:b,f:f}}}}return null}
  /* vrai tracé d'un tronçon : itinéraire Transitous (MOTIS) du même trajet, géométrie du leg de la même ligne */
  var SHP={};
@@ -6420,7 +6433,7 @@ html.bd-map-open #bd-tabbar{display:none!important}
    var dark=document.documentElement.classList.contains('dark');
    var bounds=new ML.LngLatBounds();st.forEach(function(s){bounds.extend([s.p.lon,s.p.lat])});
    map=new ML.Map({container:el,style:'https://tiles.openfreemap.org/styles/'+(dark?'dark':'liberty'),bounds:bounds,fitBoundsOptions:{padding:50},attributionControl:false});map.addControl(new ML.AttributionControl({compact:true,customAttribution:'OpenFreeMap'}),'bottom-right');
-   map.on('load',function(){
+   map.on('load',function(){try{window.bdLightenDark(map)}catch(e){}
     var secs={};st.forEach(function(s){(secs[s.sec]=secs[s.sec]||[]).push(s)});
     var lines=Object.keys(secs).map(function(k){var g=secs[k];return{type:'Feature',properties:{c:color(g[0].line)},geometry:{type:'LineString',coordinates:g.map(function(s){return[s.p.lon,s.p.lat]})}}});
     var walks=[];for(var i=0;i+1<st.length;i++)if(st[i].sec!==st[i+1].sec)walks.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[[st[i].p.lon,st[i].p.lat],[st[i+1].p.lon,st[i+1].p.lat]]}});
@@ -6441,7 +6454,7 @@ html.bd-map-open #bd-tabbar{display:none!important}
     map.on('mouseenter','bd-stops',function(){map.getCanvas().style.cursor='pointer'});map.on('mouseleave','bd-stops',function(){map.getCanvas().style.cursor=''});
     var veh=null,vehEl=null,me=null,first=true;
     var upd=function(){if(!map)return;var v=vehPos(st);/* tracé du tronçon pas encore reçu : véhicule pas encore affiché (évite le décalage) */if(v&&v.sec!=null&&!shSt[String(v.sec)])return;if(v&&v.a){var ix=ks.indexOf(String(v.sec));var co=ix>=0&&lines[ix]&&lines[ix].geometry.coordinates;if(co&&co.length>2){var q=along(co,v);if(q)v.p=q}}
-     if(v){if(!veh){vehEl=document.createElement('div');vehEl.className='bd-veh-pill';veh=new ML.Marker({element:vehEl}).setLngLat([v.p.lon,v.p.lat]).addTo(map);mk.push(veh)}else veh.setLngLat([v.p.lon,v.p.lat]);vehEl.style.background=color(v.line);vehEl.textContent=String(v.line||'').replace(/\s+\d{4,}$/,'')||'●';vehEl.title=(v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at);
+     if(v){if(!veh){vehEl=document.createElement('div');vehEl.className='bd-veh-pill';veh=new ML.Marker({element:vehEl}).setLngLat([v.p.lon,v.p.lat]).addTo(map);mk.push(veh)}else veh.setLngLat([v.p.lon,v.p.lat]);vehEl.style.background=color(v.line);vehEl.textContent=(function(){var l=String(v.line||'').trim().replace(/\s+/g,' ').replace(/\s+\d{4,}$/,'');if(l.length>8)l=l.split(' ').slice(0,2).join(' ');return l||'●'})();vehEl.title=(v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at);
       if(first){first=false;map.easeTo({center:[v.p.lon,v.p.lat],zoom:Math.max(map.getZoom(),14),duration:600})}}
      else if(veh){veh.remove();veh=null}
      var lo=window.__bd_loc;if(lo&&lo.lat!=null){if(!me){var d=document.createElement('div');d.className='bd-me-ic';me=new ML.Marker({element:d}).setLngLat([lo.lon,lo.lat]).addTo(map);mk.push(me)}else me.setLngLat([lo.lon,lo.lat])}};
@@ -6480,11 +6493,11 @@ html:not(.dark) #bd-walk-bar{background:rgba(255,255,255,.95);color:#18181b;bord
   var pg=document.createElement('div');pg.id='bd-map-page';pg.innerHTML='<div id="bd-map-head"><div class="t"><b>Marche à pied</b><span></span></div><button id="bd-map-close" aria-label="Fermer">×</button></div><div id="bd-map" style="position:relative"><div id="bd-map-msg">Chargement…</div></div>';
   pg.querySelector('.t span').textContent=label||'Itinéraire à pied';document.body.appendChild(pg);document.documentElement.classList.add('bd-map-open');pg.querySelector('#bd-map-close').onclick=close;
   if(!A){pg.querySelector('#bd-map-msg').textContent='Position de départ inconnue : activez la localisation.';return true}
-  Promise.all([loadML(),route(A,B)]).then(function(R){var ML=R[0],rt=R[1];if(!document.getElementById('bd-map-page'))return;var el=document.getElementById('bd-map');el.innerHTML='';
+  Promise.all([loadML(),route(A,B)]).then(function(R){var ML=R[0],rt=R[1];if(!document.getElementById('bd-map-page'))return;var el=document.getElementById('bd-map');el.innerHTML='';el.classList.add('bd-walkmap');
    var co=rt?rt.co:[[A.lon,A.lat],[B.lon,B.lat]],steps=rt?rt.steps:[];
    var dark=document.documentElement.classList.contains('dark');var bounds=new ML.LngLatBounds();co.forEach(function(p){bounds.extend(p)});
    map=new ML.Map({container:el,style:'https://tiles.openfreemap.org/styles/'+(dark?'dark':'liberty'),bounds:bounds,fitBoundsOptions:{padding:{top:60,bottom:150,left:50,right:50}},attributionControl:false});
-   map.addControl(new ML.AttributionControl({compact:true,customAttribution:'OpenFreeMap'}),'top-right');
+   map.addControl(new ML.AttributionControl({compact:true,customAttribution:'OpenFreeMap'}),'bottom-right');
    /* longueurs cumulées le long du tracé */
    var cum=[0];for(var i=1;i<co.length;i++)cum.push(cum[i-1]+dist(co[i-1],co[i]));var total=cum[cum.length-1];
    /* position des indications sur le tracé */
@@ -6500,9 +6513,9 @@ html:not(.dark) #bd-walk-bar{background:rgba(255,255,255,.95);color:#18181b;bord
     var sub=nav?(fmtD(left)+' restants · '+mins+' min'+(off>40?' · vous êtes hors du tracé':'')):(rt?'Itinéraire à pied':'Itinéraire approximatif (ligne directe)');
     bar.innerHTML='<div class="row">'+(nav?'<div class="arrow">'+(nxt?dir[0]:'↑')+'</div>':'')+'<div class="ins"><b></b><span></span></div><button id="bd-walk-go" class="'+(nav?'on':'')+'">'+(nav?'Arrêter':'Démarrer')+'</button></div>';
     bar.querySelector('.ins b').textContent=title;bar.querySelector('.ins span').textContent=sub;
-    bar.querySelector('#bd-walk-go').onclick=function(){nav=!nav;if(nav){try{watch=navigator.geolocation.watchPosition(function(p){window.__bd_loc=Object.assign({},window.__bd_loc||{},{lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy});upd()},function(){},{enableHighAccuracy:true,maximumAge:2000})}catch(e){}}else{try{watch!=null&&navigator.geolocation.clearWatch(watch)}catch(e){}watch=null;map.fitBounds(bounds,{padding:{top:60,bottom:150,left:50,right:50}})}upd()}};
+    bar.querySelector('#bd-walk-go').onclick=function(){nav=!nav;if(nav){var P0=here();if(P0)route(P0,B).then(function(r2){if(!r2||!map||!map.getSource('bd-walk'))return;rt=r2;co=r2.co;steps=r2.steps;cum=[0];for(var q=1;q<co.length;q++)cum.push(cum[q-1]+dist(co[q-1],co[q]));total=cum[cum.length-1];sIdx=steps.map(function(s){if(s.lat==null||s.lon==null)return null;var bi=0,bd=1e12;co.forEach(function(p,j){var d=dist(p,[s.lon,s.lat]);if(d<bd){bd=d;bi=j}});return cum[bi]});map.getSource('bd-walk').setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:co}});try{map.setPaintProperty('bd-walk-line','line-dasharray',[1,0])}catch(e){}render()});try{watch=navigator.geolocation.watchPosition(function(p){window.__bd_loc=Object.assign({},window.__bd_loc||{},{lat:p.coords.latitude,lon:p.coords.longitude,acc:p.coords.accuracy});upd()},function(){},{enableHighAccuracy:true,maximumAge:2000})}catch(e){}}else{try{watch!=null&&navigator.geolocation.clearWatch(watch)}catch(e){}watch=null;map.fitBounds(bounds,{padding:{top:60,bottom:150,left:50,right:50}})}upd()}};
    var upd=function(){if(!map)return;var P=here();if(P){if(!me){meEl=document.createElement('div');meEl.className='bd-me-ic';me=new ML.Marker({element:meEl}).setLngLat([P.lon,P.lat]).addTo(map);mk.push(me)}else me.setLngLat([P.lon,P.lat]);meEl.classList.toggle('nav',nav);if(nav)map.easeTo({center:[P.lon,P.lat],zoom:Math.max(map.getZoom(),17),duration:500})}render()};
-   map.on('load',function(){
+   map.on('load',function(){try{window.bdLightenDark(map)}catch(e){}
     map.addSource('bd-walk',{type:'geojson',data:{type:'Feature',properties:{},geometry:{type:'LineString',coordinates:co}}});
     map.addLayer({id:'bd-walk-casing',type:'line',source:'bd-walk',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':dark?'#000':'#fff','line-width':9,'line-opacity':.7}});
     map.addLayer({id:'bd-walk-line',type:'line',source:'bd-walk',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#3b82f6','line-width':5.5,'line-dasharray':rt?[1,0]:[1,1.5]}});
