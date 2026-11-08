@@ -6199,6 +6199,7 @@ function vis(e){if(!e)return false;var r=e.getBoundingClientRect(),c=getComputed
 function xIn(el){if(!el)return;var b=[].slice.call(el.querySelectorAll('button')).find(function(b){return b.textContent.trim()==='×'&&vis(b)});if(b)b.click()}
 function closeAll(){
  var m=$('bd-v101-menu');if(m)m.classList.remove('open');
+ if(window.bdTicketsPage)window.bdTicketsPage(false);
  var s=$('bd-v104-sms-overlay');if(s&&s.classList.contains('open'))xIn(s);
  var d=$('bd-distance-settings-overlay');if(d&&d.classList.contains('open'))xIn(d);
  var t=document.querySelector('.bd-tiles-sec');if(vis(t)&&getComputedStyle(t).position==='fixed'){xIn(t);var bg=document.querySelector('.bd-tiles-bg');if(vis(bg))bg.click()}
@@ -6213,7 +6214,7 @@ function go(k){
  lock=Date.now();closeAll();mark(k);
  setTimeout(function(){
   if(k==='parcours'){var b=$('bd-tiles-menu-btn');if(b)b.click()}
-  else if(k==='tickets'){var b=$('bd-v101-sms');if(b)b.click()}
+  else if(k==='tickets'){if(window.bdTicketsPage)window.bdTicketsPage(true)}
   else if(k==='parametres'){var b=$('bd-distance-settings-btn');if(b)b.click()}
   else scrollTo({top:0,behavior:'smooth'});
  },120)}
@@ -6251,6 +6252,34 @@ function add(){
  label();
 }
 setInterval(function(){add();label();var t=$('bd-set-theme');if(t){t.classList.remove('bd-v103-moved-control');t.removeAttribute('data-bd-v103-moved')}},700);
+})();
+</script>
+<style id="bd-tickets-page-css">
+#bd-tickets-page{position:fixed;left:0;right:0;top:var(--bd-tk-top,76px);bottom:var(--bd-tk-bot,64px);z-index:100150;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px;display:none;background:rgba(10,12,24,.55);-webkit-backdrop-filter:blur(22px) saturate(1.4);backdrop-filter:blur(22px) saturate(1.4)}
+html:not(.dark) #bd-tickets-page{background:rgba(255,255,255,.55)}
+#bd-tickets-page.open{display:block}
+#bd-tickets-page h2{font:900 22px/1.2 system-ui,-apple-system,sans-serif;margin:4px 2px 14px}
+#bd-tickets-page .bd-sms-rapides{display:block;margin:0!important}
+#bd-tk-empty{padding:28px 16px;text-align:center;font-size:13px;color:#a1a1aa;border:1px dashed rgba(161,161,170,.4);border-radius:18px}
+</style>
+<script id="bd-tickets-page-js">
+(function(){
+function $(i){return document.getElementById(i)}
+function page(){var p=$('bd-tickets-page');if(!p){p=document.createElement('section');p.id='bd-tickets-page';p.innerHTML='<h2>Tickets</h2><div id="bd-tk-slot"></div><div id="bd-tk-empty">Aucun SMS rapide disponible pour la ville active.<br>Activez la localisation et le service Tickets SMS dans Paramètres.</div>';document.body.appendChild(p)}return p}
+function sync(){
+ var p=page(),h=$('bd-sms-rapides'),slot=$('bd-tk-slot');
+ if(h&&h.parentElement!==slot)slot.appendChild(h);
+ var empty=!h||h.style.display==='none'||!h.innerHTML.trim();$('bd-tk-empty').style.display=empty?'':'none';
+ var hd=document.querySelector('header.bd-head'),bar=$('bd-tabbar');
+ if(hd)p.style.setProperty('--bd-tk-top',hd.getBoundingClientRect().bottom+'px');
+ if(bar)p.style.setProperty('--bd-tk-bot',bar.offsetHeight+'px');
+}
+window.bdTicketsPage=function(on){sync();page().classList.toggle('open',!!on)};
+function smsOn(){try{if(window.bdSmsOn)return !!window.bdSmsOn()}catch(e){}var c=$('bd-set-sms-on');return c?c.checked:true}
+function tabVis(){var b=document.querySelector('#bd-tabbar [data-k=tickets]');if(!b)return;var on=smsOn();b.style.display=on?'':'none';
+ if(!on&&b.classList.contains('on')){window.bdTicketsPage(false);var h=document.querySelector('#bd-tabbar [data-k=horaires]');if(h)h.click()}}
+setInterval(function(){sync();tabVis()},600);
+document.addEventListener('change',function(e){if(e.target&&e.target.id==='bd-set-sms-on')setTimeout(tabVis,50)});
 })();
 </script>
 </body>
