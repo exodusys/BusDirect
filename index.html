@@ -6347,5 +6347,7 @@ html.bd-tab-suivis section.bd-trk-sec{margin-top:8px}
  window.open=function(url){try{if(on()&&url&&toApp(String(url))){go(String(url));return null}}catch(e){}return origOpen.apply(window,arguments)};
 })();
 </script>
+<style id="bd-tabbar-hide-live">body:has(.bdt-wrap) #bd-tabbar,html.bd-live-open #bd-tabbar{display:none!important}</style>
+<script>setInterval(function(){try{document.documentElement.classList.toggle("bd-live-open",!!document.querySelector(".bdt-wrap"))}catch(e){}},400)</script>
 </body>
 </html>
