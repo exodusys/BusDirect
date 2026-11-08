@@ -6374,47 +6374,59 @@ html:not(.dark) #bd-map-head{background:rgba(255,255,255,.9);color:#18181b;borde
 html:not(.dark) #bd-map-close{background:#e4e4e7}
 #bd-map{flex:1;min-height:0}
 #bd-map-msg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#a1a1aa;font:600 13px system-ui,sans-serif;text-align:center}
-.bd-veh-ic{width:22px;height:22px;border-radius:99px;border:3px solid #fff;box-shadow:0 0 0 6px rgba(239,68,68,.35),0 2px 8px rgba(0,0,0,.5);animation:bdvp 1.6s infinite}
+.bd-veh-ic{width:22px;height:22px;background:#ef4444;border-radius:99px;border:3px solid #fff;box-shadow:0 0 0 6px rgba(239,68,68,.35),0 2px 8px rgba(0,0,0,.5);animation:bdvp 1.6s infinite}
 @keyframes bdvp{0%,100%{box-shadow:0 0 0 4px rgba(239,68,68,.45),0 2px 8px rgba(0,0,0,.5)}50%{box-shadow:0 0 0 12px rgba(239,68,68,0),0 2px 8px rgba(0,0,0,.5)}}
 .bd-me-ic{width:16px;height:16px;border-radius:99px;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.3)}
 html.bd-map-open #bd-tabbar{display:none!important}
 </style>
 <script id="bd-map-js">
-/* Carte du parcours : tous les arrêts, le tracé par tronçon (couleur de la ligne) et la position du véhicule en direct
-   (calculée d'après les heures de passage, retards compris, mise à jour chaque seconde) + ma position. */
+/* Carte du parcours (OpenFreeMap + MapLibre, sans clé) : tracé par tronçon, tous les arrêts,
+   véhicule en direct (d'après les heures de passage, retards compris, chaque seconde) et ma position. Clair / sombre selon le thème. */
 (function(){
- var L0=null,map=null,tick=null;
- function loadLeaflet(){if(window.L)return Promise.resolve(window.L);if(L0)return L0;L0=new Promise(function(ok,ko){var l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(l);var s=document.createElement('script');s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';s.onload=function(){ok(window.L)};s.onerror=function(){L0=null;ko(0)};document.head.appendChild(s)});return L0}
+ var P0=null,map=null,tick=null,mk=[];
+ function loadML(){if(window.maplibregl)return Promise.resolve(window.maplibregl);if(P0)return P0;P0=new Promise(function(ok,ko){var l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';document.head.appendChild(l);var s=document.createElement('script');s.src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';s.onload=function(){window.maplibregl?ok(window.maplibregl):ko(0)};s.onerror=function(){P0=null;ko(0)};document.head.appendChild(s)});return P0}
  function tm(v){if(v==null||v==='')return null;var t=typeof v==='number'?(v<1e12?v*1000:v):Date.parse(v);return isFinite(t)?t:null}
  function nm(x){return typeof x.station==='string'?x.station:((x.station&&x.station.name)||x.name||'')}
  function xy(x){var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null),lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);if(la==null||!isFinite(la)||!isFinite(lo))return null;return{lat:la,lon:lo}}
  function color(line){try{return window.getLineColor?window.getLineColor(line):'#ef4444'}catch(e){return'#ef4444'}}
- function stops(S){var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});return pl.map(function(x){var p=xy(x);var arr=tm(x.prognosis&&x.prognosis.arrival)||tm(x.arrival)||tm(x.arrivalTimestamp),dep=tm(x.prognosis&&x.prognosis.departure)||tm(x.departure)||tm(x.departureTimestamp);return{n:nm(x),p:p,arr:arr,dep:dep,sec:x.sectionIdx!=null?x.sectionIdx:0,line:String(x.line||((S.products||[])[x.sectionIdx||0])||x.category||'').trim(),plat:String(x.platform||'').replace(/!$/,'')}}).filter(function(s){return s.p})}
- /* position du véhicule : entre le départ d'un arrêt et l'arrivée au suivant (même tronçon), sinon à l'arrêt */
- function vehPos(st){var now=Date.now();for(var i=0;i<st.length;i++){var a=st[i],b=st[i+1];var ad=a.dep!=null?a.dep:a.arr;var aa=a.arr!=null?a.arr:a.dep;if(aa!=null&&ad!=null&&now>=aa&&now<ad)return{p:a.p,line:a.line,at:a.n};if(b&&b.sec===a.sec&&ad!=null){var ba=b.arr!=null?b.arr:b.dep;if(ba!=null&&now>=ad&&now<ba){var f=(now-ad)/Math.max(1,ba-ad);return{p:{lat:a.p.lat+(b.p.lat-a.p.lat)*f,lon:a.p.lon+(b.p.lon-a.p.lon)*f},line:a.line,to:b.n}}}}return null}
- function close(){try{clearInterval(tick)}catch(e){}tick=null;try{map&&map.remove()}catch(e){}map=null;var p=document.getElementById('bd-map-page');if(p)p.remove();document.documentElement.classList.remove('bd-map-open')}
+ function esc(t){return String(t||'').replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function stops(S){var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});return pl.map(function(x){var arr=tm(x.prognosis&&x.prognosis.arrival)||tm(x.arrival)||tm(x.arrivalTimestamp),dep=tm(x.prognosis&&x.prognosis.departure)||tm(x.departure)||tm(x.departureTimestamp);return{n:nm(x),p:xy(x),arr:arr,dep:dep,sec:x.sectionIdx!=null?x.sectionIdx:0,line:String(x.line||((S.products||[])[x.sectionIdx||0])||x.category||'').trim(),plat:String(x.platform||'').replace(/!$/,'')}}).filter(function(s){return s.p})}
+ function vehPos(st){var now=Date.now();for(var i=0;i<st.length;i++){var a=st[i],b=st[i+1];var ad=a.dep!=null?a.dep:a.arr,aa=a.arr!=null?a.arr:a.dep;if(aa!=null&&ad!=null&&now>=aa&&now<ad)return{p:a.p,line:a.line,at:a.n};if(b&&b.sec===a.sec&&ad!=null){var ba=b.arr!=null?b.arr:b.dep;if(ba!=null&&now>=ad&&now<ba){var f=(now-ad)/Math.max(1,ba-ad);return{p:{lat:a.p.lat+(b.p.lat-a.p.lat)*f,lon:a.p.lon+(b.p.lon-a.p.lon)*f},line:a.line,to:b.n}}}}return null}
+ function close(){try{clearInterval(tick)}catch(e){}tick=null;mk.forEach(function(m){try{m.remove()}catch(e){}});mk=[];try{map&&map.remove()}catch(e){}map=null;var p=document.getElementById('bd-map-page');if(p)p.remove();document.documentElement.classList.remove('bd-map-open')}
  window.bdOpenMap=function(S){close();var st=stops(S||{});
   var pg=document.createElement('div');pg.id='bd-map-page';var from=st[0]?st[0].n:'',to=st.length?st[st.length-1].n:'';
   pg.innerHTML='<div id="bd-map-head"><div class="t"><b>Parcours sur la carte</b><span></span></div><button id="bd-map-close" aria-label="Fermer">×</button></div><div id="bd-map" style="position:relative"><div id="bd-map-msg">Chargement de la carte…</div></div>';
   pg.querySelector('.t span').textContent=from+' → '+to;document.body.appendChild(pg);document.documentElement.classList.add('bd-map-open');
   pg.querySelector('#bd-map-close').onclick=close;
   if(st.length<2){pg.querySelector('#bd-map-msg').textContent='Coordonnées des arrêts indisponibles pour ce trajet.';return}
-  loadLeaflet().then(function(L){if(!document.getElementById('bd-map-page'))return;var el=document.getElementById('bd-map');el.innerHTML='';
-   map=L.map(el,{zoomControl:false,attributionControl:true});
+  loadML().then(function(ML){if(!document.getElementById('bd-map-page'))return;var el=document.getElementById('bd-map');el.innerHTML='';
    var dark=document.documentElement.classList.contains('dark');
-   L.tileLayer('https://{s}.basemaps.cartocdn.com/'+(dark?'dark_all':'rastertiles/voyager')+'/{z}/{x}/{y}{r}.png',{maxZoom:19,subdomains:'abcd',attribution:'© OpenStreetMap · © CARTO'}).addTo(map);
-   /* tracé par tronçon */
-   var secs={};st.forEach(function(s){(secs[s.sec]=secs[s.sec]||[]).push(s)});
-   Object.keys(secs).forEach(function(k){var g=secs[k];L.polyline(g.map(function(s){return[s.p.lat,s.p.lon]}),{color:color(g[0].line),weight:6,opacity:.9}).addTo(map)});
-   /* correspondances à pied (tirets) */
-   for(var i=0;i+1<st.length;i++)if(st[i].sec!==st[i+1].sec)L.polyline([[st[i].p.lat,st[i].p.lon],[st[i+1].p.lat,st[i+1].p.lon]],{color:'#a1a1aa',weight:3,dashArray:'4 6'}).addTo(map);
-   var hm=function(t){return t?new Date(t).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:(window.BD_TZ||'Europe/Zurich')}):'--:--'};
-   st.forEach(function(s,i){var end=i===0||i===st.length-1||s.sec!==(st[i-1]||{}).sec||s.sec!==(st[i+1]||{}).sec;L.circleMarker([s.p.lat,s.p.lon],{radius:end?7:5,color:'#fff',weight:2,fillColor:color(s.line),fillOpacity:1}).addTo(map).bindPopup('<b>'+s.n.replace(/</g,'&lt;')+'</b><br>'+(s.arr?'Arr. '+hm(s.arr)+' ':'')+(s.dep?'Dép. '+hm(s.dep):'')+(s.plat?'<br>'+(/^\d+[A-Z]?$/.test(s.plat)?'Voie ':'Quai ')+s.plat:''))});
-   map.fitBounds(L.latLngBounds(st.map(function(s){return[s.p.lat,s.p.lon]})),{padding:[40,40]});
-   var veh=null,me=null,first=true;
-   var upd=function(){if(!map)return;var v=vehPos(st);if(v){var ic=L.divIcon({className:'',html:'<div class="bd-veh-ic" style="background:'+color(v.line)+'"></div>',iconSize:[22,22],iconAnchor:[11,11]});if(!veh)veh=L.marker([v.p.lat,v.p.lon],{icon:ic,zIndexOffset:1000}).addTo(map);else veh.setLatLng([v.p.lat,v.p.lon]);veh.bindTooltip((v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at),{direction:'top',offset:[0,-12]});if(first){first=false;map.setView([v.p.lat,v.p.lon],Math.max(map.getZoom(),14))}}else if(veh){map.removeLayer(veh);veh=null}
-    var lo=window.__bd_loc;if(lo&&lo.lat!=null){if(!me)me=L.marker([lo.lat,lo.lon],{icon:L.divIcon({className:'',html:'<div class="bd-me-ic"></div>',iconSize:[16,16],iconAnchor:[8,8]})}).addTo(map);else me.setLatLng([lo.lat,lo.lon])}};
-   upd();tick=setInterval(upd,1000);
+   var bounds=new ML.LngLatBounds();st.forEach(function(s){bounds.extend([s.p.lon,s.p.lat])});
+   map=new ML.Map({container:el,style:'https://tiles.openfreemap.org/styles/'+(dark?'dark':'liberty'),bounds:bounds,fitBoundsOptions:{padding:50},attributionControl:{compact:true,customAttribution:'OpenFreeMap © OpenMapTiles · Données © OpenStreetMap'}});
+   map.on('load',function(){
+    var secs={};st.forEach(function(s){(secs[s.sec]=secs[s.sec]||[]).push(s)});
+    var lines=Object.keys(secs).map(function(k){var g=secs[k];return{type:'Feature',properties:{c:color(g[0].line)},geometry:{type:'LineString',coordinates:g.map(function(s){return[s.p.lon,s.p.lat]})}}});
+    var walks=[];for(var i=0;i+1<st.length;i++)if(st[i].sec!==st[i+1].sec)walks.push({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[[st[i].p.lon,st[i].p.lat],[st[i+1].p.lon,st[i+1].p.lat]]}});
+    var pts=st.map(function(s,i){var end=i===0||i===st.length-1||s.sec!==(st[i-1]||{}).sec||s.sec!==(st[i+1]||{}).sec;return{type:'Feature',properties:{i:i,c:color(s.line),r:end?7:5},geometry:{type:'Point',coordinates:[s.p.lon,s.p.lat]}}});
+    map.addSource('bd-lines',{type:'geojson',data:{type:'FeatureCollection',features:lines}});
+    map.addLayer({id:'bd-lines-casing',type:'line',source:'bd-lines',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':dark?'#000':'#fff','line-width':9,'line-opacity':.7}});
+    map.addLayer({id:'bd-lines',type:'line',source:'bd-lines',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':['get','c'],'line-width':5.5}});
+    map.addSource('bd-walk',{type:'geojson',data:{type:'FeatureCollection',features:walks}});
+    map.addLayer({id:'bd-walk',type:'line',source:'bd-walk',paint:{'line-color':'#a1a1aa','line-width':3,'line-dasharray':[1,2]}});
+    map.addSource('bd-stops',{type:'geojson',data:{type:'FeatureCollection',features:pts}});
+    map.addLayer({id:'bd-stops',type:'circle',source:'bd-stops',paint:{'circle-radius':['get','r'],'circle-color':['get','c'],'circle-stroke-color':'#fff','circle-stroke-width':2}});
+    var hm=function(t){return t?new Date(t).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:(window.BD_TZ||'Europe/Zurich')}):'--:--'};
+    map.on('click','bd-stops',function(e){var f=e.features&&e.features[0];if(!f)return;var s=st[f.properties.i];new ML.Popup({offset:10}).setLngLat([s.p.lon,s.p.lat]).setHTML('<b>'+esc(s.n)+'</b><br>'+(s.arr?'Arr. '+hm(s.arr)+' ':'')+(s.dep?'Dép. '+hm(s.dep):'')+(s.plat?'<br>'+(/^\d+[A-Z]?$/.test(s.plat)?'Voie ':'Quai ')+esc(s.plat):'')).addTo(map)});
+    map.on('mouseenter','bd-stops',function(){map.getCanvas().style.cursor='pointer'});map.on('mouseleave','bd-stops',function(){map.getCanvas().style.cursor=''});
+    var veh=null,vehEl=null,me=null,first=true;
+    var upd=function(){if(!map)return;var v=vehPos(st);
+     if(v){if(!veh){vehEl=document.createElement('div');vehEl.className='bd-veh-ic';veh=new ML.Marker({element:vehEl}).setLngLat([v.p.lon,v.p.lat]).addTo(map);mk.push(veh)}else veh.setLngLat([v.p.lon,v.p.lat]);vehEl.style.background=color(v.line);vehEl.title=(v.line?v.line+' · ':'')+(v.to?'vers '+v.to:'à '+v.at);
+      if(first){first=false;map.easeTo({center:[v.p.lon,v.p.lat],zoom:Math.max(map.getZoom(),14),duration:600})}}
+     else if(veh){veh.remove();veh=null}
+     var lo=window.__bd_loc;if(lo&&lo.lat!=null){if(!me){var d=document.createElement('div');d.className='bd-me-ic';me=new ML.Marker({element:d}).setLngLat([lo.lon,lo.lat]).addTo(map);mk.push(me)}else me.setLngLat([lo.lon,lo.lat])}};
+    upd();tick=setInterval(upd,1000);
+   });
+   map.on('error',function(){});
   }).catch(function(){var m=document.getElementById('bd-map-msg');if(m)m.textContent='Impossible de charger la carte (connexion).'})};
 })();
 </script>
