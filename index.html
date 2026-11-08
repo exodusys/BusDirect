@@ -6174,14 +6174,14 @@ html.dark:not(.bd-glass) .bd-fav-glass,html.dark:not(.bd-glass) .bd-save-glass,h
 html:not(.bd-glass) #bd-distance-settings-sheet,html:not(.bd-glass) .bd-v101-sheet,html:not(.bd-glass) .bdt-sheet,html:not(.bd-glass) .bd-fullpage,html:not(.bd-glass) .bd-tiles-sec,html:not(.bd-glass) #bd-info-page,html:not(.bd-glass) .bd-v104-sms-sheet,html:not(.bd-glass) .bd172-email-sheet,html:not(.bd-glass) .bd172-sheet,html:not(.bd-glass) #bd-prox-sheet,html:not(.bd-glass) .bd-distance-settings-head,html:not(.bd-glass) .bd-v101-head,html:not(.bd-glass) .bd-tiles-head{background:#fafaf9!important}
 html.dark:not(.bd-glass) #bd-distance-settings-sheet,html.dark:not(.bd-glass) .bd-v101-sheet,html.dark:not(.bd-glass) .bdt-sheet,html.dark:not(.bd-glass) .bd-fullpage,html.dark:not(.bd-glass) .bd-tiles-sec,html.dark:not(.bd-glass) #bd-info-page,html.dark:not(.bd-glass) .bd-v104-sms-sheet,html.dark:not(.bd-glass) .bd172-email-sheet,html.dark:not(.bd-glass) .bd172-sheet,html.dark:not(.bd-glass) #bd-prox-sheet,html.dark:not(.bd-glass) .bd-distance-settings-head,html.dark:not(.bd-glass) .bd-v101-head,html.dark:not(.bd-glass) .bd-tiles-head{background:#18181b!important}
 </style><style id="bd-tabbar-css">
-#bd-tabbar{position:fixed;left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:100200;display:flex;justify-content:space-around;gap:4px;padding:6px;border-radius:22px;background:rgba(15,18,35,.78);-webkit-backdrop-filter:blur(18px) saturate(1.4);backdrop-filter:blur(18px) saturate(1.4);border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 30px rgba(0,0,0,.35)}
-html:not(.dark) #bd-tabbar{background:rgba(255,255,255,.85);border-color:rgba(0,0,0,.08)}
+#bd-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:100200;display:flex;justify-content:space-around;gap:4px;padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:rgba(20,20,26,.41);-webkit-backdrop-filter:blur(21px) saturate(1.68);backdrop-filter:blur(21px) saturate(1.68);border-top:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+html:not(.dark) #bd-tabbar{background:rgba(255,255,255,.41);border-top-color:#e7e5e4;box-shadow:none}
 #bd-tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border:0;border-radius:16px;background:transparent;color:#a1a1aa;font:600 11px/1.1 system-ui,-apple-system,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .2s,color .2s}
 #bd-tabbar button svg{width:22px;height:22px}
-#bd-tabbar button.on{color:#fff;background:rgba(239,68,68,.9)}
+#bd-tabbar button.on{color:#ef4444;background:transparent}
 html:not(.dark) #bd-tabbar button{color:#71717a}
-html:not(.dark) #bd-tabbar button.on{color:#fff}
-body{padding-bottom:calc(84px + env(safe-area-inset-bottom))!important}
+html:not(.dark) #bd-tabbar button.on{color:#dc2626}
+body{padding-bottom:calc(70px + env(safe-area-inset-bottom))!important}
 .bd-v104-sms-overlay,.bd-distance-settings-overlay{padding-bottom:calc(88px + env(safe-area-inset-bottom))!important}
 .bd-tiles-sec{max-height:calc(100dvh - 190px)!important}
 /* éléments déplacés dans les onglets */
@@ -6224,6 +6224,7 @@ function build(){
   b.onclick=function(){go(t[0])};bar.appendChild(b)});
  document.body.appendChild(bar);mark('horaires');
  /* panneau fermé (×, fond, retour) → retour sur « Horaires » */
+ function sync(){var h=document.querySelector('header.bd-head');if(!h)return;var c=getComputedStyle(h);bar.style.background=c.backgroundColor;bar.style.backdropFilter=bar.style.webkitBackdropFilter=c.backdropFilter;bar.style.borderTop=c.borderBottom}sync();setInterval(sync,1000);
  setInterval(function(){if(cur!=='horaires'&&Date.now()-lock>1200&&!anyOpen())mark('horaires')},500);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',build);else build();
