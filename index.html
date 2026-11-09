@@ -2711,7 +2711,7 @@ delay>0?p("span",{className:"bdt-pill bdt-pill-late",children:["+"+delay+" min"]
 ]}),
 p("div",{className:"bdt-trip",children:[
 p("div",{className:"bdt-end",children:[c("div",{className:"bdt-big",children:_cfT}),c("div",{className:"bdt-st",children:_cfS})]}),
-p("div",{className:"bdt-mid",children:[c("div",{className:"bdt-dur",children:_cdur||""}),c("div",{className:"bdt-line"}),c("div",{className:"bdt-sub",children:cur.transfers>0?cur.transfers+" chang.":"Direct"})]}),
+p("div",{className:"bdt-mid",children:[c("span",{role:"link",className:"bd-follow-map",onClick:function(e){e.stopPropagation();e.preventDefault();try{window.bdOpenMap(cur)}catch(er){}},style:{display:"inline-flex",alignItems:"center",gap:"4px",height:"21px",padding:"0 9px",borderRadius:"99px",fontSize:"10.5px",fontWeight:800,color:"#fff",background:"rgba(63,63,70,.9)",cursor:"pointer",whiteSpace:"nowrap"},children:"🗺️ Parcours entier"}),c("div",{className:"bdt-dur",children:_cdur||""}),c("div",{className:"bdt-line"}),c("div",{className:"bdt-sub",children:cur.transfers>0?cur.transfers+" chang.":"Direct"})]}),
 p("div",{className:"bdt-end bdt-right",children:[c("div",{className:"bdt-big",children:_ctT}),c("div",{className:"bdt-st",children:_ctS})]})
 ]}),
 stops.length&&(function(){
