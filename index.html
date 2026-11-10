@@ -5032,8 +5032,32 @@ var out=co.map(function(p,i){if(i===0||i===co.length-1)return p;var P=E(p),n=nea
 var best=null;SF.forEach(function(s){var q=proj(P,s);if(q.d>20)return;var c=n.dx*(q.p[1]-n.s.a[1])-n.dy*(q.p[0]-n.s.a[0]);if((c>0?1:-1)!==sd)return;if(!best||q.d<best.d)best=q});if(best)return U(best.p);
 var L=Math.hypot(n.dx,n.dy),off=n.s.wid/2+1.5;return U([P[0]-n.dy/L*sd*off,P[1]+n.dx/L*sd*off])});
 return Object.assign({},r,{co:out,_sw:1})}).catch(function(){return r})}
-function route(A,B){if(!A||!B)return Promise.resolve(null);var k=rkey(A,B);if(RC[k])return RC[k];var a1=route0(A,B).then(function(r){if(!r)throw 0;return r}),b1=osrm(A,B);
-var p=new Promise(function(ok){var n=0;function f(){if(++n===2)ok(null)}a1.then(ok,f);b1.then(ok,f)}).then(function(r){return r?sidewalk(r,A,B):r});RC[k]=p;p.then(function(r){if(!r)delete RC[k]});return p}
+function osmWalk(A,B){var kx=111320*Math.cos(A.lat*Math.PI/180),ky=111320,D=Math.hypot((B.lon-A.lon)*kx,(B.lat-A.lat)*ky);if(D>2500||D<5)return Promise.resolve(null);
+var m=Math.max(120,D*0.35),dla=m/ky,dlo=m/kx,s=Math.min(A.lat,B.lat)-dla,n=Math.max(A.lat,B.lat)+dla,w=Math.min(A.lon,B.lon)-dlo,e=Math.max(A.lon,B.lon)+dlo;
+var Q='[out:json][timeout:10];way('+s+','+w+','+n+','+e+')[highway][highway!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway|elevator)$"][foot!~"^(no|private)$"][access!~"^(no|private)$"];out geom tags;';
+var ac=typeof AbortController!=='undefined'?new AbortController():null;setTimeout(function(){try{ac&&ac.abort()}catch(x){}},7000);
+return fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(Q),headers:{'Content-Type':'application/x-www-form-urlencoded'},signal:ac?ac.signal:undefined,__bdNoRoute:1}).then(function(r){return r.ok?r.json():null}).then(function(d){
+var W=(d&&d.elements||[]).filter(function(x){return x.type==='way'&&x.geometry&&x.geometry.length>1&&x.nodes});if(!W.length)return null;
+var P={},G={},E2=function(lo,la){return[(lo-A.lon)*kx,(la-A.lat)*ky]};
+var FOOT=/^(footway|path|pedestrian|steps|living_street|track|cycleway|corridor|platform)$/;
+W.forEach(function(x){var t=x.tags||{},h=t.highway,foot=FOOT.test(h)||t.foot==='designated',sep=/separate/.test((t.sidewalk||'')+(t['sidewalk:both']||'')+(t['sidewalk:left']||'')+(t['sidewalk:right']||'')),big=/^(primary|secondary|tertiary)(_link)?$/.test(h),
+cost=foot?1:(sep?12:(t.sidewalk==='no'||t['sidewalk:both']==='no'?(big?6:2.5):(big?2.2:1.4)));if(h==='steps')cost=1.3;var nm=t.name||(t.footway==='sidewalk'?'le trottoir':(t.footway==='crossing'||t.highway==='crossing'?'le passage piéton':(foot?'le chemin':'')));
+for(var i=0;i<x.nodes.length;i++){var id=x.nodes[i],g=x.geometry[i];if(!g)continue;P[id]=P[id]||E2(g.lon,g.lat);P[id].ll=[g.lon,g.lat];P[id].foot=P[id].foot||foot;if(i>0){var a=x.nodes[i-1];if(!P[a])continue;var L=Math.hypot(P[id][0]-P[a][0],P[id][1]-P[a][1]);(G[a]=G[a]||[]).push([id,L*cost,L,nm]);(G[id]=G[id]||[]).push([a,L*cost,L,nm])}}});
+var pa=E2(A.lon,A.lat),pb=E2(B.lon,B.lat);
+var near=function(p){var bf=null,bfd=1e12,ba=null,bad=1e12;Object.keys(G).forEach(function(id){var q=P[id],dd=Math.hypot(q[0]-p[0],q[1]-p[1]);if(dd<bad){bad=dd;ba=id}if(q.foot&&dd<bfd){bfd=dd;bf=id}});return bf&&bfd<Math.max(25,bad+12)?{id:bf,d:bfd}:(ba?{id:ba,d:bad}:null)};
+var sA=near(pa),sB=near(pb);if(!sA||!sB||sA.d>150||sB.d>150)return null;
+var dist={},prev={},H=[[0,sA.id]];dist[sA.id]=0;
+var push=function(x){H.push(x);var i=H.length-1;while(i>0){var p2=(i-1)>>1;if(H[p2][0]<=H[i][0])break;var t=H[p2];H[p2]=H[i];H[i]=t;i=p2}},pop=function(){var top=H[0],last=H.pop();if(H.length){H[0]=last;var i=0;for(;;){var l=2*i+1,r=l+1,m2=i;if(l<H.length&&H[l][0]<H[m2][0])m2=l;if(r<H.length&&H[r][0]<H[m2][0])m2=r;if(m2===i)break;var t=H[m2];H[m2]=H[i];H[i]=t;i=m2}}return top};
+while(H.length){var cur=pop(),u=cur[1];if(cur[0]>dist[u])continue;if(u===sB.id)break;(G[u]||[]).forEach(function(ed){var v=ed[0],nd=cur[0]+ed[1];if(dist[v]==null||nd<dist[v]){dist[v]=nd;prev[v]=[u,ed];push([nd,v])}})}
+if(dist[sB.id]==null)return null;var path=[sB.id],eds=[];while(path[0]!==sA.id){var pr=prev[path[0]];eds.unshift(pr[1]);path.unshift(pr[0])}
+var co=[[A.lon,A.lat]].concat(path.map(function(id){return P[id].ll})).concat([[B.lon,B.lat]]);
+var DIRn=function(a){a=((a+540)%360)-180;var x=Math.abs(a),sd=a>0?'RIGHT':'LEFT';if(x<35)return null;if(x<60)return'SLIGHTLY_'+sd;if(x<130)return sd;if(x<160)return'HARD_'+sd;return'UTURN_'+sd};
+var brg=function(p,q){return Math.atan2(q[0]-p[0],q[1]-p[1])*180/Math.PI},steps=[],len=0;
+for(var i=1;i<path.length-1;i++){var p0=P[path[i-1]],p1=P[path[i]],p2=P[path[i+1]],da=brg(p1,p2)-brg(p0,p1),dn=DIRn(da),n0=eds[i-1][3],n1=eds[i][3];if(dn||(n1&&n0!==n1&&!dn&&false)){steps.push({relativeDirection:dn,streetName:n1||'',lat:p1.ll[1],lon:p1.ll[0]})}}
+eds.forEach(function(ed){len+=ed[2]});len+=sA.d+sB.d;
+return{co:co,steps:steps,dur:len/1.3,_osm:1}}).catch(function(){return null})}
+function route(A,B){if(!A||!B)return Promise.resolve(null);var k=rkey(A,B);if(RC[k])return RC[k];
+var p=osmWalk(A,B).then(function(r){if(r)return r;var a1=route0(A,B).then(function(r){if(!r)throw 0;return r}),b1=osrm(A,B);return new Promise(function(ok){var n=0;function f(){if(++n===2)ok(null)}a1.then(ok,f);b1.then(ok,f)}).then(function(r){return r?sidewalk(r,A,B):r})},function(){return null});RC[k]=p;p.then(function(r){if(!r)delete RC[k]});return p}
 window.__bdWalkPrefetch=function(A,B){try{if(A&&B&&A.lat!=null&&B.lat!=null)route({lat:+A.lat,lon:+A.lon},{lat:+B.lat,lon:+B.lon})}catch(e){}};
 function route0(A,B){var u='https://api.transitous.org/api/v6/plan?fromPlace='+encodeURIComponent(A.lat+','+A.lon)+'&toPlace='+encodeURIComponent(B.lat+','+B.lon)+'&directModes=WALK&transitModes=WALK&maxDirectTime=7200&numItineraries=1';
 return fetch(u,{__bdNoRoute:1}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){var its=[].concat((d&&d.direct)||[],(d&&d.itineraries)||[]);for(var i=0;i<its.length;i++){var legs=its[i].legs||[];if(legs.length&&legs.every(function(L){return L.mode==='WALK'})){var co=[],steps=[];legs.forEach(function(L){if(L.legGeometry&&L.legGeometry.points)co=co.concat(dec(L.legGeometry.points,L.legGeometry.precision||6));(L.steps||[]).forEach(function(s){steps.push(s)})});if(co.length>1)return{co:co,steps:steps,dur:its[i].duration}}}return null}).catch(function(){return null})}
