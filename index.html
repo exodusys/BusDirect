@@ -5050,46 +5050,98 @@ var p=new Promise(function(ok){var got=[],left=3,osmDone=false,timer=null,fin=fa
 var done=function(){if(fin)return;fin=true;clearTimeout(timer);var _lg=window.__bdQLog||function(){};if(!got.length){_lg('✗ trajet : aucun calcul n’a abouti');return ok(null)}_lg('◆ trajet : '+got.map(function(g){return(g.osm?'trottoirs OSM':(g.r&&g.r.steps&&g.r.dur&&!g.r._osm?'routeur':'?'))+' '+Math.round(g.L)+' m'}).join(' · '));got.sort(function(a,b){return a.L-b.L});var w=got[0];var o=got.filter(function(g){return g.osm})[0];if(o&&w!==o&&w.L>o.L*0.92)w=o;ok(w.osm?w.r:sidewalk(w.r,A,B))};
 var add=function(r,osm){left--;if(osm)osmDone=true;if(r&&r.co&&r.co.length>1){got.push({r:r,L:lenOf(r),osm:osm});if(!timer&&!osm)timer=setTimeout(done,1000)}if(osmDone&&got.some(function(g){return g.osm}))done();else if(osmDone&&got.length&&!timer)timer=setTimeout(done,300);if(!left)done()};
 osmWalk(A,B).then(function(r){add(r,true)},function(){add(null,true)});route0(A,B).then(function(r){add(r,false)},function(){add(null,false)});osrm(A,B).then(function(r){add(r,false)},function(){add(null,false)})});RC[k]=p;p.then(function(r){if(!r)delete RC[k]});return p}
-window.__bdQuayPos=function(name,base,pf,prio){var QF=window.__bdQuayXY0||window.__bdQuayXY;if(!base)return Promise.resolve(null);
-var fast=function(name,base,pf,prio){prio=prio||0;pf=String(pf||'').replace(/^(quai|voie)\s+/i,'').trim();if(!pf||!base)return Promise.resolve(null);var want=pf.toLowerCase();var QQ=window.__bdQQ||(window.__bdQQ={}),qk=String(name||'')+'|'+want+'|'+base.lat.toFixed(4)+','+base.lon.toFixed(4);
-var JQ=window.__bdJQ||(window.__bdJQ={q:[],run:0,by:{}});var pump=function(){JQ.q.sort(function(a,b){return b.p-a.p||a.t-b.t});var open=!!document.getElementById('bd-walk-bar');while(JQ.run<2&&JQ.q.length){if(open&&JQ.q[0].p<1){setTimeout(pump,1500);break}var j=JQ.q.shift();JQ.run++;(window.__bdQLog||function(){})('▷ démarrage '+j.tag+' (priorité '+j.p+', '+JQ.q.length+' en attente)');j.go().then(j.ok,function(){j.ok(null)}).then(function(){JQ.run--;delete JQ.by[j.k];pump()})}};
+window.__bdQuayPos=function(name,base,pf,prio){
+if(!base||base.lat==null||base.lon==null)return Promise.resolve(null);
+var fast=function(name,base,pf,prio){
+prio=prio||0;
+pf=String(pf||'').replace(/^(quai|voie|track|platform)\s+/i,'').trim();
+if(!pf)return Promise.resolve(null);
+var want=pf.toLowerCase().replace(/[^a-z0-9]/g,'');
+if(!want)return Promise.resolve(null);
+var QQ=window.__bdQQ||(window.__bdQQ={});
+var qk=String(name||'')+'|'+want+'|'+(+base.lat).toFixed(4)+','+(+base.lon).toFixed(4);
+var JQ=window.__bdJQ||(window.__bdJQ={q:[],run:0,by:{}});
+var pump=function(){
+JQ.q.sort(function(a,b){return b.p-a.p||a.t-b.t});
+var open=!!document.getElementById('bd-walk-bar');
+while(JQ.run<2&&JQ.q.length){
+if(open&&JQ.q[0].p<1){setTimeout(pump,1500);break}
+var j=JQ.q.shift();JQ.run++;
+(window.__bdQLog||function(){})('▷ démarrage '+j.tag+' (prio '+j.p+', '+JQ.q.length+' en attente)');
+j.go().then(j.ok,function(){j.ok(null)}).then(function(){JQ.run--;delete JQ.by[j.k];pump()});
+}
+};
 var enq=function(k,p,tag,go){return new Promise(function(ok){var j={k:k,p:p,t:Date.now(),tag:tag,go:go,ok:ok};JQ.by[k]=j;JQ.q.push(j);pump()})};
-if(QQ[qk]&&JQ.by[qk]&&JQ.by[qk].p<prio){JQ.by[qk].p=prio;(window.__bdQLog||function(){})('⇧ '+(name||'?')+' '+pf+' passe en priorité '+prio);pump()}
-if(!QQ[qk]){QQ[qk]=enq(qk,prio,(name||'?')+' '+pf,function(){
-var LG=window.__bdQLog||function(){},t0=Date.now(),tg=(name||'?')+' '+pf;var tf=function(u,o){var ac=typeof AbortController!=='undefined'?new AbortController():null;var tm=setTimeout(function(){try{ac&&ac.abort()}catch(e){}},8000);o=Object.assign({__bdNoRoute:1},o||{});if(ac)o.signal=ac.signal;return fetch(u,o).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('HTTP '+r.status);return r},function(e){clearTimeout(tm);throw e})};
-LG('↻ '+tg+' : recherche Overpass Turbo (quais / voies)');
-/* Overpass Turbo style query – platforms + tracks near stop */
-var Q='[out:json][timeout:8];('+
-'node(around:350,'+base.lat+','+base.lon+')["highway"="bus_stop"];'+
-'node(around:350,'+base.lat+','+base.lon+')["railway"="station"];'+
-'node(around:350,'+base.lat+','+base.lon+')["railway"="tram_stop"];'+
-'node(around:350,'+base.lat+','+base.lon+')["railway"="halt"];'+
-'node(around:350,'+base.lat+','+base.lon+')["public_transport"="platform"];'+
-'node(around:350,'+base.lat+','+base.lon+')["public_transport"="stop_position"];'+
-'way(around:350,'+base.lat+','+base.lon+')["public_transport"="platform"];'+
-'way(around:350,'+base.lat+','+base.lon+')["railway"="platform"];'+
-'relation(around:350,'+base.lat+','+base.lon+')["public_transport"="platform"];'+
-'nwr(around:350,'+base.lat+','+base.lon+')["railway"="track"]["ref"];'+
-');out center tags;';
-var endpoints=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-var os=new Promise(function(ok,ko){var n=0,done=false;endpoints.forEach(function(u){tf(u,{method:'POST',body:'data='+encodeURIComponent(Q),headers:{'Content-Type':'application/x-www-form-urlencoded'}}).then(function(r){return r.json()}).then(function(d){if(!done){done=true;ok(d)}}).catch(function(e){if(++n===endpoints.length&&!done)ko(e)})})}).then(function(d){
-var best=null,bd=1e12,nMatch=0;
-((d&&d.elements)||[]).forEach(function(e){
-var t=e.tags||{};
-var refs=[t.local_ref,t.ref,t['ref:IFOPT']&&String(t['ref:IFOPT']).split(':').pop(),t['ref:track'],t.track,t.platform,t['platform:ref']].filter(Boolean).map(function(x){return String(x).toLowerCase().replace(/^(quai|voie|track|platform)\s*/i,'').trim()});
-if(refs.indexOf(want)<0)return;
-nMatch++;
-var la=e.lat!=null?e.lat:(e.center&&e.center.lat),lo=e.lon!=null?e.lon:(e.center&&e.center.lon);
-if(la==null||lo==null)return;
-var dd=dist([lo,la],[base.lon,base.lat]);
-if(dd<bd){bd=dd;best={lat:+la,lon:+lo}}
+if(QQ[qk]&&JQ.by[qk]&&JQ.by[qk].p<prio){JQ.by[qk].p=prio;(window.__bdQLog||function(){})('⇧ '+(name||'?')+' '+pf+' → prio '+prio);pump()}
+if(!QQ[qk]){
+QQ[qk]=enq(qk,prio,(name||'?')+' '+pf,function(){
+var LG=window.__bdQLog||function(){},t0=Date.now(),tg=(name||'?')+' '+pf;
+var tf=function(u,o,ms){
+ms=ms||8000;
+var ac=typeof AbortController!=='undefined'?new AbortController():null;
+var tm=setTimeout(function(){try{ac&&ac.abort()}catch(e){}},ms);
+o=Object.assign({__bdNoRoute:1},o||{});
+if(ac)o.signal=ac.signal;
+return fetch(u,o).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('HTTP '+r.status);return r},function(e){clearTimeout(tm);throw e});
+};
+var normCode=function(x){return String(x||'').toLowerCase().replace(/^(quai|voie|track|platform)\s*/i,'').replace(/[^a-z0-9]/g,'')};
+var matchCode=function(code){
+if(!code)return false;
+if(code===want)return true;
+if(want.length>=1&&code.length>=1&&(code===want||want.indexOf(code)>=0||code.indexOf(want)>=0))return true;
+return false;
+};
+var distM=function(lo,la){return dist([lo,la],[base.lon,base.lat])};
+
+LG('↻ '+tg+' : Transitous (quais / voies)');
+
+return tf('https://api.transitous.org/api/v1/geocode?type=STOP&text='+encodeURIComponent(name||'')+'&place='+base.lat+','+base.lon,null,7000)
+.then(function(r){return r.json()}).then(function(L){
+L=(Array.isArray(L)?L:[]).filter(function(x){return x&&x.id&&x.lat!=null});
+L.sort(function(a,b){return distM(+a.lon,+a.lat)-distM(+b.lon,+b.lat)});
+if(!L.length)throw 0;
+var tries=L.slice(0,3).map(function(stop){
+return tf('https://api.transitous.org/api/v1/stoptimes?stopId='+encodeURIComponent(stop.id)+'&n=150&radius=250',null,6000)
+.then(function(r){return r.json()}).then(function(d){
+var best=null,bd=1e12;
+((d&&d.stopTimes)||[]).forEach(function(st){
+var p=st.place||{};
+var t=normCode(p.track||p.scheduledTrack||'');
+if(!matchCode(t)||p.lat==null)return;
+var dd=distM(+p.lon,+p.lat);
+if(dd<bd){bd=dd;best={lat:+p.lat,lon:+p.lon,src:'transitous',code:t}};
 });
-LG((best?'✓ ':'✗ ')+tg+' · Overpass Turbo '+(best?best.lat.toFixed(5)+','+best.lon.toFixed(5)+' ('+Math.round(bd)+' m)':'aucun quai/voie « '+pf+' » ('+nMatch+' refs, '+((d&&d.elements)||[]).length+' éléments)')+' · '+(Date.now()-t0)+' ms');
-if(!best)throw 0;return best});
-os.catch(function(e){if(e!==0)LG('✗ '+tg+' · Overpass Turbo : '+(e&&e.name==='AbortError'?'pas de réponse en 8 s':'erreur réseau')+' · '+(Date.now()-t0)+' ms')});
-return os});setTimeout(function(){delete QQ[qk]},120000);QQ[qk].then(function(r){if(!r)delete QQ[qk]})}else if(prio>=1){(window.__bdQLog||function(){})('⚡ '+(name||'?')+' '+pf+' : réponse déjà préparée / en cours, reprise')}var pq=QQ[qk];return new Promise(function(ok){pq.then(ok,function(){ok(null)});setTimeout(function(){ok(null)},prio>=2?9000:4500)})};
-var both=function(name,base,pf,prio){return fast(name,base,pf,prio).then(function(r){return r&&r.lat!=null?r:null},function(){return null})};
-return both(name,base,pf,prio)};
+return best;
+}).catch(function(){return null});
+});
+return Promise.all(tries).then(function(rs){
+var best=null,bd=1e12;
+rs.forEach(function(r){if(r&&r.lat!=null){var d=distM(r.lon,r.lat);if(d<bd){bd=d;best=r}}});
+if(best)LG('✓ '+tg+' · Transitous '+best.lat.toFixed(5)+','+best.lon.toFixed(5)+' ('+Math.round(bd)+' m, code '+best.code+') · '+(Date.now()-t0)+' ms');
+else LG('✗ '+tg+' · Transitous : aucun quai « '+pf+' » · '+(Date.now()-t0)+' ms');
+if(!best)throw 0;return best;
+});
+}).catch(function(e){
+if(e!==0)LG('✗ '+tg+' · Transitous : '+(e&&e.name==='AbortError'?'timeout':(e&&e.message)||'erreur')+' · '+(Date.now()-t0)+' ms');
+return null;
+});
+});
+setTimeout(function(){delete QQ[qk]},180000);
+QQ[qk].then(function(r){if(!r)delete QQ[qk]});
+}else if(prio>=1){
+(window.__bdQLog||function(){})('⚡ '+(name||'?')+' '+pf+' : déjà en cours / cache');
+}
+var pq=QQ[qk];
+return new Promise(function(ok){
+pq.then(ok,function(){ok(null)});
+setTimeout(function(){ok(null)},prio>=2?10000:5500);
+});
+};
+var both=function(name,base,pf,prio){
+return fast(name,base,pf,prio).then(function(r){return r&&r.lat!=null?r:null},function(){return null});
+};
+return both(name,base,pf,prio);
+};
 window.__bdCorrPrefetch=function(na,a,pa,nb,b,pb){try{if(!a||!b)return;var k=[na,pa,nb,pb,(+a.lat).toFixed(4),(+b.lat).toFixed(4)].join('|'),M=window.__bdCPF||(window.__bdCPF={});if(M[k]&&Date.now()-M[k]<60000)return;M[k]=Date.now();(window.__bdQLog||function(){})('⏩ préparation correspondance '+(na||'')+' '+(pa||'-')+' → '+(pb||'-'));Promise.all([pa?window.__bdQuayPos(na,a,pa,1):null,pb?window.__bdQuayPos(nb,b,pb,1):null]).then(function(R){var A2=R[0]&&R[0].lat!=null?{lat:+R[0].lat,lon:+R[0].lon}:{lat:+a.lat,lon:+a.lon},B2=R[1]&&R[1].lat!=null?{lat:+R[1].lat,lon:+R[1].lon}:{lat:+b.lat,lon:+b.lon};if(dist([A2.lon,A2.lat],[B2.lon,B2.lat])>=3)route(A2,B2)})}catch(e){}};
 window.__bdWalkPrefetch=function(A,B){try{if(A&&B&&A.lat!=null&&B.lat!=null)route({lat:+A.lat,lon:+A.lon},{lat:+B.lat,lon:+B.lon})}catch(e){}};
 function route0(A,B){var u='https://api.transitous.org/api/v6/plan?fromPlace='+encodeURIComponent(A.lat+','+A.lon)+'&toPlace='+encodeURIComponent(B.lat+','+B.lon)+'&directModes=WALK&transitModes=WALK&maxDirectTime=7200&numItineraries=1';
