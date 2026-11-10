@@ -5039,13 +5039,17 @@ var cum=[0];for(var i=1;i<co.length;i++)cum.push(cum[i-1]+dist(co[i-1],co[i]));v
 var sIdx=steps.map(function(s){if(s.lat==null||s.lon==null)return null;var bi=0,bd=1e12;co.forEach(function(p,j){var d=dist(p,[s.lon,s.lat]);if(d<bd){bd=d;bi=j}});return cum[bi]});
 var bar=document.createElement('div');bar.id='bd-walk-bar';el.appendChild(bar);
 var nav=false,me=null,meEl=null,dst=null;
+var offT=0,rrBusy=false,rrLast=0,rrMsg=0;
+var applyRt=function(r2){if(!r2||!map||!map.getSource('bd-walk'))return;rt=r2;co=r2.co;steps=r2.steps;cum=[0];for(var q=1;q<co.length;q++)cum.push(cum[q-1]+dist(co[q-1],co[q]));total=cum[cum.length-1];sIdx=steps.map(function(s){if(s.lat==null||s.lon==null)return null;var bi=0,bd=1e12;co.forEach(function(p,j){var d=dist(p,[s.lon,s.lat]);if(d<bd){bd=d;bi=j}});return cum[bi]});map.getSource('bd-walk').setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:co}});try{map.setPaintProperty('bd-walk-line','line-dasharray',[1,0])}catch(e){}};
+var reroute=function(P){if(rrBusy)return;rrBusy=true;rrLast=Date.now();route({lat:P.lat,lon:P.lon},B).then(function(r2){if(r2&&nav){applyRt(r2);rrMsg=Date.now();offT=0}}).catch(function(){}).then(function(){rrBusy=false;try{render()}catch(e){}})};
 var render=function(){var P=here(),done=0,off=0;if(P){var bi=0,bd=1e12;for(var j=0;j<co.length;j++){var d=dist(co[j],[P.lon,P.lat]);if(d<bd){bd=d;bi=j}}done=cum[bi];off=bd}
+if(nav&&P&&off>30&&!(P.acc>50)){if(!offT)offT=Date.now();if(Date.now()-offT>5000&&Date.now()-rrLast>10000)reroute(P)}else offT=0;
 var left=Math.max(0,total-done),mins=Math.max(1,Math.round(left/80));
 if(nav&&P&&left<25){nav=false}
 var nxt=null,nd=0;for(var k=0;k<steps.length;k++){if(sIdx[k]!=null&&sIdx[k]>done+5){nxt=steps[k];nd=sIdx[k]-done;break}}
 var dir=nxt&&DIR[nxt.relativeDirection]||['↑','Continuez'];var street=nxt&&nxt.streetName?(' sur '+nxt.streetName):'';
 var title=nav&&nxt?(fmtD(nd)+' · '+dir[1]+street):(nav?'Continuez jusqu’à l’arrivée':fmtD(left)+' · '+mins+' min à pied');
-var sub=nav?(fmtD(left)+' restants · '+mins+' min'+(off>40?' · vous êtes hors du tracé':'')):(rt?'Itinéraire à pied':'Itinéraire approximatif (ligne directe)');
+var sub=nav?(fmtD(left)+' restants · '+mins+' min'+(rrBusy?' · recalcul de l’itinéraire…':(Date.now()-rrMsg<4000?' · itinéraire recalculé':(rrBusy?' · recalcul de l’itinéraire…':(Date.now()-rrMsg<4000?' · itinéraire recalculé':(off>40?' · vous êtes hors du tracé':'')))))):(rt?'Itinéraire à pied':'Itinéraire approximatif (ligne directe)');
 bar.innerHTML='<div class="row">'+(nav?'<div class="arrow">'+(nxt?dir[0]:'↑')+'</div>':'')+'<div class="ins"><b></b><span></span></div><button id="bd-walk-go" class="'+(nav?'on':'')+'">'+(nav?'Arrêter':'Démarrer')+'</button></div>';
 bar.querySelector('.ins b').textContent=title;bar.querySelector('.ins span').textContent=sub;
 bar.querySelector('#bd-walk-go').onclick=function(){nav=!nav;if(nav){var P0=here();if(P0)route(P0,B).then(function(r2){if(!r2||!map||!map.getSource('bd-walk'))return;rt=r2;co=r2.co;steps=r2.steps;cum=[0];for(var q=1;q<co.length;q++)cum.push(cum[q-1]+dist(co[q-1],co[q]));total=cum[cum.length-1];sIdx=steps.map(function(s){if(s.lat==null||s.lon==null)return null;var bi=0,bd=1e12;co.forEach(function(p,j){var d=dist(p,[s.lon,s.lat]);if(d<bd){bd=d;bi=j}});return cum[bi]});map.getSource('bd-walk').setData({type:'Feature',properties:{},geometry:{type:'LineString',coordinates:co}});try{map.setPaintProperty('bd-walk-line','line-dasharray',[1,0])}catch(e){}render()});}else{map.fitBounds(bounds,{padding:{top:60,bottom:150,left:50,right:50},bearing:0})}upd()}};
