@@ -5080,46 +5080,98 @@ var tf=function(u,o,ms){
 ms=ms||8000;
 var ac=typeof AbortController!=='undefined'?new AbortController():null;
 var tm=setTimeout(function(){try{ac&&ac.abort()}catch(e){}},ms);
-o=Object.assign({__bdNoRoute:1},o||{});
+o=Object.assign({__bdNoRoute:1,headers:Object.assign({'Accept':'application/json','User-Agent':'BusDirect/1.0 (transport app; github.com/busdirect)'},(o&&o.headers)||{})},o||{});
 if(ac)o.signal=ac.signal;
 return fetch(u,o).then(function(r){clearTimeout(tm);if(!r.ok)throw new Error('HTTP '+r.status);return r},function(e){clearTimeout(tm);throw e});
 };
-var normCode=function(x){return String(x||'').toLowerCase().replace(/^(quai|voie|track|platform)\s*/i,'').replace(/[^a-z0-9]/g,'')};
-var matchCode=function(code){
-if(!code)return false;
-if(code===want)return true;
-if(want.length>=1&&code.length>=1&&(code===want||want.indexOf(code)>=0||code.indexOf(want)>=0))return true;
-return false;
+var normCode=function(x){return String(x||'').toLowerCase().replace(/^(quai|voie|track|platform|gleis|binario)\s*/i,'').replace(/[^a-z0-9]/g,'')};
+/* score: 100 exact, 70 startsWith, 40 contains, 0 none */
+var scoreCode=function(code){
+if(!code)return 0;
+if(code===want)return 100;
+if(code.length>=1&&want.length>=1){
+if(code.indexOf(want)===0||want.indexOf(code)===0)return 70;
+if(code.indexOf(want)>=0||want.indexOf(code)>=0)return 40;
+}
+return 0;
 };
 var distM=function(lo,la){return dist([lo,la],[base.lon,base.lat])};
+var MAX_DIST=180; /* platforms usually < 180 m from station centroid */
 
-LG('↻ '+tg+' : Transitous (quais / voies)');
+LG('↻ '+tg+' : Transitous précis');
 
+/* 1) Geocode – prefer stops very close to base */
 return tf('https://api.transitous.org/api/v1/geocode?type=STOP&text='+encodeURIComponent(name||'')+'&place='+base.lat+','+base.lon,null,7000)
 .then(function(r){return r.json()}).then(function(L){
-L=(Array.isArray(L)?L:[]).filter(function(x){return x&&x.id&&x.lat!=null});
-L.sort(function(a,b){return distM(+a.lon,+a.lat)-distM(+b.lon,+b.lat)});
+L=(Array.isArray(L)?L:[]).filter(function(x){return x&&x.id&&x.lat!=null&&isFinite(+x.lat)&&isFinite(+x.lon)});
+L.forEach(function(x){x._d=distM(+x.lon,+x.lat)});
+L=L.filter(function(x){return x._d<=500}).sort(function(a,b){return a._d-b._d});
 if(!L.length)throw 0;
-var tries=L.slice(0,3).map(function(stop){
-return tf('https://api.transitous.org/api/v1/stoptimes?stopId='+encodeURIComponent(stop.id)+'&n=150&radius=250',null,6000)
-.then(function(r){return r.json()}).then(function(d){
-var best=null,bd=1e12;
-((d&&d.stopTimes)||[]).forEach(function(st){
+
+/* 2) Fetch stoptimes for top stops (up to 4) in parallel */
+var tries=L.slice(0,4).map(function(stop){
+return tf('https://api.transitous.org/api/v1/stoptimes?stopId='+encodeURIComponent(stop.id)+'&n=200&radius=300',null,6500)
+.then(function(r){return r.json()})
+.then(function(d){return {stop:stop,times:(d&&d.stopTimes)||[]}})
+.catch(function(){return {stop:stop,times:[]}});
+});
+
+return Promise.all(tries).then(function(results){
+/* Collect all candidate positions for the wanted platform */
+var cands=[]; /* {lat,lon,score,code,d,src} */
+var allCodes={};
+
+results.forEach(function(res){
+var stop=res.stop;
+(res.times||[]).forEach(function(st){
 var p=st.place||{};
-var t=normCode(p.track||p.scheduledTrack||'');
-if(!matchCode(t)||p.lat==null)return;
-var dd=distM(+p.lon,+p.lat);
-if(dd<bd){bd=dd;best={lat:+p.lat,lon:+p.lon,src:'transitous',code:t}};
+var raw=p.track||p.scheduledTrack||'';
+var t=normCode(raw);
+if(t)allCodes[t]=(allCodes[t]||0)+1;
+var sc=scoreCode(t);
+if(sc<40||p.lat==null||p.lon==null)return;
+var la=+p.lat,lo=+p.lon;
+if(!isFinite(la)||!isFinite(lo))return;
+var dd=distM(lo,la);
+if(dd>MAX_DIST)return;
+/* Prefer realtime track over scheduled when both present and different */
+var isRt=!!(p.track&&p.scheduledTrack&&normCode(p.track)!==normCode(p.scheduledTrack)&&normCode(p.track)===t);
+cands.push({lat:la,lon:lo,score:sc+(isRt?15:0),code:t,d:dd,stopD:stop._d,raw:raw});
 });
-return best;
-}).catch(function(){return null});
 });
-return Promise.all(tries).then(function(rs){
-var best=null,bd=1e12;
-rs.forEach(function(r){if(r&&r.lat!=null){var d=distM(r.lon,r.lat);if(d<bd){bd=d;best=r}}});
-if(best)LG('✓ '+tg+' · Transitous '+best.lat.toFixed(5)+','+best.lon.toFixed(5)+' ('+Math.round(bd)+' m, code '+best.code+') · '+(Date.now()-t0)+' ms');
-else LG('✗ '+tg+' · Transitous : aucun quai « '+pf+' » · '+(Date.now()-t0)+' ms');
-if(!best)throw 0;return best;
+
+if(!cands.length){
+LG('✗ '+tg+' · aucun quai « '+pf+' » (codes vus: '+Object.keys(allCodes).slice(0,12).join(',')+') · '+(Date.now()-t0)+' ms');
+throw 0;
+}
+
+/* 3) Cluster by rounded coords – pick densest + highest score cluster */
+var clusters={};
+cands.forEach(function(c){
+var k=c.lat.toFixed(5)+','+c.lon.toFixed(5);
+if(!clusters[k])clusters[k]={lat:c.lat,lon:c.lon,n:0,score:0,d:c.d,code:c.code};
+clusters[k].n++;
+clusters[k].score=Math.max(clusters[k].score,c.score);
+clusters[k].d=Math.min(clusters[k].d,c.d);
+});
+var list=Object.keys(clusters).map(function(k){return clusters[k]});
+/* rank: higher score first, then more observations, then closer */
+list.sort(function(a,b){
+if(b.score!==a.score)return b.score-a.score;
+if(b.n!==a.n)return b.n-a.n;
+return a.d-b.d;
+});
+
+var best=list[0];
+/* 4) If best is basically the station centroid and we have an offset candidate, prefer offset */
+var stationish=best.d<8;
+if(stationish&&list.length>1){
+var alt=list.find(function(x){return x.d>=8&&x.d<=MAX_DIST&&x.score>=70});
+if(alt)best=alt;
+}
+
+LG('✓ '+tg+' · '+best.lat.toFixed(5)+','+best.lon.toFixed(5)+' ('+Math.round(best.d)+' m, code '+best.code+', score '+best.score+', ×'+best.n+') · '+(Date.now()-t0)+' ms');
+return {lat:best.lat,lon:best.lon,src:'transitous',code:best.code};
 });
 }).catch(function(e){
 if(e!==0)LG('✗ '+tg+' · Transitous : '+(e&&e.name==='AbortError'?'timeout':(e&&e.message)||'erreur')+' · '+(Date.now()-t0)+' ms');
