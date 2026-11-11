@@ -94,6 +94,10 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .jr .chain::-webkit-scrollbar{display:none}
 .chain .lb{flex:none}
 .lb.rail{font-style:normal}
+.cd{flex:none;text-align:right;line-height:1.15;align-self:flex-start;padding-top:2px}
+.cd-t{display:block;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px;white-space:nowrap}
+.cd-t.soon{color:#ff8a00}
+.cd .late,.cd .ontime{font-size:12px;font-weight:700}
 .tile{min-height:72px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.from{outline:2.5px dashed var(--accent);outline-offset:-1px}
@@ -504,6 +508,9 @@ function lineColor(l){
 }
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
+// Compte à rebours à la seconde, sans re-rendre la liste
+setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
 function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
@@ -524,6 +531,7 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
+      <div class="cd"><span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>${dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
     </div>
     <div class="jr-times">
       <div class="tt"><b>${hm(depAt)}</b><small>${inMin<=0?'<span class="ontime">maintenant</span>':inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
