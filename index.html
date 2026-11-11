@@ -1,17 +1,13 @@
 <!DOCTYPE html><html lang="en"><head><script id="bd-perf-gate">(function(){
 var _si=window.setInterval,_ci=window.clearInterval;
-var tasks={},nxt=1,raf=0;
-function loop(ts){
-raf=requestAnimationFrame(loop);
+var tasks={},nxt=1;
+var heart=_si.call(window,function(){
 if(document.hidden)return;
+var ts=Date.now();
 for(var id in tasks){var t=tasks[id];if(ts-t.last>=t.ms){t.last=ts;try{t.fn()}catch(e){}}}
-}
-raf=requestAnimationFrame(loop);
-document.addEventListener('visibilitychange',function(){
-if(!document.hidden&&!raf)raf=requestAnimationFrame(loop);
-});
+},1000);
 window.setInterval=function(fn,ms){
-var id=nxt++;tasks[id]={fn:typeof fn==='function'?fn:function(){},ms:ms||16,last:0};return id};
+var id=nxt++;tasks[id]={fn:typeof fn==='function'?fn:function(){},ms:Math.max(ms||1000,1000),last:0};return id};
 window.clearInterval=function(id){delete tasks[id]};
 })();</script><script id="bd-v339-tz">try{window.BD_TZ=Intl.DateTimeFormat().resolvedOptions().timeZone||"Europe/Zurich"}catch(e){window.BD_TZ="Europe/Zurich"}</script><script>try{localStorage.removeItem("bd_src_combine")}catch(e){}</script><script id="bd-v336-purge">try{["bd_sources_v1"].forEach(function(k){var L=JSON.parse(localStorage.getItem(k)||"null");if(Array.isArray(L)){var M=L.filter(function(x){return x&&x.id!=="db-rest"&&x.id!=="irail"&&x.id!=="searchch"});if(M.length!==L.length)localStorage.setItem(k,JSON.stringify(M))}});var R=JSON.parse(localStorage.getItem("bd_src_route")||"{}")||{},ch=0;Object.keys(R).forEach(function(c){if(R[c]==="db-rest"||R[c]==="irail"||R[c]==="searchch"){delete R[c];ch=1}});if(ch)localStorage.setItem("bd_src_route",JSON.stringify(R))}catch(e){}</script><script id="bd-v306-limit">(function(){var F=window.fetch;if(!F||F.__bdLim)return;var MAX=4,act=0,Q=[];function nx(){while(act<MAX&&Q.length){var j=Q.shift();act++;F.apply(window,j.a).then(function(r){act--;nx();j.ok(r)},function(e){act--;nx();j.ko(e)})}}
 var RL=[[/evian/,"1"],[/annecy/,"2"],[/gervais|fayet/,"3"],[/annemasse/,"4"],[/plaine/,"5"],[/bellegarde/,"6"]];
