@@ -80,6 +80,20 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .arrow{color:var(--muted);font-size:12px}
 .dur{text-align:right;font-size:13px;color:var(--muted)}
 .dur b{display:block;color:var(--text);font-size:15px}
+.jr-times{display:flex;align-items:center;gap:10px;margin-top:12px}
+.jr-times .tt{flex:none;line-height:1}
+.jr-times .tt b{display:block;font-size:26px;font-weight:800;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+.jr-times .tt small{display:block;font-size:11.5px;color:var(--muted);margin-top:4px;font-weight:600;white-space:nowrap}
+.jr-times .tt.r{text-align:right}
+.tmid{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tdur{font-weight:700;font-size:13.5px}
+.tline{display:block;width:100%;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--muted),var(--accent));opacity:.55;position:relative}
+.tline::after{content:"";position:absolute;right:-1px;top:-3px;border:4px solid transparent;border-left:6px solid var(--accent);border-right:0}
+.tsub{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.jr .chain{display:flex;gap:4px;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.jr .chain::-webkit-scrollbar{display:none}
+.chain .lb{flex:none}
+.lb.rail{font-style:normal}
 .tile{min-height:72px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.from{outline:2.5px dashed var(--accent);outline-offset:-1px}
@@ -468,8 +482,8 @@ function renderJourneyList(){
     let el=existing.get(k);
     if(el){
       existing.delete(k); el.dataset.i=i;
-      ['.jr-top','.jr-foot','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
-        if(a&&b&&a.innerHTML!==b.innerHTML){a.innerHTML=b.innerHTML; if(sel!=='.legs'){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}});
+      ['.jr-top','.jr-times','.chain','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
+        if(a&&b&&a.innerHTML!==b.innerHTML){const sig=x=>[...x.querySelectorAll('b,.late')].map(n=>n.textContent).join('|');const chg=sel==='.jr-times'&&sig(a)!==sig(b);a.innerHTML=b.innerHTML; if(chg){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}});
     }else{el=fresh; if(prev) el.classList.add('enter')}
     const ref=prev?prev.nextSibling:box.firstChild; if(el!==ref) box.insertBefore(el,ref);
     prev=el;
@@ -510,13 +524,13 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="dep">${big}${inMin>0&&inMin<60?'<em>min</em>':''}
-        <small>${inMin<60?hm(depAt):''}${dl>0?` <span class="late">+${dl}</span>`:''}</small></div>
     </div>
-    <div class="jr-foot">
-      <div class="chain">${chain}</div>
-      <div class="jr-info">${rt?'<span class="live"></span>':''}${walk?`<span>🚶${walk}′</span>`:''}<span>${it.transfers?it.transfers+'×':'Direct'}</span><span><b>${hm(it.endTime)}</b> · ${fmtDur(it.duration)}</span></div>
+    <div class="jr-times">
+      <div class="tt"><b>${hm(depAt)}</b><small>${inMin<=0?'<span class="ontime">maintenant</span>':inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
+      <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
+      <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
+    <div class="chain">${chain}</div>
     <div class="legs">${legs}<div class="row" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
