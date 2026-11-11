@@ -16,9 +16,7 @@ function qk(lat,lon){return(+lat).toFixed(6)+','+(+lon).toFixed(6)}
 function stopId(name,c){var k=nz(name)+(c?'|'+c.lat.toFixed(3)+','+c.lon.toFixed(3):'');if(!GEO[k])GEO[k]=J(API+'geocode?type=STOP&text='+encodeURIComponent(name)+(c?'&place='+c.lat+','+c.lon:'')).then(function(d){var L=(Array.isArray(d)?d:[]).filter(function(x){return x&&x.id});if(c)L.sort(function(a,b){return d2(c,a)-d2(c,b)});return L[0]?{id:L[0].id,lat:+L[0].lat,lon:+L[0].lon}:null});return GEO[k]}
 function times(id,t,arr){var k=id+'|'+Math.floor(t/300000)+'|'+(arr?1:0);if(!ST[k])ST[k]=J(API+'stoptimes?stopId='+encodeURIComponent(id)+'&n=60&radius=200&arriveBy='+(arr?'true':'false')+'&time='+new Date(t+(arr?20*60000:-10*60000)).toISOString()).then(function(d){return d&&d.stopTimes||[]});return ST[k]}
 function lineKey(a,b){var x=nz(a),y=nz(b);return x&&y&&(x===y||x.indexOf(y)>=0||y.indexOf(x)>=0)}
-function track(name,c,t,line,arr,dir,next){if(!name||t==null)return Promise.resolve(null);return stopId(name,c).then(function(g){if(!g)return null;return times(g.id,t,arr).then(function(L){var best=null,bd=1e12;L.forEach(function(s){var p=s.place||{},tt=ms(arr?(p.scheduledArrival||p.arrival):(p.scheduledDeparture||p.departure));if(tt==null)return;var dt=Math.abs(tt-t);if(dt>120000)return;var okL=lineKey(s.routeShortName||s.displayName,line);var hs=nz(s.headsign||s.headSign||''),dd=nz(dir||'');var okD=!dd||!hs||hs.indexOf(dd.slice(0,8))>=0||dd.indexOf(hs.slice(0,8))>=0;var score=dt+(okL?0:600000)+(okD?0:300000);if(score<bd){bd=score;best=p}});if(!best||bd>=600000&&L.filter(function(s){var p=s.place||{},tt=ms(arr?(p.scheduledArrival||p.arrival):(p.scheduledDeparture||p.departure));return tt!=null&&Math.abs(tt-t)<=60000}).length!==1)return null;
-var pos=null;if(best.lat!=null&&best.lon!=null){pos={lat:+best.lat,lon:+best.lon};var bn=nz(best.name),U={};L.forEach(function(s){var p=s.place||{};if(p.lat!=null&&(!bn||nz(p.name)===bn))U[(+p.lat).toFixed(5)+','+(+p.lon).toFixed(5)]=1});if(Object.keys(U).length<2)pos=null;if(pos&&next&&!isNaN(g.lat)){var kx=111320*Math.cos(g.lat*Math.PI/180),vx=(next.lon-g.lon)*kx,vy=(next.lat-g.lat)*111320,ox=(pos.lon-g.lon)*kx,oy=(pos.lat-g.lat)*111320;if(Math.hypot(ox,oy)>2&&Math.hypot(vx,vy)>30&&(vx*oy-vy*ox)>0)pos=null}}
-return{t:String(best.track||best.scheduledTrack||'').trim()||null,p:pos}})})}
+function track(name,c,t,line,arr,dir,next){/* Localisation quai/voie : plus d'appels Transitous/Overpass — données locales uniquement */return Promise.resolve(null)}
 function roads(c){var k=c.lat.toFixed(4)+','+c.lon.toFixed(4);if(!RD[k])RD[k]=J('https://overpass-api.de/api/interpreter?data='+encodeURIComponent('[out:json][timeout:6];way(around:40,'+c.lat+','+c.lon+')[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|busway)(_link)?$"];out geom;')).then(function(d){return(d&&d.elements||[]).filter(function(w){return w.geometry&&w.geometry.length>1})});return RD[k]}
 function roadSide(c,next){if(!c||!next||d2(c,next)<30)return Promise.resolve(null);return tmo(roads(c),3500).then(function(W){if(!W||!W.length)return null;var kx=111320*Math.cos(c.lat*Math.PI/180),ky=111320,best=null;
 W.forEach(function(w){var g=w.geometry;for(var i=0;i+1<g.length;i++){var ax=(g[i].lon-c.lon)*kx,ay=(g[i].lat-c.lat)*ky,bx=(g[i+1].lon-c.lon)*kx,by=(g[i+1].lat-c.lat)*ky,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy;if(!L2)continue;var t=Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)),px=ax+dx*t,py=ay+dy*t,dd=Math.hypot(px,py);if(!best||dd<best.d)best={d:dd,px:px,py:py,dx:dx,dy:dy,lanes:+(w.tags&&w.tags.lanes)||2}}});
@@ -111,7 +109,7 @@ window.addEventListener("bd-geo-mode-change",function(){Object.keys(reg).forEach
 }catch(e){}})();</script>
 
 <style>html{transition: background-color 0.2s, color 0.2s}html.dark{color-scheme: dark}</style>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>BusDirect</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>BusDirect</title><script id="bd-leaflet-src-mig">try{if(!localStorage.getItem("bd_src_leaflet1")){var R=JSON.parse(localStorage.getItem("bd_src_route")||"{}")||{};if(!R.coords||R.coords==="transitous"){R.coords="leaflet";localStorage.setItem("bd_src_route",JSON.stringify(R))}localStorage.setItem("bd_src_leaflet1","1")}}catch(e){}</script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <style id="bd-leaflet-quais-css">
@@ -341,7 +339,7 @@ function nameOk(stop,cand){var a=norm(stop),b=norm(cand);if(!a||!b)return false;
 function short(name){var p=String(name||'').split(',');return p.length>1?(p.slice(1).join(',').trim()+' '+p[0].trim()):name}
 async function j(u){var r=await fetch(u,{headers:{'Accept':'application/json'}});if(!r.ok)throw 0;return r.json()}
 async function opendata(name){if(!active('opendata-ch'))return null;try{var d=await j('https://transport.opendata.ch/v1/locations?type=station&query='+encodeURIComponent(name));var st=(d.stations||[]).filter(function(s){return s.coordinate&&s.coordinate.x!=null});var e=st.find(function(s){return norm(s.name)===norm(name)})||st[0];return e?{lat:+e.coordinate.x,lon:+e.coordinate.y,src:'transport.opendata.ch'}:null}catch(e){return null}}
-function coordsKind(){try{var x=window.__bdSrcFor&&window.__bdSrcFor('coords');var k=x&&window.__bdSrcKinds?window.__bdSrcKinds(x):[];return k.indexOf('transitous')>=0?'transitous':k.indexOf('pluscode')>=0?'pluscode':k.indexOf('nominatim')>=0?'nominatim':(k.indexOf('photon')>=0?'photon':(k.indexOf('stops')>=0?'stops':''))}catch(e){return''}}
+function coordsKind(){try{var x=window.__bdSrcFor&&window.__bdSrcFor('coords');var k=x&&window.__bdSrcKinds?window.__bdSrcKinds(x):[];return k.indexOf('leaflet')>=0?'leaflet':k.indexOf('transitous')>=0?'transitous':k.indexOf('pluscode')>=0?'pluscode':k.indexOf('nominatim')>=0?'nominatim':(k.indexOf('photon')>=0?'photon':(k.indexOf('stops')>=0?'stops':''))}catch(e){return''}}
 function coordsName(){try{var x=window.__bdSrcFor&&window.__bdSrcFor('coords');return x?x.name:''}catch(e){return''}}
 async function photon(name,ref){if(!active('photon')||coordsKind()!=='photon')return[];try{var u='https://photon.komoot.io/api/?limit=10&q='+encodeURIComponent(short(name))+(ref?'&lat='+ref.lat+'&lon='+ref.lon:'')+'&osm_tag=highway:bus_stop&osm_tag=public_transport:platform&osm_tag=public_transport:stop_position&osm_tag=railway:halt&osm_tag=railway:station&osm_tag=railway:tram_stop&osm_tag=railway:platform';var d=await j(u);return(d.features||[]).map(function(f){return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],name:(f.properties||{}).name||'',kind:((f.properties||{}).osm_key||'')+':'+((f.properties||{}).osm_value||''),src:coordsName()||'Photon / Komoot'}})}catch(e){return[]}}
 async function photonAny(name,ref){try{var u='https://photon.komoot.io/api/?limit=10&q='+encodeURIComponent(short(name))+(ref?'&lat='+ref.lat+'&lon='+ref.lon:'')+'&osm_tag=highway:bus_stop&osm_tag=public_transport:platform&osm_tag=public_transport:stop_position&osm_tag=railway:halt&osm_tag=railway:station&osm_tag=railway:tram_stop&osm_tag=railway:platform';var d=await j(u);return(d.features||[]).map(function(f){return{lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],name:(f.properties||{}).name||'',kind:((f.properties||{}).osm_key||'')+':'+((f.properties||{}).osm_value||'')}})}catch(e){return[]}}
@@ -376,12 +374,12 @@ var CATS=[
 {id:'lieux',label:'Recherche de lieux (et Plus Code)',def:'pluscode',kinds:['pluscode','photon','nominatim']},
 {id:'adresses',label:'Recherche d’adresses (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
 {id:'position',label:'Adresse de votre position (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
-{id:'coords',label:'Coordonnées précises des arrêts (Google Maps, boussole)',def:'transitous',kinds:['transitous','nominatim','photon','stops','pluscode']},
+{id:'coords',label:'Coordonnées précises des arrêts (Google Maps, boussole, quais)',def:'leaflet',kinds:['leaflet','transitous','nominatim','photon','stops','pluscode']},
 {id:'catalogue',label:'Recherche de nouvelles sources',def:'mobilitydb',kinds:['mobilitydb']}
 ];
 function srcList(){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'null');return Array.isArray(L)?L:[]}catch(e){return[]}}
-function kindOf(s){var u=String(s&&s.url||'').toLowerCase(),id=s&&s.id;if(id==='searchch'||/search\.ch\/timetable/.test(u))return'searchch';if(id==='transitous'||/transitous/.test(u))return'transitous';if(id==='db-rest'||/db\.transport\.rest/.test(u))return'dbrest';if(id==='irail'||/irail\.be/.test(u))return'irail';if(id==='opendata-ch'||/transport\.opendata\.ch|\/v1\/(connections|locations|stationboard)/.test(u))return'opendata';if(id==='photon'||/photon/.test(u))return'photon';if(id==='nominatim'||/nominatim/.test(u))return'nominatim';if(id==='pluscode'||/plus\.codes/.test(u))return'pluscode';if(id==='mobilitydb'||/mobilitydatabase/.test(u))return'mobilitydb';return'custom'}
-function kindsOf(s){if(s&&s.id==='searchch')return['searchch'];if(s&&s.id==='transitous')return['transitous'];if(s&&s.id==='db-rest')return['dbrest'];if(s&&s.id==='irail')return['irail'];if(s&&Array.isArray(s.caps)&&s.caps.length)return s.caps.slice();var k=kindOf(s);return k==='custom'?[]:[k]}
+function kindOf(s){var u=String(s&&s.url||'').toLowerCase(),id=s&&s.id;if(id==='leaflet'||/leafletjs\.com/.test(u))return'leaflet';if(id==='searchch'||/search\.ch\/timetable/.test(u))return'searchch';if(id==='transitous'||/transitous/.test(u))return'transitous';if(id==='db-rest'||/db\.transport\.rest/.test(u))return'dbrest';if(id==='irail'||/irail\.be/.test(u))return'irail';if(id==='opendata-ch'||/transport\.opendata\.ch|\/v1\/(connections|locations|stationboard)/.test(u))return'opendata';if(id==='photon'||/photon/.test(u))return'photon';if(id==='nominatim'||/nominatim/.test(u))return'nominatim';if(id==='pluscode'||/plus\.codes/.test(u))return'pluscode';if(id==='mobilitydb'||/mobilitydatabase/.test(u))return'mobilitydb';return'custom'}
+function kindsOf(s){if(s&&s.id==='leaflet')return['leaflet','coords','stops'];if(s&&s.id==='searchch')return['searchch'];if(s&&s.id==='transitous')return['transitous'];if(s&&s.id==='db-rest')return['dbrest'];if(s&&s.id==='irail')return['irail'];if(s&&Array.isArray(s.caps)&&s.caps.length)return s.caps.slice();var k=kindOf(s);return k==='custom'?[]:[k]}
 try{if(!localStorage.getItem('bd_src_route_osm1')){var _r0=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{};delete _r0.coords;localStorage.setItem('bd_src_route',JSON.stringify(_r0));localStorage.setItem('bd_src_route_osm1','1');localStorage.removeItem('bd-stop-xy-v1')}}catch(e){}
 try{if(!localStorage.getItem('bd_src_route_trs1')){localStorage.setItem('bd_src_route_photon1','1');var _r1=JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{};delete _r1.coords;localStorage.setItem('bd_src_route',JSON.stringify(_r1));localStorage.setItem('bd_src_route_trs1','1');localStorage.removeItem('bd-stop-xy-v1')}}catch(e){}
 function routes(){try{if(localStorage.getItem('bd_sources_autodetect')!=='0')return{};return JSON.parse(localStorage.getItem('bd_src_route')||'{}')||{}}catch(e){return{}}}
@@ -1638,32 +1636,64 @@ function bdApplyNetworkRules(list,start,minutes){var _r=bdApplyNetworkRules0(lis
 function bdApplyNetworkRules0(list,start,minutes){try{return bdApplyProximityRules(list,start,minutes)}catch(e){return(list||[]).slice().sort(bdPrefSort)}}
 function bdJoinEndsAt(S,name){return bdJoinEndsAt0(S,name)}
 function bdEndWalkSec(c){try{var ss=c&&c.sections;if(ss&&ss.length){var t=0;for(var i=ss.length-1;i>=0;i--){var x=ss[i];if(x&&x.journey)break;t+=bdWalkSec(x)||0}return t}var pl=c&&c.passList||[],w=0;for(var j=pl.length-1;j>=0;j--){var y=pl[j];if(!y)continue;if(y.type==="walk"){w+=(+y.walkMin||0)*60;continue}if(y.type==="stop"||!y.type)break}return w}catch(e){return 0}}
-var __bdQ=null;setInterval(function(){__bdQ=null},120000);try{if(!localStorage.getItem("bd_quay_trs3")){localStorage.removeItem("bd-quay-xy");localStorage.setItem("bd_quay_trs3","1")}}catch(e){}
-function bdQuayXY(stop,base,pf,cb,when){try{pf=String(pf||"").replace(/!$/,"").trim();if(!pf||!base||base.lat==null)return null;if(!__bdQ){__bdQ={};try{localStorage.removeItem("bd-quay-xy")}catch(e){}}var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ[k];
-if(v&&v.t&&Date.now()-v.t<(v.lat!=null?120000:60000))return v.lat!=null?{lat:v.lat,lon:v.lon}:null;
-var P=window.__bdQP||(window.__bdQP={});if(P[k])return null;P[k]=1;
-var want=pf.toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,"").trim(),wk=want.replace(/[^a-z0-9]/g,"");
-var A='(around:550,'+base.lat+','+base.lon+')';
-var vs=[want.toUpperCase(),want];if(vs[0]===vs[1])vs.pop();var rx=vs.map(function(v){return v.replace(/[^A-Za-z0-9]/g,'')}).join('|');
-var q='[out:json][timeout:15];(nwr'+A+'["local_ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["railway:track_ref"~"^('+rx+')$|(^|;)('+rx+')(;|$)"];nwr'+A+'["name"~"(Quai|Voie|Gleis|Kante) ('+rx+')$"];);out center tags;';
-var hosts=["https://overpass-api.de/api/interpreter","https://overpass.private.coffee/api/interpreter","https://maps.mail.ru/osm/tools/overpass/api/interpreter","https://overpass.kumi.systems/api/interpreter"];
-var ask=function(n){if(n>=hosts.length)return Promise.reject(0);var ac=window.AbortController?new AbortController():null,tm=setTimeout(function(){try{ac&&ac.abort()}catch(e){}},12000);return Promise.race([fetch(hosts[n]+"?data="+encodeURIComponent(q),{method:"GET",cache:"no-store",credentials:"omit",signal:ac?ac.signal:void 0,__bdNoRoute:1}).then(function(r){if(!r.ok)throw"HTTP "+r.status;return r.json().catch(function(){throw"réponse illisible"})}),new Promise(function(_,rej){setTimeout(function(){rej("délai dépassé")},12500)})]).then(function(j){clearTimeout(tm);return j},function(er){clearTimeout(tm);errs.push(["principal","secours 1","secours 2","secours 3"][n]+" : "+(typeof er==="string"?er:(er&&er.name==="AbortError"?"délai dépassé":(er&&er.message)||String(er))));return ask(n+1)})};var errs=[];
-var netFail=false;
-var trsQ=function(){var T='https://api.transitous.org/api/';return fetch(T+'v1/reverse-geocode?type=STOP&place='+base.lat+','+base.lon,{__bdNoRoute:1}).then(function(r){if(!r.ok)throw"Transitous HTTP "+r.status;return r.json()}).then(function(L){L=(Array.isArray(L)?L:[]).filter(function(x){return x&&x.id}).slice(0,3);if(!L.length)return null;
-var tq=[''];try{if(when){var w0=new Date((when>1e12?when:when*1000)-20*60000);if(!isNaN(w0))tq=['&time='+encodeURIComponent(w0.toISOString()),'']}}catch(e){}
-var reqs=[];L.slice(0,2).forEach(function(x){tq.forEach(function(t){[false,true].forEach(function(ab){reqs.push(T+'v6/stoptimes?stopId='+encodeURIComponent(x.id)+'&n=300&radius=500'+(ab?'&arriveBy=true':'')+t)})})});
-var seq=function(n){if(n>=reqs.length)return Promise.resolve(null);return fetch(reqs[n],{__bdNoRoute:1}).then(function(r){return r.ok?r.json():null}).catch(function(){return null}).then(function(d){var best=null,bd=1e9;((d&&d.stopTimes)||[]).forEach(function(st){var p=st.place||{};var tr=String(p.track||p.scheduledTrack||'').toLowerCase().replace(/^(quai|voie|gleis|kante)\s*/,'').trim();if(tr!==want&&tr!==wk)return;if(p.lat==null)return;var dd=zt(base,{lat:+p.lat,lon:+p.lon});if(dd<bd&&dd<0.8){bd=dd;best={lat:+p.lat,lon:+p.lon,src:'transitous'}}});return best||seq(n+1)})};return seq(0)}).catch(function(er){errs.push(typeof er==='string'?er:'Transitous : '+((er&&er.message)||er));return null})};
-trsQ().then(function(best){
-if(best||!netFail){__bdQ[k]=best?{lat:best.lat,lon:best.lon,t:Date.now(),src:best.src||"osm"}:{t:Date.now()};}
-try{window.__bdSrcMark&&window.__bdSrcMark(best&&best.src==="photon"?"https://photon.komoot.io":best&&best.src==="transitous"?"https://api.transitous.org":"https://www.openstreetmap.org","Position des quais et des voies")}catch(e){}
-try{(window.__bdQS||(window.__bdQS={}))[k]=best?"ok":(netFail?"net":"none");(window.__bdQE||(window.__bdQE={}))[k]=errs.join(", ")}catch(e){}
-if(cb)cb()}).catch(function(){}).then(function(){delete P[k]})}catch(e){}return null}
+var __bdQ=null;setInterval(function(){__bdQ=null},120000);try{if(!localStorage.getItem("bd_quay_leaflet1")){localStorage.removeItem("bd-quay-xy");localStorage.setItem("bd_quay_leaflet1","1")}}catch(e){}
+function bdQuayXY(stop,base,pf,cb,when){try{
+pf=String(pf||"").replace(/!$/,"").trim();
+if(!pf||!base||base.lat==null)return null;
+if(!__bdQ){__bdQ={};try{localStorage.removeItem("bd-quay-xy")}catch(e){}}
+var k=bdNorm(stop)+"|"+pf.toLowerCase();
+var v=__bdQ[k];
+if(v&&v.t&&Date.now()-v.t<(v.lat!=null?300000:60000)){
+  if(cb)setTimeout(function(){try{cb()}catch(e){}},0);
+  return v.lat!=null?{lat:v.lat,lon:v.lon}:null;
+}
+// Uniquement données déjà présentes dans les trajets (pas d'appel Overpass / Transitous)
+var want=pf.toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,"").trim();
+var best=null;
+try{
+  var T=window.__bdCardTrips||{};
+  Object.keys(T).forEach(function(id){
+    var S=T[id];if(!S)return;
+    (S.passList||[]).forEach(function(x){
+      if(!x)return;
+      var tr=String(x.platform||(x.prognosis&&x.prognosis.platform)||"").replace(/!$/,"").trim().toLowerCase();
+      if(tr!==want&&tr.replace(/^(quai|voie)\s*/,"")!==want)return;
+      var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null);
+      var lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);
+      if(la==null||lo==null||!isFinite(la)||!isFinite(lo))return;
+      // préférer les points proches de la base
+      var d=Math.hypot((la-base.lat)*111320,(lo-base.lon)*111320*Math.cos(base.lat*Math.PI/180));
+      if(d>800)return;
+      if(!best||d<best.d)best={lat:la,lon:lo,d:d,src:"horaire"};
+    });
+    // aussi from / to
+    [["from",S.from],["to",S.to]].forEach(function(pair){
+      var x=pair[1];if(!x)return;
+      var tr=String(x.platform||"").replace(/!$/,"").trim().toLowerCase();
+      if(tr!==want&&tr.replace(/^(quai|voie)\s*/,"")!==want)return;
+      var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null);
+      var lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);
+      if(la==null||lo==null)return;
+      var d=Math.hypot((la-base.lat)*111320,(lo-base.lon)*111320*Math.cos(base.lat*Math.PI/180));
+      if(d>800)return;
+      if(!best||d<best.d)best={lat:la,lon:lo,d:d,src:"horaire"};
+    });
+  });
+}catch(e){}
+// Position déjà injectée par bd-tx (si présente sur base avec même platform)
+if(!best&&base.platform&&String(base.platform).replace(/!$/,"").trim().toLowerCase()===want&&base.lat!=null){
+  best={lat:+base.lat,lon:+base.lon,src:"base"};
+}
+__bdQ[k]=best?{lat:best.lat,lon:best.lon,t:Date.now(),src:best.src||"horaire"}:{t:Date.now()};
+try{(window.__bdQS||(window.__bdQS={}))[k]=best?"ok":"none";(window.__bdQE||(window.__bdQE={}))[k]=best?"":"Aucune coordonnée de quai dans les horaires"}catch(e){}
+if(cb)setTimeout(function(){try{cb()}catch(e){}},0);
+return best?{lat:best.lat,lon:best.lon}:null;
+}catch(e){}return null}
 window.__bdQuayXY=bdQuayXY;window.__bdQuayState=bdQuayState;
 function bdQuayErr(stop,pf){try{pf=String(pf||"").replace(/!$/,"").trim();return(window.__bdQE||{})[bdNorm(stop)+"|"+pf.toLowerCase()]||""}catch(e){return""}}
 function bdQuayState(stop,pf){try{pf=String(pf||"").replace(/!$/,"").trim();var k=bdNorm(stop)+"|"+pf.toLowerCase();var v=__bdQ&&__bdQ[k];if(v&&v.lat!=null)return"ok";return(window.__bdQS||{})[k]||(v?"none":null)}catch(e){return null}}
-function bdQuayPhoton(stop,base,pf){return Promise.race([bdQuayPhoton0(stop,base,pf),new Promise(function(r){setTimeout(function(){r(null)},7000)})])}
-function bdQuayPhoton0(stop,base,pf){try{var want=String(pf).toLowerCase(),sh=String(stop||"").split(",").pop().trim();var u="https://photon.komoot.io/api/?q="+encodeURIComponent(sh+" "+pf)+"&lat="+base.lat+"&lon="+base.lon+"&limit=15&osm_tag=highway:bus_stop&osm_tag=public_transport:platform&osm_tag=railway:platform&osm_tag=public_transport:stop_position";
-return fetch(u).then(function(r){return r.json()}).then(function(j){var best=null,bd=1e9;(j.features||[]).forEach(function(f){var pr=f.properties||{},g=(f.geometry&&f.geometry.coordinates)||[];if(g.length<2)return;var p2={lat:+g[1],lon:+g[0]};var d=zt(base,p2)*1000;if(d>350)return;var txt=[pr.name,pr.ref,pr.local_ref,pr.housenumber].filter(Boolean).join(" ").toLowerCase();var hit=new RegExp("(^|[\\s,;/(-])("+want.replace(/[^a-z0-9]/g,"")+")([\\s,;/)]|$)").test(txt)||new RegExp("(quai|voie|gleis|perron|platform)\\s*"+want.replace(/[^a-z0-9]/g,"")+"\\b").test(txt);if(!hit)return;if(d<bd){bd=d;best={lat:p2.lat,lon:p2.lon,src:"photon"}}});return best}).catch(function(){return null})}catch(e){return Promise.resolve(null)}}
+function bdQuayPhoton(stop,base,pf){return Promise.resolve(null)}
+function bdQuayPhoton0(stop,base,pf){return Promise.resolve(null)}
 var __bdR={};function bdRoadBetween(a,b,cb){try{if(!a||!b)return null;var k=a.lat.toFixed(5)+","+a.lon.toFixed(5)+">"+b.lat.toFixed(5)+","+b.lon.toFixed(5);if(k in __bdR)return __bdR[k];__bdR[k]=null;
 var m={lat:(a.lat+b.lat)/2,lon:(a.lon+b.lon)/2},r=Math.max(40,Math.round(zt(a,b)*1000/2+20));
 var q='[out:json][timeout:12];way(around:'+r+','+m.lat+','+m.lon+')[highway~"^(motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service)(_link)?$"];out geom;';
@@ -2865,6 +2895,8 @@ var DEFAULTS=[
 {id:'transitous',name:'Transitous (Europe : FR, DE, BE, NL, GB, ES, IT, CH…)',type:'Horaires / connexions — toutes les villes, liaison automatique',url:'https://api.transitous.org',active:true,status:'ok',core:true},
 {id:'photon',name:'Photon / Komoot',type:'Recherche lieux',url:'https://photon.komoot.io',active:true,status:'ok',core:true},
 {id:'nominatim',name:'OpenStreetMap Nominatim',type:'Géocodage / localisation',url:'https://nominatim.openstreetmap.org',active:true,status:'ok',core:true},
+{id:'leaflet',name:'Leaflet.js (carte quais / voies)',type:'Coordonnées des quais et voies — mise à jour locale',url:'https://leafletjs.com',active:true,status:'ok',core:true,caps:['coords','stops']},
+
 {id:'pluscode',name:'Plus Codes (Google Open Location Code)',type:'Recherche lieux / adresses par Plus Code',url:'https://plus.codes',active:true,status:'ok',core:true},
 {id:'mobilitydb',name:'MobilityDatabase',type:'Catalogue mondial GTFS / GTFS-RT',url:'https://mobilitydatabase.org/feeds?gtfs=true',active:true,status:'ok',catalog:true}
 ];
@@ -2885,9 +2917,9 @@ function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return{'&':'
 function renderSources(){var box=document.getElementById('bd-v101-list');if(!box)return;box.innerHTML=sources.map(function(s,i){var st=!s.active?'':(s.status||'warn');var use=(window.__bdSrcUsage&&s.url)?window.__bdSrcUsage(s.url):{},now=Date.now(),ps=Object.keys(use).sort(function(a,b){return use[b]-use[a]}),lastT=ps.length?use[ps[0]]:0,recent=ps.filter(function(p){return now-use[p]<=120000});
 var ago=function(t){var x=Math.round((now-t)/1000);return x<60?'il y a '+x+' s':(x<3600?'il y a '+Math.round(x/60)+' min':'il y a '+Math.round(x/3600)+' h')};
 var uh=!s.active?'<div class="bd-src-use off">Désactivée — non utilisée</div>':(recent.length?'<div class="bd-src-use on">● Utilisée actuellement pour : '+esc(recent.join(' · '))+'</div>':(ps.length?'<div class="bd-src-use">Dernière utilisation '+ago(lastT)+' : '+esc(ps.join(' · '))+'</div>':'<div class="bd-src-use">Pas encore utilisée depuis l’ouverture de l’application</div>'));
-var cf=s._del&&now-s._del<4000,canDel=!!s.custom;var DESC={'opendata-ch':'horaires et correspondances (Prochains parcours, Live), départs aux arrêts et détection du véhicule, arrêts à proximité, recherche d’arrêts.','photon':'recherche de lieux, et coordonnées précises des arrêts (Google Maps, boussole).','nominatim':'adresse de votre position, recherche d’adresses, coordonnées précises des arrêts.','pluscode':'par défaut pour la recherche de lieux, la recherche d’adresses et l’adresse de votre position : recherche par Plus Code (8FR8646R+3X ou 646R+3X Genève) et Plus Code affiché sur les résultats et sous votre adresse.','mobilitydb':'recherche de nouvelles sources.'};var desc=DESC[s.id]||(s.custom?(_det[s.id]?'détection de l’utilisation en cours…':(Array.isArray(s.caps)?(s.caps.length?s.caps.map(function(k){return CAPLAB[k]||k}).join(' · ')+' — détecté automatiquement, disponible dans « Source utilisée par usage ».':'utilisation non détectée (format inconnu ou accès refusé par le site).'):'détection de l’utilisation…')):'');
+var cf=s._del&&now-s._del<4000,canDel=!!s.custom;var DESC={'opendata-ch':'horaires et correspondances (Prochains parcours, Live), départs aux arrêts et détection du véhicule, arrêts à proximité, recherche d’arrêts.','leaflet':'carte interactive des quais et voies : affiche et met à jour les positions à partir des horaires et du cache local.','photon':'recherche de lieux, et coordonnées précises des arrêts (Google Maps, boussole).','nominatim':'adresse de votre position, recherche d’adresses, coordonnées précises des arrêts.','pluscode':'par défaut pour la recherche de lieux, la recherche d’adresses et l’adresse de votre position : recherche par Plus Code (8FR8646R+3X ou 646R+3X Genève) et Plus Code affiché sur les résultats et sous votre adresse.','mobilitydb':'recherche de nouvelles sources.'};var desc=DESC[s.id]||(s.custom?(_det[s.id]?'détection de l’utilisation en cours…':(Array.isArray(s.caps)?(s.caps.length?s.caps.map(function(k){return CAPLAB[k]||k}).join(' · ')+' — détecté automatiquement, disponible dans « Source utilisée par usage ».':'utilisation non détectée (format inconnu ou accès refusé par le site).'):'détection de l’utilisation…')):'');
 return'<div class="bd-v101-source"><span class="bd-v101-dot '+st+'"></span><div><div class="bd-v101-name">'+esc(s.name)+'</div><div class="bd-v101-sub">'+esc(s.type||'Source transport')+' · '+esc(s.url||'')+'</div>'+(desc?'<div class="bd-src-desc"><b>Sert à :</b> '+esc(desc)+'</div>':'')+uh+'</div><div class="bd-src-actions"><button class="bd-v101-toggle '+(s.active?'on':'')+'" data-source-toggle="'+i+'" aria-label="'+(s.active?tr('enabled'):tr('disabled'))+'"><div class="bd-v101-knob"></div></button>'+(canDel?'<button class="bd-src-del'+(cf?' confirm':'')+'" data-source-del="'+i+'" aria-label="Supprimer la source">'+(cf?'Confirmer':'🗑')+'</button>':'')+'</div></div>'}).join('');var _rb=document.getElementById('bd-src-routes-box');if(_rb){var _f=document.activeElement&&_rb.contains(document.activeElement);if(!_f)_rb.innerHTML=routesHtml()}}
-var CAPLAB={opendata:'Horaires, départs, arrêts (API type transport.opendata.ch)',photon:'Recherche de lieux / coordonnées (API Photon)',nominatim:'Adresses / position / coordonnées (API Nominatim)',stops:'Coordonnées d’arrêts (fichier d’arrêts)',pluscode:'Plus Codes',mobilitydb:'Catalogue de sources'};
+var CAPLAB={leaflet:'Carte Leaflet — quais / voies (mise à jour locale)',opendata:'Horaires, départs, arrêts (API type transport.opendata.ch)',photon:'Recherche de lieux / coordonnées (API Photon)',nominatim:'Adresses / position / coordonnées (API Nominatim)',stops:'Coordonnées d’arrêts (fichier d’arrêts)',pluscode:'Plus Codes',mobilitydb:'Catalogue de sources'};
 function srcBase(url){try{var u=new URL(url);var p=u.pathname.replace(/\/v1\/.*$/,'').replace(/\/(api|search|reverse)\/?.*$/,'').replace(/\/$/,'');return u.origin+p}catch(e){return null}}
 async function tryJ(url,ms){var c=typeof AbortController!=='undefined'?new AbortController():null,t=c?setTimeout(function(){c.abort()},ms||7000):null;try{var r=await fetch(url,c?{signal:c.signal,__bdNoRoute:true}:{__bdNoRoute:true});if(!r.ok)return null;var ct=r.headers.get('content-type')||'';var tx=await r.text();if(t)clearTimeout(t);try{return{json:JSON.parse(tx),text:tx,ct:ct}}catch(e){return{json:null,text:tx,ct:ct}}}catch(e){if(t)clearTimeout(t);return null}}
 async function detectCaps(s){var caps=[],b=srcBase(s.url),u=String(s.url||'');if(!b)return caps;
@@ -5108,14 +5140,7 @@ var pg=document.createElement('div');pg.id='bd-map-page';pg.innerHTML='<div id="
 pg.querySelector('.t span').textContent=label||'Itinéraire à pied';document.body.appendChild(pg);document.documentElement.classList.add('bd-map-open');pg.querySelector('#bd-map-close').onclick=close;
 if(!A){pg.querySelector('#bd-map-msg').textContent='Position de départ inconnue : activez la localisation.';return true}
 var _to=function(p,ms,v){return Promise.race([p,new Promise(function(r){setTimeout(function(){r(v)},ms)})])};
-var qpos=function(){var QF=window.__bdQuayXY0||window.__bdQuayXY;if(!QF||!A||!B)return Promise.resolve();var one=function(name,base,pf){pf=String(pf||'').replace(/^(quai|voie)\s+/i,'').trim();if(!pf||!name||!base)return Promise.resolve(null);return new Promise(function(ok){var r=null;try{r=QF(name,base,pf,function(){try{ok(QF(name,base,pf))}catch(e){ok(null)}})}catch(e){}if(r)ok(r);setTimeout(function(){ok(null)},4500)})};
-var fast=function(name,base,pf){pf=String(pf||'').replace(/^(quai|voie)\s+/i,'').trim();if(!pf||!base)return Promise.resolve(null);var want=pf.toLowerCase();
-var tr=fetch('https://api.transitous.org/api/v1/geocode?type=STOP&text='+encodeURIComponent(name||'')+'&place='+base.lat+','+base.lon,{__bdNoRoute:1}).then(function(r){return r.json()}).then(function(L){L=(L||[]).filter(function(x){return x&&x.id});L.sort(function(a,b){return dist([a.lon,a.lat],[base.lon,base.lat])-dist([b.lon,b.lat],[base.lon,base.lat])});if(!L[0])throw 0;return fetch('https://api.transitous.org/api/v1/stoptimes?stopId='+encodeURIComponent(L[0].id)+'&n=200&radius=300',{__bdNoRoute:1}).then(function(r){return r.json()})}).then(function(d){var best=null;((d&&d.stopTimes)||[]).forEach(function(st){var p=st.place||{},t=String(p.track||p.scheduledTrack||'').toLowerCase().replace(/^(quai|voie)\s*/,'').trim();if(t===want&&p.lat!=null&&!best)best={lat:+p.lat,lon:+p.lon}});if(!best)throw 0;return best});
-var Q='[out:json][timeout:6];nwr(around:300,'+base.lat+','+base.lon+')[public_transport=platform];out center tags;';
-var os=fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(Q),headers:{'Content-Type':'application/x-www-form-urlencoded'},__bdNoRoute:1}).then(function(r){return r.json()}).then(function(d){var best=null,bd=1e12;((d&&d.elements)||[]).forEach(function(e){var t=e.tags||{},refs=[t.local_ref,t.ref,t['ref:IFOPT']&&t['ref:IFOPT'].split(':').pop()].filter(Boolean).map(function(x){return String(x).toLowerCase().trim()});if(refs.indexOf(want)<0)return;var la=e.lat!=null?e.lat:(e.center&&e.center.lat),lo=e.lon!=null?e.lon:(e.center&&e.center.lon);if(la==null)return;var dd=dist([lo,la],[base.lon,base.lat]);if(dd<bd){bd=dd;best={lat:la,lon:lo}}});if(!best)throw 0;return best});
-return new Promise(function(ok){var n=0,f=function(){if(++n===2)ok(null)};tr.then(ok,f);os.then(ok,f);setTimeout(function(){ok(null)},4500)})};
-var both=function(name,base,pf){return new Promise(function(ok){var n=0,f=function(r){if(r&&r.lat!=null)ok(r);else if(++n===2)ok(null)};one(name,base,pf).then(f,function(){f(null)});fast(name,base,pf).then(f,function(){f(null)})})};
-return Promise.all([both(opt.fromName,A,opt.fromPf),both(opt.toName,B,opt.toPf)]).then(function(R){if(R[0]&&R[0].lat!=null)A={lat:+R[0].lat,lon:+R[0].lon};if(R[1]&&R[1].lat!=null)B={lat:+R[1].lat,lon:+R[1].lon}})};
+var qpos=function(){var QF=window.__bdQuayXY0||window.__bdQuayXY;if(!QF||!A||!B)return Promise.resolve();var one=function(name,base,pf){pf=String(pf||'').replace(/^(quai|voie)\s+/i,'').trim();if(!pf||!name||!base)return Promise.resolve(null);return new Promise(function(ok){var r=null;try{r=QF(name,base,pf,function(){try{ok(QF(name,base,pf))}catch(e){ok(null)}})}catch(e){}if(r)ok(r);setTimeout(function(){ok(null)},600)})};return Promise.all([one(opt.fromName,A,opt.fromPf),one(opt.toName,B,opt.toPf)]).then(function(R){if(R[0]&&R[0].lat!=null)A={lat:+R[0].lat,lon:+R[0].lon};if(R[1]&&R[1].lat!=null)B={lat:+R[1].lat,lon:+R[1].lon}});};
 var _qP=(origin&&(opt.fromPf||opt.toPf))?qpos():Promise.resolve();
 var _rP=_qP.then(function(){return route(A,B)});
 Promise.all([_to(loadML(),15000,null),_to(_rP,1200,null),_to(_qP,4600,null)]).then(function(R){var ML=R[0]||window.maplibregl,rt=R[1];if(!document.getElementById('bd-map-page'))return;if(!ML)throw new Error('ml');var _late=!rt,_noRt=false;var el=document.getElementById('bd-map');el.innerHTML='';el.classList.add('bd-walkmap');
@@ -5196,11 +5221,10 @@ setInterval(function(){try{if(!window.__bdWalkPrefetch)return;var n=0;document.q
 <script id="bd-leaflet-quais-js">
 (function(){
 'use strict';
-var map=null, layer=null, page=null;
+var map=null, page=null;
 
 function close(){
   try{ if(map){ map.remove(); map=null; } }catch(e){}
-  layer=null;
   if(page){ try{ page.remove(); }catch(e){} page=null; }
   document.documentElement.classList.remove('bd-lf-open');
 }
@@ -5213,105 +5237,79 @@ function distM(a,b){
   return Math.sqrt(x*x+y*y)*6371000;
 }
 
-function labelOf(tags){
-  if(!tags) return null;
-  var refs = [tags.local_ref, tags.ref, tags['railway:track_ref'], tags['ref:IFOPT'] && String(tags['ref:IFOPT']).split(':').pop()]
-    .filter(Boolean).map(function(x){ return String(x).trim(); });
-  var name = tags.name || tags['name:fr'] || tags['name:de'] || '';
-  var m = name.match(/(?:Quai|Voie|Gleis|Kante|Perron|Platform|Track)\s*([A-Za-z0-9]+)/i);
-  if(m) refs.unshift(m[1]);
-  // unique
-  var seen={}, out=[];
-  refs.forEach(function(r){ var k=r.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(r); } });
-  return out[0] || null;
+function normalizeWant(w){
+  return String(w||'').toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,'').replace(/[^a-z0-9]/g,'');
 }
 
-function isPlatform(tags){
-  if(!tags) return false;
-  var pt = tags.public_transport || '';
-  var ry = tags.railway || '';
-  var hw = tags.highway || '';
-  return pt==='platform' || ry==='platform' || ry==='tram_stop' || (hw==='platform') || tags.bus==='yes' && pt;
-}
-
-function queryOverpass(lat, lon, radius){
-  radius = radius || 350;
-  var q = '[out:json][timeout:12];('
-    + 'nwr(around:'+radius+','+lat+','+lon+')[public_transport=platform];'
-    + 'nwr(around:'+radius+','+lat+','+lon+')[railway=platform];'
-    + 'nwr(around:'+radius+','+lat+','+lon+')[railway=tram_stop];'
-    + 'nwr(around:'+radius+','+lat+','+lon+')["railway:track_ref"];'
-    + ');out center tags;';
-  var hosts = [
-    'https://overpass-api.de/api/interpreter',
-    'https://overpass.private.coffee/api/interpreter',
-    'https://overpass.kumi.systems/api/interpreter'
-  ];
-  function tryHost(i){
-    if(i>=hosts.length) return Promise.reject(new Error('Overpass indisponible'));
-    var ac = typeof AbortController!=='undefined' ? new AbortController() : null;
-    var tm = setTimeout(function(){ try{ac&&ac.abort()}catch(e){} }, 11000);
-    return fetch(hosts[i], {
-      method:'POST',
-      body:'data='+encodeURIComponent(q),
-      headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      signal: ac ? ac.signal : undefined,
-      __bdNoRoute:1
-    }).then(function(r){
-      clearTimeout(tm);
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return r.json();
-    }).catch(function(e){
-      clearTimeout(tm);
-      return tryHost(i+1);
-    });
+/** Collecte les quais uniquement depuis les données déjà en mémoire (horaires / cache). Pas d'Overpass ni Transitous. */
+function collectPlatforms(centerLat, centerLon, stopName){
+  var plats = [], seen = {};
+  function push(lab, la, lo, name, src){
+    if(la==null||lo==null||!isFinite(la)||!isFinite(lo)) return;
+    lab = String(lab||'').replace(/!$/,'').trim();
+    if(!lab) return;
+    var key = lab.toLowerCase()+'|'+Number(la).toFixed(5)+'|'+Number(lo).toFixed(5);
+    if(seen[key]) return;
+    // rayon max 900 m
+    if(distM({lat:centerLat,lon:centerLon},{lat:+la,lon:+lo}) > 900) return;
+    seen[key]=1;
+    plats.push({ lat:+la, lon:+lo, label:lab, name:name||'', src:src||'horaire' });
   }
-  return tryHost(0);
-}
 
-function fromTransitous(lat, lon, wantPf){
-  var API = 'https://api.transitous.org/api/';
-  return fetch(API+'v1/reverse-geocode?type=STOP&place='+lat+','+lon,{__bdNoRoute:1})
-    .then(function(r){ return r.ok ? r.json() : []; })
-    .then(function(L){
-      L = (Array.isArray(L)?L:[]).filter(function(x){ return x && x.id; }).slice(0,3);
-      if(!L.length) return [];
-      var reqs = [];
-      L.forEach(function(x){
-        reqs.push(API+'v1/stoptimes?stopId='+encodeURIComponent(x.id)+'&n=200&radius=400');
+  // 1) Cache bdQuayXY
+  try{
+    var Q = window.__bdQ || {};
+    Object.keys(Q).forEach(function(k){
+      var v=Q[k];
+      if(!v||v.lat==null) return;
+      var parts=k.split('|');
+      var pf=parts[parts.length-1]||'';
+      push(pf, v.lat, v.lon, stopName, v.src||'cache');
+    });
+  }catch(e){}
+
+  // 2) Trajets en mémoire
+  try{
+    var T=window.__bdCardTrips||{};
+    Object.keys(T).forEach(function(id){
+      var S=T[id]; if(!S) return;
+      (S.passList||[]).forEach(function(x){
+        if(!x) return;
+        var pf=String(x.platform||(x.prognosis&&x.prognosis.platform)||'').replace(/!$/,'').trim();
+        if(!pf) return;
+        var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null);
+        var lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);
+        var nm=typeof x.station==='string'?x.station:((x.station&&x.station.name)||'');
+        push(pf, la, lo, nm, 'horaire');
       });
-      return Promise.all(reqs.map(function(u){
-        return fetch(u,{__bdNoRoute:1}).then(function(r){ return r.ok?r.json():null; }).catch(function(){ return null; });
-      })).then(function(arr){
-        var seen = {}, plats = [];
-        arr.forEach(function(d){
-          ((d&&d.stopTimes)||[]).forEach(function(st){
-            var p = st.place || {};
-            var tr = String(p.track||p.scheduledTrack||'').trim();
-            if(!tr || p.lat==null) return;
-            var key = tr.toLowerCase()+'|'+Number(p.lat).toFixed(5)+'|'+Number(p.lon).toFixed(5);
-            if(seen[key]) return;
-            seen[key]=1;
-            plats.push({
-              lat:+p.lat, lon:+p.lon,
-              label: tr,
-              name: p.name || '',
-              src: 'transitous'
-            });
-          });
-        });
-        return plats;
+      [['from',S.from],['to',S.to]].forEach(function(pair){
+        var x=pair[1]; if(!x) return;
+        var pf=String(x.platform||'').replace(/!$/,'').trim();
+        if(!pf) return;
+        var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null);
+        var lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);
+        var nm=typeof x.station==='string'?x.station:((x.station&&x.station.name)||'');
+        push(pf, la, lo, nm, 'horaire');
       });
-    }).catch(function(){ return []; });
+    });
+  }catch(e){}
+
+  // 3) Positions marquées côté route / side
+  try{
+    var QP=window.__bdSideQP||{};
+    Object.keys(QP).forEach(function(k){
+      var p=k.split(',');
+      if(p.length===2){
+        // pas de label → on n'ajoute pas sans numéro de quai
+      }
+    });
+  }catch(e){}
+
+  return plats;
 }
 
 /**
- * Ouvre une carte Leaflet centrée sur un arrêt et affiche les quais / voies.
- * @param {object} opts
- *   - lat, lon (number) : centre
- *   - name (string) : nom de l'arrêt
- *   - platform (string) : quai/voie à mettre en évidence (ex: "3", "A")
- *   - fromName, toName, fromPf, toPf : pour afficher deux quais (correspondance)
+ * Carte Leaflet des quais / voies — données locales uniquement (pas Overpass, pas Transitous).
  */
 window.bdOpenLeafletQuais = function(opts){
   opts = opts || {};
@@ -5326,12 +5324,20 @@ window.bdOpenLeafletQuais = function(opts){
   var want2 = String(opts.toPf || '').replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/i,'').trim();
 
   if(lat==null || lon==null || !isFinite(lat) || !isFinite(lon)){
-    var L = window.__bd_loc;
-    if(L && L.lat!=null){ lat=+L.lat; lon=+L.lon; }
+    var L0 = window.__bd_loc;
+    if(L0 && L0.lat!=null){ lat=+L0.lat; lon=+L0.lon; }
   }
   if(lat==null || lon==null){
     alert('Position de l\'arrêt inconnue. Active la localisation ou ouvre un trajet avec coordonnées.');
     return false;
+  }
+
+  // Si un platform est demandé, tenter le cache local bdQuayXY (sans réseau)
+  if(want && typeof bdQuayXY === 'function'){
+    try{ bdQuayXY(name, {lat:lat, lon:lon}, want); }catch(e){}
+  }
+  if(want2 && typeof bdQuayXY === 'function'){
+    try{ bdQuayXY(name, {lat:lat, lon:lon}, want2); }catch(e){}
   }
 
   page = document.createElement('div');
@@ -5342,10 +5348,10 @@ window.bdOpenLeafletQuais = function(opts){
     +   '<button id="bd-lf-close" aria-label="Fermer">×</button>'
     + '</div>'
     + '<div id="bd-lf-map" style="position:relative">'
-    +   '<div id="bd-lf-msg">Recherche des quais…</div>'
+    +   '<div id="bd-lf-msg">Chargement…</div>'
     +   '<div id="bd-lf-bar" style="display:none"></div>'
     + '</div>';
-  page.querySelector('.t span').textContent = name + (want ? ' · cible '+want : '');
+  page.querySelector('.t span').textContent = name + (want ? ' · cible '+want+(want2?' → '+want2:'') : '');
   document.body.appendChild(page);
   document.documentElement.classList.add('bd-lf-open');
   page.querySelector('#bd-lf-close').onclick = close;
@@ -5360,17 +5366,13 @@ window.bdOpenLeafletQuais = function(opts){
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
     : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-  map = L.map('bd-lf-map', {
-    zoomControl: true,
-    attributionControl: true
-  }).setView([lat, lon], 18);
-
+  map = L.map('bd-lf-map', { zoomControl:true, attributionControl:true }).setView([lat, lon], 18);
   L.tileLayer(tileUrl, {
     maxZoom: 20,
     attribution: '&copy; OpenStreetMap, &copy; CARTO'
   }).addTo(map);
 
-  // Marker centre arrêt
+  // Centre arrêt
   var centerIcon = L.divIcon({
     className: '',
     html: '<div style="width:16px;height:16px;border-radius:99px;background:#3b82f6;border:3px solid #fff;box-shadow:0 0 0 5px rgba(59,130,246,.3)"></div>',
@@ -5382,119 +5384,52 @@ window.bdOpenLeafletQuais = function(opts){
 
   var msg = page.querySelector('#bd-lf-msg');
   var bar = page.querySelector('#bd-lf-bar');
-  var markers = [];
 
   function addPlat(p, hit){
     var lab = p.label || '?';
     var el = document.createElement('div');
     el.className = 'bd-lf-plat' + (hit ? ' hit' : '');
     el.innerHTML = esc(lab) + (p.name ? '<small>'+esc(p.name)+'</small>' : '');
-    var ic = L.divIcon({
-      className: '',
-      html: el.outerHTML,
-      iconSize: null,
-      iconAnchor: [20, 14]
-    });
-    var m = L.marker([p.lat, p.lon], {icon: ic, zIndexOffset: hit ? 200 : 50}).addTo(map);
+    var ic = L.divIcon({ className:'', html:el.outerHTML, iconSize:null, iconAnchor:[20,14] });
+    var m = L.marker([p.lat, p.lon], {icon:ic, zIndexOffset: hit?200:50}).addTo(map);
     m.bindPopup(
-      '<b>'+(hit?'★ ':'')+(p.src==='transitous'?'Voie/Quai ':'Quai ')+esc(lab)+'</b>'
+      '<b>'+(hit?'★ ':'')+'Quai/Voie '+esc(lab)+'</b>'
       + (p.name ? '<br>'+esc(p.name) : '')
-      + '<br><span style="opacity:.7;font-size:11px">Source : '+esc(p.src||'OSM')+'</span>'
+      + '<br><span style="opacity:.7;font-size:11px">Source : données horaires locales</span>'
     );
-    markers.push(m);
     return m;
   }
 
-  function normalizeWant(w){
-    return String(w||'').toLowerCase().replace(/^(quai|voie|gleis|kante|perron|platform|track)\s*/,'').replace(/[^a-z0-9]/g,'');
-  }
   var wantN = normalizeWant(want);
   var want2N = normalizeWant(want2);
+  var plats = collectPlatforms(lat, lon, name);
 
-  Promise.all([
-    queryOverpass(lat, lon, 400).catch(function(){ return {elements:[]}; }),
-    fromTransitous(lat, lon, want).catch(function(){ return []; }),
-    // aussi tenter via bdQuayXY existant si platform demandé
-    (function(){
-      if(!want || !window.__bdQuayXY) return Promise.resolve(null);
-      return new Promise(function(ok){
-        var r = null;
-        try{
-          r = window.__bdQuayXY(name, {lat:lat, lon:lon}, want, function(){
-            try{ ok(window.__bdQuayXY(name, {lat:lat, lon:lon}, want)); }catch(e){ ok(null); }
-          });
-        }catch(e){}
-        if(r && r.lat!=null) ok(r);
-        setTimeout(function(){ ok(r); }, 4500);
-      });
-    })()
-  ]).then(function(res){
-    var osm = res[0] || {elements:[]};
-    var trs = res[1] || [];
-    var quayXY = res[2];
-
-    var plats = [];
-    var seen = {};
-
-    // 1) Overpass
-    (osm.elements||[]).forEach(function(el){
-      var tags = el.tags || {};
-      if(!isPlatform(tags) && !tags.local_ref && !tags.ref && !tags['railway:track_ref']) return;
-      var la = el.lat != null ? el.lat : (el.center && el.center.lat);
-      var lo = el.lon != null ? el.lon : (el.center && el.center.lon);
-      if(la==null || lo==null) return;
-      var lab = labelOf(tags);
-      if(!lab) return;
-      var key = lab.toLowerCase()+'|'+Number(la).toFixed(5)+'|'+Number(lo).toFixed(5);
-      if(seen[key]) return;
-      seen[key]=1;
-      plats.push({
-        lat:+la, lon:+lo,
-        label: lab,
-        name: tags.name || '',
-        src: 'osm'
-      });
-    });
-
-    // 2) Transitous
-    trs.forEach(function(p){
-      var key = (p.label||'').toLowerCase()+'|'+Number(p.lat).toFixed(5)+'|'+Number(p.lon).toFixed(5);
-      if(seen[key]) return;
-      seen[key]=1;
-      plats.push(p);
-    });
-
-    // 3) Résultat précis de bdQuayXY
-    if(quayXY && quayXY.lat!=null){
-      var key = (want||'?').toLowerCase()+'|'+Number(quayXY.lat).toFixed(5)+'|'+Number(quayXY.lon).toFixed(5);
-      if(!seen[key]){
-        plats.unshift({
-          lat:+quayXY.lat, lon:+quayXY.lon,
-          label: want || '?',
-          name: name,
-          src: 'bdQuayXY'
-        });
+  // Si le quai demandé n'est pas encore dans la liste mais bdQuayXY l'a en cache
+  if(want){
+    try{
+      var q1 = typeof bdQuayXY==='function' ? bdQuayXY(name,{lat:lat,lon:lon},want) : null;
+      if(q1 && q1.lat!=null){
+        var already = plats.some(function(p){ return normalizeWant(p.label)===wantN && distM(p,q1)<15; });
+        if(!already) plats.unshift({ lat:q1.lat, lon:q1.lon, label:want, name:name, src:'cache' });
       }
-    }
+    }catch(e){}
+  }
 
-    // Trier : hits en premier, puis distance
-    plats.sort(function(a,b){
-      var ha = wantN && normalizeWant(a.label)===wantN ? 0 : 1;
-      var hb = wantN && normalizeWant(b.label)===wantN ? 0 : 1;
-      if(ha!==hb) return ha-hb;
-      return distM({lat:lat,lon:lon},a) - distM({lat:lat,lon:lon},b);
-    });
+  plats.sort(function(a,b){
+    var ha = wantN && normalizeWant(a.label)===wantN ? 0 : (want2N && normalizeWant(a.label)===want2N ? 0 : 1);
+    var hb = wantN && normalizeWant(b.label)===wantN ? 0 : (want2N && normalizeWant(b.label)===want2N ? 0 : 1);
+    if(ha!==hb) return ha-hb;
+    return distM({lat:lat,lon:lon},a) - distM({lat:lat,lon:lon},b);
+  });
 
-    msg.style.display = 'none';
+  msg.style.display = 'none';
 
-    if(!plats.length){
-      msg.style.display = '';
-      msg.textContent = 'Aucun quai / voie trouvé dans un rayon de 400 m.';
-      bar.style.display = '';
-      bar.innerHTML = '<div class="row"><span class="meta">Essayez de zoomer ou de vérifier le nom de l\'arrêt.</span></div>';
-      return;
-    }
-
+  if(!plats.length){
+    msg.style.display = '';
+    msg.textContent = 'Aucun quai / voie avec coordonnées dans les horaires chargés.';
+    bar.style.display = '';
+    bar.innerHTML = '<div class="row"><span class="meta">Ouvre un trajet qui indique un quai, ou tape sur la carte pour enregistrer une position.</span></div>';
+  } else {
     var bounds = L.latLngBounds([[lat,lon]]);
     var hits = 0;
     plats.forEach(function(p){
@@ -5503,33 +5438,92 @@ window.bdOpenLeafletQuais = function(opts){
       addPlat(p, hit);
       bounds.extend([p.lat, p.lon]);
     });
-
-    try{
-      map.fitBounds(bounds.pad(0.35), {maxZoom:19, animate:true});
-    }catch(e){}
-
+    try{ map.fitBounds(bounds.pad(0.35), {maxZoom:19, animate:true}); }catch(e){}
     bar.style.display = '';
     bar.innerHTML = ''
       + '<div class="row">'
       +   (want ? '<span class="chip">Cible : '+(want2?want+' → '+want2:want)+'</span>' : '')
-      +   '<span class="meta">'+plats.length+' quai'+(plats.length>1?'s':'')+'/voie'+(plats.length>1?'s':'')+' trouvé'+(plats.length>1?'s':'')
+      +   '<span class="meta">'+plats.length+' quai'+(plats.length>1?'s':'')+'/voie'+(plats.length>1?'s':'')+' (données locales)'
       +   (hits ? ' · '+hits+' correspondance'+(hits>1?'s':'') : '')
       +   '</span>'
       + '</div>';
-  }).catch(function(err){
-    msg.textContent = 'Erreur : '+(err && err.message ? err.message : 'recherche impossible');
+  }
+
+  // Mise à jour des données via Leaflet (source leaflet)
+  var editPf = want || '';
+  function saveQuay(la, lo, pf){
+    pf = String(pf||'').replace(/!$/,'').trim();
+    if(!pf) return false;
+    try{
+      if(!window.__bdQ) window.__bdQ = {};
+      var k = (typeof bdNorm==='function'?bdNorm(name):String(name||'').toLowerCase())+'|'+pf.toLowerCase();
+      window.__bdQ[k] = { lat:+la, lon:+lo, t:Date.now(), src:'leaflet' };
+      try{ (window.__bdQS||(window.__bdQS={}))[k]='ok'; (window.__bdQE||(window.__bdQE={}))[k]=''; }catch(e){}
+      try{ window.__bdSrcMark && window.__bdSrcMark('https://leafletjs.com', 'Position des quais et des voies (Leaflet)'); }catch(e){}
+      return true;
+    }catch(e){ return false; }
+  }
+  function refreshBar(extra){
+    bar.style.display = '';
+    var base = (want ? '<span class="chip">Cible : '+(want2?want+' → '+want2:want)+'</span>' : '')
+      + '<span class="meta">'+(extra||'Tape sur la carte pour enregistrer / mettre à jour un quai')+'</span>';
+    bar.innerHTML = '<div class="row">'+base+'</div>';
+  }
+  // Champ pour choisir le n° de quai à mettre à jour
+  var tools = document.createElement('div');
+  tools.style.cssText = 'position:absolute;left:10px;right:10px;top:10px;z-index:650;display:flex;gap:8px;align-items:center';
+  tools.innerHTML = ''
+    + '<input id="bd-lf-pf" type="text" placeholder="N° quai / voie" value="'+esc(editPf)+'" '
+    + 'style="flex:1;min-width:0;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.15);'
+    + 'background:rgba(20,20,26,.9);color:#fafafa;padding:0 12px;font:700 14px system-ui,-apple-system,sans-serif" />'
+    + '<button id="bd-lf-mode" type="button" '
+    + 'style="height:40px;padding:0 14px;border-radius:12px;border:0;background:#ef4444;color:#fff;font:800 13px system-ui;cursor:pointer;white-space:nowrap">'
+    + 'Mettre à jour</button>';
+  if(!document.documentElement.classList.contains('dark')){
+    tools.querySelector('#bd-lf-pf').style.background = 'rgba(255,255,255,.95)';
+    tools.querySelector('#bd-lf-pf').style.color = '#18181b';
+    tools.querySelector('#bd-lf-pf').style.borderColor = '#e7e5e4';
+  }
+  page.querySelector('#bd-lf-map').appendChild(tools);
+  var editMode = false;
+  var editMarker = null;
+  tools.querySelector('#bd-lf-mode').onclick = function(){
+    editMode = !editMode;
+    this.textContent = editMode ? 'Annuler' : 'Mettre à jour';
+    this.style.background = editMode ? '#3f3f46' : '#ef4444';
+    refreshBar(editMode ? 'Mode édition : tape sur la carte pour fixer le quai « '+(tools.querySelector('#bd-lf-pf').value||'?')+' »' : null);
+    if(!editMode && editMarker){ try{ map.removeLayer(editMarker); }catch(e){} editMarker=null; }
+  };
+  map.on('click', function(ev){
+    if(!editMode) return;
+    var pf = (tools.querySelector('#bd-lf-pf').value||'').trim();
+    if(!pf){ refreshBar('Indique d’abord le n° de quai / voie'); return; }
+    var la = ev.latlng.lat, lo = ev.latlng.lng;
+    if(editMarker){ try{ map.removeLayer(editMarker); }catch(e){} }
+    var el = document.createElement('div');
+    el.className = 'bd-lf-plat hit';
+    el.textContent = pf;
+    editMarker = L.marker([la, lo], {
+      icon: L.divIcon({ className:'', html:el.outerHTML, iconSize:null, iconAnchor:[20,14] }),
+      zIndexOffset: 300
+    }).addTo(map);
+    if(saveQuay(la, lo, pf)){
+      refreshBar('✓ Quai/voie « '+pf+' » enregistré ('+la.toFixed(5)+', '+lo.toFixed(5)+') — source Leaflet');
+      // Ajouter aussi dans la liste visuelle
+      try{ addPlat({ lat:la, lon:lo, label:pf, name:name, src:'leaflet' }, true); }catch(e){}
+    } else {
+      refreshBar('Impossible d’enregistrer');
+    }
   });
 
-  // resize fix
   setTimeout(function(){ try{ map.invalidateSize(); }catch(e){} }, 200);
   return true;
 };
 
-// Clic sur badge quai/voie → ouvre la carte Leaflet
+// Clic sur badge quai/voie → carte Leaflet
 document.addEventListener('click', function(e){
   var el = e.target && e.target.closest && e.target.closest('[data-bd-plat],[data-platform],.bdt-plat,.bd-plat-badge,.bd-card-plat,.bdt-tags span');
   if(!el){
-    // fallback: texte "Quai X" / "Voie X"
     var t = e.target;
     if(t && t.nodeType===1 && /^(Quai|Voie)\s*[A-Za-z0-9]+$/i.test((t.textContent||'').trim()) && (t.textContent||'').trim().length<12) el=t;
   }
@@ -5537,9 +5531,8 @@ document.addEventListener('click', function(e){
   var raw = (el.textContent||'').trim();
   var pf = el.getAttribute('data-bd-plat') || el.getAttribute('data-platform') || raw.replace(/^(quai|voie)\s*/i,'').trim();
   if(!pf || pf.length>10) return;
-  // éviter les faux positifs sur boutons longs
   if(raw.length>18 && !el.getAttribute('data-bd-plat') && !el.classList.contains('bd-card-plat')) return;
-  // Chercher le contexte (nom d'arrêt + coords) dans la carte / ligne parente
+
   var card = el.closest('[data-trk],.bdt-card,.bd-trip-card,section');
   var name = '', lat=null, lon=null;
   try{
@@ -5568,15 +5561,13 @@ document.addEventListener('click', function(e){
       if(xy){ lat=xy.lat; lon=xy.lon; }
     }catch(e){}
   }
-  if(lat==null||lon==null) return; // laisse le comportement normal
+  if(lat==null||lon==null) return;
   e.preventDefault();
   e.stopPropagation();
   window.bdOpenLeafletQuais({ lat:lat, lon:lon, name:name, platform:pf });
 }, true);
 
-// API publique pour ouvrir depuis un trajet (deux quais)
 window.bdOpenTwoQuays = function(fromName, fromLat, fromLon, fromPf, toName, toLat, toLon, toPf){
-  // On centre sur le premier, on met les deux en évidence
   var lat = fromLat!=null?+fromLat:(toLat!=null?+toLat:null);
   var lon = fromLon!=null?+fromLon:(toLon!=null?+toLon:null);
   if(lat==null) return false;
