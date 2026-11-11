@@ -4930,18 +4930,9 @@ window.bdMeHeading=function(){try{var M=window.__bdMotion;if(M&&M.isOn&&M.isOn()
 window.bdMeEl=function(nav){var w=document.createElement('div');w.className='bd-me-wrap';w.innerHTML='<svg class="bd-me-cone" viewBox="0 0 100 100" width="84" height="84"><defs><radialGradient id="bdcg" cx="50%" cy="100%" r="100%"><stop offset="0" stop-color="#3b82f6" stop-opacity=".75"/><stop offset="1" stop-color="#3b82f6" stop-opacity="0"/></radialGradient></defs><path d="M50 50 L22 8 A50 50 0 0 1 78 8 Z" fill="url(#bdcg)"/></svg><div class="bd-me-ic'+(nav?' nav':'')+'"></div>';return w};
 window.bdMeUpdate=function(w){try{var h=window.bdMeHeading();var c=w.querySelector('.bd-me-cone');if(h==null){c.style.display='none';return}c.style.display='';c.style.transform='rotate('+h+'deg)'}catch(e){}};
 })();</script>
-<script id="bd-map-gray">window.bdLightenDark=function(map){try{if(!document.documentElement.classList.contains('dark'))return;var st=map.getStyle();(st.layers||[]).forEach(function(l){var id=l.id||'';try{
-if(l.type==='background')map.setPaintProperty(id,'background-color','#3b3e45');
-else if(l.type==='fill'&&/water/.test(id))map.setPaintProperty(id,'fill-color','#272b33');
-else if(l.type==='fill'&&/building/.test(id))map.setPaintProperty(id,'fill-color','#4a4d55');
-else if(l.type==='fill'&&/park|wood|grass|landcover|landuse|forest|cemetery|pitch/.test(id))map.setPaintProperty(id,'fill-color','#3f4a43');
-else if(l.type==='line'&&/water|river|stream/.test(id))map.setPaintProperty(id,'line-color','#272b33');
-else if(l.type==='line'&&/road|highway|street|path|bridge|tunnel|motorway|trunk|primary|secondary|tertiary|minor|service/.test(id)&&!/casing/.test(id))map.setPaintProperty(id,'line-color','#5d616a');
-else if(l.type==='symbol'&&l.paint&&l.paint['text-color']!==undefined&&!/^bd-/.test(id)){map.setPaintProperty(id,'text-color','#d4d4d8');map.setPaintProperty(id,'text-halo-color','#2b2e34')}
-}catch(e){}})}catch(e){}};</script>
 <script id="bd-map-js">(function(){
 function nm(x){return typeof x.station==='string'?x.station:((x.station&&x.station.name)||x.name||'')}
-function xy(x){var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null),lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);if(la==null||!isFinite(la)||!isFinite(lo))return null;return{lat:la,lon:lo}}
+function xy(x){var n=nm(x);var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null),lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);var base=null;try{base=window.bdStopXY?window.bdStopXY(n,la,lo):null}catch(e){}base=base||(la!=null&&isFinite(la)&&isFinite(lo)?{lat:la,lon:lo}:null);if(!base)return null;var pf=String(x.platform||(x.prognosis&&x.prognosis.platform)||'').replace(/!$/,'').trim();if(pf&&window.bdQuayXY){try{var q=window.bdQuayXY(n,{lat:base.lat,lon:base.lon},pf,null,x.departureTimestamp||x.arrivalTimestamp||(x.prognosis&&(x.prognosis.departure||x.prognosis.arrival)&&Date.parse(x.prognosis.departure||x.prognosis.arrival))||null);if(q)return{lat:q.lat,lon:q.lon}}catch(e){}}return base}
 window.bdCloseMapPage=function(){};
 window.bdOpenMap=function(S){
 var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});
