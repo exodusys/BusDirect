@@ -80,6 +80,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .arrow{color:var(--muted);font-size:12px}
 .dur{text-align:right;font-size:13px;color:var(--muted)}
 .dur b{display:block;color:var(--text);font-size:15px}
+.jr-stop{font-size:12.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile{min-height:72px}
 .jr-meta{display:flex;gap:12px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
 .quai{background:rgba(127,127,127,.18);border-radius:6px;padding:1px 6px;font-weight:700;color:var(--text)}
 .live{display:inline-flex;align-items:center;gap:4px;color:#18a957;font-weight:700}
@@ -360,8 +362,8 @@ function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''}" data-u="${d.uid}">
-    <div class="ico">${TYPE_ICON[d.type]||'📍'}</div><div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('');
-  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{selDest=S.dests.find(d=>d.uid===t.dataset.u);renderTiles();loadJourneys()});
+    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('');
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{shown=5;selDest=S.dests.find(d=>d.uid===t.dataset.u);renderTiles();loadJourneys()});
   if(!selDest){$('#jrHead').style.display='none';$('#journeys').innerHTML=''}
 }
 async function loadJourneys(){
@@ -373,11 +375,16 @@ async function loadJourneys(){
   try{
     lastJourneys=await nextDepartures(selDest);
     if(!lastJourneys.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
-    const stops=new Set(lastJourneys.map(it=>firstTransit(it).from?.name));
-    box.innerHTML=`<p class="muted" style="font-size:12px;margin:0 6px 10px">${lastJourneys.length} départs depuis ${stops.size} arrêt${stops.size>1?'s':''} proches de toi</p>`
-      +lastJourneys.map((it,i)=>journeyHTML(it,i,false)).join('');
-    bindJourneys(box,lastJourneys,false);
+    renderJourneyList();
   }catch(e){box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'}
+}
+let shown=5;
+function renderJourneyList(){
+  const box=$('#journeys'), list=lastJourneys.slice(0,shown);
+  box.innerHTML=list.map((it,i)=>journeyHTML(it,i,false)).join('')
+    +(lastJourneys.length>shown?`<button class="btn ghost" id="more" style="width:100%;margin-top:4px">Afficher 5 de plus (${lastJourneys.length-shown} restants)</button>`:'');
+  bindJourneys(box,list,false);
+  const m=$('#more'); if(m) m.onclick=()=>{shown+=5;renderJourneyList()};
 }
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
@@ -392,14 +399,18 @@ function journeyHTML(it,i,tracked){
   const legs=it.legs.map(l=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':(l.routeColor?'#'+l.routeColor:'var(--accent)')}"></div>
     <div>${l.mode==='WALK'?`🚶 Marche ${mins(l.duration)} min`:`${MODE_ICON[l.mode]||''} <b>${esc(l.routeShortName||l.mode)}</b> → ${esc(l.headsign||l.to?.name)}`}
     <div class="muted" style="font-size:12px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} (${hm(l.endTime)})</div></div></div>`).join('');
+  const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   return `<div class="jr glass" data-i="${i}">
     <div class="jr-top">
-      <div class="dep">${inMin<=0?'<span class="ontime">now</span>':inMin<60?inMin+'′':hm(depAt)}<small>${hm(depAt)}${dl>0?` <span class="late">+${dl}</span>`:''}</small></div>
-      <div class="lines">${lines}</div>
-      <div class="dur"><b>${mins(it.duration)} min</b>arr. ${hm(it.endTime)}</div>
+      <div class="dep">${inMin<=0?'<span class="ontime">Now</span>':inMin<60?inMin+'<span style="font-size:14px"> min</span>':hm(depAt)}
+        <small>${hm(depAt)}${dl>0?` <span class="late">+${dl}′</span>`:rt?' <span class="ontime">✓</span>':''}</small></div>
+      <div style="flex:1;min-width:0">
+        <div class="lines">${lines}</div>
+        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` · Quai <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
+      </div>
+      <div class="dur"><b>${hm(it.endTime)}</b>${mins(it.duration)} min</div>
     </div>
-    <div class="jr-meta">${ft?.from?.track?`<span>Quai <span class="quai">${esc(ft.from.track)}</span></span>`:''}
-      ${ft?`<span>🚏 ${esc(ft.from?.name)}${(()=>{const w=it.legs[0];return w&&w.mode==='WALK'&&w!==ft?` · 🚶 ${Math.max(1,mins(w.duration))} min`:''})()}</span>`:''}<span>${it.transfers} corresp.</span>${rt?'<span class="live">Temps réel</span>':''}</div>
+    <div class="jr-meta">${walk?`<span>🚶 ${walk} min à pied</span>`:''}<span>${it.transfers?it.transfers+' corresp.':'Direct'}</span>${rt?'<span class="live">Temps réel</span>':''}</div>
     <div class="legs">${legs}<div class="row" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
