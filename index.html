@@ -293,14 +293,34 @@ async function geocode(text){
   const u = `${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(pos?`&place=${pos.lat},${pos.lon}`:'');
   const r = await fetch(u); if(!r.ok) throw new Error('geocode'); return r.json();
 }
-async function plan(dest, time){
+let planVersion=null;
+async function plan(dest, time, cursor){
   if(!pos) throw new Error('nopos');
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
-  const qs = `fromPlace=${pos.lat},${pos.lon}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}&numItineraries=8&detailedTransfers=false`;
-  for(const v of PLAN_VERSIONS){
-    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok) return r.json(); }catch(e){}
+  // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
+  let qs = `fromPlace=${pos.lat},${pos.lon}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
+    +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=false`;
+  if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
+  for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){planVersion=v;return r.json();} }catch(e){}
   }
   throw new Error('plan');
+}
+// Récupère tous les prochains départs (plusieurs pages), sans doublons, triés par heure de départ
+async function nextDepartures(dest){
+  let all=[], cursor=null;
+  for(let p=0;p<3;p++){
+    const d=await plan(dest,null,cursor);
+    all=all.concat(d.itineraries||[]);
+    cursor=d.nextPageCursor; if(!cursor) break;
+  }
+  const seen=new Set();
+  return all.filter(it=>{
+    const f=firstTransit(it); if(!f) return false;
+    const k=`${f.routeShortName}|${f.from?.name}|${f.scheduledStartTime||f.startTime}`;
+    if(seen.has(k)) return false; seen.add(k);
+    return new Date(f.startTime)>Date.now()-60000;
+  }).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -351,10 +371,11 @@ async function loadJourneys(){
   if(!pos){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
   box.innerHTML='<div class="spin"></div>';
   try{
-    const data=await plan(selDest);
-    lastJourneys=(data.itineraries||[]).filter(it=>new Date(it.endTime)>new Date());
-    if(!lastJourneys.length){box.innerHTML='<div class="card glass empty">Aucun trajet trouvé.</div>';return}
-    box.innerHTML=lastJourneys.map((it,i)=>journeyHTML(it,i,false)).join('');
+    lastJourneys=await nextDepartures(selDest);
+    if(!lastJourneys.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
+    const stops=new Set(lastJourneys.map(it=>firstTransit(it).from?.name));
+    box.innerHTML=`<p class="muted" style="font-size:12px;margin:0 6px 10px">${lastJourneys.length} départs depuis ${stops.size} arrêt${stops.size>1?'s':''} proches de toi</p>`
+      +lastJourneys.map((it,i)=>journeyHTML(it,i,false)).join('');
     bindJourneys(box,lastJourneys,false);
   }catch(e){box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'}
 }
@@ -378,7 +399,7 @@ function journeyHTML(it,i,tracked){
       <div class="dur"><b>${mins(it.duration)} min</b>arr. ${hm(it.endTime)}</div>
     </div>
     <div class="jr-meta">${ft?.from?.track?`<span>Quai <span class="quai">${esc(ft.from.track)}</span></span>`:''}
-      ${ft?`<span>Depuis ${esc(ft.from?.name)}</span>`:''}<span>${it.transfers} corresp.</span>${rt?'<span class="live">Temps réel</span>':''}</div>
+      ${ft?`<span>🚏 ${esc(ft.from?.name)}${(()=>{const w=it.legs[0];return w&&w.mode==='WALK'&&w!==ft?` · 🚶 ${Math.max(1,mins(w.duration))} min`:''})()}</span>`:''}<span>${it.transfers} corresp.</span>${rt?'<span class="live">Temps réel</span>':''}</div>
     <div class="legs">${legs}<div class="row" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
