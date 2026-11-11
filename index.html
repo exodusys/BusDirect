@@ -80,8 +80,27 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .arrow{color:var(--muted);font-size:12px}
 .dur{text-align:right;font-size:13px;color:var(--muted)}
 .dur b{display:block;color:var(--text);font-size:15px}
-.jr-stop{font-size:12.5px;color:var(--muted);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile{min-height:72px}
+/* Departure board cards */
+.jr{padding:12px 14px 10px;border-radius:18px;margin-bottom:8px}
+.jr-top{display:flex;align-items:center;gap:12px}
+.lb{display:inline-flex;align-items:center;justify-content:center;font-weight:800;letter-spacing:-.2px;border-radius:8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.lb.main{min-width:46px;height:40px;padding:0 8px;font-size:19px;border-radius:10px;flex:none}
+.lb.mini{min-width:28px;height:21px;padding:0 6px;font-size:12px;border-radius:6px}
+.lb.rail{font-style:italic}
+.jr-mid{flex:1;min-width:0}
+.jr-dir{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jr-stop{font-size:12.5px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jr-stop .quai{font-size:11px;padding:0 5px;margin-left:2px}
+.dep{font-size:28px;font-weight:800;text-align:right;min-width:0;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.6px}
+.dep em{font-style:normal;font-size:12px;font-weight:700;margin-left:2px;letter-spacing:0}
+.dep small{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-top:4px;letter-spacing:0}
+.jr-foot{display:flex;align-items:center;gap:10px;margin-top:10px;padding-top:9px;border-top:1px solid var(--border)}
+.chain{display:flex;align-items:center;gap:4px;flex:1;min-width:0;overflow:hidden}
+.chain .sep{width:8px;height:2px;border-radius:1px;background:var(--muted);opacity:.5;flex:none}
+.jr-info{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);white-space:nowrap}
+.jr-info b{color:var(--text)}
+.live::before{margin:0}
 .jr-meta{display:flex;gap:12px;font-size:12px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
 .quai{background:rgba(127,127,127,.18);border-radius:6px;padding:1px 6px;font-weight:700;color:var(--text)}
 .live{display:inline-flex;align-items:center;gap:4px;color:#18a957;font-weight:700}
@@ -386,31 +405,42 @@ function renderJourneyList(){
   bindJourneys(box,list,false);
   const m=$('#more'); if(m) m.onclick=()=>{shown+=5;renderJourneyList()};
 }
+const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
+  SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
+  LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
+function lineColor(l){
+  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
+  return MODE_COLOR[l.mode]||['#636e80','#fff'];
+}
+function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
+  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
 function journeyHTML(it,i,tracked){
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
-  const lines=it.legs.map(l=>{
-    if(l.mode==='WALK') return mins(l.duration)>1?`<span class="walk">🚶${mins(l.duration)}′</span>`:'';
-    const c=l.routeColor?'#'+l.routeColor:'var(--accent)', tc=l.routeTextColor?'#'+l.routeTextColor:'#fff';
-    return `<span class="badge" style="background:${c};color:${tc}">${MODE_ICON[l.mode]||''} ${esc(l.routeShortName||l.displayName||l.mode)}</span>`;
-  }).filter(Boolean).join('<span class="arrow">›</span>');
-  const legs=it.legs.map(l=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':(l.routeColor?'#'+l.routeColor:'var(--accent)')}"></div>
-    <div>${l.mode==='WALK'?`🚶 Marche ${mins(l.duration)} min`:`${MODE_ICON[l.mode]||''} <b>${esc(l.routeShortName||l.mode)}</b> → ${esc(l.headsign||l.to?.name)}`}
-    <div class="muted" style="font-size:12px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} (${hm(l.endTime)})</div></div></div>`).join('');
+  const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
+  const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
+  const legs=it.legs.map(l=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
+    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
+    <div class="muted" style="font-size:12px;margin-top:2px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
+  const big=inMin<=0?'<span class="ontime">0</span>':inMin<60?inMin:hm(depAt);
   return `<div class="jr glass" data-i="${i}">
     <div class="jr-top">
-      <div class="dep">${inMin<=0?'<span class="ontime">Now</span>':inMin<60?inMin+'<span style="font-size:14px"> min</span>':hm(depAt)}
-        <small>${hm(depAt)}${dl>0?` <span class="late">+${dl}′</span>`:rt?' <span class="ontime">✓</span>':''}</small></div>
-      <div style="flex:1;min-width:0">
-        <div class="lines">${lines}</div>
-        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` · Quai <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
+      ${ft?badge(ft,'main'):''}
+      <div class="jr-mid">
+        <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
+        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="dur"><b>${hm(it.endTime)}</b>${mins(it.duration)} min</div>
+      <div class="dep">${big}${inMin>0&&inMin<60?'<em>min</em>':''}
+        <small>${inMin<60?hm(depAt):''}${dl>0?` <span class="late">+${dl}</span>`:''}</small></div>
     </div>
-    <div class="jr-meta">${walk?`<span>🚶 ${walk} min à pied</span>`:''}<span>${it.transfers?it.transfers+' corresp.':'Direct'}</span>${rt?'<span class="live">Temps réel</span>':''}</div>
+    <div class="jr-foot">
+      <div class="chain">${chain}</div>
+      <div class="jr-info">${rt?'<span class="live"></span>':''}${walk?`<span>🚶${walk}′</span>`:''}<span>${it.transfers?it.transfers+'×':'Direct'}</span><span><b>${hm(it.endTime)}</b> · ${fmtDur(it.duration)}</span></div>
+    </div>
     <div class="legs">${legs}<div class="row" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
