@@ -350,6 +350,7 @@ var CATS=[
 {id:'adresses',label:'Recherche d’adresses (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
 {id:'position',label:'Adresse de votre position (et Plus Code)',def:'pluscode',kinds:['pluscode','nominatim','photon']},
 {id:'coords',label:'Coordonnées précises des arrêts (Google Maps, boussole)',def:'transitous',kinds:['transitous','nominatim','photon','stops','pluscode']},
+{id:'voies',label:'Voies et quais temps réel (GTFS-RT / SIRI-ET via MOTIS)',def:'transitous',kinds:['transitous']},
 {id:'catalogue',label:'Recherche de nouvelles sources',def:'mobilitydb',kinds:['mobilitydb']}
 ];
 function srcList(){try{var L=window.__bd_sources||JSON.parse(localStorage.getItem('bd_sources_v1')||'null');return Array.isArray(L)?L:[]}catch(e){return[]}}
@@ -4987,6 +4988,8 @@ map.addSource('bd-walk',{type:'geojson',data:{type:'FeatureCollection',features:
 map.addLayer({id:'bd-walk',type:'line',source:'bd-walk',paint:{'line-color':'#a1a1aa','line-width':3,'line-dasharray':[1,2]}});
 map.addSource('bd-stops',{type:'geojson',data:{type:'FeatureCollection',features:pts}});
 map.addLayer({id:'bd-stops',type:'circle',source:'bd-stops',paint:{'circle-radius':['get','r'],'circle-color':['get','c'],'circle-stroke-color':'#fff','circle-stroke-width':2}});
+/* --- Positionnement quai/voie via bdQuayXY --- */
+(function(){if(typeof bdQuayXY!=='function')return;var pending=0,moved=0;st.forEach(function(s,i){var pf=s.plat;if(!pf||!s.p)return;pending++;bdQuayXY(s.n,{lat:s.p.lat,lon:s.p.lon},pf,function(){try{var k=bdNorm(s.n)+'|'+pf.toLowerCase().replace(/!$/,'').trim();var v=window.__bdQ&&window.__bdQ[k];if(v&&v.lat!=null){s.p={lat:v.lat,lon:v.lon};pts[i].geometry.coordinates=[v.lon,v.lat];moved++;log('Quai/voie '+pf+' à '+s.n+' : repositionné ('+v.src+')')}}catch(e){}pending--;if(pending<=0&&map&&map.getSource('bd-stops')){map.getSource('bd-stops').setData({type:'FeatureCollection',features:pts});if(moved)log('Carte mise à jour : '+moved+' arrêt(s) repositionné(s) au quai/voie')}},s.dep||s.arr)})})();
 try{map.addLayer({id:'bd-stop-names',type:'symbol',source:'bd-stops',layout:{'text-field':['get','n'],'text-font':['Noto Sans Bold'],'text-size':['case',['==',['get','e'],1],13,11.5],'text-offset':[0,1.1],'text-anchor':'top','text-max-width':9,'text-optional':true,'symbol-sort-key':['-',1,['get','e']],'text-allow-overlap':false},paint:{'text-color':dark?'#fafafa':'#18181b','text-halo-color':dark?'rgba(0,0,0,.85)':'rgba(255,255,255,.95)','text-halo-width':1.6}})}catch(e){}
 var hm=function(t){return t?new Date(t).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit',timeZone:(window.BD_TZ||'Europe/Zurich')}):'--:--'};
 map.on('click','bd-stops',function(e){var f=e.features&&e.features[0];if(!f)return;var s=st[f.properties.i];new ML.Popup({offset:10}).setLngLat([s.p.lon,s.p.lat]).setHTML('<b>'+esc(s.n)+'</b><br>'+(s.arr?'Arr. '+hm(s.arr)+' ':'')+(s.dep?'Dép. '+hm(s.dep):'')+(s.plat?'<br>'+(/^\d+[A-Z]?$/.test(s.plat)?'Voie ':'Quai ')+esc(s.plat):'')).addTo(map)});
