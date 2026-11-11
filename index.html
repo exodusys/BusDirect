@@ -80,7 +80,15 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .arrow{color:var(--muted);font-size:12px}
 .dur{text-align:right;font-size:13px;color:var(--muted)}
 .dur b{display:block;color:var(--text);font-size:15px}
-.tile{min-height:72px}
+.tile{min-height:72px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;z-index:1}
+.tiles{position:relative}
+.tile.from{outline:2.5px dashed var(--accent);outline-offset:-1px}
+.tile.target{transform:scale(1.04);outline:2.5px solid var(--accent)}
+svg.link{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible;opacity:0;transition:opacity .2s}
+svg.link.on{opacity:1}
+svg.link line{stroke:var(--accent);stroke-width:3;stroke-linecap:round;stroke-dasharray:2 7;animation:dash 1s linear infinite}
+svg.link circle{fill:var(--accent);stroke:#fff;stroke-width:2.5}
+@keyframes dash{to{stroke-dashoffset:-18}}
 .jr.enter{animation:fade .3s ease}
 .jr.leave{opacity:0;transform:scale(.97);transition:.25s}
 .flash{animation:flash .9s ease}
@@ -321,11 +329,12 @@ async function geocode(text){
   const r = await fetch(u); if(!r.ok) throw new Error('geocode'); return r.json();
 }
 let planVersion=null;
-async function plan(dest, time, cursor){
-  if(!pos) throw new Error('nopos');
+const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
+async function plan(dest, time, cursor, from){
+  if(!from&&!pos) throw new Error('nopos');
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
-  let qs = `fromPlace=${pos.lat},${pos.lon}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
+  let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):pos.lat+','+pos.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=false`;
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
@@ -334,10 +343,10 @@ async function plan(dest, time, cursor){
   throw new Error('plan');
 }
 // Récupère tous les prochains départs (plusieurs pages), sans doublons, triés par heure de départ
-async function nextDepartures(dest){
+async function nextDepartures(dest,from){
   let all=[], cursor=null;
   for(let p=0;p<3;p++){
-    const d=await plan(dest,null,cursor);
+    const d=await plan(dest,null,cursor,from);
     all=all.concat(d.itineraries||[]);
     cursor=d.nextPageCursor; if(!cursor) break;
   }
@@ -380,29 +389,65 @@ function renderDests(){
     <div style="flex:1"><div class="n">${esc(d.name)}</div><div class="a">${esc(d.area)}</div></div>
     <button class="del" onclick="moveDest(${i},-1)">↑</button><button class="del" onclick="delDest('${d.uid}')">✕</button></div>`).join('');
 }
-function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===uid)selDest=null;save();renderDests();renderTiles()}
+function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===uid||selFrom?.uid===uid){selDest=null;selFrom=null}save();renderDests();renderTiles()}
 function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.dests[j],S.dests[i]];save();renderDests();renderTiles()}
 
 /* ========= Horaires ========= */
+let selFrom=null; // null = ma position
+function pickPair(from,to){shown=5;loadedFor=null;$('#journeys').innerHTML='';selFrom=from;selDest=to;renderTiles();loadJourneys()}
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
-  $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''}" data-u="${d.uid}">
-    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('');
-  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{shown=5;loadedFor=null;$('#journeys').innerHTML='';selDest=S.dests.find(d=>d.uid===t.dataset.u);renderTiles();loadJourneys()});
+  $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
+    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('')
+    +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
+  document.querySelectorAll('.tile').forEach(bindTileDrag);
+  drawLink();
   if(!selDest){$('#jrHead').style.display='none';$('#journeys').innerHTML=''}
+}
+function tileCenter(el){const g=$('#tiles').getBoundingClientRect(),r=el.getBoundingClientRect();return [r.left-g.left+r.width/2,r.top-g.top+r.height/2]}
+function setLine(a,b,show){const svg=$('#tileLink');if(!svg)return;svg.classList.toggle('on',!!show);if(!show)return;
+  const l=$('#linkLine');l.setAttribute('x1',a[0]);l.setAttribute('y1',a[1]);l.setAttribute('x2',b[0]);l.setAttribute('y2',b[1]);
+  $('#linkA').setAttribute('cx',a[0]);$('#linkA').setAttribute('cy',a[1]);$('#linkB').setAttribute('cx',b[0]);$('#linkB').setAttribute('cy',b[1])}
+function drawLink(){ // ligne permanente entre les deux dalles sélectionnées
+  const a=selFrom&&document.querySelector(`.tile[data-u="${selFrom.uid}"]`), b=selDest&&document.querySelector(`.tile[data-u="${selDest.uid}"]`);
+  setLine(a&&tileCenter(a),b&&tileCenter(b),a&&b);
+}
+addEventListener('resize',drawLink);
+function bindTileDrag(t){
+  let start=null,drag=false;
+  t.addEventListener('pointerdown',e=>{start=[e.clientX,e.clientY];drag=false;t.setPointerCapture(e.pointerId)});
+  t.addEventListener('pointermove',e=>{
+    if(!start) return;
+    if(!drag&&Math.hypot(e.clientX-start[0],e.clientY-start[1])>12){drag=true;t.classList.add('from');if(navigator.vibrate)navigator.vibrate(10)}
+    if(!drag) return;
+    const g=$('#tiles').getBoundingClientRect();
+    const over=document.elementsFromPoint(e.clientX,e.clientY).find(x=>x.classList?.contains('tile')&&x!==t);
+    document.querySelectorAll('.tile.target').forEach(x=>x!==over&&x.classList.remove('target'));
+    if(over){over.classList.add('target');setLine(tileCenter(t),tileCenter(over),true)}
+    else setLine(tileCenter(t),[e.clientX-g.left,e.clientY-g.top],true);
+  });
+  const end=e=>{
+    if(!start) return; start=null;
+    const fromD=S.dests.find(d=>d.uid===t.dataset.u);
+    if(!drag){pickPair(null,fromD);return} // simple appui : depuis ma position
+    const over=document.querySelector('.tile.target');
+    document.querySelectorAll('.tile.target').forEach(x=>x.classList.remove('target'));
+    if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u)); else {t.classList.remove('from');drawLink()}
+  };
+  t.addEventListener('pointerup',end); t.addEventListener('pointercancel',()=>{start=null;t.classList.remove('from');drawLink()});
 }
 let loadedFor=null, loading=false;
 async function loadJourneys(){
   if(!selDest||loading) return;
-  $('#jrHead').style.display='flex'; $('#jrTitle').textContent='Vers '+selDest.name;
+  $('#jrHead').style.display='flex'; $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name;
   const box=$('#journeys');
-  if(!pos){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
-  const first=loadedFor!==selDest.uid;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
+  if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
+  const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
   if(first){box.innerHTML='<div class="spin"></div>';lastJourneys=[]}
   loading=true; $('#jrHead').classList.add('busy');
   try{
-    const data=await nextDepartures(selDest);
-    lastJourneys=data; loadedFor=selDest.uid;
+    const data=await nextDepartures(selDest,selFrom);
+    lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     renderJourneyList();
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; else toast('Actualisation impossible') }
@@ -487,7 +532,7 @@ function bindJourneys(box,list,tracked){
 
 /* ========= Suivis ========= */
 function trackIt(it){
-  S.tracked.push({dest:selDest,it,savedAt:Date.now()}); save(); toast('Ajouté aux suivis');
+  S.tracked.push({dest:selDest,from:selFrom,it,savedAt:Date.now()}); save(); toast('Ajouté aux suivis');
 }
 function renderTracked(){
   S.tracked=S.tracked.filter(t=>new Date(t.it.endTime)>Date.now()-30*60000); save();
@@ -503,7 +548,7 @@ async function refreshTracked(){
   for(const t of S.tracked){
     try{
       const ft=firstTransit(t.it);
-      const d=await plan(t.dest,new Date(new Date(t.it.startTime).getTime()-60000));
+      const d=await plan(t.dest,new Date(new Date(t.it.startTime).getTime()-60000),null,t.from);
       const match=(d.itineraries||[]).find(x=>{const f=firstTransit(x);return f&&ft&&f.routeShortName===ft.routeShortName&&Math.abs(new Date(f.scheduledStartTime||f.startTime)-new Date(ft.scheduledStartTime||ft.startTime))<120000});
       if(match) t.it=match;
     }catch{}
