@@ -4943,7 +4943,19 @@ else if(l.type==='line'&&/road|highway|street|path|bridge|tunnel|motorway|trunk|
 else if(l.type==='symbol'&&l.paint&&l.paint['text-color']!==undefined&&!/^bd-/.test(id)){map.setPaintProperty(id,'text-color','#d4d4d8');map.setPaintProperty(id,'text-halo-color','#2b2e34')}
 }catch(e){}})}catch(e){}};</script>
 <script id="bd-map-js">(function(){
-var P0=null,map=null,tick=null,mk=[];
+function nm(x){return typeof x.station==='string'?x.station:((x.station&&x.station.name)||x.name||'')}
+function xy(x){var la=x.lat!=null?+x.lat:(x.station&&x.station.coordinate&&x.station.coordinate.x!=null?+x.station.coordinate.x:null),lo=x.lon!=null?+x.lon:(x.station&&x.station.coordinate&&x.station.coordinate.y!=null?+x.station.coordinate.y:null);if(la==null||!isFinite(la)||!isFinite(lo))return null;return{lat:la,lon:lo}}
+window.bdCloseMapPage=function(){};
+window.bdOpenMap=function(S){
+var pl=(S.passList||[]).filter(function(x){return x&&(x.type==='stop'||!x.type)});
+var pts=pl.map(function(x){var p=xy(x);return p?{n:nm(x),lat:p.lat,lon:p.lon}:null}).filter(Boolean);
+if(pts.length<2)return;
+var o=pts[0],d=pts[pts.length-1];
+var wp=pts.slice(1,-1).map(function(p){return p.lat+','+p.lon}).join('|');
+var u='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(o.lat+','+o.lon)+'&destination='+encodeURIComponent(d.lat+','+d.lon)+'&travelmode=transit';
+if(wp)u+='&waypoints='+encodeURIComponent(wp);
+window.open(u,'_blank','noopener')};
+})();</script><script id="bd-map-js-end">/* old map code removed */
 function loadML(){if(window.maplibregl)return Promise.resolve(window.maplibregl);if(P0)return P0;if(window.__bdMLP)return P0=window.__bdMLP.catch(function(){P0=null;return loadML()});P0=new Promise(function(ok,ko){var l=document.createElement('link');l.rel='stylesheet';l.href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css';document.head.appendChild(l);var s=document.createElement('script');s.src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js';s.onload=function(){window.maplibregl?ok(window.maplibregl):ko(0)};s.onerror=function(){P0=null;ko(0)};setTimeout(function(){if(!window.maplibregl){P0=null;ko(0)}},15000);document.head.appendChild(s)});return P0}
 function tm(v){if(v==null||v==='')return null;var t=typeof v==='number'?(v<1e12?v*1000:v):Date.parse(v);return isFinite(t)?t:null}
 function nm(x){return typeof x.station==='string'?x.station:((x.station&&x.station.name)||x.name||'')}
