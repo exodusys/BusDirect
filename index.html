@@ -7,8 +7,6 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b1220">
 <title>BusDirect</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{
   --accent:#e30613; --accent2:#ff5a5f;
@@ -83,6 +81,12 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .dur{text-align:right;font-size:13px;color:var(--muted)}
 .dur b{display:block;color:var(--text);font-size:15px}
 .tile{min-height:72px}
+.jr.enter{animation:fade .3s ease}
+.jr.leave{opacity:0;transform:scale(.97);transition:.25s}
+.flash{animation:flash .9s ease}
+@keyframes flash{0%{background:rgba(255,200,0,.18)}100%{background:transparent}}
+#jrHead.busy button{opacity:.5}
+#jrHead.busy button::after{content:'';display:inline-block;width:10px;height:10px;margin-left:6px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:r .8s linear infinite;vertical-align:-1px}
 /* Departure board cards */
 .jr{padding:12px 14px 10px;border-radius:18px;margin-bottom:8px}
 .jr-top{display:flex;align-items:center;gap:12px}
@@ -159,20 +163,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .sms:last-child{border-bottom:none}
 .sms .z{flex:1}
 .sms code{font-weight:800;font-size:15px}
-/* Map */
-#mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
-#mapView.open{display:block}
-#map{position:absolute;inset:0}
-.map-bar{position:absolute;z-index:1000;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
-.map-bar .t{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.map-bar .t small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
-.map-btn{width:38px;height:38px;border-radius:12px;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:17px;cursor:pointer;flex:none}
-.veh{display:flex;align-items:center;justify-content:center;font:800 11px/1 -apple-system,system-ui,sans-serif;border-radius:8px;padding:0 5px;height:22px;min-width:26px;
-  box-shadow:0 2px 6px rgba(0,0,0,.35),0 0 0 2px #fff;white-space:nowrap;transition:transform .9s linear}
-.veh.hl{transform:scale(1.35);box-shadow:0 0 0 3px #fff,0 0 0 6px var(--accent),0 4px 12px rgba(0,0,0,.4)}
-.me{width:16px;height:16px;border-radius:50%;background:#0a84ff;box-shadow:0 0 0 4px rgba(10,132,255,.3),0 0 0 2px #fff}
-.leaflet-div-icon{background:none;border:none}
-[data-theme="dark"] .leaflet-tile-pane{filter:brightness(.7) invert(1) contrast(.9) hue-rotate(200deg) saturate(.35)}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 96px);transform:translateX(-50%) translateY(20px);opacity:0;
   padding:10px 16px;border-radius:16px;font-weight:600;font-size:14px;z-index:40;transition:.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%)}
@@ -197,7 +187,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Ajoute des destinations dans l'onglet <b style="display:inline;font-size:inherit">Parcours</b>.</div>
     <div id="jrHead" class="row between" style="display:none;margin:18px 4px 8px">
       <h3 style="margin:0" id="jrTitle">Prochains départs</h3>
-      <div class="row"><button class="btn ghost sm" onclick="openMap()">🗺️</button><button class="btn ghost sm" onclick="loadJourneys()">↻</button></div>
+      <button class="btn ghost sm" onclick="loadJourneys()">↻ Actualiser</button>
     </div>
     <div id="journeys"></div>
   </section>
@@ -273,15 +263,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <button data-v="tickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
-
-<div id="mapView">
-  <div id="map"></div>
-  <div class="map-bar glass">
-    <button class="map-btn" onclick="closeMap()">✕</button>
-    <div class="t" id="mapTitle">Véhicules en circulation<small id="mapSub">Transitous · temps réel</small></div>
-    <button class="map-btn" onclick="mapCenterMe()">◎</button>
-  </div>
-</div>
 
 <div class="toast glass" id="toast"></div>
 
@@ -407,72 +388,63 @@ function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''}" data-u="${d.uid}">
     <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('');
-  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{shown=5;selDest=S.dests.find(d=>d.uid===t.dataset.u);renderTiles();loadJourneys()});
+  document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>{shown=5;loadedFor=null;$('#journeys').innerHTML='';selDest=S.dests.find(d=>d.uid===t.dataset.u);renderTiles();loadJourneys()});
   if(!selDest){$('#jrHead').style.display='none';$('#journeys').innerHTML=''}
 }
+let loadedFor=null, loading=false;
 async function loadJourneys(){
-  if(!selDest) return;
+  if(!selDest||loading) return;
   $('#jrHead').style.display='flex'; $('#jrTitle').textContent='Vers '+selDest.name;
   const box=$('#journeys');
   if(!pos){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
-  box.innerHTML='<div class="spin"></div>';
+  const first=loadedFor!==selDest.uid;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
+  if(first){box.innerHTML='<div class="spin"></div>';lastJourneys=[]}
+  loading=true; $('#jrHead').classList.add('busy');
   try{
-    lastJourneys=await nextDepartures(selDest);
-    if(!lastJourneys.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
+    const data=await nextDepartures(selDest);
+    lastJourneys=data; loadedFor=selDest.uid;
+    if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     renderJourneyList();
-  }catch(e){box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'}
+  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; else toast('Actualisation impossible') }
+  finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
 let shown=5;
+const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?.name}|${f?.scheduledStartTime||f?.startTime}`};
+// Met à jour la liste en place : seules les cartes qui changent sont modifiées
 function renderJourneyList(){
-  const box=$('#journeys'), list=lastJourneys.slice(0,shown);
-  box.innerHTML=list.map((it,i)=>journeyHTML(it,i,false)).join('')
-    +(lastJourneys.length>shown?`<button class="btn ghost" id="more" style="width:100%;margin-top:4px">Afficher 5 de plus (${lastJourneys.length-shown} restants)</button>`:'');
-  bindJourneys(box,list,false);
-  const m=$('#more'); if(m) m.onclick=()=>{shown+=5;renderJourneyList()};
+  const box=$('#journeys');
+  lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Date.now()-60000});
+  const list=lastJourneys.slice(0,shown);
+  box.querySelectorAll(':scope > :not(.jr)').forEach(n=>n.remove()); // spinner / message / bouton
+  const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
+  const tpl=document.createElement('template'); let prev=null;
+  list.forEach((it,i)=>{
+    const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
+    let el=existing.get(k);
+    if(el){
+      existing.delete(k); el.dataset.i=i;
+      ['.jr-top','.jr-foot','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
+        if(a&&b&&a.innerHTML!==b.innerHTML){a.innerHTML=b.innerHTML; if(sel!=='.legs'){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}});
+    }else{el=fresh; if(prev) el.classList.add('enter')}
+    const ref=prev?prev.nextSibling:box.firstChild; if(el!==ref) box.insertBefore(el,ref);
+    prev=el;
+  });
+  existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
+  if(lastJourneys.length>shown){const b=document.createElement('button');b.className='btn ghost';b.id='more';b.style.cssText='width:100%;margin-top:4px';
+    b.textContent=`Afficher 5 de plus (${lastJourneys.length-shown} restants)`;b.onclick=()=>{shown+=5;renderJourneyList()};box.appendChild(b)}
+  curList=list;
+  bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
+let curList=[];
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
-/* Vraies couleurs : base ouverte Traewelling/line-colors (utilisée aussi par Transitous) */
-const LC={byKey:{},byLine:{},ready:false};
-const SBB_CAT={IC:['#eb0000','#fff'],ICE:['#eb0000','#fff'],IR:['#eb0000','#fff'],EC:['#eb0000','#fff'],EN:['#eb0000','#fff'],
-  TGV:['#eb0000','#fff'],RJX:['#eb0000','#fff'],NJ:['#eb0000','#fff'],PE:['#eb0000','#fff'],RE:['#fff','#eb0000','#eb0000'],
-  R:['#fff','#000','#000'],S:['#fff','#000','#000'],SN:['#000','#ffde00'],IRE:['#fff','#eb0000','#eb0000']};
-const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
-async function loadLineColors(){
-  const cached=store.get('lc',null);
-  if(cached&&Date.now()-cached.t<7*864e5){Object.assign(LC,cached.d,{ready:true});return}
-  const files=['line-colors-CH.csv','line-colors.csv'];
-  for(const f of files){
-    try{
-      const txt=await (await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f)).text();
-      const rows=txt.split(/\r?\n/), h=rows[0].split(',').map(x=>x.trim());
-      const ix=n=>h.findIndex(x=>x.toLowerCase().startsWith(n.toLowerCase()));
-      const iL=ix('lineName'),iB=ix('backgroundColor'),iT=ix('textColor'),iBo=ix('borderColor'),iS=ix('shape'),iA=ix('delfiAgencyName'),iI=ix('delfiAgencyID'),iO=ix('shortOperatorName');
-      for(let r=1;r<rows.length;r++){
-        const c=rows[r].split(','); if(!c[iL]) continue;
-        const v=[c[iB],c[iT],c[iBo]||'',c[iS]||''], ln=norm(c[iL]);
-        [c[iA],c[iI],c[iO]].filter(Boolean).forEach(a=>LC.byKey[norm(a)+'|'+ln]=v);
-        (LC.byLine[ln]=LC.byLine[ln]||[]).push(v);
-      }
-    }catch(e){}
-  }
-  LC.ready=true;
-  try{store.set('lc',{t:Date.now(),d:{byKey:LC.byKey,byLine:LC.byLine}})}catch{}
+function lineColor(l){
+  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
+  return MODE_COLOR[l.mode]||['#636e80','#fff'];
 }
-function lineStyle(l){
-  const name=l.routeShortName||l.displayName||'', ln=norm(name);
-  for(const a of [l.agencyName,l.agencyId]){const v=a&&LC.byKey[norm(a)+'|'+ln]; if(v) return v}
-  if(l.routeColor&&!/^(ffffff|000000)$/i.test(l.routeColor)) return ['#'+l.routeColor,'#'+(l.routeTextColor||'ffffff'),'',''];
-  const cat=(name.match(/^[A-Z]+/)||[''])[0];
-  if(/RAIL|LONG|SUBURBAN|NIGHT/.test(l.mode)&&SBB_CAT[cat]){const s=SBB_CAT[cat];return [s[0],s[1],s[2]||'','rectangle']}
-  const cand=LC.byLine[ln]; if(cand&&cand.length===1) return cand[0];
-  const m=MODE_COLOR[l.mode]||['#636e80','#fff']; return [m[0],m[1],'',''];
-}
-function lineColor(l){const s=lineStyle(l);return [s[0]==='#fff'||/^#?fff(fff)?$/i.test(s[0])?(s[2]||s[1]):s[0],s[1]]}
-function badge(l,size){const [bg,fg,bo,sh]=lineStyle(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
-  const rad=sh==='pill'?'99px':sh==='circle'?'50%':sh==='rectangle'?'3px':'';
-  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg};${bo?`box-shadow:inset 0 0 0 2px ${bo};`:''}${rad?`border-radius:${rad};`:''}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
+  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
@@ -500,15 +472,13 @@ function journeyHTML(it,i,tracked){
       <div class="chain">${chain}</div>
       <div class="jr-info">${rt?'<span class="live"></span>':''}${walk?`<span>🚶${walk}′</span>`:''}<span>${it.transfers?it.transfers+'×':'Direct'}</span><span><b>${hm(it.endTime)}</b> · ${fmtDur(it.duration)}</span></div>
     </div>
-    <div class="legs">${legs}<div class="row" style="margin-top:8px;flex-wrap:wrap">
-      <button class="btn ghost sm" data-act="map">🗺️ Carte</button>
+    <div class="legs">${legs}<div class="row" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
 }
 function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr').forEach(el=>el.onclick=e=>{
-    const act=e.target.dataset.act, it=list[+el.dataset.i];
-    if(act==='map'){e.stopPropagation();openMap(it);return}
+    const act=e.target.dataset.act, it=(list||curList)[+el.dataset.i];
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();renderTracked();return}
     el.classList.toggle('open');
@@ -540,6 +510,7 @@ async function refreshTracked(){
   }
   save(); renderTracked(); toast('Suivis actualisés');
 }
+setInterval(()=>{ if(lastJourneys.length&&$('#v-horaires').classList.contains('active')) renderJourneyList() },15000);
 setInterval(()=>{ if($('#v-horaires').classList.contains('active')&&selDest&&!document.hidden) loadJourneys();
   if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(); },60000);
 
@@ -623,101 +594,8 @@ $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySetting
 ['blur','alpha','sat'].forEach(k=>$('#'+k).oninput=e=>{S.settings[k]=+e.target.value;save();applySettings()});
 function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
-/* ========= Carte des véhicules (Transitous /map/trips) ========= */
-let map, vehLayer, meMarker, routeLayer, segs=[], focusTrip=null, mapTimer, animTimer;
-function decodePoly(str,prec){let i=0,lat=0,lng=0,out=[],f=Math.pow(10,prec);
-  while(i<str.length){for(const k of [0,1]){let b,s=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<s;s+=5}while(b>=32);const d=r&1?~(r>>1):r>>1;k?lng+=d:lat+=d}out.push([lat/f,lng/f])}return out}
-function polyFor(seg){
-  const p=seg.polyline; if(!p) return [[seg.from.lat,seg.from.lon],[seg.to.lat,seg.to.lon]];
-  for(const pr of [6,5,7]){const pts=decodePoly(p,pr);if(pts.length&&Math.abs(pts[0][0]-seg.from.lat)<.05&&Math.abs(pts[0][1]-seg.from.lon)<.05)return pts}
-  return decodePoly(p,6);
-}
-function along(pts,t){ // position à la fraction t de la polyligne
-  if(pts.length<2) return pts[0];
-  const d=[0];for(let i=1;i<pts.length;i++)d.push(d[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
-  const goal=d[d.length-1]*Math.min(1,Math.max(0,t));
-  for(let i=1;i<pts.length;i++)if(d[i]>=goal){const f=(goal-d[i-1])/((d[i]-d[i-1])||1);return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*f,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*f]}
-  return pts[pts.length-1];
-}
-function loadLeaflet(){
-  if(window.L) return Promise.resolve();
-  return new Promise((ok,ko)=>{const css=document.createElement('link');css.rel='stylesheet';css.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';document.head.appendChild(css);
-    const sc=document.createElement('script');sc.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc)});
-}
-function ensureMap(){
-  if(map) return true;
-  if(!window.L){toast('Carte indisponible (Leaflet non chargé)');return false}
-  map=L.map('map',{zoomControl:false,attributionControl:true}).setView(pos?[pos.lat,pos.lon]:[46.204,6.143],15);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:19,attribution:'© OpenStreetMap, © CARTO, Transitous'}).addTo(map);
-  routeLayer=L.layerGroup().addTo(map); vehLayer=L.layerGroup().addTo(map);
-  map.on('moveend',()=>fetchVehicles());
-  return true;
-}
-async function openMap(it){
-  $('#mapView').classList.add('open');
-  try{await loadLeaflet()}catch{toast('Impossible de charger la carte');return}
-  try{ openMapInner(it) }catch(e){ console.error(e); toast('Erreur carte : '+e.message) }
-}
-function openMapInner(it){
-  if(!ensureMap()) return;
-  setTimeout(()=>map.invalidateSize(),50);
-  routeLayer.clearLayers(); focusTrip=null;
-  if(pos){if(meMarker)meMarker.remove();meMarker=L.marker([pos.lat,pos.lon],{icon:L.divIcon({html:'<div class="me"></div>',iconSize:[16,16]}),interactive:false}).addTo(map)}
-  if(it){
-    const ft=firstTransit(it); focusTrip=ft;
-    $('#mapTitle').firstChild.textContent=`${ft?.routeShortName||''} → ${ft?.headsign||''}`;
-    $('#mapSub').textContent=`Départ ${hm(ft?.startTime)} · ${ft?.from?.name||''}`;
-    it.legs.forEach(l=>{const pts=l.legGeometry?.points?decodePoly(l.legGeometry.points,l.legGeometry.precision||6):[[l.from.lat,l.from.lon],[l.to.lat,l.to.lon]];
-      L.polyline(pts,{color:l.mode==='WALK'?'#8e8e93':lineColor(l)[0],weight:l.mode==='WALK'?4:6,dashArray:l.mode==='WALK'?'4 8':null,opacity:.9}).addTo(routeLayer)});
-    if(ft?.from) L.circleMarker([ft.from.lat,ft.from.lon],{radius:7,color:'#fff',weight:3,fillColor:lineColor(ft)[0],fillOpacity:1}).bindTooltip(`${ft.from.name}${ft.from.track?' · Quai '+ft.from.track:''}`,{permanent:true,direction:'top',offset:[0,-6]}).addTo(routeLayer);
-    const b=L.featureGroup(routeLayer.getLayers()).getBounds(); if(b.isValid()) map.fitBounds(b,{padding:[60,60]});
-  }else{
-    $('#mapTitle').firstChild.textContent='Véhicules en circulation'; $('#mapSub').textContent='Transitous · temps réel';
-    if(pos) map.setView([pos.lat,pos.lon],15);
-  }
-  fetchVehicles();
-  clearInterval(mapTimer); mapTimer=setInterval(fetchVehicles,20000);
-  clearInterval(animTimer); animTimer=setInterval(drawVehicles,1000);
-}
-function closeMap(){$('#mapView').classList.remove('open');clearInterval(mapTimer);clearInterval(animTimer)}
-function mapCenterMe(){if(pos&&map)map.setView([pos.lat,pos.lon],16);else locate(true)}
-async function fetchVehicles(){
-  if(!map||!$('#mapView').classList.contains('open')) return;
-  const b=map.getBounds(), z=Math.round(map.getZoom());
-  if(z<12){segs=[];drawVehicles();$('#mapSub').textContent='Zoome pour voir les véhicules';return}
-  const now=new Date(), end=new Date(now.getTime()+90000);
-  const qs=`zoom=${z}&min=${b.getNorth()},${b.getWest()}&max=${b.getSouth()},${b.getEast()}&startTime=${now.toISOString()}&endTime=${end.toISOString()}`;
-  for(const v of ['v1','v2','v4','v5']){
-    try{const r=await fetch(`${API}/${v}/map/trips?${qs}`);if(!r.ok)continue;
-      segs=(await r.json()).map(s=>({s,pts:polyFor(s),dep:+new Date(s.departure),arr:+new Date(s.arrival)}));drawVehicles();return}catch{}
-  }
-}
-const vehMarkers=new Map();
-function drawVehicles(){
-  if(!vehLayer) return;
-  const now=Date.now(), seen=new Set();
-  for(const g of segs){
-    if(now<g.dep-60000||now>g.arr+30000) continue;
-    const s=g.s, trip=s.trips?.[0]||{}, name=trip.routeShortName||trip.displayName||s.routeShortName||'';
-    const id=(trip.tripId||s.tripId||name)+'|'+(s.from?.name||''); if(seen.has(id)) continue; seen.add(id);
-    const p=along(g.pts,(now-g.dep)/((g.arr-g.dep)||1));
-    const legLike={routeShortName:name,mode:s.mode,routeColor:s.routeColor,routeTextColor:s.routeTextColor,agencyName:trip.agencyName,agencyId:trip.agencyId};
-    const [bg,fg,bo]=lineStyle(legLike);
-    const hl=focusTrip&&((trip.tripId&&trip.tripId===focusTrip.tripId)||(name===focusTrip.routeShortName&&(trip.headsign||s.to?.name)===focusTrip.headsign));
-    const html=`<div class="veh${hl?' hl':''}" style="background:${bg};color:${fg};${bo?`outline:2px solid ${bo};`:''}">${esc(name)}</div>`;
-    let m=vehMarkers.get(id);
-    if(!m){m=L.marker(p,{icon:L.divIcon({html,iconSize:null,className:''}),zIndexOffset:hl?1000:0})
-      .bindPopup(()=>`<b>${esc(name)}</b> → ${esc(trip.headsign||s.to?.name||'')}<br>${esc(s.from?.name||'')} → ${esc(s.to?.name||'')}<br>Arrivée ${hm(s.arrival)}${s.realTime?' · <span style="color:#18a957">temps réel</span>':''}`);
-      vehLayer.addLayer(m);vehMarkers.set(id,m);m._h=html}
-    else{m.setLatLng(p);if(m._h!==html){m.setIcon(L.divIcon({html,iconSize:null,className:''}));m._h=html}}
-  }
-  for(const [id,m] of vehMarkers) if(!seen.has(id)){vehLayer.removeLayer(m);vehMarkers.delete(id)}
-  if(focusTrip===null&&$('#mapView').classList.contains('open')&&map.getZoom()>=12) $('#mapSub').textContent=`${seen.size} véhicules · temps réel`;
-}
-
 /* ========= Init ========= */
 applySettings(); renderDests(); renderTiles(); renderSMS(); locate();
-loadLineColors().then(()=>{ if(lastJourneys.length) renderJourneyList(); if($('#v-suivis').classList.contains('active')) renderTracked(); });
 </script>
 </body>
 </html>
