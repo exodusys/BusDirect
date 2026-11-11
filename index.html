@@ -336,7 +336,8 @@ if(!pend[k]){pend[k]=locate(name,lat!=null?{lat:+lat,lon:+lon}:null).then(functi
 return lat!=null?{lat:+lat,lon:+lon}:null};
 window.addEventListener('bd-sources-change',function(){C={};save();tables={}});
 window.bdStopXYAsync=function(name,lat,lon){var k=norm(name);if(C[k])return Promise.resolve(C[k]);return locate(name,lat!=null?{lat:+lat,lon:+lon}:null).then(function(r){if(r){C[k]=r;save()}return r})};
-function fix(a){try{var u=new URL(a.href);var ch=false;if(u.searchParams.has('destination')&&u.searchParams.get('travelmode')!=='walking'&&/pied|walk/i.test((a.textContent||'')+' '+(a.className||'')+' '+((a.parentElement&&a.parentElement.textContent)||''))){u.searchParams.set('travelmode','walking');ch=true}['origin','destination'].forEach(function(p){var v=u.searchParams.get(p);if(!v||/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(v))return;var xy=window.bdStopXY(v,null,null,null);if(xy){u.searchParams.set(p,window.bdCoordStr?window.bdCoordStr(xy.lat,xy.lon):xy.lat+','+xy.lon);ch=true}});if(ch)a.href=u.toString()}catch(e){}}
+function toApple(href){try{var u=new URL(href);var o=u.searchParams.get('origin')||u.searchParams.get('saddr')||'';var d=u.searchParams.get('destination')||u.searchParams.get('daddr')||u.searchParams.get('query')||u.searchParams.get('q')||'';if(!o&&!d){var m=u.pathname.match(/\/dir\/([^/]*)\/([^/]+)/);if(m){o=decodeURIComponent(m[1]);d=decodeURIComponent(m[2])}}var tm=u.searchParams.get('travelmode')||'';var flg=tm==='walking'?'w':(tm==='transit'?'r':'r');var r='maps://maps.apple.com/?dirflg='+flg;if(o){if(window.bdStopXY&&!/^-?\d/.test(o)){var xy=window.bdStopXY(o,null,null,null);if(xy)o=xy.lat+','+xy.lon}r+='&saddr='+encodeURIComponent(o)}if(d){if(window.bdStopXY&&!/^-?\d/.test(d)){var xy2=window.bdStopXY(d,null,null,null);if(xy2)d=xy2.lat+','+xy2.lon}r+='&daddr='+encodeURIComponent(d)}if(!d&&!o){var sq=u.searchParams.get('query')||u.searchParams.get('q');if(sq)return'maps://maps.apple.com/?q='+encodeURIComponent(sq)}return r}catch(e){return href}}
+function fix(a){try{a.href=toApple(a.href)}catch(e){}}
 ['pointerdown','touchstart','mousedown'].forEach(function(ev){window.addEventListener(ev,function(e){var a=e.target&&e.target.closest&&e.target.closest('a[href*="google.com/maps"],a[href*="maps.google.com"]');if(a)fix(a)},true)});
 })();</script>
 <script id="bd-source-usage">(function(){
@@ -4940,8 +4941,7 @@ var pts=pl.map(function(x){var p=xy(x);return p?{n:nm(x),lat:p.lat,lon:p.lon}:nu
 if(pts.length<2)return;
 var o=pts[0],d=pts[pts.length-1];
 var wp=pts.slice(1,-1).map(function(p){return p.lat+','+p.lon}).join('|');
-var u='https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(o.lat+','+o.lon)+'&destination='+encodeURIComponent(d.lat+','+d.lon)+'&travelmode=transit';
-if(wp)u+='&waypoints='+encodeURIComponent(wp);
+var u='maps://maps.apple.com/?saddr='+o.lat+','+o.lon+'&daddr='+d.lat+','+d.lon+'&dirflg=r';
 window.open(u,'_blank','noopener')};
 })();</script>
 <script id="bd-walk-js">(function(){
@@ -4950,9 +4950,9 @@ window.bdCloseWalk=function(){};
 window.bdOpenWalk=function(origin,dest,label,opt){
 var o=parseLL(origin),d=parseLL(dest);
 if(!d){try{var L=window.__bd_loc;if(L&&L.lat!=null)o={lat:+L.lat,lon:+L.lon}}catch(e){}}
-var u='https://www.google.com/maps/dir/?api=1&travelmode=walking';
-if(o)u+='&origin='+encodeURIComponent(o.lat+','+o.lon);
-if(d)u+='&destination='+encodeURIComponent(d.lat+','+d.lon);
+var u='maps://maps.apple.com/?dirflg=w';
+if(o)u+='&saddr='+o.lat+','+o.lon;
+if(d)u+='&daddr='+d.lat+','+d.lon;
 window.open(u,'_blank','noopener');
 return false};
 })();</script>
