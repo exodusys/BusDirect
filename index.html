@@ -408,12 +408,46 @@ function renderJourneyList(){
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
-function lineColor(l){
-  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
-  return MODE_COLOR[l.mode]||['#636e80','#fff'];
+/* Vraies couleurs : base ouverte Traewelling/line-colors (utilisée aussi par Transitous) */
+const LC={byKey:{},byLine:{},ready:false};
+const SBB_CAT={IC:['#eb0000','#fff'],ICE:['#eb0000','#fff'],IR:['#eb0000','#fff'],EC:['#eb0000','#fff'],EN:['#eb0000','#fff'],
+  TGV:['#eb0000','#fff'],RJX:['#eb0000','#fff'],NJ:['#eb0000','#fff'],PE:['#eb0000','#fff'],RE:['#fff','#eb0000','#eb0000'],
+  R:['#fff','#000','#000'],S:['#fff','#000','#000'],SN:['#000','#ffde00'],IRE:['#fff','#eb0000','#eb0000']};
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+async function loadLineColors(){
+  const cached=store.get('lc',null);
+  if(cached&&Date.now()-cached.t<7*864e5){Object.assign(LC,cached.d,{ready:true});return}
+  const files=['line-colors-CH.csv','line-colors.csv'];
+  for(const f of files){
+    try{
+      const txt=await (await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f)).text();
+      const rows=txt.split(/\r?\n/), h=rows[0].split(',').map(x=>x.trim());
+      const ix=n=>h.findIndex(x=>x.toLowerCase().startsWith(n.toLowerCase()));
+      const iL=ix('lineName'),iB=ix('backgroundColor'),iT=ix('textColor'),iBo=ix('borderColor'),iS=ix('shape'),iA=ix('delfiAgencyName'),iI=ix('delfiAgencyID'),iO=ix('shortOperatorName');
+      for(let r=1;r<rows.length;r++){
+        const c=rows[r].split(','); if(!c[iL]) continue;
+        const v=[c[iB],c[iT],c[iBo]||'',c[iS]||''], ln=norm(c[iL]);
+        [c[iA],c[iI],c[iO]].filter(Boolean).forEach(a=>LC.byKey[norm(a)+'|'+ln]=v);
+        (LC.byLine[ln]=LC.byLine[ln]||[]).push(v);
+      }
+    }catch(e){}
+  }
+  LC.ready=true;
+  try{store.set('lc',{t:Date.now(),d:{byKey:LC.byKey,byLine:LC.byLine}})}catch{}
 }
-function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
-  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function lineStyle(l){
+  const name=l.routeShortName||l.displayName||'', ln=norm(name);
+  for(const a of [l.agencyName,l.agencyId]){const v=a&&LC.byKey[norm(a)+'|'+ln]; if(v) return v}
+  if(l.routeColor&&!/^(ffffff|000000)$/i.test(l.routeColor)) return ['#'+l.routeColor,'#'+(l.routeTextColor||'ffffff'),'',''];
+  const cat=(name.match(/^[A-Z]+/)||[''])[0];
+  if(/RAIL|LONG|SUBURBAN|NIGHT/.test(l.mode)&&SBB_CAT[cat]){const s=SBB_CAT[cat];return [s[0],s[1],s[2]||'','rectangle']}
+  const cand=LC.byLine[ln]; if(cand&&cand.length===1) return cand[0];
+  const m=MODE_COLOR[l.mode]||['#636e80','#fff']; return [m[0],m[1],'',''];
+}
+function lineColor(l){const s=lineStyle(l);return [s[0]==='#fff'||/^#?fff(fff)?$/i.test(s[0])?(s[2]||s[1]):s[0],s[1]]}
+function badge(l,size){const [bg,fg,bo,sh]=lineStyle(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
+  const rad=sh==='pill'?'99px':sh==='circle'?'50%':sh==='rectangle'?'3px':'';
+  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg};${bo?`box-shadow:inset 0 0 0 2px ${bo};`:''}${rad?`border-radius:${rad};`:''}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
@@ -441,13 +475,15 @@ function journeyHTML(it,i,tracked){
       <div class="chain">${chain}</div>
       <div class="jr-info">${rt?'<span class="live"></span>':''}${walk?`<span>🚶${walk}′</span>`:''}<span>${it.transfers?it.transfers+'×':'Direct'}</span><span><b>${hm(it.endTime)}</b> · ${fmtDur(it.duration)}</span></div>
     </div>
-    <div class="legs">${legs}<div class="row" style="margin-top:8px">
+    <div class="legs">${legs}<div class="row" style="margin-top:8px;flex-wrap:wrap">
+      <button class="btn ghost sm" data-act="map">🗺️ Carte</button>
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}</div></div>
   </div>`;
 }
 function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr').forEach(el=>el.onclick=e=>{
     const act=e.target.dataset.act, it=list[+el.dataset.i];
+    if(act==='map'){e.stopPropagation();openMap(it);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();renderTracked();return}
     el.classList.toggle('open');
