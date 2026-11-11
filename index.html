@@ -538,13 +538,20 @@ setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.
 // Perturbations (alertes GTFS-RT fournies par Transitous sur chaque tronçon)
 const EFFECT={DETOUR:'Déviation',NO_SERVICE:'Supprimé',REDUCED_SERVICE:'Service réduit',SIGNIFICANT_DELAYS:'Retards importants',
   MODIFIED_SERVICE:'Service modifié',STOP_MOVED:'Arrêt déplacé',ADDITIONAL_SERVICE:'Service supplémentaire',ACCESSIBILITY_ISSUE:'Accessibilité',OTHER_EFFECT:'Info trafic',UNKNOWN_EFFECT:'Info trafic'};
+// Uniquement les déviations en cours (période d'impact contenant maintenant)
+function activeNow(a){
+  const per=a.impactPeriod||a.activePeriod||a.communicationPeriod; if(!per||!per.length) return true;
+  const now=Date.now(); return per.some(p=>(!p.from||+new Date(p.from)<=now)&&(!p.to||+new Date(p.to)>=now));
+}
 function alertsOf(it){
   const out=[],seen=new Set();
-  it.legs.forEach(l=>{
-    (l.alerts||[]).forEach(a=>{const h=a.headerText||a.descriptionText||'';const k=h+'|'+(l.routeShortName||'');if(!h||seen.has(k))return;seen.add(k);
-      out.push({leg:l,title:EFFECT[a.effect]||(/d[ée]vi/i.test(h)?'Déviation':'Info trafic'),head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour:a.effect==='DETOUR'||/d[ée]vi/i.test(h+a.descriptionText)})});
-    if(l.cancelled||l.tripCancelled) out.push({leg:l,title:'Supprimé',head:`${l.routeShortName||''} ${hm(l.startTime)} supprimé`,desc:'',detour:false,cancel:true});
-  });
+  it.legs.forEach(l=>(l.alerts||[]).forEach(a=>{
+    const txt=(a.headerText||'')+' '+(a.descriptionText||'');
+    const detour=a.effect==='DETOUR'||/d[ée]vi(é|e|ation)|umleitung|detour|diversion/i.test(txt);
+    if(!detour||!activeNow(a)) return;
+    const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
+    out.push({leg:l,title:'Déviation',head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour:true});
+  }));
   return out;
 }
 function alertBanner(al){
