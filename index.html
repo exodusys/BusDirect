@@ -7,6 +7,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0b1220">
 <title>BusDirect</title>
+<link rel="apple-touch-icon" id="touchIcon" href="">
+<link rel="icon" id="favIcon" href="">
 <style>
 :root{
   --accent:#5ec26a; --accent2:#8fd897;
@@ -1187,6 +1189,19 @@ const WALLS={
   slate:{n:'Ardoise',g:wallOf('#3a4a5a','#5a6a7a','#2a8ac0')},
   grey:{n:'Gris',g:wallOf('#444444','#8a8a8a','#b0b0b0')}
 };
+// Icône de l'écran d'accueil et de l'onglet = logo choisi dans l'app
+let lastIconKey='';
+function updateAppIcon(customUrl,key){
+  const k=customUrl||key; if(k===lastIconKey) return; lastIconKey=k;
+  const N=180, c=document.createElement('canvas'); c.width=c.height=N; const x=c.getContext('2d');
+  const finish=()=>{ const url=c.toDataURL('image/png'); $('#touchIcon').href=url; $('#favIcon').href=url };
+  x.fillStyle='#0b0b0d'; x.fillRect(0,0,N,N);
+  const img=new Image();
+  img.onload=()=>{ if(customUrl){ const sc=Math.max(N/img.width,N/img.height); x.drawImage(img,(N-img.width*sc)/2,(N-img.height*sc)/2,img.width*sc,img.height*sc) }
+    else x.drawImage(img,N*0.14,N*0.14,N*0.72,N*0.72); finish() };
+  img.onerror=finish;
+  img.src=customUrl||('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" color="#5ec26a">${(LOGOS[key]||LOGOS.original).s}</svg>`));
+}
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1202,6 +1217,7 @@ function applySettings(){
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
   else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
+  updateAppIcon(cl?cl.url:null, s.logo);
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
   $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
   renderPickers();
