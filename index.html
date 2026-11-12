@@ -105,6 +105,10 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .al-t .lb{vertical-align:1px;margin:0 2px}
 .al-n{flex:none;font-weight:700;font-size:12px;background:rgba(127,127,127,.25);border-radius:8px;padding:1px 6px}
 .al-d{padding:10px 12px;border-radius:12px;background:rgba(255,159,10,.12);margin-bottom:8px}
+.time-bar{display:flex;align-items:center;gap:8px;border-radius:16px;padding:6px 6px 6px 12px;margin:0 0 10px}
+.time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
+.time-bar input.custom{color:var(--accent)}
+#nowBtn.on{background:var(--accent);color:#fff}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -268,6 +272,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div id="jrHead" class="row between" style="display:none;margin:18px 4px 8px">
       <h3 style="margin:0" id="jrTitle">Prochains départs</h3>
       <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻ Actualiser</button>
+    </div>
+    <div id="timeBar" class="time-bar glass" style="display:none">
+      <span>🕒</span>
+      <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
+      <button class="btn ghost sm" id="nowBtn" onclick="setPlanTime('')">Maintenant</button>
     </div>
     <div id="journeys"></div>
   </section>
@@ -554,7 +563,7 @@ async function nextDepartures(dest,from){
   dest=await nearestStop(dest); if(from) from=await nearestStop(from);
   let all=[], cursor=null;
   for(let p=0;p<3;p++){
-    const d=await plan(dest,null,cursor,from);
+    const d=await plan(dest,planTime,cursor,from);
     all=all.concat(d.itineraries||[]);
     cursor=d.nextPageCursor; if(!cursor) break;
   }
@@ -563,7 +572,7 @@ async function nextDepartures(dest,from){
     const f=firstTransit(it); if(!f) return false;
     const k=`${f.routeShortName}|${f.from?.name}|${f.scheduledStartTime||f.startTime}`;
     if(seen.has(k)) return false; seen.add(k);
-    return new Date(f.startTime)>Date.now()-60000;
+    return new Date(f.startTime)>(planTime?+planTime:Date.now())-60000;
   }).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
 }
 
@@ -630,7 +639,7 @@ function renderTiles(){
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
   document.querySelectorAll('.tile').forEach(bindTileDrag);
   drawLink();
-  if(!selDest){$('#jrHead').style.display='none';$('#journeys').innerHTML=''}
+  if(!selDest){$('#jrHead').style.display='none';$('#timeBar').style.display='none';$('#journeys').innerHTML=''}
 }
 function tileCenter(el){const g=$('#tiles').getBoundingClientRect(),r=el.getBoundingClientRect();return [r.left-g.left+r.width/2,r.top-g.top+r.height/2]}
 function setLine(a,b,show){const svg=$('#tileLink');if(!svg)return;svg.classList.toggle('on',!!show);if(!show)return;
@@ -679,10 +688,24 @@ function bindTileDrag(t){
   });
   t.addEventListener('pointercancel',()=>{const a=armed;reset();if(a){t.classList.remove('from');drawLink()}});
 }
+/* Choix de la date / heure de départ (vide = maintenant) */
+let planTime=null;
+const toLocalInput=d=>{const z=new Date(d.getTime()-d.getTimezoneOffset()*60000);return z.toISOString().slice(0,16)};
+function syncTimeBar(){
+  const inp=$('#planTime'); if(!inp) return;
+  inp.value=toLocalInput(planTime||new Date());
+  inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
+}
+function setPlanTime(v){
+  planTime=v?new Date(v):null;
+  if(planTime&&Math.abs(planTime-Date.now())<60000) planTime=null;
+  syncTimeBar(); shown=5; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
+}
+setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 let loadedFor=null, loading=false;
 async function loadJourneys(){
   if(!selDest||loading) return;
-  $('#jrHead').style.display='flex'; $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
+  $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
   const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
@@ -704,7 +727,7 @@ const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?
 // Met à jour la liste en place : seules les cartes qui changent sont modifiées
 function renderJourneyList(){
   const box=$('#journeys');
-  lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Date.now()-60000});
+  lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>(planTime?+planTime:Date.now())-60000});
   const list=lastJourneys.slice(0,shown);
   box.querySelectorAll(':scope > :not(.jr)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
