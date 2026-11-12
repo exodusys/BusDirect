@@ -191,6 +191,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:10px;margin-top:10px}
 .pick{aspect-ratio:1;border-radius:16px;cursor:pointer;display:grid;place-items:center;font-size:24px;color:#fff;border:2px solid transparent;background-size:cover;background-position:center;overflow:hidden}
 .pick.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(227,6,19,.25)}
+.pick{position:relative;overflow:visible}
+.pick-x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:2px solid var(--bg);background:#ff3b30;color:#fff;
+  font-size:11px;font-weight:800;line-height:1;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:2}
 .pick.add{background:rgba(127,127,127,.18);color:var(--text)}
 .sms{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--border)}
 .sms:last-child{border-bottom:none}
@@ -312,8 +315,14 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'auto',accent:'#e30613',glass:true,blur:22,alpha:55,sat:180,logo:'bus',wall:'aurora',customLogo:null,customWall:null}, store.get('settings',{}))
+  settings: Object.assign({theme:'auto',accent:'#e30613',glass:true,blur:22,alpha:55,sat:180,logo:'bus',wall:'aurora',customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
+// migration ancienne version (une seule image perso)
+(()=>{const s=S.settings;
+  if(s.customLogo){s.customLogos.push({id:'l'+Date.now(),url:s.customLogo});if(s.logo==='custom')s.logo='c:'+s.customLogos.at(-1).id}
+  if(s.customWall){s.customWalls.push({id:'w'+Date.now(),url:s.customWall});if(s.wall==='custom')s.wall='c:'+s.customWalls.at(-1).id}
+  delete s.customLogo;delete s.customWall;})();
+const customOf=(list,k)=>k&&k.startsWith('c:')?list.find(x=>'c:'+x.id===k):null;
 let pos = null, selDest = null, uploadTarget = null, lastJourneys = [];
 const save = () => { store.set('dests',S.dests); store.set('tracked',S.tracked); store.set('settings',S.settings); };
 
@@ -701,9 +710,9 @@ function applySettings(){
   root.style.setProperty('--glass-a',s.alpha/100);
   root.style.setProperty('--sat',s.sat+'%');
   document.body.classList.toggle('noglass',!s.glass);
-  root.style.setProperty('--wall',s.wall==='custom'&&s.customWall?`url(${s.customWall})`:(WALLS[s.wall]||'none'));
+  const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]||'none'));
   const lg=$('#logo');
-  if(s.logo==='custom'&&s.customLogo){lg.style.background='none';lg.innerHTML=`<img src="${s.customLogo}" alt="">`}
+  const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
   else{const L=LOGOS[s.logo]||LOGOS.bus;lg.style.background=L.bg;lg.innerHTML=L.ic}
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
   $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
@@ -712,14 +721,21 @@ function applySettings(){
 function renderPickers(){
   const s=S.settings;
   $('#logoPicker').innerHTML=Object.entries(LOGOS).map(([k,L])=>`<div class="pick ${s.logo===k?'on':''}" data-k="${k}" style="background:${L.bg}">${L.ic}</div>`).join('')
-    +(s.customLogo?`<div class="pick ${s.logo==='custom'?'on':''}" data-k="custom" style="background-image:url(${s.customLogo})"></div>`:'')
+    +s.customLogos.map(c=>`<div class="pick ${s.logo==='c:'+c.id?'on':''}" data-k="c:${c.id}" style="background-image:url(${c.url})"><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
     +`<div class="pick add" data-k="+logo">＋</div>`;
   $('#wallPicker').innerHTML=Object.entries(WALLS).map(([k,W])=>`<div class="pick ${s.wall===k?'on':''}" data-k="${k}" style="background:${W==='none'?'var(--bg)':W+',var(--bg)'}">${k==='none'?'∅':''}</div>`).join('')
-    +(s.customWall?`<div class="pick ${s.wall==='custom'?'on':''}" data-k="custom" style="background-image:url(${s.customWall})"></div>`:'')
+    +s.customWalls.map(c=>`<div class="pick ${s.wall==='c:'+c.id?'on':''}" data-k="c:${c.id}" style="background-image:url(${c.url})"><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
     +`<div class="pick add" data-k="+wall">＋</div>`;
 }
-$('#logoPicker').onclick=e=>{const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
-$('#wallPicker').onclick=e=>{const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
+$('#logoPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('logo',del);return}const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
+$('#wallPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
+function delCustom(type,id){
+  const s=S.settings, key=type==='logo'?'customLogos':'customWalls';
+  s[key]=s[key].filter(x=>x.id!==id);
+  if(type==='logo'&&s.logo==='c:'+id) s.logo='bus';
+  if(type==='wall'&&s.wall==='c:'+id) s.wall='aurora';
+  save();applySettings();toast(type==='logo'?'Logo supprimé':'Fond d\'écran supprimé');
+}
 $('#fileIn').onchange=e=>{
   const f=e.target.files[0];if(!f)return;
   const img=new Image(),rd=new FileReader();
@@ -727,7 +743,8 @@ $('#fileIn').onchange=e=>{
     const max=uploadTarget==='logo'?256:1400,sc=Math.min(1,max/Math.max(img.width,img.height));
     const c=document.createElement('canvas');c.width=img.width*sc;c.height=img.height*sc;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
     const url=c.toDataURL('image/jpeg',.82);
-    if(uploadTarget==='logo'){S.settings.customLogo=url;S.settings.logo='custom'}else{S.settings.customWall=url;S.settings.wall='custom'}
+    const id=(uploadTarget==='logo'?'l':'w')+Date.now().toString(36);
+    if(uploadTarget==='logo'){S.settings.customLogos.push({id,url});S.settings.logo='c:'+id}else{S.settings.customWalls.push({id,url});S.settings.wall='c:'+id}
     save();applySettings();e.target.value='';};img.src=rd.result};
   rd.readAsDataURL(f);
 };
