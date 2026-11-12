@@ -578,7 +578,7 @@ async function geocode(text){
   const u = `${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(pos?`&place=${pos.lat},${pos.lon}`:'');
   const r = await fetch(u); if(!r.ok) throw new Error('geocode'); return r.json();
 }
-let planVersion=null;
+let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
 async function plan(dest, time, cursor, from){
   if(!from&&!pos) throw new Error('nopos');
@@ -588,7 +588,7 @@ async function plan(dest, time, cursor, from){
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
-    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){planVersion=v;return r.json();} }catch(e){}
+    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();} }catch(e){}
   }
   throw new Error('plan');
 }
@@ -607,14 +607,7 @@ async function nearestStop(p){
   }
   return p;
 }
-async function nextDepartures(dest,from){
-  dest=await nearestStop(dest); if(from) from=await nearestStop(from);
-  let all=[], cursor=null;
-  for(let p=0;p<3;p++){
-    const d=await plan(dest,planTime,cursor,from);
-    all=all.concat(d.itineraries||[]);
-    cursor=d.nextPageCursor; if(!cursor) break;
-  }
+function cleanList(all){
   const seen=new Set();
   return all.filter(it=>{
     const f=firstTransit(it); if(!f) return false;
@@ -622,6 +615,15 @@ async function nextDepartures(dest,from){
     if(seen.has(k)) return false; seen.add(k);
     return new Date(f.startTime)>(planTime?+planTime:Date.now())-60000;
   }).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
+}
+// 1re page tout de suite ; pages suivantes en arrière-plan (onMore reçoit la liste complétée)
+async function nextDepartures(dest,from,onMore){
+  [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
+  const d=await plan(dest,planTime,null,from);
+  let all=d.itineraries||[];
+  if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
+    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(n.itineraries||[]); cur=n.nextPageCursor; onMore(cleanList(all))}catch{break} } })();
+  return cleanList(all);
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -671,7 +673,9 @@ async function pickPair(from,to){
   shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles();
   $('#jrHead').style.display='flex';$('#jrTitle').textContent=(from?from.name+' → ':'Vers ')+to.name;
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
-  if(!from) await freshPos();
+  const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
+  if(!from&&!recent) await freshPos();                 // position récente : pas d'attente GPS
+  else if(!from) freshPos().then(()=>{ if(lastPlanPos&&pos&&dist(lastPlanPos,pos)>0.1) loadJourneys() });
   if(selDest===to&&selFrom===from) loadJourneys();
 }
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
@@ -761,9 +765,16 @@ async function loadJourneys(){
   loading=true; $('#jrHead').classList.add('busy');
   try{
     const usedPos=pos&&{...pos};
-    const data=await nextDepartures(selDest,selFrom);
+    // affichage instantané depuis le cache (si récent), puis mise à jour
+    const ck='bd_jc_'+pairKey+(planTime?'@'+(+planTime):'');
+    if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
+      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
+    const reqDest=selDest, reqFrom=selFrom;
+    const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
+      prefetchColors(more); lastJourneys=more; renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
+    try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
     lastPlanPos=usedPos;
-    if(first) await colorsBeforeRender(data); else prefetchColors(data);
+    if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
@@ -898,7 +909,7 @@ function prefetchColors(list){ (list||[]).forEach(it=>it.legs.forEach(l=>{ if(l.
 async function colorsBeforeRender(list){
   prefetchColors(list); clearTimeout(osmTimer);
   if(!osmQueue.size) return;
-  await Promise.race([osmFetch(), new Promise(r=>setTimeout(r,1500))]);
+  await Promise.race([osmFetch(), new Promise(r=>setTimeout(r,450))]);
 }
 function resetLineColors(){
   OSMC.m={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
