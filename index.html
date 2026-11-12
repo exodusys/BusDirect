@@ -112,8 +112,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input.custom{color:var(--accent)}
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;justify-content:center;align-items:center;gap:5px;height:56px;opacity:.9}
-.load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.15;animation:lm 1s ease-in-out infinite}
-.load-more i:nth-child(2){animation-delay:.12s}.load-more i:nth-child(3){animation-delay:.24s}.load-more i:nth-child(4){animation-delay:.36s}
+.load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.15;animation:lm 1.8s ease-in-out infinite}
+.load-more i:nth-child(2){animation-delay:.22s}.load-more i:nth-child(3){animation-delay:.44s}.load-more i:nth-child(4){animation-delay:.66s}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(6px)}}
 .day-sep{font-size:13px;font-weight:600;color:var(--muted);margin:14px 6px 8px;text-transform:capitalize}
 .pull-more{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0 22px;color:var(--muted);font-size:12.5px;font-weight:600;--p:0}
@@ -121,8 +121,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
   background:rgba(127,127,127,.16);transform:scale(calc(.8 + var(--p)*.35)) rotate(calc(var(--p)*180deg));transition:transform .15s,background .2s,color .2s}
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
-.jr.pop{animation:popIn .45s ease-out both}
-@keyframes popIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.jr.pop{animation:popIn .9s cubic-bezier(.22,.8,.3,1) both}
+@keyframes popIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -790,7 +790,7 @@ function renderJourneyList(){
   // Bas de liste : animation de chargement, la suite arrive automatiquement en arrivant en bas
   const sen=document.createElement('div'); sen.id='more'; sen.className='load-more';
   sen.innerHTML='<i></i><i></i><i></i><i></i>'; box.appendChild(sen);
-  if(!moreObs) moreObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) setTimeout(loadMoreJourneys,350) },{rootMargin:'0px 0px 40px 0px'});
+  if(!moreObs) moreObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) setTimeout(loadMoreJourneys,900) },{rootMargin:'0px 0px 40px 0px'});
   moreObs.disconnect(); moreObs.observe(sen);
   // séparateurs de jour (quand la liste passe au lendemain)
   box.querySelectorAll('.day-sep').forEach(n=>n.remove());
@@ -804,7 +804,7 @@ function renderJourneyList(){
 let curList=[], moreObs=null, moreBusy=false;
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
-  cards.forEach((c,i)=>{c.classList.remove('pop');void c.offsetWidth;c.style.animationDelay=(i*60)+'ms';c.classList.add('pop')});
+  cards.forEach((c,i)=>{c.classList.remove('pop');void c.offsetWidth;c.style.animationDelay=(i*140)+'ms';c.classList.add('pop')});
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
