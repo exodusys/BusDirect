@@ -725,6 +725,11 @@ function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.
 
 /* ========= Horaires ========= */
 let selFrom=null; // null = ma position
+// Désélection : la liste disparaît et son actualisation s'arrête
+function deselectTile(){
+  selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[];
+  renderTiles(); $('#jrHead').style.display='none'; $('#timeBar').style.display='none'; $('#journeys').innerHTML='';
+}
 // Position fraîche (pas de cache) avant de calculer la liste
 function freshPos(){
   return new Promise(res=>{
@@ -800,7 +805,7 @@ function bindTileDrag(t){
     if(wasArmed){
       if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u));
       else {t.classList.remove('from');renderTiles()}
-    }else if(!wasMoved) pickPair(null,fromD);   // simple appui court : depuis ma position
+    }else if(!wasMoved){ if(selDest&&(selDest.uid===fromD.uid||selFrom?.uid===fromD.uid)) deselectTile(); else pickPair(null,fromD) }   // appui court : sélection / désélection
   });
   t.addEventListener('pointercancel',()=>{const a=armed;reset();if(a){t.classList.remove('from');drawLink()}});
 }
@@ -837,6 +842,7 @@ async function loadJourneys(){
     const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
       prefetchColors(more); lastJourneys=more; renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
     try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
+    if(selDest!==reqDest||selFrom!==reqFrom) return;   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     lastJourneys=data; loadedFor=pairKey;
