@@ -111,13 +111,18 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
 .time-bar input.custom{color:var(--accent)}
 #nowBtn.on{background:var(--accent);color:#fff}
+.load-more{display:flex;justify-content:center;align-items:center;gap:5px;height:56px;opacity:.9}
+.load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.15;animation:lm 1s ease-in-out infinite}
+.load-more i:nth-child(2){animation-delay:.12s}.load-more i:nth-child(3){animation-delay:.24s}.load-more i:nth-child(4){animation-delay:.36s}
+@keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(6px)}}
+.day-sep{font-size:13px;font-weight:600;color:var(--muted);margin:14px 6px 8px;text-transform:capitalize}
 .pull-more{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0 22px;color:var(--muted);font-size:12.5px;font-weight:600;--p:0}
 .pull-more .pm-ic{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:17px;font-weight:800;
   background:rgba(127,127,127,.16);transform:scale(calc(.8 + var(--p)*.35)) rotate(calc(var(--p)*180deg));transition:transform .15s,background .2s,color .2s}
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
-.jr.pop{animation:popIn .5s cubic-bezier(.2,1.3,.4,1) both}
-@keyframes popIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+.jr.pop{animation:popIn .45s ease-out both}
+@keyframes popIn{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -766,7 +771,7 @@ function renderJourneyList(){
   const box=$('#journeys');
   lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>(planTime?+planTime:Date.now())-60000});
   const list=lastJourneys.slice(0,shown);
-  box.querySelectorAll(':scope > :not(.jr)').forEach(n=>n.remove()); // spinner / message / bouton
+  box.querySelectorAll(':scope > :not(.jr):not(.day-sep)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
@@ -782,43 +787,24 @@ function renderJourneyList(){
     prev=el;
   });
   existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
-  // Bas de liste : tirer vers le haut (rebond) pour afficher 5 trajets de plus
-  const sen=document.createElement('div'); sen.id='more'; sen.className='pull-more';
-  sen.innerHTML='<div class="pm-ic">↑</div><span>Tire pour voir 5 trajets de plus</span>'; box.appendChild(sen);
+  // Bas de liste : animation de chargement, la suite arrive automatiquement en arrivant en bas
+  const sen=document.createElement('div'); sen.id='more'; sen.className='load-more';
+  sen.innerHTML='<i></i><i></i><i></i><i></i>'; box.appendChild(sen);
+  if(!moreObs) moreObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) setTimeout(loadMoreJourneys,350) },{rootMargin:'0px 0px 40px 0px'});
+  moreObs.disconnect(); moreObs.observe(sen);
+  // séparateurs de jour (quand la liste passe au lendemain)
+  box.querySelectorAll('.day-sep').forEach(n=>n.remove());
+  let lastDay=new Date().toDateString();
+  box.querySelectorAll(':scope > .jr').forEach(el=>{const it=list[+el.dataset.i]; if(!it) return; const d=new Date(firstTransit(it).startTime);
+    if(d.toDateString()!==lastDay){ lastDay=d.toDateString(); const sep=document.createElement('div'); sep.className='day-sep';
+      sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) }});
   curList=list;
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
 let curList=[], moreObs=null, moreBusy=false;
-/* Effet élastique en bas de page */
-let pullY=0, pullStart=null, pullOn=false;
-const atBottom=()=>window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-2;
-function pullSet(d){
-  const box=$('#journeys'), sen=$('#more'); if(!box||!sen) return;
-  pullY=d; const r=Math.min(1,d/80);
-  box.style.transform=d?`translateY(${-d}px)`:''; box.style.transition=d?'none':'';
-  sen.style.setProperty('--p',r); sen.classList.toggle('ready',r>=1);
-  sen.querySelector('span').textContent=r>=1?'Relâche pour afficher la suite':'Tire pour voir 5 trajets de plus';
-}
-document.addEventListener('touchstart',e=>{ if(!$('#v-horaires').classList.contains('active')||!$('#more')||moreBusy) return;
-  pullStart=atBottom()?e.touches[0].clientY:null; pullOn=false },{passive:true});
-document.addEventListener('touchmove',e=>{ if(pullStart==null) return;
-  const dy=pullStart-e.touches[0].clientY;
-  if(dy>0&&atBottom()){ pullOn=true; pullSet(Math.min(140,dy*0.45)) } else if(pullOn) pullSet(0) },{passive:true});
-document.addEventListener('touchend',()=>{ if(pullStart==null) return; pullStart=null;
-  const go=pullY>=80, box=$('#journeys');
-  if(box){ box.style.transition='transform .45s cubic-bezier(.2,1.4,.4,1)'; box.style.transform='' }   // rebond
-  pullY=0; const sen=$('#more'); if(sen){sen.style.setProperty('--p',0);sen.classList.remove('ready')}
-  if(go){ if(navigator.vibrate) navigator.vibrate(12); loadMoreJourneys() }
-});
-// Ordinateur : molette en bas de page
-let wheelAcc=0,wheelT=null;
-addEventListener('wheel',e=>{ if(!$('#v-horaires').classList.contains('active')||!$('#more')||!atBottom()||e.deltaY<=0) return;
-  wheelAcc+=e.deltaY; pullSet(Math.min(100,wheelAcc*0.3)); clearTimeout(wheelT);
-  wheelT=setTimeout(()=>{ const go=wheelAcc*0.3>=80; wheelAcc=0; const b=$('#journeys'); if(b){b.style.transition='transform .45s cubic-bezier(.2,1.4,.4,1)';b.style.transform=''} pullSet(0); if(go) loadMoreJourneys() },160) },{passive:true});
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
   cards.forEach((c,i)=>{c.classList.remove('pop');void c.offsetWidth;c.style.animationDelay=(i*60)+'ms';c.classList.add('pop')});
-  setTimeout(()=>cards[0]?.scrollIntoView({behavior:'smooth',block:'nearest'}),80);
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
