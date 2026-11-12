@@ -194,6 +194,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .pick.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(227,6,19,.25)}
 .pick{position:relative;overflow:visible}
 .sstat{font-size:12px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px}
+.sstat{flex-wrap:wrap}
+.perm-help{flex-basis:100%;font-size:12px;line-height:1.4;margin-top:6px;padding:8px 10px;border-radius:10px;background:rgba(255,59,48,.12);color:var(--text)}
 .sdot{width:8px;height:8px;border-radius:50%;flex:none;background:#8e8e93}
 .sdot.ok{background:#34c759;box-shadow:0 0 0 3px rgba(52,199,89,.25);animation:pulse 1.6s infinite}
 .sdot.warn{background:#ff9f0a}.sdot.bad{background:#ff3b30}
@@ -417,23 +419,57 @@ function motionListen(on){
   removeEventListener('deviceorientationabsolute',onMotionStatus);removeEventListener('deviceorientation',onMotionStatus);
   if(on){addEventListener('deviceorientationabsolute',onMotionStatus);addEventListener('deviceorientation',onMotionStatus)}
 }
+// Réactivation : on redemande toujours l'autorisation au système
+function askGeo(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res('unsupported');
+    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};res('granted')},
+      e=>res(e.code===1?'denied':'error'),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
+  });
+}
 async function setGeo(on){
-  S.settings.geoOn=on; save();
-  if(on){ GEO.resumeAll(); locate(true) } else { GEO.pauseAll(); pos=null; $('#locLabel').textContent='📍 Désactivée'; SENS.geo.acc=null }
+  if(on){
+    SENS.geo.err=null; $('#geoStat').innerHTML=dotHTML('warn','Demande d\'autorisation…');
+    const r=await askGeo();
+    if(r==='denied'){
+      SENS.geo.err='refusée'; S.settings.geoOn=false; save(); renderSensors();
+      showPermHelp('localisation'); return;
+    }
+    S.settings.geoOn=true; save(); GEO.resumeAll();
+    $('#locLabel').textContent='📍 '+nearestRegion().name; renderSMS(); if(selDest&&!selFrom) loadJourneys();
+    toast(r==='granted'?'Localisation activée':'Localisation activée, signal en attente');
+  }else{ S.settings.geoOn=false; save(); GEO.pauseAll(); pos=null; $('#locLabel').textContent='📍 Désactivée'; SENS.geo.acc=null }
   renderSensors();
 }
 async function setMotion(on){
-  if(on&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
-    try{SENS.mot.perm=await DeviceOrientationEvent.requestPermission()}catch{SENS.mot.perm='denied'}
-    if(SENS.mot.perm!=='granted'){toast('Accès au mouvement refusé');on=false}
+  if(on){
+    SENS.mot.perm=null;
+    if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
+      try{SENS.mot.perm=await DeviceOrientationEvent.requestPermission()}catch{SENS.mot.perm='denied'}
+      if(SENS.mot.perm!=='granted'){S.settings.motionOn=false;save();motionListen(false);renderSensors();showPermHelp('mouvement');return}
+    }else SENS.mot.perm='granted';
+    toast('Mouvement et orientation activés');
   }
   S.settings.motionOn=on; save(); motionListen(on);
-  if(!on&&typeof stopNav==='function'&&navOn){heading=null}
+  if(!on&&typeof navOn!=='undefined'&&navOn){heading=null}
   renderSensors();
+}
+// Si le système ne repropose plus la fenêtre (refus mémorisé), on explique comment débloquer
+function showPermHelp(kind){
+  const ios=/iPhone|iPad/.test(navigator.userAgent);
+  const msg=kind==='localisation'
+    ? (ios?'Réglages › Confidentialité › Service de localisation › Safari (ou BusDirect) › « Lorsque l\'app est active », puis recharge la page.'
+          :'Clique sur le cadenas dans la barre d\'adresse › Localisation › Autoriser, puis recharge la page.')
+    : (ios?'Ferme et rouvre l\'app, puis réactive l\'interrupteur. Si rien ne s\'affiche : Réglages › Safari › Réinitialiser les autorisations (ou Avancé › Données de sites).'
+          :'Autorise les capteurs de mouvement dans les paramètres du site, puis recharge la page.');
+  const el=$('#'+(kind==='localisation'?'geoStat':'motStat'));
+  el.innerHTML=dotHTML('bad',`Accès refusé`)+`<div class="perm-help">${msg}<button class="btn sm" style="margin-top:6px" onclick="${kind==='localisation'?'setGeo(true)':'setMotion(true)'}">Réessayer</button></div>`;
+  el._help=Date.now();
 }
 function dotHTML(c,txt){return `<span class="sdot ${c}"></span>${txt}`}
 async function renderSensors(){
-  const g=$('#geoStat'), m=$('#motStat'); if(!g) return;
+  const g0=$('#geoStat'), m0=$('#motStat'); if(!g0) return;
+  const g=g0._help&&Date.now()-g0._help<15000?{set innerHTML(v){}}:g0, m=m0._help&&Date.now()-m0._help<15000?{set innerHTML(v){}}:m0;
   $('#geoOn').checked=S.settings.geoOn!==false; $('#motOn').checked=S.settings.motionOn!==false;
   let perm=null; try{perm=(await navigator.permissions?.query({name:'geolocation'}))?.state}catch{}
   if(!navigator.geolocation) g.innerHTML=dotHTML('off','Non supportée par cet appareil');
