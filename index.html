@@ -211,7 +211,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
 #mapView.open{display:block}
 #map{position:absolute;inset:0}
-[data-theme="dark"] #map .maplibregl-canvas{filter:brightness(1.45) contrast(.92) saturate(1.1)}
 .map-bar{position:absolute;z-index:5;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
 .map-bar .t{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .map-bar .t small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
@@ -343,6 +342,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
   </div>
   <div class="map-ctrl glass">
+    <button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button>
     <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
     <button class="map-btn" onclick="mapFit()">⤢</button>
   </div>
@@ -913,6 +913,13 @@ $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySetting
 function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
 /* ========= Carte OpenFreeMap (MapLibre) ========= */
+let mapDark=null; // null = suit le thème de l'app
+const mapStyleUrl=()=>`https://tiles.openfreemap.org/styles/${mapDark?'fiord':'liberty'}`;
+async function toggleMapTheme(){
+  mapDark=!mapDark; $('#btnTheme').textContent=mapDark?'☀️':'🌙';
+  if(!mlMap) return; mlMap.setStyle(mapStyleUrl());
+  await new Promise(r=>mlMap.once('style.load',r)); if(mapIt) drawItinerary(mapIt);
+}
 let is3D=false; // la marche démarre en 2D
 function toggle3D(){is3D=!is3D;$('#btn3d').textContent=is3D?'2D':'3D';if(mlMap)mlMap.easeTo({pitch:is3D?55:0,duration:500})}
 let mlMap=null, mapIt=null, vehMk=null, meMk=null, navOn=false, heading=null, mapTimers=[], walkGeo=null, boardStop=null;
@@ -954,13 +961,14 @@ async function openMap(it){
   $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
   $('#mapSub').textContent=`${hm(it.startTime)} → ${hm(it.endTime)} · ${fmtDur(it.duration)}`;
   try{await loadMapLib()}catch{toast('Impossible de charger la carte');return}
-  const dark=document.documentElement.dataset.theme==='dark';
-  const style=`https://tiles.openfreemap.org/styles/${dark?'dark':'liberty'}`;
+  if(mapDark===null) mapDark=document.documentElement.dataset.theme==='dark';
+  $('#btnTheme').textContent=mapDark?'☀️':'🌙';
+  const style=mapStyleUrl();
   if(!mlMap){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
     mlMap.on('dragstart',()=>{ if(navOn) $('#walkBtn').textContent='◎ Recentrer' });
     await new Promise(r=>mlMap.once('load',r));
-  }else{ mlMap.setStyle(style); await new Promise(r=>mlMap.once('styledata',r)); mlMap.resize() }
+  }else{ mlMap.setStyle(style); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
   drawItinerary(it);
   mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
@@ -981,11 +989,34 @@ function drawItinerary(it){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
   }
-  document.querySelectorAll('.stop-mk').forEach(m=>m.remove());
-  it.legs.filter(l=>l.mode!=='WALK').forEach(l=>{
-    [l.from,l.to].forEach((p,ix)=>{const el=document.createElement('div');el.className='stop-m stop-mk';el.style.borderColor=lineColor(l)[0];
-      new maplibregl.Marker({element:el}).setLngLat([p.lon,p.lat]).setPopup(new maplibregl.Popup({offset:12}).setHTML(`<b>${esc(p.name)}</b>${p.track?'<br>Quai '+esc(p.track):''}<br>${ix?'Arrivée':'Départ'} ${hm(ix?l.endTime:l.startTime)}`)).addTo(mlMap)})
+  // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
+  const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
+  const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED/.test(l.mode);
+  const pts=[], key=new Set();
+  const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+props.major;if(key.has(k))return;key.add(k);
+    pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[p.lon,p.lat]}})};
+  transit.forEach((l,i)=>{
+    const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
+    const role=i===0?'Départ':'Correspondance';
+    add(l.from,{major:1,color:col,name:l.from.name,sub:`${role} ${hm(l.startTime)}${l.from.track?' · '+lab+' '+l.from.track:''}`});
+    (l.intermediateStops||[]).forEach(st=>add(st,{major:0,color:col,name:st.name,sub:''}));
+    const last=i===transit.length-1;
+    add(l.to,{major:1,color:col,name:l.to.name,sub:`${last?'Arrivée':'Descente'} ${hm(l.endTime)}${l.to.track?' · '+lab+' '+l.to.track:''}`});
   });
+  const fc={type:'FeatureCollection',features:pts};
+  if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
+  else{
+    mlMap.addSource('stops',{type:'geojson',data:fc});
+    mlMap.addLayer({id:'stops-minor',type:'circle',source:'stops',filter:['==','major',0],paint:{'circle-radius':4,'circle-color':'#fff','circle-stroke-color':['get','color'],'circle-stroke-width':2.5}});
+    mlMap.addLayer({id:'stops-major',type:'circle',source:'stops',filter:['==','major',1],paint:{'circle-radius':8,'circle-color':'#fff','circle-stroke-color':['get','color'],'circle-stroke-width':4}});
+    mlMap.addLayer({id:'stops-minor-lbl',type:'symbol',source:'stops',filter:['==','major',0],minzoom:13,
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':11.5,'text-anchor':'left','text-offset':[0.8,0],'text-optional':true},
+      paint:{'text-color':mapDark?'#e8ecf4':'#2a2f3a','text-halo-color':mapDark?'#1d2433':'#ffffff','text-halo-width':1.6}});
+    mlMap.addLayer({id:'stops-major-lbl',type:'symbol',source:'stops',filter:['==','major',1],
+      layout:{'text-field':['format',['get','name'],{'font-scale':1.05,'text-font':['literal',['Noto Sans Bold']]},'\n',{},['get','sub'],{'font-scale':0.85,'text-font':['literal',['Noto Sans Regular']]}],
+        'text-font':['Noto Sans Regular'],'text-size':13,'text-anchor':'left','text-offset':[1.1,0],'text-justify':'left','text-allow-overlap':true},
+      paint:{'text-color':mapDark?'#ffffff':'#111827','text-halo-color':mapDark?'#1d2433':'#ffffff','text-halo-width':2}});
+  }
 }
 function mapFit(){
   if(!mlMap||!mapIt) return;
