@@ -325,7 +325,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <h3>Données</h3>
     <div class="card glass">
       <div class="set"><span>Horaires & positions</span><span class="muted">Transitous</span></div>
-      <div class="set"><span>Couleurs des lignes</span><button class="btn ghost sm" onclick="resetLineColors()">↻ Rafraîchir</button></div>
       <div class="set"><span>Réinitialiser</span><button class="btn ghost sm" onclick="resetAll()">Effacer</button></div>
     </div>
     <input type="file" id="fileIn" accept="image/*" hidden>
@@ -719,67 +718,12 @@ let curList=[];
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
-/* Vraies couleurs : base ouverte Traewelling/line-colors (utilisée aussi par Transitous) */
-const LC={byKey:{},byLine:{},ready:false};
-const SBB_CAT={IC:['#eb0000','#fff'],ICE:['#eb0000','#fff'],IR:['#eb0000','#fff'],EC:['#eb0000','#fff'],EN:['#eb0000','#fff'],
-  TGV:['#eb0000','#fff'],RJX:['#eb0000','#fff'],NJ:['#eb0000','#fff'],PE:['#eb0000','#fff'],RE:['#fff','#eb0000','#eb0000'],
-  R:['#fff','#000','#000'],S:['#fff','#000','#000'],SN:['#000','#ffde00'],IRE:['#fff','#eb0000','#eb0000']};
-const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
-// Toutes les bases de Traewelling/line-colors, en cache IndexedDB 7 jours
-const LC_FILES=['line-colors-CH.csv','line-colors.csv','line-colors-AT.csv','line-colors-LU.csv','line-colors-SE.csv','line-colors-FI.csv',
-  'line-colors-FR.csv','line-colors-NL.csv','line-colors-BE.csv','line-colors-IT.csv','line-colors-ES.csv','line-colors-PL.csv','line-colors-CZ.csv',
-  'line-colors-DK.csv','line-colors-NO.csv','line-colors-UK.csv','line-colors-GB.csv','line-colors-HU.csv','line-colors-PT.csv','line-colors-IE.csv'];
-const idb={db:null,
-  open(){return this.db?Promise.resolve(this.db):new Promise((ok,ko)=>{try{const r=indexedDB.open('busdirect',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(this.db=r.result);r.onerror=ko}catch(e){ko(e)}})},
-  async get(k){const db=await this.open();return new Promise(ok=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})},
-  async set(k,v){const db=await this.open();return new Promise(ok=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok})},
-  async del(k){const db=await this.open();return new Promise(ok=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=ok;t.onerror=ok})}};
-function csvRows(txt){const out=[];let row=[],f='',q=false;
-  for(let i=0;i<txt.length;i++){const c=txt[i];
-    if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
-    else if(c==='"')q=true; else if(c===','){row.push(f);f=''} else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''} else f+=c}
-  if(f||row.length){row.push(f);out.push(row)} return out}
-function ingestCSV(txt){
-  const rows=csvRows(txt); if(rows.length<2) return 0;
-  const h=rows[0].map(x=>x.trim().toLowerCase()), ix=n=>h.findIndex(x=>x.startsWith(n.toLowerCase()));
-  const iL=ix('lineName'),iB=ix('backgroundColor'),iT=ix('textColor'),iBo=ix('borderColor'),iS=ix('shape'),iA=ix('delfiAgencyName'),iI=ix('delfiAgencyID'),iO=ix('shortOperatorName'),iH=ix('hafasOperatorCode');
-  let n=0;
-  for(let r=1;r<rows.length;r++){const c=rows[r]; if(!c[iL]||!c[iB]) continue;
-    const v=[c[iB],c[iT]||'#fff',iBo>=0?c[iBo]||'':'',iS>=0?c[iS]||'':''], ln=norm(c[iL]);
-    [c[iA],c[iI],c[iO],c[iH]].filter(Boolean).forEach(a=>LC.byKey[norm(a)+'|'+ln]=v);
-    (LC.byLine[ln]=LC.byLine[ln]||[]).push(v); n++}
-  return n}
-let lcT=null;
-function lcRefreshUI(){clearTimeout(lcT);lcT=setTimeout(()=>{
-  if(lastJourneys.length){document.querySelectorAll('#journeys > .jr').forEach(el=>el.remove());renderJourneyList()}
-  if($('#v-suivis').classList.contains('active')) renderTracked();
-  if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
-},300)}
-async function loadLineColors(force){
-  let cache=null; if(!force) try{cache=await idb.get('lc')}catch{}
-  if(cache&&Date.now()-cache.t<7*864e5){cache.files.forEach(ingestCSV);LC.ready=true;return}
-  const got=[];
-  await Promise.all(LC_FILES.map(async f=>{try{const r=await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f,{cache:force?'reload':'default'});if(!r.ok)return;
-    const txt=await r.text(); if(ingestCSV(txt)){got.push(txt);lcRefreshUI()}}catch{}}));
-  LC.ready=true; if(got.length) try{await idb.set('lc',{t:Date.now(),files:got})}catch{}
+function lineColor(l){
+  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
+  return MODE_COLOR[l.mode]||['#636e80','#fff'];
 }
-async function resetLineColors(){
-  LC.byKey={};LC.byLine={};LC.ready=false;try{await idb.del('lc')}catch{}
-  toast('Couleurs en cours de mise à jour…'); await loadLineColors(true); lcRefreshUI();
-}
-function lineStyle(l){
-  const name=l.routeShortName||l.displayName||'', ln=norm(name);
-  for(const a of [l.agencyName,l.agencyId]){const v=a&&LC.byKey[norm(a)+'|'+ln]; if(v) return v}
-  if(l.routeColor&&!/^(ffffff|000000)$/i.test(l.routeColor)) return ['#'+l.routeColor,'#'+(l.routeTextColor||'ffffff'),'',''];
-  const cat=(name.match(/^[A-Z]+/)||[''])[0];
-  if(/RAIL|LONG|SUBURBAN|NIGHT/.test(l.mode)&&SBB_CAT[cat]){const s=SBB_CAT[cat];return [s[0],s[1],s[2]||'','rectangle']}
-  const cand=LC.byLine[ln]; if(cand&&cand.length===1) return cand[0];
-  const m=MODE_COLOR[l.mode]||['#636e80','#fff']; return [m[0],m[1],'',''];
-}
-function lineColor(l){const s=lineStyle(l);return [s[0]==='#fff'||/^#?fff(fff)?$/i.test(s[0])?(s[2]||s[1]):s[0],s[1]]}
-function badge(l,size){const [bg,fg,bo,sh]=lineStyle(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
-  const rad=sh==='pill'?'99px':sh==='circle'?'50%':sh==='rectangle'?'3px':'';
-  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg};${bo?`box-shadow:inset 0 0 0 2px ${bo};`:''}${rad?`border-radius:${rad};`:''}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
+  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
 setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
@@ -1023,14 +967,14 @@ function darkFor(ly,prop,v){
   const conv=c=>{const o=parseColor(c); if(!o) return c; const L=rgb2hsl(o.r,o.g,o.b)[2], a=o.a;
     let out;
     if(/water|river|lake|ocean/.test(id)&&t!=='symbol') out=`rgb(44,58,79)`;
-    else if(t==='background'||(t==='fill'&&!/building/.test(id))) out=dkHsl(0.235+Math.max(0,0.96-L)*0.35);      // fond ≈ #3a3d47
-    else if(/building/.test(id)) out=prop==='fill-outline-color'?dkHsl(0.16):dkHsl(0.29);                         // bâtiments ≈ #474a54
-    else if(t==='line'&&/rail|transit|subway|tram|funicular/.test(id)) out=dkHsl(/hatch|dash/.test(id)?0.62:0.55,0.12); // voies ferrées bien visibles
-    else if(t==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track/.test(id)) out=dkHsl(0.42);              // trottoirs / chemins
+    else if(t==='background'||(t==='fill'&&!/building/.test(id))) out=dkHsl(0.235+Math.max(0,0.96-L)*0.35);
+    else if(/building/.test(id)) out=prop==='fill-outline-color'?dkHsl(0.16):dkHsl(0.29);
+    else if(t==='line'&&/rail|transit|subway|tram|funicular/.test(id)) out=dkHsl(/hatch|dash/.test(id)?0.62:0.55,0.12);
+    else if(t==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track/.test(id)) out=dkHsl(0.42);
     else if(t==='line'&&/casing/.test(id)) out=dkHsl(0.30);
-    else if(t==='line'&&/road|street|highway|motorway|trunk|primary|secondary|tertiary|minor|service|bridge|tunnel/.test(id)) out=dkHsl(0.36+L*0.04); // routes ≈ #5a5d68
+    else if(t==='line'&&/road|street|highway|motorway|trunk|primary|secondary|tertiary|minor|service|bridge|tunnel/.test(id)) out=dkHsl(0.36+L*0.04);
     else if(t==='line') out=dkHsl(0.30+L*0.12);
-    else if(t==='symbol') out=prop==='text-halo-color'||prop==='icon-halo-color'?dkHsl(0.22):dkHsl(0.92-L*0.25,0.08); // textes clairs, halo sombre
+    else if(t==='symbol') out=prop==='text-halo-color'||prop==='icon-halo-color'?dkHsl(0.22):dkHsl(0.92-L*0.25,0.08);
     else out=dkHsl(0.30+(1-L)*0.3);
     return a<1?out.replace('rgb(','rgba(').replace(')',`,${a})`):out;
   };
@@ -1291,8 +1235,6 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
-try{localStorage.removeItem('bd_osmc')}catch{}
-loadLineColors().then(lcRefreshUI);
 applySettings(); if(S.settings.motionOn!==false && !(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function')) motionListen(true);
 renderDests(); renderTiles(); renderSMS(); locate();
 </script>
