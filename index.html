@@ -338,6 +338,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div class="card glass"><div class="picker" id="logoPicker"></div></div>
     <h3>Fond d'écran</h3>
     <div class="card glass"><div class="picker" id="wallPicker"></div></div>
+    <h3>Tickets</h3>
+    <div class="card glass">
+      <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets dans la barre du bas</div></div>
+        <label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div>
+    </div>
     <h3>Capteurs</h3>
     <div class="card glass">
       <div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div>
@@ -359,7 +364,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button>
   <button data-v="suivis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
   <button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button>
-  <button data-v="tickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
+  <button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
 
@@ -515,6 +520,16 @@ async function renderSensors(){
   else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'écran pour réactiver':'En attente de données…');
 }
 setInterval(()=>{if($('#v-parametres').classList.contains('active'))renderSensors()},1000);
+function setSmsTab(on){
+  S.settings.smsOn=on; save(); applySmsTab();
+  toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
+}
+function applySmsTab(){
+  const on=S.settings.smsOn!==false, tab=$('#tabTickets');
+  if(tab) tab.style.display=on?'':'none';
+  if($('#smsOn')) $('#smsOn').checked=on;
+  if(!on&&$('#v-tickets').classList.contains('active')) document.querySelector('#tabs button[data-v="horaires"]').click();
+}
 function locate(force){
   if(!navigator.geolocation){$('#locLabel').textContent='📍 Indisponible';return}
   if(!GEO.on){$('#locLabel').textContent='📍 Désactivée';return}
@@ -871,7 +886,7 @@ function journeyHTML(it,i,tracked){
       <div class="cd">${otherDay?`<span class="cd-date">${esc(fmtDay(depAt))}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
     </div>
     <div class="jr-times">
-      <div class="tt"><b>${hm(depAt)}</b><small>${inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
+      <div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
       <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
       <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
@@ -1466,6 +1481,7 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
+applySmsTab();
 applySettings();
 /* Mouvement & orientation : l'état choisi est mémorisé et réappliqué à chaque ouverture.
    Sur iPhone, Safari exige un geste de l'utilisateur pour réactiver le capteur : on le fait au premier toucher, sans rien demander d'autre. */
