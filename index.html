@@ -211,7 +211,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
 #mapView.open{display:block}
 #map{position:absolute;inset:0;background:#f2efe9;transition:opacity .25s}
-#map.dk{background:#1a1a1a}
+#map.dk{background:#3a3d47}
 #map.loading .maplibregl-canvas{opacity:0}
 #map .maplibregl-canvas{transition:opacity .3s}
 .map-bar{position:absolute;z-index:5;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
@@ -995,20 +995,42 @@ async function buildStyle(){
   if(!baseStyle){ baseStyle=await (await fetch('https://tiles.openfreemap.org/styles/liberty')).json() }
   const st=JSON.parse(JSON.stringify(baseStyle));
   st.layers.forEach(ly=>{
-    if(mapDark) for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) ly.paint[k]=mapColor(v);
+    if(mapDark) for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) ly.paint[k]=darkFor(ly,k,v);
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
     if(ly.paint&&ly.paint['fill-pattern']){ // pas de hachures (gares, voies, zones…)
-      delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?'#2b2b2b':'#e9e5df'; ly.paint['fill-opacity']=0.6;
+      delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?'#41444e':'#e9e5df'; ly.paint['fill-opacity']=mapDark?1:0.6;
     }
   });
   return st;
+}
+/* Palette sombre bleu-gris (référence : capture de l'utilisateur) */
+const DK={hue:228/360,sat:0.10};
+function dkHsl(l,sat){const [r,g,b]=hsl2rgb(DK.hue,sat??DK.sat,Math.max(0,Math.min(1,l)));return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`}
+function darkFor(ly,prop,v){
+  const id=ly.id.toLowerCase(), t=ly.type;
+  const conv=c=>{const o=parseColor(c); if(!o) return c; const L=rgb2hsl(o.r,o.g,o.b)[2], a=o.a;
+    let out;
+    if(/water|river|lake|ocean/.test(id)&&t!=='symbol') out=`rgb(44,58,79)`;
+    else if(t==='background'||(t==='fill'&&!/building/.test(id))) out=dkHsl(0.235+Math.max(0,0.96-L)*0.35);      // fond ≈ #3a3d47
+    else if(/building/.test(id)) out=prop==='fill-outline-color'?dkHsl(0.16):dkHsl(0.29);                         // bâtiments ≈ #474a54
+    else if(t==='line'&&/rail|transit|subway|tram|funicular/.test(id)) out=dkHsl(/hatch|dash/.test(id)?0.62:0.55,0.12); // voies ferrées bien visibles
+    else if(t==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track/.test(id)) out=dkHsl(0.42);              // trottoirs / chemins
+    else if(t==='line'&&/casing/.test(id)) out=dkHsl(0.30);
+    else if(t==='line'&&/road|street|highway|motorway|trunk|primary|secondary|tertiary|minor|service|bridge|tunnel/.test(id)) out=dkHsl(0.36+L*0.04); // routes ≈ #5a5d68
+    else if(t==='line') out=dkHsl(0.30+L*0.12);
+    else if(t==='symbol') out=prop==='text-halo-color'||prop==='icon-halo-color'?dkHsl(0.22):dkHsl(0.92-L*0.25,0.08); // textes clairs, halo sombre
+    else out=dkHsl(0.30+(1-L)*0.3);
+    return a<1?out.replace('rgb(','rgba(').replace(')',`,${a})`):out;
+  };
+  const walk=x=>typeof x==='string'?conv(x):Array.isArray(x)?x.map(walk):x;
+  return walk(v);
 }
 function applyMapDark(){
   if(!mlMap||!mapDark) return;
   for(const ly of mlMap.getStyle().layers){
     if(/^(route|walkto|stops|bld3d)/.test(ly.id)) continue;
-    for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) try{mlMap.setPaintProperty(ly.id,k,mapColor(v))}catch{}
+    for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) try{mlMap.setPaintProperty(ly.id,k,darkFor(ly,k,v))}catch{}
   }
 }
 /* --- Bâtiments 3D --- */
