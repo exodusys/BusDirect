@@ -193,6 +193,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .pick{aspect-ratio:1;border-radius:16px;cursor:pointer;display:grid;place-items:center;font-size:24px;color:#fff;border:2px solid transparent;background-size:cover;background-position:center;overflow:hidden}
 .pick.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(227,6,19,.25)}
 .pick{position:relative;overflow:visible}
+.sstat{font-size:12px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:6px}
+.sdot{width:8px;height:8px;border-radius:50%;flex:none;background:#8e8e93}
+.sdot.ok{background:#34c759;box-shadow:0 0 0 3px rgba(52,199,89,.25);animation:pulse 1.6s infinite}
+.sdot.warn{background:#ff9f0a}.sdot.bad{background:#ff3b30}
+.compass{display:inline-block;color:var(--accent);transform-origin:50% 50%;transition:transform .3s;margin-left:2px}
 .pick-x{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:2px solid var(--bg);background:#ff3b30;color:#fff;
   font-size:11px;font-weight:800;line-height:1;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);z-index:2}
 .pick.add{background:rgba(127,127,127,.18);color:var(--text)}
@@ -305,6 +310,13 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div class="card glass"><div class="picker" id="logoPicker"></div></div>
     <h3>Fond d'écran</h3>
     <div class="card glass"><div class="picker" id="wallPicker"></div></div>
+    <h3>Capteurs</h3>
+    <div class="card glass">
+      <div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div>
+        <label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div>
+      <div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div>
+        <label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div>
+    </div>
     <h3>Données</h3>
     <div class="card glass">
       <div class="set"><span>Horaires & positions</span><span class="muted">Transitous</span></div>
@@ -383,9 +395,65 @@ $('#tabs').addEventListener('click',e=>{
 });
 
 /* ========= Geolocation ========= */
+/* ========= Services capteurs (activables dans Paramètres) ========= */
+const SENS={geo:{state:'—',acc:null,t:0,err:null},mot:{heading:null,t:0,perm:null}};
+const geoWatches=new Map(); let geoWid=0;
+const geoWrap=ok=>p=>{SENS.geo.acc=Math.round(p.coords.accuracy);SENS.geo.t=Date.now();SENS.geo.err=null;renderSensors();ok(p)};
+const geoErr=ko=>e=>{SENS.geo.err=e&&e.code===1?'refusée':'indisponible';renderSensors();ko&&ko(e)};
+const GEO={
+  get on(){return S.settings.geoOn!==false&&!!navigator.geolocation},
+  getCurrentPosition(ok,ko,o){ if(!this.on){ko&&ko({code:0});return} navigator.geolocation.getCurrentPosition(geoWrap(ok),geoErr(ko),o) },
+  watchPosition(ok,ko,o){ const id=++geoWid; const w={ok,ko,o,nid:null}; geoWatches.set(id,w);
+    if(this.on) w.nid=navigator.geolocation.watchPosition(geoWrap(ok),geoErr(ko),o); return id },
+  clearWatch(id){ const w=geoWatches.get(id); if(w&&w.nid!=null) navigator.geolocation.clearWatch(w.nid); geoWatches.delete(id) },
+  pauseAll(){ geoWatches.forEach(w=>{if(w.nid!=null){navigator.geolocation.clearWatch(w.nid);w.nid=null}}) },
+  resumeAll(){ geoWatches.forEach(w=>{if(w.nid==null) w.nid=navigator.geolocation.watchPosition(geoWrap(w.ok),geoErr(w.ko),w.o)}) }
+};
+function onMotionStatus(e){
+  const h=e.webkitCompassHeading!=null?e.webkitCompassHeading:(e.absolute&&e.alpha!=null?360-e.alpha:(e.alpha!=null?360-e.alpha:null));
+  if(h!=null){SENS.mot.heading=Math.round(h)%360;SENS.mot.t=Date.now()}
+}
+function motionListen(on){
+  removeEventListener('deviceorientationabsolute',onMotionStatus);removeEventListener('deviceorientation',onMotionStatus);
+  if(on){addEventListener('deviceorientationabsolute',onMotionStatus);addEventListener('deviceorientation',onMotionStatus)}
+}
+async function setGeo(on){
+  S.settings.geoOn=on; save();
+  if(on){ GEO.resumeAll(); locate(true) } else { GEO.pauseAll(); pos=null; $('#locLabel').textContent='📍 Désactivée'; SENS.geo.acc=null }
+  renderSensors();
+}
+async function setMotion(on){
+  if(on&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
+    try{SENS.mot.perm=await DeviceOrientationEvent.requestPermission()}catch{SENS.mot.perm='denied'}
+    if(SENS.mot.perm!=='granted'){toast('Accès au mouvement refusé');on=false}
+  }
+  S.settings.motionOn=on; save(); motionListen(on);
+  if(!on&&typeof stopNav==='function'&&navOn){heading=null}
+  renderSensors();
+}
+function dotHTML(c,txt){return `<span class="sdot ${c}"></span>${txt}`}
+async function renderSensors(){
+  const g=$('#geoStat'), m=$('#motStat'); if(!g) return;
+  $('#geoOn').checked=S.settings.geoOn!==false; $('#motOn').checked=S.settings.motionOn!==false;
+  let perm=null; try{perm=(await navigator.permissions?.query({name:'geolocation'}))?.state}catch{}
+  if(!navigator.geolocation) g.innerHTML=dotHTML('off','Non supportée par cet appareil');
+  else if(S.settings.geoOn===false) g.innerHTML=dotHTML('off','Désactivée');
+  else if(SENS.geo.err==='refusée'||perm==='denied') g.innerHTML=dotHTML('bad','Refusée — autorise la localisation dans Réglages');
+  else if(SENS.geo.t&&Date.now()-SENS.geo.t<120000) g.innerHTML=dotHTML('ok',`Active · précision ±${SENS.geo.acc} m · il y a ${Math.round((Date.now()-SENS.geo.t)/1000)} s`);
+  else g.innerHTML=dotHTML('warn','En attente d\'un signal…');
+  const supported='DeviceOrientationEvent' in window;
+  if(!supported) m.innerHTML=dotHTML('off','Non supporté par cet appareil');
+  else if(S.settings.motionOn===false) m.innerHTML=dotHTML('off','Désactivé');
+  else if(SENS.mot.perm==='denied') m.innerHTML=dotHTML('bad','Refusé — réactive pour redemander l\'accès');
+  else if(SENS.mot.t&&Date.now()-SENS.mot.t<5000){const d=SENS.mot.heading,dir=['N','NE','E','SE','S','SO','O','NO'][Math.round(d/45)%8];
+    m.innerHTML=dotHTML('ok',`Actif · boussole ${d}° ${dir} <span class="compass" style="transform:rotate(${-d}deg)">➤</span>`)}
+  else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'interrupteur pour autoriser':'En attente de données…');
+}
+setInterval(()=>{if($('#v-parametres').classList.contains('active'))renderSensors()},1000);
 function locate(force){
   if(!navigator.geolocation){$('#locLabel').textContent='📍 Indisponible';return}
-  navigator.geolocation.getCurrentPosition(p=>{
+  if(!GEO.on){$('#locLabel').textContent='📍 Désactivée';return}
+  GEO.getCurrentPosition(p=>{
     pos={lat:p.coords.latitude,lon:p.coords.longitude};
     $('#locLabel').textContent='📍 '+nearestRegion().name;
     if(force) toast('Position mise à jour');
@@ -484,7 +552,7 @@ let selFrom=null; // null = ma position
 function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
-    navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
+    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
       ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
   });
 }
@@ -497,7 +565,7 @@ async function pickPair(from,to){
 }
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null;
-if(navigator.geolocation) navigator.geolocation.watchPosition(p=>{
+GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
@@ -890,7 +958,7 @@ function mapFit(){
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer';
   mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:is3D?55:0,bearing:0,duration:600});
 }
-function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){navigator.geolocation.clearWatch(meWatch);meWatch=null} }
+function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){GEO.clearWatch(meWatch);meWatch=null} }
 
 /* Position du véhicule : suivi Transitous (map/trips) sinon estimation sur l'horaire */
 async function updateVehicle(){
@@ -926,7 +994,7 @@ async function updateVehicle(){
 let meWatch=null;
 function startMeWatch(){
   if(!navigator.geolocation||meWatch!=null) return;
-  meWatch=navigator.geolocation.watchPosition(p=>{
+  meWatch=GEO.watchPosition(p=>{
     pos={lat:p.coords.latitude,lon:p.coords.longitude};
     if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>0.5&&heading==null) gpsHeading=p.coords.heading;
     onMyPos();
@@ -975,9 +1043,9 @@ function onOrient(e){
 async function toggleNav(){
   if(navOn&&$('#walkBtn').textContent.startsWith('◎')){$('#walkBtn').textContent='■ Arrêter';onMyPos();return}
   if(navOn){stopNav();mapFit();return}
-  try{ if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
+  try{ if(S.settings.motionOn!==false&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
-  addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient);
+  if(S.settings.motionOn!==false){ addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient) } else toast('Mouvement désactivé : orientation selon ta marche');
   is3D=false; $('#btn3d').textContent='3D';
   navOn=true; $('#walkBtn').textContent='■ Arrêter'; onMyPos();
 }
@@ -988,7 +1056,8 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
-applySettings(); renderDests(); renderTiles(); renderSMS(); locate();
+applySettings(); if(S.settings.motionOn!==false && !(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function')) motionListen(true);
+renderDests(); renderTiles(); renderSMS(); locate();
 </script>
 </body>
 </html>
