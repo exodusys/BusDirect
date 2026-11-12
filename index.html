@@ -151,6 +151,17 @@ nav button{position:relative}
 .info-body ul{margin:0;padding-left:18px}.info-body li{margin:4px 0}
 .cov{display:flex;flex-direction:column;padding:8px 0;border-bottom:1px solid var(--border)}
 .cov span{font-size:12.5px;color:var(--muted)}
+/* ===== Apparence classique : coins droits, barres collées aux bords ===== */
+body.classic{--radius:6px}
+body.classic header{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 10px) 16px 10px}
+body.classic nav{left:0;right:0;bottom:0;max-width:none;border-radius:0;border-width:1px 0 0;padding:6px 6px calc(var(--safe-b) + 6px)}
+body.classic nav button{border-radius:8px}
+body.classic main{padding-top:calc(var(--safe-t) + 74px)}
+body.classic .card,body.classic .jr,body.classic .tile,body.classic .search,body.classic .results,body.classic .time-bar,
+body.classic .info-sheet,body.classic .walk-card,body.classic .map-bar,body.classic .map-ctrl,body.classic .pick2,body.classic .alert,body.classic .al-d{border-radius:6px}
+body.classic .btn,body.classic .map-btn,body.classic .seg,body.classic .seg button,body.classic .pick2 .pv,body.classic .logo{border-radius:5px}
+body.classic .lb.main{border-radius:6px}body.classic .lb.mini{border-radius:4px}
+body.classic .quai{border-radius:3px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -379,6 +390,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div>
     <h3>Apparence</h3>
     <div class="card glass">
+      <div class="set"><span>Style</span>
+        <div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div>
       <div class="set"><span>Thème</span>
         <div class="seg" id="themeSeg">
           <button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button>
@@ -1280,6 +1293,8 @@ function applySettings(){
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
   else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
+  document.body.classList.toggle('classic',s.look==='classic');
+  document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
   $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
   renderPickers();
@@ -1314,6 +1329,7 @@ $('#fileIn').onchange=e=>{
     save();applySettings();e.target.value='';};img.src=rd.result};
   rd.readAsDataURL(f);
 };
+$('#styleSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.look=v;save();applySettings()}};
 $('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.theme=v;save();applySettings()}};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettings);
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
