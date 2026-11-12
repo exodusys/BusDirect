@@ -230,6 +230,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .me-m .cone{position:absolute;left:50%;bottom:50%;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:34px solid rgba(10,132,255,.35);
   transform:translateX(-50%);transform-origin:50% 100%;display:none}
 .me-m.dir .cone{display:block}
+.stair-m{display:flex;align-items:center;gap:1px;height:24px;padding:0 6px;border-radius:12px;background:#0a84ff;color:#fff;font:800 11px/1 -apple-system,system-ui,sans-serif;
+  box-shadow:0 0 0 2px #fff,0 3px 8px rgba(0,0,0,.35);cursor:pointer}
 .stop-m{width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 96px);transform:translateX(-50%) translateY(20px);opacity:0;
   padding:10px 16px;border-radius:16px;font-weight:600;font-size:14px;z-index:40;transition:.25s;pointer-events:none}
@@ -1146,7 +1148,33 @@ async function openMap(it){
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));
   startMeWatch();
 }
+/* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
+let stairMks={route:[],walk:[]};
+function stairPoints(legs){
+  const out=[];
+  legs.filter(l=>l.mode==='WALK').forEach(l=>(l.steps||[]).forEach(st=>{
+    const fl=st.fromLevel, tl=st.toLevel, dir=String(st.relativeDirection||'').toUpperCase();
+    const lvl=fl!=null&&tl!=null&&Number(fl)!==Number(tl);
+    const elev=/ELEVATOR/.test(dir), stairs=/STAIRS/.test(dir)||/steps|stairs/i.test(st.streetName||'');
+    if(!lvl&&!elev&&!stairs) return;
+    let p=null; if(st.polyline&&st.polyline.points){for(const pr of [st.polyline.precision,6,5,7].filter(Boolean)){const c=decodePoly(st.polyline.points,pr);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05){p=c[0];break}}}
+    if(!p) return;
+    const up=lvl?Number(tl)>Number(fl):null;
+    out.push({p,kind:elev?'elev':'stairs',up,txt:`${elev?'Ascenseur':'Escaliers'}${lvl?` ${up?'↑ montée':'↓ descente'} · niveau ${fl} → ${tl}`:''}`});
+  }));
+  return out;
+}
+function drawStairs(which,legs){
+  stairMks[which].forEach(m=>m.remove()); stairMks[which]=[];
+  if(!mlMap) return;
+  stairPoints(legs).forEach(s=>{
+    const el=document.createElement('div'); el.className='stair-m';
+    el.innerHTML=s.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${s.up===null?'':`<b>${s.up?'↑':'↓'}</b>`}`;
+    stairMks[which].push(new maplibregl.Marker({element:el}).setLngLat(s.p).setPopup(new maplibregl.Popup({offset:14}).setText(s.txt)).addTo(mlMap));
+  });
+}
 function drawItinerary(it){
+  drawStairs('route',it.legs);
   const feats=it.legs.map(l=>({type:'Feature',properties:{walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
   const src={type:'FeatureCollection',features:feats};
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
@@ -1266,7 +1294,7 @@ async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon 
       const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${stop.lat},${stop.lon}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
       if(!r.ok) continue; const d=await r.json();
       const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
-      if(w) return w.legs.flatMap(legCoords);
+      if(w){ drawStairs('walk',w.legs); return w.legs.flatMap(legCoords); }
       break;
     }
   }catch{}
