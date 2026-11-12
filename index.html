@@ -1028,7 +1028,7 @@ async function openMap(it){
   $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
   $('#mapSub').textContent=`${hm(it.startTime)} → ${hm(it.endTime)} · ${fmtDur(it.duration)}`;
   try{await loadMapLib()}catch{toast('Impossible de charger la carte');return}
-  if(mapDark===null) mapDark=document.documentElement.dataset.theme==='dark';
+  mapDark=document.documentElement.dataset.theme==='dark'; // la carte démarre toujours dans le thème de l'app
   $('#btnTheme').textContent=mapDark?'☀️':'🌙';
   const style=mapStyleUrl();
   if(!mlMap){
