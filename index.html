@@ -718,9 +718,13 @@ let curList=[];
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
+// Couleurs officielles fournies par Transitous (route_color / route_text_color des données GTFS)
+function hexText(bg){const n=parseInt(bg.slice(1),16);return ((n>>16&255)*299+(n>>8&255)*587+(n&255)*114)/1000>155?'#111':'#fff'}
 function lineColor(l){
-  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
-  return MODE_COLOR[l.mode]||['#636e80','#fff'];
+  const c=String(l.routeColor||'').replace('#','');
+  if(/^[0-9a-f]{6}$/i.test(c)){const bg='#'+c, t=String(l.routeTextColor||'').replace('#','');
+    return [bg, /^[0-9a-f]{6}$/i.test(t)&&t.toLowerCase()!==c.toLowerCase()?'#'+t:hexText(bg)]}
+  return MODE_COLOR[l.mode]||['#636e80','#fff'];   // pas de couleur dans les données → couleur par type
 }
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
