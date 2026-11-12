@@ -325,6 +325,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <h3>Données</h3>
     <div class="card glass">
       <div class="set"><span>Horaires & positions</span><span class="muted">Transitous</span></div>
+      <div class="set"><span>Couleurs des lignes</span><button class="btn ghost sm" onclick="resetLineColors()">↻ Rafraîchir</button></div>
       <div class="set"><span>Réinitialiser</span><button class="btn ghost sm" onclick="resetAll()">Effacer</button></div>
     </div>
     <input type="file" id="fileIn" accept="image/*" hidden>
@@ -752,6 +753,11 @@ async function osmFetch(){
     osmSave(); refreshColorsUI();
   }
   osmBusy=false; if(osmQueue.size) osmTimer=setTimeout(osmFetch,1500);
+}
+function resetLineColors(){
+  OSMC.m={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
+  try{localStorage.removeItem('bd_osmc')}catch{}
+  refreshColorsUI(); toast('Couleurs en cours de mise à jour…');
 }
 function cssColor(c){if(!c)return null;c=String(c).trim();if(/^[0-9a-f]{6}$/i.test(c))return '#'+c;return c}
 function textOn(c){const d=document.createElement('canvas').getContext('2d');d.fillStyle=c;const h=d.fillStyle;if(!/^#/.test(h))return '#fff';
