@@ -105,8 +105,9 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .al-t .lb{vertical-align:1px;margin:0 2px}
 .al-n{flex:none;font-weight:700;font-size:12px;background:rgba(127,127,127,.25);border-radius:8px;padding:1px 6px}
 .al-d{padding:10px 12px;border-radius:12px;background:rgba(255,159,10,.12);margin-bottom:8px}
-.tile{min-height:72px;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;z-index:1}
+.tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
+.tile.arming{transform:scale(.97);transition:transform .4s ease}
 .tile.from{outline:2.5px dashed var(--accent);outline-offset:-1px}
 .tile.target{transform:scale(1.04);outline:2.5px solid var(--accent)}
 svg.link{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible;opacity:0;transition:opacity .2s}
@@ -482,28 +483,43 @@ function drawLink(){ // ligne permanente entre les deux dalles sélectionnées
   setLine(a&&tileCenter(a),b&&tileCenter(b),a&&b);
 }
 addEventListener('resize',drawLink);
+// Appui long (≈0,4 s) puis glisser vers une autre dalle. Un glisser simple = défilement normal, aucune action.
+let tileArmed=false;
+document.addEventListener('touchmove',e=>{if(tileArmed)e.preventDefault()},{passive:false});
 function bindTileDrag(t){
-  let start=null,drag=false;
-  t.addEventListener('pointerdown',e=>{start=[e.clientX,e.clientY];drag=false;t.setPointerCapture(e.pointerId)});
+  let start=null,timer=null,armed=false,moved=false;
+  const reset=()=>{clearTimeout(timer);start=null;armed=false;tileArmed=false;moved=false;t.classList.remove('arming');
+    document.querySelectorAll('.tile.target').forEach(x=>x.classList.remove('target'))};
+  t.addEventListener('contextmenu',e=>e.preventDefault());
+  t.addEventListener('pointerdown',e=>{
+    start=[e.clientX,e.clientY];moved=false;armed=false;t.classList.add('arming');
+    timer=setTimeout(()=>{ if(!start||moved) return;
+      armed=true;tileArmed=true;t.classList.remove('arming');t.classList.add('from');
+      try{t.setPointerCapture(e.pointerId)}catch{}
+      if(navigator.vibrate)navigator.vibrate(15);
+      setLine(tileCenter(t),tileCenter(t),true);
+    },400);
+  });
   t.addEventListener('pointermove',e=>{
     if(!start) return;
-    if(!drag&&Math.hypot(e.clientX-start[0],e.clientY-start[1])>12){drag=true;t.classList.add('from');if(navigator.vibrate)navigator.vibrate(10)}
-    if(!drag) return;
+    if(!armed){ if(Math.hypot(e.clientX-start[0],e.clientY-start[1])>10){moved=true;clearTimeout(timer);t.classList.remove('arming')} return }
     const g=$('#tiles').getBoundingClientRect();
     const over=document.elementsFromPoint(e.clientX,e.clientY).find(x=>x.classList?.contains('tile')&&x!==t);
     document.querySelectorAll('.tile.target').forEach(x=>x!==over&&x.classList.remove('target'));
     if(over){over.classList.add('target');setLine(tileCenter(t),tileCenter(over),true)}
     else setLine(tileCenter(t),[e.clientX-g.left,e.clientY-g.top],true);
   });
-  const end=e=>{
-    if(!start) return; start=null;
+  t.addEventListener('pointerup',()=>{
+    if(!start) return;
+    const wasArmed=armed, wasMoved=moved, over=document.querySelector('.tile.target');
     const fromD=S.dests.find(d=>d.uid===t.dataset.u);
-    if(!drag){pickPair(null,fromD);return} // simple appui : depuis ma position
-    const over=document.querySelector('.tile.target');
-    document.querySelectorAll('.tile.target').forEach(x=>x.classList.remove('target'));
-    if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u)); else {t.classList.remove('from');drawLink()}
-  };
-  t.addEventListener('pointerup',end); t.addEventListener('pointercancel',()=>{start=null;t.classList.remove('from');drawLink()});
+    reset();
+    if(wasArmed){
+      if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u));
+      else {t.classList.remove('from');renderTiles()}
+    }else if(!wasMoved) pickPair(null,fromD);   // simple appui court : depuis ma position
+  });
+  t.addEventListener('pointercancel',()=>{const a=armed;reset();if(a){t.classList.remove('from');drawLink()}});
 }
 let loadedFor=null, loading=false;
 async function loadJourneys(){
