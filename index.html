@@ -111,8 +111,15 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
 .time-bar input.custom{color:var(--accent)}
 #nowBtn.on{background:var(--accent);color:#fff}
-.load-more{display:flex;justify-content:center;align-items:center;gap:5px;height:56px;opacity:.9}
-.load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.15;animation:lm 1.8s ease-in-out infinite}
+.load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
+.load-more span{flex-basis:100%;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);opacity:calc(.5 + var(--ins)*.5)}
+.load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.18;transition:opacity .12s}
+.load-more.insisting i:nth-child(1){opacity:calc(.18 + min(1,var(--ins)*4)*.82)}
+.load-more.insisting i:nth-child(2){opacity:calc(.18 + max(0,min(1,var(--ins)*4 - 1))*.82)}
+.load-more.insisting i:nth-child(3){opacity:calc(.18 + max(0,min(1,var(--ins)*4 - 2))*.82)}
+.load-more.insisting i:nth-child(4){opacity:calc(.18 + max(0,min(1,var(--ins)*4 - 3))*.82)}
+.load-more.busy i{animation:lm 1.8s ease-in-out infinite}
+.load-more.busy span{visibility:hidden}
 .load-more i:nth-child(2){animation-delay:.22s}.load-more i:nth-child(3){animation-delay:.44s}.load-more i:nth-child(4){animation-delay:.66s}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(6px)}}
 .day-sep{font-size:13px;font-weight:600;color:var(--muted);margin:14px 6px 8px;text-transform:capitalize}
@@ -121,8 +128,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
   background:rgba(127,127,127,.16);transform:scale(calc(.8 + var(--p)*.35)) rotate(calc(var(--p)*180deg));transition:transform .15s,background .2s,color .2s}
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
-.jr.pop{animation:popIn .8s ease both}
-@keyframes popIn{from{opacity:0}to{opacity:1}}
+.jr.pop{animation:popIn .6s cubic-bezier(.2,.8,.3,1) both}
+@keyframes popIn{from{transform:translateY(16px)}to{transform:none}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -771,7 +778,7 @@ function renderJourneyList(){
   const box=$('#journeys');
   lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>(planTime?+planTime:Date.now())-60000});
   const list=lastJourneys.slice(0,shown);
-  box.querySelectorAll(':scope > :not(.jr):not(.day-sep)').forEach(n=>n.remove()); // spinner / message / bouton
+  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
@@ -787,29 +794,44 @@ function renderJourneyList(){
     prev=el;
   });
   existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
-  // Bas de liste : animation de chargement, la suite arrive automatiquement en arrivant en bas
-  const sen=document.createElement('div'); sen.id='more'; sen.className='load-more';
-  sen.innerHTML='<i></i><i></i><i></i><i></i>'; box.appendChild(sen);
-  if(!moreObs) moreObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) setTimeout(loadMoreJourneys,900) },{rootMargin:'0px 0px 40px 0px'});
-  moreObs.disconnect(); moreObs.observe(sen);
-  // séparateurs de jour (quand la liste passe au lendemain)
-  box.querySelectorAll('.day-sep').forEach(n=>n.remove());
-  let lastDay=new Date().toDateString();
+  // Bas de liste : repère persistant (jamais recréé → pas de saut ni de clignotement)
+  let sen=$('#more'); if(!sen){ sen=document.createElement('div'); sen.id='more'; sen.className='load-more'; sen.innerHTML='<i></i><i></i><i></i><i></i><span>Continue de faire défiler</span>' }
+  if(box.lastElementChild!==sen) box.appendChild(sen);
+  // séparateurs de jour : ajoutés/retirés seulement si nécessaire
+  const want=new Set(); let lastDay=new Date().toDateString();
   box.querySelectorAll(':scope > .jr').forEach(el=>{const it=list[+el.dataset.i]; if(!it) return; const d=new Date(firstTransit(it).startTime);
-    if(d.toDateString()!==lastDay){ lastDay=d.toDateString(); const sep=document.createElement('div'); sep.className='day-sep';
-      sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) }});
+    if(d.toDateString()!==lastDay){ lastDay=d.toDateString(); want.add(el.dataset.k);
+      const prevEl=el.previousElementSibling; if(!(prevEl&&prevEl.classList.contains('day-sep')&&prevEl.dataset.for===el.dataset.k)){
+        const sep=document.createElement('div'); sep.className='day-sep'; sep.dataset.for=el.dataset.k;
+        sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) } }});
+  box.querySelectorAll('.day-sep').forEach(sp=>{ const nx=sp.nextElementSibling; if(!want.has(sp.dataset.for)||!nx||nx.dataset.k!==sp.dataset.for) sp.remove() });
   box.querySelectorAll(':scope > .jr').forEach(el=>{ if(!appending) el.dataset.shown=el.dataset.shown||1 });
   curList=list;
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
 let curList=[], moreObs=null, moreBusy=false, appending=false;
+/* Il faut insister en bas de liste pour charger la suite : les barres se remplissent avec l'effort */
+let insist=0, insStart=null, insT=null;
+const atEnd=()=>window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4;
+function insistSet(v){ insist=Math.max(0,Math.min(1,v)); const sen=$('#more'); if(!sen) return;
+  sen.style.setProperty('--ins',insist); sen.classList.toggle('insisting',insist>0&&!moreBusy) }
+function insistDone(){ if(insist>=1&&!moreBusy){ if(navigator.vibrate) navigator.vibrate(10); loadMoreJourneys() } insistSet(0) }
+document.addEventListener('touchstart',e=>{ insStart=($('#v-horaires').classList.contains('active')&&$('#more')&&atEnd())?e.touches[0].clientY:null },{passive:true});
+document.addEventListener('touchmove',e=>{ if(insStart==null) return; if(!atEnd()){insistSet(0);return}
+  insistSet((insStart-e.touches[0].clientY)/110) },{passive:true});
+document.addEventListener('touchend',()=>{ if(insStart!=null){insStart=null;insistDone()} },{passive:true});
+addEventListener('wheel',e=>{ if(!$('#v-horaires').classList.contains('active')||!$('#more')||!atEnd()||e.deltaY<=0) return;
+  insistSet(insist+e.deltaY/600); clearTimeout(insT); insT=setTimeout(insistDone,180) },{passive:true});
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
   cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.classList.add('pop')}); // seules les nouvelles cartes s'animent
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
-  if(lastJourneys.length>shown){ shown+=5; appending=true; renderJourneyList(); appending=false; animNew(); return }
+  if(lastJourneys.length>shown){ moreBusy=true; $('#more')?.classList.add('busy');
+    await new Promise(r=>setTimeout(r,700));                     // court temps de chargement pour une transition douce
+    shown+=5; appending=true; renderJourneyList(); appending=false; animNew();
+    moreBusy=false; $('#more')?.classList.remove('busy'); return }
   // plus rien en réserve : on charge les départs suivants
   moreBusy=true; const sen=$('#more'); if(sen) sen.classList.add('busy');
   try{
