@@ -724,53 +724,42 @@ const SBB_CAT={IC:['#eb0000','#fff'],ICE:['#eb0000','#fff'],IR:['#eb0000','#fff'
   TGV:['#eb0000','#fff'],RJX:['#eb0000','#fff'],NJ:['#eb0000','#fff'],PE:['#eb0000','#fff'],RE:['#fff','#eb0000','#eb0000'],
   R:['#fff','#000','#000'],S:['#fff','#000','#000'],SN:['#000','#ffde00'],IRE:['#fff','#eb0000','#eb0000']};
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
-// Toutes les bases européennes de Traewelling/line-colors, mises en cache dans IndexedDB (trop gros pour localStorage)
+// Toutes les bases de Traewelling/line-colors, en cache IndexedDB 7 jours
 const LC_FILES=['line-colors-CH.csv','line-colors.csv','line-colors-AT.csv','line-colors-LU.csv','line-colors-SE.csv','line-colors-FI.csv',
   'line-colors-FR.csv','line-colors-NL.csv','line-colors-BE.csv','line-colors-IT.csv','line-colors-ES.csv','line-colors-PL.csv','line-colors-CZ.csv',
   'line-colors-DK.csv','line-colors-NO.csv','line-colors-UK.csv','line-colors-GB.csv','line-colors-HU.csv','line-colors-PT.csv','line-colors-IE.csv'];
-const idb={
-  db:null,
-  open(){return this.db?Promise.resolve(this.db):new Promise((ok,ko)=>{try{const r=indexedDB.open('busdirect',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');
-    r.onsuccess=()=>ok(this.db=r.result);r.onerror=ko}catch(e){ko(e)}})},
+const idb={db:null,
+  open(){return this.db?Promise.resolve(this.db):new Promise((ok,ko)=>{try{const r=indexedDB.open('busdirect',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(this.db=r.result);r.onerror=ko}catch(e){ko(e)}})},
   async get(k){const db=await this.open();return new Promise(ok=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})},
-  async set(k,v){const db=await this.open();return new Promise(ok=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok})}
-};
-function csvRows(txt){ // CSV avec champs entre guillemets
-  const out=[];let row=[],f='',q=false;
+  async set(k,v){const db=await this.open();return new Promise(ok=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok})}};
+function csvRows(txt){const out=[];let row=[],f='',q=false;
   for(let i=0;i<txt.length;i++){const c=txt[i];
     if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
     else if(c==='"')q=true; else if(c===','){row.push(f);f=''} else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''} else f+=c}
-  if(f||row.length){row.push(f);out.push(row)} return out;
-}
+  if(f||row.length){row.push(f);out.push(row)} return out}
 function ingestCSV(txt){
   const rows=csvRows(txt); if(rows.length<2) return 0;
   const h=rows[0].map(x=>x.trim().toLowerCase()), ix=n=>h.findIndex(x=>x.startsWith(n.toLowerCase()));
   const iL=ix('lineName'),iB=ix('backgroundColor'),iT=ix('textColor'),iBo=ix('borderColor'),iS=ix('shape'),iA=ix('delfiAgencyName'),iI=ix('delfiAgencyID'),iO=ix('shortOperatorName'),iH=ix('hafasOperatorCode');
   let n=0;
-  for(let r=1;r<rows.length;r++){
-    const c=rows[r]; if(!c[iL]||!c[iB]) continue;
+  for(let r=1;r<rows.length;r++){const c=rows[r]; if(!c[iL]||!c[iB]) continue;
     const v=[c[iB],c[iT]||'#fff',iBo>=0?c[iBo]||'':'',iS>=0?c[iS]||'':''], ln=norm(c[iL]);
     [c[iA],c[iI],c[iO],c[iH]].filter(Boolean).forEach(a=>LC.byKey[norm(a)+'|'+ln]=v);
-    (LC.byLine[ln]=LC.byLine[ln]||[]).push(v); n++;
-  }
-  return n;
-}
-let lcRerender=null;
-function lcRefreshUI(){clearTimeout(lcRerender);lcRerender=setTimeout(()=>{
+    (LC.byLine[ln]=LC.byLine[ln]||[]).push(v); n++}
+  return n}
+let lcT=null;
+function lcRefreshUI(){clearTimeout(lcT);lcT=setTimeout(()=>{
   if(lastJourneys.length){document.querySelectorAll('#journeys > .jr').forEach(el=>el.remove());renderJourneyList()}
   if($('#v-suivis').classList.contains('active')) renderTracked();
-  if(typeof mapIt!=='undefined'&&mapIt&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
+  if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
 },300)}
 async function loadLineColors(){
   let cache=null; try{cache=await idb.get('lc')}catch{}
   if(cache&&Date.now()-cache.t<7*864e5){cache.files.forEach(ingestCSV);LC.ready=true;return}
   const got=[];
-  await Promise.all(LC_FILES.map(async f=>{
-    try{const r=await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f); if(!r.ok) return;
-      const txt=await r.text(); if(ingestCSV(txt)){got.push(txt);lcRefreshUI()}}catch{}
-  }));
-  LC.ready=true;
-  if(got.length) try{await idb.set('lc',{t:Date.now(),files:got})}catch{}
+  await Promise.all(LC_FILES.map(async f=>{try{const r=await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f);if(!r.ok)return;
+    const txt=await r.text(); if(ingestCSV(txt)){got.push(txt);lcRefreshUI()}}catch{}}));
+  LC.ready=true; if(got.length) try{await idb.set('lc',{t:Date.now(),files:got})}catch{}
 }
 function lineStyle(l){
   const name=l.routeShortName||l.displayName||'', ln=norm(name);
