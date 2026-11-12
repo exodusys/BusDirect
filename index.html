@@ -133,6 +133,9 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
+nav button{position:relative}
+.tab-badge{position:absolute;top:2px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:9px;background:#ff3b30;color:#fff;
+  font:800 10.5px/17px -apple-system,system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px rgba(var(--glass-rgb),.9)}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -400,7 +403,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 
 <nav class="glass" id="tabs">
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button>
-  <button data-v="suivis"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
+  <button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
   <button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button>
   <button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
@@ -1015,22 +1018,33 @@ function bindJourneys(box,list,tracked){
     if(act==='map'){e.stopPropagation();openMap(it);return}
     if(act==='walk'){e.stopPropagation();openMap(it,+e.target.dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
-    if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();renderTracked();return}
+    if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');return}
     el.classList.toggle('open');
   });
 }
 
 /* ========= Suivis ========= */
+const trackKey=(it,dest)=>jkey(it)+'>'+(dest?.uid||'');
 function trackIt(it){
-  S.tracked.push({dest:selDest,from:selFrom,it,savedAt:Date.now()}); save(); toast('Ajouté aux suivis');
+  if(S.tracked.some(t=>trackKey(t.it,t.dest)===trackKey(it,selDest))){ toast('Ce parcours est déjà suivi'); return }
+  S.tracked.push({dest:selDest,from:selFrom,it,savedAt:Date.now()}); save(); updateSuivisTab(); toast('Ajouté aux suivis');
 }
+// Onglet Suivis visible seulement s'il y a des suivis, avec pastille rouge du nombre
+function updateSuivisTab(){
+  S.tracked=S.tracked.filter(t=>new Date(t.it.endTime)>Date.now()-30*60000);
+  const n=S.tracked.length, tab=$('#tabSuivis'), b=$('#suivisBadge');
+  if(tab) tab.style.display=n?'':'none';
+  if(b){ b.textContent=n>9?'9+':n; b.style.display=n?'':'none' }
+  if(!n&&$('#v-suivis').classList.contains('active')) document.querySelector('#tabs button[data-v="horaires"]').click();
+}
+setInterval(updateSuivisTab,60000);
 function renderTracked(){
-  S.tracked=S.tracked.filter(t=>new Date(t.it.endTime)>Date.now()-30*60000); save();
+  updateSuivisTab(); save();
   const box=$('#tracked');
   if(!S.tracked.length){box.innerHTML='<div class="card glass empty"><b>🔖</b>Ouvre un trajet dans Horaires et touche « Suivre ».</div>';return}
   box.innerHTML=S.tracked.map((t,i)=>`<h3>→ ${esc(t.dest.name)}</h3>`+journeyHTML(t.it,i,true)).join('');
   bindJourneys(box,S.tracked.map(t=>t.it),true);
-  box.querySelectorAll('.jr').forEach(el=>el.classList.add('open'));
+  updateSuivisTab();
 }
 async function refreshTracked(){
   // Re-plan around the original departure to get fresh real-time data for the same trip
@@ -1360,7 +1374,7 @@ function stairPoints(legs){
     let p=null; if(st.polyline&&st.polyline.points){for(const pr of [st.polyline.precision,6,5,7].filter(Boolean)){const c=decodePoly(st.polyline.points,pr);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05){p=c[0];break}}}
     if(!p) return;
     const up=lvl?Number(tl)>Number(fl):null;
-    out.push({p,kind:elev?'elev':'stairs',up,txt:`${elev?'Ascenseur':'Escaliers'}${lvl?` ${up?'↑ montée':'↓ descente'} · niveau ${fl} → ${tl}`:''}`});
+    out.push({p,kind:elev?'elev':'stairs',up,t1:`${elev?'Ascenseur':'Escaliers'}${lvl?` ${up?'↑ montée':'↓ descente'}`:''}`,t2:lvl?`Niveau ${fl} → ${tl}`:''});
   }));
   return out;
 }
@@ -1370,7 +1384,7 @@ function drawStairs(which,legs){
   stairPoints(legs).forEach(s=>{
     const el=document.createElement('div'); el.className='stair-m';
     el.innerHTML=s.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${s.up===null?'':`<b>${s.up?'↑':'↓'}</b>`}`;
-    stairMks[which].push(new maplibregl.Marker({element:el}).setLngLat(s.p).setPopup(new maplibregl.Popup({offset:14}).setText(s.txt)).addTo(mlMap));
+    stairMks[which].push(new maplibregl.Marker({element:el}).setLngLat(s.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(s.t1)}</b>${s.t2?`<br><span style="color:var(--muted)">${esc(s.t2)}</span>`:''}`)).addTo(mlMap));
   });
 }
 function drawItinerary(it){
@@ -1625,6 +1639,7 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
+updateSuivisTab();
 applySmsTab();
 applySettings();
 /* Mouvement & orientation : l'état choisi est mémorisé et réappliqué à chaque ouverture.
