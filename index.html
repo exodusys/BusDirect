@@ -718,57 +718,73 @@ let curList=[];
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
-/* Couleurs des lignes : OpenStreetMap (tag colour des relations route), via l'API Overpass — gratuite et ouverte (ODbL) */
-const OSMC=(()=>{try{const c=JSON.parse(localStorage.getItem('bd_osmc')||'{}');return Date.now()-(c.t||0)<14*864e5?c:{t:Date.now(),m:{},miss:{}}}catch{return {t:Date.now(),m:{},miss:{}}}})();
-const nref=s=>String(s||'').toUpperCase().replace(/\s+/g,'');
-const cellOf=(lat,lon)=>(Math.round(lat*50)/50)+','+(Math.round(lon*50)/50); // ~2 km
-const osmKey=l=>nref(l.routeShortName||l.displayName)+'@'+cellOf(l.from.lat,l.from.lon);
-let osmQueue=new Map(), osmTimer=null, osmBusy=false;
-function osmSave(){try{localStorage.setItem('bd_osmc',JSON.stringify(OSMC))}catch{}}
-function osmWant(l){
-  if(!l||!l.from||l.mode==='WALK') return;
-  const k=osmKey(l); if(OSMC.m[k]||OSMC.miss[k]||osmQueue.has(k)) return;
-  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,400);
+/* Vraies couleurs : base ouverte Traewelling/line-colors (utilisée aussi par Transitous) */
+const LC={byKey:{},byLine:{},ready:false};
+const SBB_CAT={IC:['#eb0000','#fff'],ICE:['#eb0000','#fff'],IR:['#eb0000','#fff'],EC:['#eb0000','#fff'],EN:['#eb0000','#fff'],
+  TGV:['#eb0000','#fff'],RJX:['#eb0000','#fff'],NJ:['#eb0000','#fff'],PE:['#eb0000','#fff'],RE:['#fff','#eb0000','#eb0000'],
+  R:['#fff','#000','#000'],S:['#fff','#000','#000'],SN:['#000','#ffde00'],IRE:['#fff','#eb0000','#eb0000']};
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
+// Toutes les bases européennes de Traewelling/line-colors, mises en cache dans IndexedDB (trop gros pour localStorage)
+const LC_FILES=['line-colors-CH.csv','line-colors.csv','line-colors-AT.csv','line-colors-LU.csv','line-colors-SE.csv','line-colors-FI.csv',
+  'line-colors-FR.csv','line-colors-NL.csv','line-colors-BE.csv','line-colors-IT.csv','line-colors-ES.csv','line-colors-PL.csv','line-colors-CZ.csv',
+  'line-colors-DK.csv','line-colors-NO.csv','line-colors-UK.csv','line-colors-GB.csv','line-colors-HU.csv','line-colors-PT.csv','line-colors-IE.csv'];
+const idb={
+  db:null,
+  open(){return this.db?Promise.resolve(this.db):new Promise((ok,ko)=>{try{const r=indexedDB.open('busdirect',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');
+    r.onsuccess=()=>ok(this.db=r.result);r.onerror=ko}catch(e){ko(e)}})},
+  async get(k){const db=await this.open();return new Promise(ok=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok(null)})},
+  async set(k,v){const db=await this.open();return new Promise(ok=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=ok;t.onerror=ok})}
+};
+function csvRows(txt){ // CSV avec champs entre guillemets
+  const out=[];let row=[],f='',q=false;
+  for(let i=0;i<txt.length;i++){const c=txt[i];
+    if(q){if(c==='"'){if(txt[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+    else if(c==='"')q=true; else if(c===','){row.push(f);f=''} else if(c==='\n'||c==='\r'){if(c==='\r'&&txt[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''} else f+=c}
+  if(f||row.length){row.push(f);out.push(row)} return out;
 }
-async function osmFetch(){
-  if(osmBusy||!osmQueue.size) return; osmBusy=true;
-  const batch=[...osmQueue.entries()].slice(0,25); batch.forEach(([k])=>osmQueue.delete(k));
-  const refs=[...new Set(batch.map(([,l])=>nref(l.routeShortName||l.displayName)).filter(Boolean))].map(r=>r.replace(/[^A-Z0-9]/g,'')).filter(Boolean);
-  const pts=[...new Map(batch.map(([,l])=>[cellOf(l.from.lat,l.from.lon),l.from])).values()];
-  const rx='^('+refs.join('|')+')$';
-  const q=`[out:json][timeout:20];(${pts.map(p=>`relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref~"${rx}",i][colour](around:1500,${p.lat},${p.lon});`).join('')});out tags;`;
-  let els=null;
-  for(const ep of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
-    try{const r=await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(r.ok){els=(await r.json()).elements;break}}catch{}
+function ingestCSV(txt){
+  const rows=csvRows(txt); if(rows.length<2) return 0;
+  const h=rows[0].map(x=>x.trim().toLowerCase()), ix=n=>h.findIndex(x=>x.startsWith(n.toLowerCase()));
+  const iL=ix('lineName'),iB=ix('backgroundColor'),iT=ix('textColor'),iBo=ix('borderColor'),iS=ix('shape'),iA=ix('delfiAgencyName'),iI=ix('delfiAgencyID'),iO=ix('shortOperatorName'),iH=ix('hafasOperatorCode');
+  let n=0;
+  for(let r=1;r<rows.length;r++){
+    const c=rows[r]; if(!c[iL]||!c[iB]) continue;
+    const v=[c[iB],c[iT]||'#fff',iBo>=0?c[iBo]||'':'',iS>=0?c[iS]||'':''], ln=norm(c[iL]);
+    [c[iA],c[iI],c[iO],c[iH]].filter(Boolean).forEach(a=>LC.byKey[norm(a)+'|'+ln]=v);
+    (LC.byLine[ln]=LC.byLine[ln]||[]).push(v); n++;
   }
-  if(els){
-    batch.forEach(([k,l])=>{
-      const ref=nref(l.routeShortName||l.displayName), ag=norm2(l.agencyName);
-      const cands=els.filter(e=>nref(e.tags.ref)===ref);
-      const best=cands.find(e=>ag&&[e.tags.operator,e.tags.network].some(x=>x&&(norm2(x).includes(ag)||ag.includes(norm2(x)))))||cands[0];
-      if(best){const t=best.tags;OSMC.m[k]=[t.colour,t['colour:text']||t.text_colour||null]} else OSMC.miss[k]=1;
-    });
-    osmSave(); refreshColorsUI();
-  }
-  osmBusy=false; if(osmQueue.size) osmTimer=setTimeout(osmFetch,1500);
+  return n;
 }
-const norm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
-function cssColor(c){if(!c)return null;c=String(c).trim();if(/^[0-9a-f]{6}$/i.test(c))return '#'+c;return c}
-function textOn(c){const d=document.createElement('canvas').getContext('2d');d.fillStyle=c;const h=d.fillStyle;if(!/^#/.test(h))return '#fff';
-  const n=parseInt(h.slice(1),16);return ((n>>16&255)*299+(n>>8&255)*587+(n&255)*114)/1000>155?'#111':'#fff'}
-let colT=null;
-function refreshColorsUI(){clearTimeout(colT);colT=setTimeout(()=>{
+let lcRerender=null;
+function lcRefreshUI(){clearTimeout(lcRerender);lcRerender=setTimeout(()=>{
   if(lastJourneys.length){document.querySelectorAll('#journeys > .jr').forEach(el=>el.remove());renderJourneyList()}
   if($('#v-suivis').classList.contains('active')) renderTracked();
-  if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
-},250)}
-function lineColor(l){
-  if(l&&l.from&&l.mode!=='WALK'){const o=OSMC.m[osmKey(l)]; if(o){const bg=cssColor(o[0]);return [bg,cssColor(o[1])||textOn(bg)]} osmWant(l)}
-  if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
-  return MODE_COLOR[l.mode]||['#636e80','#fff'];
+  if(typeof mapIt!=='undefined'&&mapIt&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
+},300)}
+async function loadLineColors(){
+  let cache=null; try{cache=await idb.get('lc')}catch{}
+  if(cache&&Date.now()-cache.t<7*864e5){cache.files.forEach(ingestCSV);LC.ready=true;return}
+  const got=[];
+  await Promise.all(LC_FILES.map(async f=>{
+    try{const r=await fetch('https://cdn.jsdelivr.net/gh/Traewelling/line-colors@main/'+f); if(!r.ok) return;
+      const txt=await r.text(); if(ingestCSV(txt)){got.push(txt);lcRefreshUI()}}catch{}
+  }));
+  LC.ready=true;
+  if(got.length) try{await idb.set('lc',{t:Date.now(),files:got})}catch{}
 }
-function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
-  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function lineStyle(l){
+  const name=l.routeShortName||l.displayName||'', ln=norm(name);
+  for(const a of [l.agencyName,l.agencyId]){const v=a&&LC.byKey[norm(a)+'|'+ln]; if(v) return v}
+  if(l.routeColor&&!/^(ffffff|000000)$/i.test(l.routeColor)) return ['#'+l.routeColor,'#'+(l.routeTextColor||'ffffff'),'',''];
+  const cat=(name.match(/^[A-Z]+/)||[''])[0];
+  if(/RAIL|LONG|SUBURBAN|NIGHT/.test(l.mode)&&SBB_CAT[cat]){const s=SBB_CAT[cat];return [s[0],s[1],s[2]||'','rectangle']}
+  const cand=LC.byLine[ln]; if(cand&&cand.length===1) return cand[0];
+  const m=MODE_COLOR[l.mode]||['#636e80','#fff']; return [m[0],m[1],'',''];
+}
+function lineColor(l){const s=lineStyle(l);return [s[0]==='#fff'||/^#?fff(fff)?$/i.test(s[0])?(s[2]||s[1]):s[0],s[1]]}
+function badge(l,size){const [bg,fg,bo,sh]=lineStyle(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
+  const rad=sh==='pill'?'99px':sh==='circle'?'50%':sh==='rectangle'?'3px':'';
+  return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg};${bo?`box-shadow:inset 0 0 0 2px ${bo};`:''}${rad?`border-radius:${rad};`:''}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
 setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
@@ -1255,6 +1271,7 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
+loadLineColors().then(lcRefreshUI);
 applySettings(); if(S.settings.motionOn!==false && !(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function')) motionListen(true);
 renderDests(); renderTiles(); renderSMS(); locate();
 </script>
