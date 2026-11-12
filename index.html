@@ -472,10 +472,16 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <ul><li>« Suivre » enregistre un trajet. L'onglet apparaît avec une pastille indiquant le nombre de suivis. Touche un suivi pour le déplier.</li></ul>
       <h4>🧭 Parcours</h4>
       <ul><li>Recherche un arrêt, une adresse ou un lieu et ajoute-le à tes destinations. Pour une adresse, l'arrêt le plus proche est utilisé.</li></ul>
+      <h4>🚏 Itinéraires</h4>
+      <ul>
+        <li><b>Arrêt le plus proche uniquement</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li>
+        <li><b>Désactivé</b> : tous les arrêts des environs sont acceptés, avec une marche jusqu'à la destination. Plus de choix de trajets, mais l'arrivée peut se faire à un autre arrêt.</li>
+        <li>Réglage dans Paramètres › Itinéraires.</li>
+      </ul>
       <h4>🎫 Tickets</h4>
       <ul><li>Tickets SMS de la région où tu te trouves. L'onglet peut être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li></ul>
       <h4>⚙️ Paramètres</h4>
-      <ul><li>Thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, tickets, localisation et mouvement/orientation.</li></ul>
+      <ul><li>Thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
       <h4>📡 Sources de données</h4>
       <ul>
         <li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li>
@@ -632,7 +638,7 @@ function setNearestOnly(on){
   toast(on?'Arrêt le plus proche uniquement':'Autres arrêts acceptés');
 }
 function syncNearestUI(){ const on=S.settings.nearestOnly!==false; if($('#nearestOn')) $('#nearestOn').checked=on;
-  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche de la destination, sans marche finale':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
+  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche, puis marche jusqu\'à l\'adresse ou au lieu':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
 function setSmsTab(on){
   S.settings.smsOn=on; save(); applySmsTab();
   toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
@@ -709,8 +715,39 @@ function cleanList(all){
   }).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
 }
 // 1re page tout de suite ; pages suivantes en arrière-plan (onMore reçoit la liste complétée)
+/* Marche finale arrêt → adresse/POI (calculée une fois par destination, puis ajoutée à chaque trajet) */
+async function finalWalkFor(orig,stop){
+  const key=stop.id+'>'+orig.lat+','+orig.lon;
+  if(orig._fw&&orig._fw.key===key) return orig._fw;
+  let coords=null, dur=null, distM=null;
+  try{
+    for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+      const r=await fetch(`${API}/${v}/plan?fromPlace=${encodeURIComponent(stop.id)}&toPlace=${orig.lat},${orig.lon}&directModes=WALK&maxDirectTime=3600&numItineraries=1&detailedTransfers=true`);
+      if(!r.ok) continue; const d=await r.json();
+      const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
+      if(w){ coords=w.legs.flatMap(legCoords); dur=w.duration; distM=w.legs.reduce((a,l)=>a+(l.distance||0),0); w._legs=w.legs } break;
+    }
+  }catch{}
+  if(!coords){ const km=dist(stop,orig); coords=[[stop.lon,stop.lat],[orig.lon,orig.lat]]; dur=Math.round(km*1.3/4.8*3600); distM=Math.round(km*1300) }
+  orig._fw={key,coords,dur:Math.max(60,dur||60),distM}; return orig._fw;
+}
+function withFinalWalk(list,orig,stop,fw){
+  return list.map(it=>{
+    if(it._fw) return it;
+    const lastT=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lastT) return it;
+    const t0=+new Date(it.endTime), t1=t0+fw.dur*1000;
+    const leg={mode:'WALK',from:{...(lastT.to||{}),name:lastT.to?.name||stop.name,lat:stop.lat,lon:stop.lon},to:{name:orig.name,lat:orig.lat,lon:orig.lon},
+      startTime:new Date(t0).toISOString(),endTime:new Date(t1).toISOString(),scheduledStartTime:new Date(t0).toISOString(),scheduledEndTime:new Date(t1).toISOString(),
+      duration:fw.dur,distance:fw.distM,_coords:fw.coords,_final:true};
+    return {...it,legs:[...it.legs,leg],endTime:leg.endTime,duration:(it.duration||0)+fw.dur,_fw:true};
+  });
+}
 async function nextDepartures(dest,from,onMore){
+  const origDest=dest;
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
+  const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
+  const fwP=addFW?finalWalkFor(origDest,dest):null;
+  const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
   const d=await plan(dest,planTime,null,from);
   const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false) return its||[];
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
@@ -718,8 +755,8 @@ async function nextDepartures(dest,from,onMore){
       return lt.to?.stopId===dest.id||(norm2?norm2(lt.to?.name):String(lt.to?.name).toLowerCase())===nm }) };
   let all=onlyStop(d.itineraries); if(!all.length&&(d.itineraries||[]).length) all=d.itineraries;   // sécurité : jamais de liste vide à cause du filtre
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
-    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; onMore(cleanList(all))}catch{break} } })();
-  return cleanList(all);
+    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; onMore(await fin(cleanList(all)))}catch{break} } })();
+  return fin(cleanList(all));
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -955,6 +992,7 @@ async function loadMoreJourneys(){
     const known=new Set(lastJourneys.map(jkey));
     const add=(d.itineraries||[]).filter(it=>firstTransit(it)&&!known.has(jkey(it)))
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
+    if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add.splice(0,add.length,...withFinalWalk(add,selDest,dest,fw)) }
     if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
     else if(sen) sen.remove();
   }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
@@ -1407,6 +1445,7 @@ let mlMap=null, mapIt=null, vehMk=null, meMk=null, navOn=false, heading=null, ma
 function decodePoly(str,prec){let i=0,lat=0,lng=0,out=[],f=Math.pow(10,prec||6);
   while(i<str.length){for(const k of [0,1]){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=r&1?~(r>>1):r>>1;k?lng+=d:lat+=d}out.push([lng/f,lat/f])}return out} // [lon,lat]
 function legCoords(l){
+  if(l._coords) return l._coords;
   const g=l.legGeometry; if(g&&g.points){for(const p of [g.precision,6,5,7].filter(Boolean)){const c=decodePoly(g.points,p);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05)return c}}
   return [[l.from.lon,l.from.lat],[l.to.lon,l.to.lat]];
 }
