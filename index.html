@@ -210,7 +210,10 @@ input[type=range]{width:55%;accent-color:var(--accent)}
  /* Carte */
 #mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
 #mapView.open{display:block}
-#map{position:absolute;inset:0}
+#map{position:absolute;inset:0;background:#f2efe9;transition:opacity .25s}
+#map.dk{background:#1a1a1a}
+#map.loading .maplibregl-canvas{opacity:0}
+#map .maplibregl-canvas{transition:opacity .3s}
 .map-bar{position:absolute;z-index:5;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
 .map-bar .t{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .map-bar .t small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
@@ -941,6 +944,18 @@ function darkenColor(c){
   return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${o.a})`;
 }
 const mapColor=v=>typeof v==='string'?darkenColor(v):Array.isArray(v)?v.map(mapColor):(v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,mapColor(x)])):v);
+// Style préparé AVANT l'affichage (pas de flash clair → sombre)
+let baseStyle=null;
+async function buildStyle(){
+  if(!baseStyle){ baseStyle=await (await fetch('https://tiles.openfreemap.org/styles/liberty')).json() }
+  const st=JSON.parse(JSON.stringify(baseStyle));
+  st.layers.forEach(ly=>{
+    if(mapDark) for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) ly.paint[k]=mapColor(v);
+    if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
+    if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
+  });
+  return st;
+}
 function applyMapDark(){
   if(!mlMap||!mapDark) return;
   for(const ly of mlMap.getStyle().layers){
@@ -978,8 +993,9 @@ function applyPoiFilter(){
 async function afterStyle(){ applyMapDark(); applyBuildings(); applyPoiFilter(); if(mapIt) drawItinerary(mapIt); }
 async function toggleMapTheme(){
   mapDark=!mapDark; $('#btnTheme').textContent=mapDark?'☀️':'🌙';
-  if(!mlMap) return; mlMap.setStyle(mapStyleUrl(),{diff:false});
-  await new Promise(r=>mlMap.once('style.load',r)); afterStyle();
+  $('#map').classList.toggle('dk',mapDark);
+  if(!mlMap) return; mlMap.setStyle(await buildStyle(),{diff:false});
+  await new Promise(r=>mlMap.once('style.load',r)); applyBuildings(); if(mapIt) drawItinerary(mapIt);
 }
 let is3D=false; // la marche démarre en 2D
 let lastUserMove=0, recenterT=null;
@@ -1030,7 +1046,8 @@ async function openMap(it){
   try{await loadMapLib()}catch{toast('Impossible de charger la carte');return}
   mapDark=document.documentElement.dataset.theme==='dark'; // la carte démarre toujours dans le thème de l'app
   $('#btnTheme').textContent=mapDark?'☀️':'🌙';
-  const style=mapStyleUrl();
+  $('#map').classList.toggle('dk',mapDark); $('#map').classList.add('loading');
+  let style; try{style=await buildStyle()}catch{style=mapStyleUrl()}
   if(!mlMap){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
     // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
@@ -1038,7 +1055,8 @@ async function openMap(it){
     ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
     await new Promise(r=>mlMap.once('load',r));
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
-  applyMapDark(); applyBuildings(); applyPoiFilter();
+  if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
+  mlMap.once('idle',()=>$('#map').classList.remove('loading')); setTimeout(()=>$('#map').classList.remove('loading'),2500);
   drawItinerary(it);
   mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
