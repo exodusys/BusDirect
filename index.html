@@ -325,6 +325,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .stop-lbl{background:rgba(255,255,255,.96);color:#111827;border:2px solid var(--c);border-radius:9px;padding:3px 7px;box-shadow:0 2px 8px rgba(0,0,0,.25);
   font:600 11.5px/1.25 -apple-system,system-ui,sans-serif;white-space:nowrap;pointer-events:none;max-width:200px;overflow:hidden;text-overflow:ellipsis}
 .stop-lbl b{font-weight:700}
+.stop-lbl .lt{font-style:normal;font-weight:700;margin-left:6px;color:#4b5563;font-variant-numeric:tabular-nums}
+#map.dk .stop-lbl .lt{color:#aab2c0}
 .stop-lbl small{display:block;font-size:11px;font-weight:600;color:#4b5563}
 .stop-lbl.major{font-size:13px;padding:5px 9px;border-width:2.5px;border-left-width:6px}
 .stop-lbl.minor{opacity:.95}
@@ -1639,7 +1641,8 @@ function drawItinerary(it){
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
     const role=i===0?'Départ':'Correspondance';
     add(l.from,{major:1,color:col,name:l.from.name,sub:`${role} ${hm(l.startTime)}${l.from.track?' · '+lab+' '+l.from.track:''}`});
-    (l.intermediateStops||[]).forEach(st=>add(st,{major:0,color:col,name:st.name,sub:''}));
+    (l.intermediateStops||[]).forEach(st=>{const t=st.arrival||st.departure; const dl=st.scheduledArrival&&st.arrival?Math.round((new Date(st.arrival)-new Date(st.scheduledArrival))/60000):0;
+      add(st,{major:0,color:col,name:st.name,sub:'',time:t?hm(t):'',late:dl>0?'+'+dl:''})});
     const last=i===transit.length-1;
     add(l.to,{major:1,color:col,name:l.to.name,sub:`${last?'Arrivée':'Descente'} ${hm(l.endTime)}${l.to.track?' · '+lab+' '+l.to.track:''}`});
   });
@@ -1647,7 +1650,7 @@ function drawItinerary(it){
   stopLbls.forEach(m=>m.remove()); stopLbls=[];
   pts.forEach(f=>{const p=f.properties, el=document.createElement('div');
     el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
-    el.innerHTML=`<b>${esc(p.name)}</b>${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
+    el.innerHTML=`<b>${esc(p.name)}</b>${p.time?`<em class="lt">${esc(p.time)}${p.late?` <span class="late">${esc(p.late)}</span>`:''}</em>`:''}${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
     stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
   updateLblZoom();
   const fc={type:'FeatureCollection',features:pts};
