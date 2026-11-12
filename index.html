@@ -652,6 +652,7 @@ async function plan(dest, time, cursor, from){
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
   let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):pos.lat+','+pos.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
+  if(dest.type==='STOP'&&dest.id) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
     try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();} }catch(e){}
@@ -695,9 +696,13 @@ function cleanList(all){
 async function nextDepartures(dest,from,onMore){
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
   const d=await plan(dest,planTime,null,from);
-  let all=d.itineraries||[];
+  const onlyStop=its=>{ if(dest.type!=='STOP') return its||[];
+    const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
+    return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
+      return lt.to?.stopId===dest.id||(norm2?norm2(lt.to?.name):String(lt.to?.name).toLowerCase())===nm }) };
+  let all=onlyStop(d.itineraries); if(!all.length&&(d.itineraries||[]).length) all=d.itineraries;   // sécurité : jamais de liste vide à cause du filtre
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
-    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(n.itineraries||[]); cur=n.nextPageCursor; onMore(cleanList(all))}catch{break} } })();
+    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; onMore(cleanList(all))}catch{break} } })();
   return cleanList(all);
 }
 
