@@ -313,6 +313,12 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:rgba(var(--glass-rgb),.96)!important}
 .maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:rgba(var(--glass-rgb),.96)!important}
 .maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:rgba(var(--glass-rgb),.96)!important}
+.appr-stop{display:flex;align-items:center;gap:6px;pointer-events:none}
+.appr-stop i{width:10px;height:10px;border-radius:50%;background:#fff;border:3px solid var(--c);flex:none;box-sizing:content-box}
+.appr-stop span{background:rgba(255,255,255,.92);color:#111827;border:1.5px dashed var(--c);border-radius:8px;padding:2px 6px;font:600 10.5px/1.25 -apple-system,system-ui,sans-serif;white-space:nowrap}
+.appr-stop small{margin-left:5px;color:#6b7280;font-weight:600}
+#map.dk .appr-stop span{background:rgba(30,34,44,.92);color:#e5e7eb}
+#map.z-lo .appr-stop span{display:none}
 .stair-m{display:flex;align-items:center;gap:1px;height:24px;padding:0 6px;border-radius:12px;background:#0a84ff;color:#fff;font:800 11px/1 -apple-system,system-ui,sans-serif;
   box-shadow:0 0 0 2px #fff,0 3px 8px rgba(0,0,0,.35);cursor:pointer}
 .walk-map{border:none;background:rgba(10,132,255,.15);color:#0a84ff;font-weight:700;font-size:12px;padding:3px 8px;border-radius:9px;margin-left:6px;cursor:pointer}
@@ -1440,7 +1446,9 @@ async function buildStyle(){
     if(mapDark) for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) ly.paint[k]=darkFor(ly,k,v);
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
-    if(/hatch/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';      // traverses hachurées des voies
+    if(/hatch/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
+    if(/shield/i.test(ly.id)||(ly.type==='symbol'&&ly['source-layer']==='transportation_name'&&/"ref"|\{ref\}/.test(JSON.stringify(ly.layout||{}))))
+      (ly.layout=ly.layout||{}).visibility='none';   // pas de numéros de routes (ex. 112)      // traverses hachurées des voies
     if(ly.paint&&ly.paint['line-pattern']){ delete ly.paint['line-pattern']; ly.paint['line-color']=ly.paint['line-color']||(mapDark?'#5a5d68':'#cfcac2') }
     if(ly.paint&&ly.paint['fill-pattern']){ // pas de hachures (gares, voies, zones…)
       delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?'#41444e':'#e9e5df'; ly.paint['fill-opacity']=mapDark?1:0.6;
@@ -1553,7 +1561,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
-  delayTarget=0; delayShown=null; vehShown=null; followVeh=false; $('#btnFollow')?.classList.remove('on');
+  delayTarget=0; delayShown=null; vehShown=null; apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
@@ -1725,6 +1733,26 @@ function estimateOnTrip(trip,now){ // position estimée selon l'horaire de la co
       const seg=trip.coords.slice(Math.min(ia,ib),Math.max(ia,ib)+1); return seg.length>1?alongLine(seg,(now-a)/((b-a)||1)):[st[i].lon,st[i].lat]}}
   return null;
 }
+// Arrêts que le véhicule va desservir avant d'arriver à mon arrêt (sur le trait tiret)
+const apprMks=new Map();
+function drawApproachStops(trip,p,ft,show){
+  const keep=new Set();
+  if(show&&trip&&trip.stops&&ft){
+    const iv=nearestIdx(trip.coords,p);
+    const bi=trip.stops.findIndex(x=>x.name===ft.from.name)>=0?trip.stops.findIndex(x=>x.name===ft.from.name)
+      :trip.stops.reduce((b,x,i)=>kmDist([x.lon,x.lat],[ft.from.lon,ft.from.lat])<kmDist([trip.stops[b].lon,trip.stops[b].lat],[ft.from.lon,ft.from.lat])?i:b,0);
+    const vKm=trip.cum?trip.cum[iv]:null, col=lineColor(ft)[0];
+    trip.stops.slice(0,bi).forEach(st=>{
+      if(vKm!=null&&st.km!=null&&st.km<vKm-0.02) return;          // déjà passé
+      const k=st.name+'@'+st.lon.toFixed(5); keep.add(k);
+      if(apprMks.has(k)) return;
+      const el=document.createElement('div'); el.className='appr-stop'; el.style.setProperty('--c',col);
+      el.innerHTML=`<i></i><span>${esc(st.name)}<small>${st.arr?hm(st.arr):''}</small></span>`;
+      apprMks.set(k,new maplibregl.Marker({element:el,anchor:'left',offset:[-6,0],subpixelPositioning:true}).setLngLat([st.lon,st.lat]).addTo(mlMap));
+    });
+  }
+  for(const [k,m] of apprMks) if(!keep.has(k)){ m.remove(); apprMks.delete(k) }
+}
 function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon arrêt de montée
   const src=mlMap.getSource('approach'); let data={type:'FeatureCollection',features:[]};
   if(trip&&p&&ft&&Date.now()<+new Date(ft.startTime)+30000){
@@ -1732,6 +1760,7 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
     if(iv<ib){const line=[p,...trip.coords.slice(iv+1,ib+1),[ft.from.lon,ft.from.lat]];
       data={type:'Feature',properties:{color:lineColor(ft)[0]},geometry:{type:'LineString',coordinates:line}}}
   }
+  drawApproachStops(trip,p,ft,data.type==='Feature');
   if(src) src.setData(data);
   else{ mlMap.addSource('approach',{type:'geojson',data});
     mlMap.addLayer({id:'approach',type:'line',source:'approach',paint:{'line-color':['coalesce',['get','color'],'#e30613'],'line-width':4,'line-dasharray':[1.2,1.4],'line-opacity':.9},layout:{'line-cap':'round'}},mlMap.getLayer('stops-minor')?'stops-minor':undefined) }
