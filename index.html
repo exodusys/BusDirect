@@ -121,8 +121,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
   background:rgba(127,127,127,.16);transform:scale(calc(.8 + var(--p)*.35)) rotate(calc(var(--p)*180deg));transition:transform .15s,background .2s,color .2s}
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
-.jr.pop{animation:popIn .9s cubic-bezier(.22,.8,.3,1) both}
-@keyframes popIn{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.jr.pop{animation:popIn .8s ease both}
+@keyframes popIn{from{opacity:0}to{opacity:1}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -782,7 +782,7 @@ function renderJourneyList(){
       { const a=el.querySelector('.alert'), b=fresh.querySelector('.alert'); if(a&&!b)a.remove(); else if(!a&&b)el.querySelector('.chain').before(b.cloneNode(true)); else if(a&&b&&a.innerHTML!==b.innerHTML){a.className=b.className;a.innerHTML=b.innerHTML} }
       ['.jr-top','.jr-times','.chain','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
         if(a&&b&&a.innerHTML!==b.innerHTML){const sig=x=>[...x.querySelectorAll('b,.late')].map(n=>n.textContent).join('|');const chg=sel==='.jr-times'&&sig(a)!==sig(b);a.innerHTML=b.innerHTML; if(chg){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}});
-    }else{el=fresh; if(prev) el.classList.add('enter')}
+    }else{el=fresh}
     const ref=prev?prev.nextSibling:box.firstChild; if(el!==ref) box.insertBefore(el,ref);
     prev=el;
   });
@@ -798,17 +798,18 @@ function renderJourneyList(){
   box.querySelectorAll(':scope > .jr').forEach(el=>{const it=list[+el.dataset.i]; if(!it) return; const d=new Date(firstTransit(it).startTime);
     if(d.toDateString()!==lastDay){ lastDay=d.toDateString(); const sep=document.createElement('div'); sep.className='day-sep';
       sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) }});
+  box.querySelectorAll(':scope > .jr').forEach(el=>{ if(!appending) el.dataset.shown=el.dataset.shown||1 });
   curList=list;
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
-let curList=[], moreObs=null, moreBusy=false;
+let curList=[], moreObs=null, moreBusy=false, appending=false;
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
-  cards.forEach((c,i)=>{c.classList.remove('pop');void c.offsetWidth;c.style.animationDelay=(i*140)+'ms';c.classList.add('pop')});
+  cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.classList.add('pop')}); // seules les nouvelles cartes s'animent
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
-  if(lastJourneys.length>shown){ shown+=5; renderJourneyList(); animNew(); return }
+  if(lastJourneys.length>shown){ shown+=5; appending=true; renderJourneyList(); appending=false; animNew(); return }
   // plus rien en réserve : on charge les départs suivants
   moreBusy=true; const sen=$('#more'); if(sen) sen.classList.add('busy');
   try{
@@ -819,7 +820,7 @@ async function loadMoreJourneys(){
     const known=new Set(lastJourneys.map(jkey));
     const add=(d.itineraries||[]).filter(it=>firstTransit(it)&&!known.has(jkey(it)))
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
-    if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; renderJourneyList(); animNew() }
+    if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
     else if(sen) sen.remove();
   }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
 }
@@ -887,7 +888,7 @@ function textOn(c){const d=document.createElement('canvas').getContext('2d');d.f
   const n=parseInt(h.slice(1),16);return ((n>>16&255)*299+(n>>8&255)*587+(n&255)*114)/1000>155?'#111':'#fff'}
 let colT=null;
 function refreshColorsUI(){clearTimeout(colT);colT=setTimeout(()=>{
-  if(lastJourneys.length){document.querySelectorAll('#journeys > .jr').forEach(el=>el.remove());renderJourneyList()}
+  if(lastJourneys.length) renderJourneyList();
   if($('#v-suivis').classList.contains('active')) renderTracked();
   if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
 },250)}
