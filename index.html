@@ -204,6 +204,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
 #mapView.open{display:block}
 #map{position:absolute;inset:0}
+[data-theme="dark"] #map .maplibregl-canvas{filter:brightness(1.45) contrast(.92) saturate(1.1)}
 .map-bar{position:absolute;z-index:5;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
 .map-bar .t{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .map-bar .t small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
@@ -400,7 +401,7 @@ async function plan(dest, time, cursor, from){
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
   let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):pos.lat+','+pos.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
-    +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=false`;
+    +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
     try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){planVersion=v;return r.json();} }catch(e){}
@@ -935,7 +936,7 @@ async function onMyPos(){
   // éloigné du tracé ? → itinéraire à pied jusqu'à l'arrêt de montée
   const all=mapIt.legs.flatMap(legCoords), off=nearestOnLine(me,all);
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
-  const show=off>0.08&&boardStop&&Date.now()<+new Date(firstTransit(mapIt).startTime)+60000;
+  const show=toStop>0.025&&boardStop&&Date.now()<+new Date(firstTransit(mapIt).startTime)+60000;
   $('#walkCard').classList.toggle('on',!!show);
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
   if(!walkGeo||Date.now()-lastWalkFetch>60000||kmDist(me,walkGeo[0])>0.05){ lastWalkFetch=Date.now(); walkGeo=await walkRoute(me,boardStop) }
@@ -949,7 +950,7 @@ async function onMyPos(){
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
     for(const v of PLAN_VERSIONS){
-      const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${stop.lat},${stop.lon}&directModes=WALK&maxDirectTime=5400&numItineraries=1`);
+      const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${stop.lat},${stop.lon}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
       if(!r.ok) continue; const d=await r.json();
       const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
       if(w) return w.legs.flatMap(legCoords);
