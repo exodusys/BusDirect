@@ -392,6 +392,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
+    <h3>Itinéraires</h3>
+    <div class="card glass">
+      <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
+        <label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div>
+    </div>
     <h3>Tickets</h3>
     <div class="card glass">
       <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets dans la barre du bas</div></div>
@@ -617,6 +622,14 @@ async function renderSensors(){
   else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'écran pour réactiver':'En attente de données…');
 }
 setInterval(()=>{if($('#v-parametres').classList.contains('active'))renderSensors()},1000);
+function setNearestOnly(on){
+  S.settings.nearestOnly=on; save(); syncNearestUI();
+  try{Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>sessionStorage.removeItem(k))}catch{}
+  if(selDest){ loadedFor=null; $('#journeys').innerHTML=''; loadJourneys() }
+  toast(on?'Arrêt le plus proche uniquement':'Autres arrêts acceptés');
+}
+function syncNearestUI(){ const on=S.settings.nearestOnly!==false; if($('#nearestOn')) $('#nearestOn').checked=on;
+  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche de la destination, sans marche finale':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
 function setSmsTab(on){
   S.settings.smsOn=on; save(); applySmsTab();
   toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
@@ -652,7 +665,7 @@ async function plan(dest, time, cursor, from){
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
   let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):pos.lat+','+pos.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
-  if(dest.type==='STOP'&&dest.id) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
+  if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
     try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();} }catch(e){}
@@ -663,7 +676,7 @@ async function plan(dest, time, cursor, from){
 // Arrêt le plus proche d'une adresse / d'un lieu (mis en cache sur la destination)
 // Arrêt le plus proche d'une adresse / d'un POI (mémorisé sur la destination)
 async function nearestStop(p){
-  if(!p||p.type==='STOP') return p;
+  if(!p||p.type==='STOP'||S.settings.nearestOnly===false) return p;   // option : accepter d'autres arrêts → on vise l'adresse elle-même
   if(p.nearStop&&p.nearStop.id) return p.nearStop;
   const pick=list=>{ list=(list||[]).filter(x=>x&&x.lat!=null&&(x.stopId||x.id)); if(!list.length) return null;
     list.sort((a,b)=>dist(p,a)-dist(p,b)); const st=list[0];
@@ -696,7 +709,7 @@ function cleanList(all){
 async function nextDepartures(dest,from,onMore){
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
   const d=await plan(dest,planTime,null,from);
-  const onlyStop=its=>{ if(dest.type!=='STOP') return its||[];
+  const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false) return its||[];
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
       return lt.to?.stopId===dest.id||(norm2?norm2(lt.to?.name):String(lt.to?.name).toLowerCase())===nm }) };
@@ -842,7 +855,7 @@ setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTim
 let loadedFor=null, loading=false;
 async function loadJourneys(){
   if(!selDest||loading) return;
-  $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
+  $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
   const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
@@ -863,7 +876,7 @@ async function loadJourneys(){
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
-    $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
+    $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
     renderJourneyList();
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; else toast('Actualisation impossible') }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
@@ -1764,6 +1777,7 @@ function toggleInfo(on){
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
 /* ========= Init ========= */
+syncNearestUI();
 setTimeout(()=>S.dests.filter(d=>d.type!=='STOP'&&!(d.nearStop&&d.nearStop.id)).forEach(d=>nearestStop(d)),1500);
 updateSuivisTab();
 applySmsTab();
