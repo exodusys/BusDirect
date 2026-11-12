@@ -936,7 +936,7 @@ function darkenColor(c){
   const o=parseColor(c); if(!o) return c;
   let [h,sa,l]=rgb2hsl(o.r,o.g,o.b);
   l=0.10+(1-l)*0.80;           // clair ↔ sombre
-  sa=sa*0.75;                  // couleurs un peu adoucies
+  sa=0;                        // nuances de gris
   const [r,g,b]=hsl2rgb(h,sa,l);
   return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${o.a})`;
 }
@@ -964,16 +964,30 @@ function applyBuildings(){
 }
 function toggleBuildings(){
   mapBld=!mapBld; applyBuildings();
-  if(mapBld&&mlMap&&mlMap.getPitch()<20){is3D=true;$('#btn3d').textContent='2D';mlMap.easeTo({pitch:55,duration:500})}
   toast(mapBld?'Bâtiments 3D activés':'Bâtiments 3D désactivés');
 }
-async function afterStyle(){ applyMapDark(); applyBuildings(); if(mapIt) drawItinerary(mapIt); }
+// Points d'intérêt : uniquement ceux liés aux transports
+function applyPoiFilter(){
+  if(!mlMap) return;
+  for(const ly of mlMap.getStyle().layers){
+    if(ly['source-layer']!=='poi') continue;
+    const keep=/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id);
+    try{mlMap.setLayoutProperty(ly.id,'visibility',keep?'visible':'none')}catch{}
+  }
+}
+async function afterStyle(){ applyMapDark(); applyBuildings(); applyPoiFilter(); if(mapIt) drawItinerary(mapIt); }
 async function toggleMapTheme(){
   mapDark=!mapDark; $('#btnTheme').textContent=mapDark?'☀️':'🌙';
   if(!mlMap) return; mlMap.setStyle(mapStyleUrl(),{diff:false});
   await new Promise(r=>mlMap.once('style.load',r)); afterStyle();
 }
 let is3D=false; // la marche démarre en 2D
+let lastUserMove=0, recenterT=null;
+function userMoved(){
+  lastUserMove=Date.now(); clearTimeout(recenterT);
+  recenterT=setTimeout(()=>{ if(navOn&&Date.now()-lastUserMove>=2900) onMyPos(true) },3000);
+}
+const userBusy=()=>Date.now()-lastUserMove<3000;
 function toggle3D(){is3D=!is3D;$('#btn3d').textContent=is3D?'2D':'3D';if(mlMap)mlMap.easeTo({pitch:is3D?55:0,duration:500})}
 let mlMap=null, mapIt=null, vehMk=null, meMk=null, navOn=false, heading=null, mapTimers=[], walkGeo=null, boardStop=null;
 function decodePoly(str,prec){let i=0,lat=0,lng=0,out=[],f=Math.pow(10,prec||6);
@@ -1019,10 +1033,12 @@ async function openMap(it){
   const style=mapStyleUrl();
   if(!mlMap){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
-    mlMap.on('dragstart',()=>{ if(navOn) $('#walkBtn').textContent='◎ Recentrer' });
+    // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
+    ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
+    ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
     await new Promise(r=>mlMap.once('load',r));
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
-  applyMapDark(); applyBuildings();
+  applyMapDark(); applyBuildings(); applyPoiFilter();
   drawItinerary(it);
   mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
@@ -1122,7 +1138,7 @@ function startMeWatch(){
   },()=>{},{enableHighAccuracy:true,maximumAge:3000});
 }
 let gpsHeading=null, lastWalkFetch=0;
-async function onMyPos(){
+async function onMyPos(force){
   if(!mlMap||!pos) return;
   const me=[pos.lon,pos.lat];
   if(!meMk){const el=document.createElement('div');el.className='me-m';el.innerHTML='<div class="cone"></div><div class="dot"></div>';meMk=new maplibregl.Marker({element:el,rotationAlignment:'map'}).setLngLat(me).addTo(mlMap)}
@@ -1141,7 +1157,7 @@ async function onMyPos(){
   const wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((+new Date(firstTransit(mapIt).startTime)-Date.now())/60000);
   $('#walkTitle').textContent=`Marche jusqu'à ${boardStop.name}${boardStop.track?' · Quai '+boardStop.track:''}`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied · départ dans ${left} min ${wmin>left?'<span class="late">— presse le pas !</span>':''}`;
-  if(navOn){ mlMap.easeTo({center:me,bearing:hd??bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]),pitch:is3D?55:0,zoom:18,duration:800}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
+  if(navOn&&(force||!userBusy())){ mlMap.easeTo({center:me,bearing:hd??bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]),pitch:is3D?55:0,zoom:18,duration:800}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
 }
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
@@ -1159,10 +1175,9 @@ function onOrient(e){
   let h=e.webkitCompassHeading!=null?e.webkitCompassHeading:(e.absolute&&e.alpha!=null?360-e.alpha:null);
   if(h==null) return; heading=h;
   if(meMk){meMk.getElement().classList.add('dir');meMk.setRotation(h)}
-  if(navOn&&mlMap&&!mlMap.isMoving()) mlMap.setBearing(h);
+  if(navOn&&mlMap&&!mlMap.isMoving()&&!userBusy()) mlMap.setBearing(h);
 }
 async function toggleNav(){
-  if(navOn&&$('#walkBtn').textContent.startsWith('◎')){$('#walkBtn').textContent='■ Arrêter';onMyPos();return}
   if(navOn){stopNav();mapFit();return}
   try{ if(S.settings.motionOn!==false&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
