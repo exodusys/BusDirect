@@ -23,10 +23,12 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
+/* Fond d'écran sur un calque fixe de la taille de l'écran : il ne bouge ni ne s'étire quand la liste change (iOS ignore background-attachment:fixed) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--wall) center/cover no-repeat,var(--bg);
+  transform:translateZ(0);height:100lvh}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
   color:var(--text);background:var(--bg);
-  background-image:var(--wall);background-size:cover;background-position:center;background-attachment:fixed;
   -webkit-font-smoothing:antialiased;
 }
 .glass{
