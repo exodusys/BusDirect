@@ -232,6 +232,16 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .me-m.dir .cone{display:block}
 .stair-m{display:flex;align-items:center;gap:1px;height:24px;padding:0 6px;border-radius:12px;background:#0a84ff;color:#fff;font:800 11px/1 -apple-system,system-ui,sans-serif;
   box-shadow:0 0 0 2px #fff,0 3px 8px rgba(0,0,0,.35);cursor:pointer}
+.walk-map{border:none;background:rgba(10,132,255,.15);color:#0a84ff;font-weight:700;font-size:12px;padding:3px 8px;border-radius:9px;margin-left:6px;cursor:pointer}
+.stop-lbl{background:rgba(255,255,255,.96);color:#111827;border:2px solid var(--c);border-radius:9px;padding:3px 7px;box-shadow:0 2px 8px rgba(0,0,0,.25);
+  font:600 11.5px/1.25 -apple-system,system-ui,sans-serif;white-space:nowrap;pointer-events:none;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.stop-lbl b{font-weight:700}
+.stop-lbl small{display:block;font-size:11px;font-weight:600;color:#4b5563}
+.stop-lbl.major{font-size:13px;padding:5px 9px;border-width:2.5px;border-left-width:6px}
+.stop-lbl.minor{opacity:.95}
+#map.dk .stop-lbl{background:rgba(30,34,44,.95);color:#f3f4f6}
+#map.dk .stop-lbl small{color:#aab2c0}
+#map.z-lo .stop-lbl.minor{display:none}
 .stop-m{width:14px;height:14px;border-radius:50%;background:#fff;border:4px solid var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .toast{position:fixed;left:50%;bottom:calc(var(--safe-b) + 96px);transform:translateX(-50%) translateY(20px);opacity:0;
   padding:10px 16px;border-radius:16px;font-weight:600;font-size:14px;z-index:40;transition:.25s;pointer-events:none}
@@ -817,8 +827,8 @@ function journeyHTML(it,i,tracked){
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
-  const legs=it.legs.map(l=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
-    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
+  const legs=it.legs.map((l,li)=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
+    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span> <button class="walk-map" data-act="walk" data-leg="${li}">🗺️ Voir la marche</button>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
     <div class="muted" style="font-size:12px;margin-top:2px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const al=alertsOf(it);
@@ -847,6 +857,7 @@ function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr').forEach(el=>el.onclick=e=>{
     const act=e.target.dataset.act, it=(list||curList)[+el.dataset.i];
     if(act==='map'){e.stopPropagation();openMap(it);return}
+    if(act==='walk'){e.stopPropagation();openMap(it,+e.target.dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();renderTracked();return}
     el.classList.toggle('open');
@@ -1080,7 +1091,7 @@ async function toggleMapTheme(){
   mapDark=!mapDark; $('#btnTheme').textContent=mapDark?'☀️':'🌙';
   $('#map').classList.toggle('dk',mapDark);
   if(!mlMap) return; mlMap.setStyle(await buildStyle(),{diff:false});
-  await new Promise(r=>mlMap.once('style.load',r)); applyBuildings(); if(mapIt) drawItinerary(mapIt);
+  await new Promise(r=>mlMap.once('style.load',r)); applyBuildings(); if(mapIt){ drawItinerary(mapIt); if(mapWalk!=null) setRouteDim(true) }
 }
 let is3D=false; // la marche démarre en 2D
 let lastUserMove=0, recenterT=null;
@@ -1122,7 +1133,8 @@ function alongLine(coords,t){
 }
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
-async function openMap(it){
+async function openMap(it,walkLeg){
+  mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
   const ft=firstTransit(it);
@@ -1135,6 +1147,7 @@ async function openMap(it){
   let style; try{style=await buildStyle()}catch{style=mapStyleUrl()}
   if(!mlMap){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
+    mlMap.on('zoom',updateLblZoom);
     // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
     ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
     ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
@@ -1143,7 +1156,7 @@ async function openMap(it){
   if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
   mlMap.once('idle',()=>$('#map').classList.remove('loading')); setTimeout(()=>$('#map').classList.remove('loading'),2500);
   drawItinerary(it);
-  mapFit();
+  if(mapWalk!=null) focusWalk(); else mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));
   startMeWatch();
@@ -1175,7 +1188,7 @@ function drawStairs(which,legs){
 }
 function drawItinerary(it){
   drawStairs('route',it.legs);
-  const feats=it.legs.map(l=>({type:'Feature',properties:{walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
+  const feats=it.legs.map((l,idx)=>({type:'Feature',properties:{idx,walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
   const src={type:'FeatureCollection',features:feats};
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
   else{
@@ -1202,22 +1215,49 @@ function drawItinerary(it){
     const last=i===transit.length-1;
     add(l.to,{major:1,color:col,name:l.to.name,sub:`${last?'Arrivée':'Descente'} ${hm(l.endTime)}${l.to.track?' · '+lab+' '+l.to.track:''}`});
   });
+  // Étiquettes encadrées (HTML) pour chaque arrêt du parcours
+  stopLbls.forEach(m=>m.remove()); stopLbls=[];
+  pts.forEach(f=>{const p=f.properties, el=document.createElement('div');
+    el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
+    el.innerHTML=`<b>${esc(p.name)}</b>${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
+    stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0]}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
+  updateLblZoom();
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
   else{
     mlMap.addSource('stops',{type:'geojson',data:fc});
     mlMap.addLayer({id:'stops-minor',type:'circle',source:'stops',filter:['==','major',0],paint:{'circle-radius':4,'circle-color':'#fff','circle-stroke-color':['get','color'],'circle-stroke-width':2.5}});
     mlMap.addLayer({id:'stops-major',type:'circle',source:'stops',filter:['==','major',1],paint:{'circle-radius':8,'circle-color':'#fff','circle-stroke-color':['get','color'],'circle-stroke-width':4}});
-    mlMap.addLayer({id:'stops-minor-lbl',type:'symbol',source:'stops',filter:['==','major',0],minzoom:13,
-      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':11.5,'text-anchor':'left','text-offset':[0.8,0],'text-optional':true},
-      paint:{'text-color':mapDark?'#e8ecf4':'#2a2f3a','text-halo-color':mapDark?'#1d2433':'#ffffff','text-halo-width':1.6}});
-    mlMap.addLayer({id:'stops-major-lbl',type:'symbol',source:'stops',filter:['==','major',1],
-      layout:{'text-field':['format',['get','name'],{'font-scale':1.05,'text-font':['literal',['Noto Sans Bold']]},'\n',{},['get','sub'],{'font-scale':0.85,'text-font':['literal',['Noto Sans Regular']]}],
-        'text-font':['Noto Sans Regular'],'text-size':13,'text-anchor':'left','text-offset':[1.1,0],'text-justify':'left','text-allow-overlap':true},
-      paint:{'text-color':mapDark?'#ffffff':'#111827','text-halo-color':mapDark?'#1d2433':'#ffffff','text-halo-width':2}});
   }
 }
+let stopLbls=[];
+function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
+let mapWalk=null;
+// Vue d'une marche seule : on centre sur ce tronçon et on atténue le reste du parcours
+function focusWalk(){
+  const l=mapIt.legs[mapWalk]; if(!l) return mapFit();
+  const prev=mapIt.legs[mapWalk-1], next=mapIt.legs[mapWalk+1];
+  $('#mapTitle').textContent=`🚶 Marche · ${Math.max(1,mins(l.duration))} min`;
+  const len=(l.distance||0)>0?` · ${l.distance<1000?Math.round(l.distance)+' m':(l.distance/1000).toFixed(1)+' km'}`:'';
+  $('#mapSub').textContent=`${l.from?.name||'Départ'} → ${l.to?.name||'Arrivée'}${next?.from?.track?' · Quai '+next.from.track:''}${len}`;
+  setRouteDim(true);
+  const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
+  mlMap.fitBounds(b,{padding:{top:120,bottom:160,left:50,right:70},maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
+}
+function setRouteDim(on){
+  if(!mlMap) return;
+  [['route-line','line-opacity'],['route-casing','line-opacity'],['route-walk','line-opacity']].forEach(([id,p])=>{
+    if(!mlMap.getLayer(id)) return;
+    if(id==='route-walk') mlMap.setPaintProperty(id,p,on?['case',['==',['get','idx'],mapWalk],1,0.25]:1);
+    else mlMap.setPaintProperty(id,p,on?0.25:1);
+  });
+  if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',on?['case',['==',['get','idx'],mapWalk],7,4]:5);
+  document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
+}
 function mapFit(){
+  if(mapWalk!=null){mapWalk=null;setRouteDim(false);const ft=firstTransit(mapIt);
+    $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
+    $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`}
   if(!mlMap||!mapIt) return;
   const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach(l=>legCoords(l).forEach(c=>b.extend(c)));
   if(pos) b.extend([pos.lon,pos.lat]);
@@ -1330,13 +1370,28 @@ function startMeWatch(){
   },()=>{},{enableHighAccuracy:true,maximumAge:3000});
 }
 let gpsHeading=null, lastWalkFetch=0;
+/* Animation fluide de ma position, de l'orientation et de la caméra en navigation */
+let meTarget=null, meShown=null, bearTarget=null, bearShown=null, meRaf=null;
+const angDiff=(a,b)=>((b-a+540)%360)-180;
+function startMeAnim(){
+  if(meRaf) return;
+  const tick=()=>{
+    meRaf=null; if(!meMk||!$('#mapView').classList.contains('open')) return;
+    if(meTarget){ if(!meShown) meShown=meTarget.slice();
+      const k=kmDist(meShown,meTarget)>0.3?1:0.12; meShown=[meShown[0]+(meTarget[0]-meShown[0])*k, meShown[1]+(meTarget[1]-meShown[1])*k]; meMk.setLngLat(meShown) }
+    if(bearTarget!=null){ if(bearShown==null) bearShown=bearTarget; bearShown=(bearShown+angDiff(bearShown,bearTarget)*0.15+360)%360; meMk.setRotation(bearShown) }
+    if(navOn&&!userBusy()&&!mlMap.isEasing?.()&&meShown){ const o={center:meShown}; if(bearShown!=null) o.bearing=bearShown; mlMap.jumpTo(o) }
+    meRaf=requestAnimationFrame(tick);
+  };
+  meRaf=requestAnimationFrame(tick);
+}
 async function onMyPos(force){
   if(!mlMap||!pos) return;
   const me=[pos.lon,pos.lat];
   if(!meMk){const el=document.createElement('div');el.className='me-m';el.innerHTML='<div class="cone"></div><div class="dot"></div>';meMk=new maplibregl.Marker({element:el,rotationAlignment:'map'}).setLngLat(me).addTo(mlMap)}
-  meMk.setLngLat(me);
+  meTarget=me; if(!meShown){meShown=me.slice();meMk.setLngLat(me)} startMeAnim();
   const hd=heading??gpsHeading; const el=meMk.getElement();
-  el.classList.toggle('dir',hd!=null); if(hd!=null) meMk.setRotation(hd);
+  el.classList.toggle('dir',hd!=null); if(hd!=null) bearTarget=hd;
   // éloigné du tracé ? → itinéraire à pied jusqu'à l'arrêt de montée
   const all=mapIt.legs.flatMap(legCoords), off=nearestOnLine(me,all);
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
@@ -1349,7 +1404,7 @@ async function onMyPos(force){
   const wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((+new Date(firstTransit(mapIt).startTime)-Date.now())/60000);
   $('#walkTitle').textContent=`Marche jusqu'à ${boardStop.name}${boardStop.track?' · Quai '+boardStop.track:''}`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied · départ dans ${left} min ${wmin>left?'<span class="late">— presse le pas !</span>':''}`;
-  if(navOn&&(force||!userBusy())){ mlMap.easeTo({center:me,bearing:hd??bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]),pitch:is3D?55:0,zoom:18,duration:800}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
+  if(navOn){ if(hd==null) bearTarget=bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]); if(force) mlMap.easeTo({center:meShown||me,bearing:bearTarget??0,pitch:is3D?55:0,zoom:Math.max(mlMap.getZoom(),17.5),duration:600}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
 }
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
@@ -1366,8 +1421,7 @@ async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon 
 function onOrient(e){
   let h=e.webkitCompassHeading!=null?e.webkitCompassHeading:(e.absolute&&e.alpha!=null?360-e.alpha:null);
   if(h==null) return; heading=h;
-  if(meMk){meMk.getElement().classList.add('dir');meMk.setRotation(h)}
-  if(navOn&&mlMap&&!mlMap.isMoving()&&!userBusy()) mlMap.setBearing(h);
+  if(meMk) meMk.getElement().classList.add('dir'); bearTarget=h; startMeAnim();
 }
 async function toggleNav(){
   if(navOn){stopNav();mapFit();return}
@@ -1375,7 +1429,7 @@ async function toggleNav(){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
   if(S.settings.motionOn!==false){ addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient) } else toast('Mouvement désactivé : orientation selon ta marche');
   is3D=false; $('#btn3d').textContent='3D';
-  navOn=true; $('#walkBtn').textContent='■ Arrêter'; onMyPos();
+  navOn=true; $('#walkBtn').textContent='■ Arrêter'; onMyPos(true);
 }
 function stopNav(){
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer';
