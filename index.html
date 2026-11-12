@@ -162,6 +162,11 @@ body.classic .info-sheet,body.classic .walk-card,body.classic .map-bar,body.clas
 body.classic .btn,body.classic .map-btn,body.classic .seg,body.classic .seg button,body.classic .pick2 .pv,body.classic .logo{border-radius:5px}
 body.classic .lb.main{border-radius:6px}body.classic .lb.mini{border-radius:4px}
 body.classic .quai{border-radius:3px}
+#jrHead{display:none!important}
+.list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
+.list-title{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
+body.classic .back-btn{border-radius:6px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -341,10 +346,16 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <h2>Horaires</h2>
     <div class="tiles" id="tiles"></div>
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Ajoute des destinations dans l'onglet <b style="display:inline;font-size:inherit">Parcours</b>.</div>
-    <div id="jrHead" class="row between" style="display:none;margin:18px 4px 8px">
-      <h3 style="margin:0" id="jrTitle">Prochains départs</h3>
-      <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻ Actualiser</button>
+  </section>
+
+  <!-- LISTE DES PARCOURS (page séparée) -->
+  <section class="view" id="v-list">
+    <div class="list-top">
+      <button class="back-btn" onclick="closeList()" aria-label="Retour">‹</button>
+      <h2 id="jrTitle" class="list-title">Prochains départs</h2>
+      <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻</button>
     </div>
+    <div id="jrHead" style="display:none"></div>
     <div id="timeBar" class="time-bar glass" style="display:none">
       <span>🕒</span>
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
@@ -545,9 +556,21 @@ const MODE_ICON = {BUS:'🚌',TRAM:'🚋',SUBWAY:'🚇',METRO:'🚇',RAIL:'🚆'
 const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 
 /* ========= Navigation ========= */
+const listOpen=()=>$('#v-list').classList.contains('active');
+function openList(){
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-list'));
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
+  window.scrollTo({top:0});
+}
+function closeList(){
+  deselectTile();
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
+  window.scrollTo({top:0});
+}
 $('#tabs').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x===b));
+  if(listOpen()) deselectTile();   // quitter la liste arrête son actualisation
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
   if(b.dataset.v==='tickets') renderSMS();
@@ -821,7 +844,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles();
+  shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';$('#jrTitle').textContent=(from?from.name+' → ':'Vers ')+to.name;
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -979,11 +1002,11 @@ const atEnd=()=>window.innerHeight+window.scrollY>=document.documentElement.scro
 function insistSet(v){ insist=Math.max(0,Math.min(1,v)); const sen=$('#more'); if(!sen) return;
   sen.style.setProperty('--ins',insist); sen.classList.toggle('insisting',insist>0&&!moreBusy) }
 function insistDone(){ if(insist>=1&&!moreBusy){ if(navigator.vibrate) navigator.vibrate(10); loadMoreJourneys() } insistSet(0) }
-document.addEventListener('touchstart',e=>{ insStart=($('#v-horaires').classList.contains('active')&&$('#more')&&atEnd())?e.touches[0].clientY:null },{passive:true});
+document.addEventListener('touchstart',e=>{ insStart=(listOpen()&&$('#more')&&atEnd())?e.touches[0].clientY:null },{passive:true});
 document.addEventListener('touchmove',e=>{ if(insStart==null) return; if(!atEnd()){insistSet(0);return}
   insistSet((insStart-e.touches[0].clientY)/110) },{passive:true});
 document.addEventListener('touchend',()=>{ if(insStart!=null){insStart=null;insistDone()} },{passive:true});
-addEventListener('wheel',e=>{ if(!$('#v-horaires').classList.contains('active')||!$('#more')||!atEnd()||e.deltaY<=0) return;
+addEventListener('wheel',e=>{ if(!listOpen()||!$('#more')||!atEnd()||e.deltaY<=0) return;
   insistSet(insist+e.deltaY/600); clearTimeout(insT); insT=setTimeout(insistDone,180) },{passive:true});
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
@@ -1201,8 +1224,8 @@ async function refreshTracked(){
   }
   save(); renderTracked(); toast('Suivis actualisés');
 }
-setInterval(()=>{ if(lastJourneys.length&&$('#v-horaires').classList.contains('active')) renderJourneyList() },15000);
-setInterval(()=>{ if($('#v-horaires').classList.contains('active')&&selDest&&!document.hidden) loadJourneys();
+setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
+setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys();
   if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(); },60000);
 
 /* ========= Tickets SMS ========= */
@@ -1562,7 +1585,7 @@ function drawItinerary(it){
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED/.test(l.mode);
   const pts=[], key=new Set();
-  const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+props.major;if(key.has(k))return;key.add(k);
+  const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+(p.track||'')+'|'+props.major+'|'+p.lat.toFixed(5)+','+p.lon.toFixed(5);if(key.has(k))return;key.add(k); // même arrêt mais quai différent = étiquette séparée
     pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[p.lon,p.lat]}})};
   transit.forEach((l,i)=>{
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
