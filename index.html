@@ -24,8 +24,10 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 /* Fond d'écran sur un calque fixe de la taille de l'écran : il ne bouge ni ne s'étire quand la liste change (iOS ignore background-attachment:fixed) */
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:var(--wall) center/cover no-repeat,var(--bg);
-  transform:translateZ(0);height:100lvh}
+body::before{content:"";position:fixed;left:0;right:0;top:-160px;bottom:-160px;z-index:-1;pointer-events:none;
+  background:var(--wall) center/cover no-repeat,var(--bg);transform:translateZ(0)}
+/* le calque dépasse en haut et en bas : il passe sous la barre d'adresse et la barre d'outils de Safari, sans bande non couverte */
+@supports (height:100lvh){ body::before{top:calc(-160px);bottom:auto;height:calc(100lvh + 320px)} }
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
   color:var(--text);background:var(--bg);
