@@ -298,7 +298,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 110px)}
 .walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
-.veh-m{will-change:transform;display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
+.veh-m{will-change:transform;transition:none!important;display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
   box-shadow:0 0 0 3px #fff,0 4px 12px rgba(0,0,0,.4)}
 .me-m{width:22px;height:22px;position:relative}
 .me-m .dot{position:absolute;inset:3px;border-radius:50%;background:#0a84ff;box-shadow:0 0 0 3px #fff,0 0 0 8px rgba(10,132,255,.25)}
@@ -1603,7 +1603,7 @@ function drawStairs(which,legs){
   stairPoints(legs).forEach(s=>{
     const el=document.createElement('div'); el.className='stair-m';
     el.innerHTML=s.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${s.up===null?'':`<b>${s.up?'↑':'↓'}</b>`}`;
-    stairMks[which].push(new maplibregl.Marker({element:el}).setLngLat(s.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(s.t1)}</b>${s.t2?`<br><span style="color:var(--muted)">${esc(s.t2)}</span>`:''}`)).addTo(mlMap));
+    stairMks[which].push(new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(s.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(s.t1)}</b>${s.t2?`<br><span style="color:var(--muted)">${esc(s.t2)}</span>`:''}`)).addTo(mlMap));
   });
 }
 function drawItinerary(it){
@@ -1640,7 +1640,7 @@ function drawItinerary(it){
   pts.forEach(f=>{const p=f.properties, el=document.createElement('div');
     el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
     el.innerHTML=`<b>${esc(p.name)}</b>${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
-    stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0]}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
+    stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
   updateLblZoom();
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
@@ -1744,6 +1744,7 @@ function toggleFollowVeh(){
   if(!vehMk||!vehShown){ toast('Position du véhicule pas encore disponible'); return }
   followVeh=!followVeh; $('#btnFollow').classList.toggle('on',followVeh);
   if(followVeh){ if(navOn) stopNav(); mlMap.easeTo({center:vehShown,zoom:Math.max(mlMap.getZoom(),16),duration:700}); toast('Suivi du véhicule activé') }
+  else if(pos){ mlMap.easeTo({center:[pos.lon,pos.lat],zoom:Math.max(mlMap.getZoom(),16),duration:700}) }   // retour à ma position
 }
 function vehPosAt(t){
   if(!vehState) return null;
@@ -1761,10 +1762,10 @@ function startVehAnim(){
     if(target){
       if(!vehShown) vehShown=target.slice();
       const d=kmDist(vehShown,target);
-      const k=d>0.8?1:0.25;                       // suit la position calculée (déjà continue), lissage léger
+      const k=d>0.8?1:0.18;                       // suit la position calculée (déjà continue), lissage léger
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
+      if(followVeh&&!mlMap.isEasing?.()) mlMap.jumpTo({center:vehShown});   // caméra puis marqueur dans la même image : pas de tremblement
       vehMk.setLngLat(vehShown);
-      if(followVeh&&!mlMap.isEasing?.()&&Date.now()-(lastUserMove||0)>400) mlMap.jumpTo({center:vehShown});
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=firstTransit(mapIt); drawApproach(vehState.trip,vehShown,ft) }
     }
     vehRaf=requestAnimationFrame(tick);
@@ -1800,7 +1801,7 @@ async function updateVehicle(){
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
   if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} $('#mapSub').textContent=`Départ ${hm(ft.startTime)} · position du véhicule pas encore disponible`; return }
-  if(!vehMk){const el=document.createElement('div');el.className='veh-m';vehMk=new maplibregl.Marker({element:el}).setLngLat(p).addTo(mlMap)}
+  if(!vehMk){const el=document.createElement('div');el.className='veh-m';vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
   const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
@@ -1837,7 +1838,7 @@ function startMeAnim(){
 async function onMyPos(force){
   if(!mlMap||!pos) return;
   const me=[pos.lon,pos.lat];
-  if(!meMk){const el=document.createElement('div');el.className='me-m';el.innerHTML='<div class="cone"></div><div class="dot"></div>';meMk=new maplibregl.Marker({element:el,rotationAlignment:'map'}).setLngLat(me).addTo(mlMap)}
+  if(!meMk){const el=document.createElement('div');el.className='me-m';el.innerHTML='<div class="cone"></div><div class="dot"></div>';meMk=new maplibregl.Marker({element:el,rotationAlignment:'map',subpixelPositioning:true}).setLngLat(me).addTo(mlMap)}
   meTarget=me; if(!meShown){meShown=me.slice();meMk.setLngLat(me)} startMeAnim();
   const hd=heading??gpsHeading; const el=meMk.getElement();
   el.classList.toggle('dir',hd!=null); if(hd!=null) bearTarget=hd;
