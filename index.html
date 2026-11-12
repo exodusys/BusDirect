@@ -107,7 +107,7 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .al-d{padding:10px 12px;border-radius:12px;background:rgba(255,159,10,.12);margin-bottom:8px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
-.tile.arming{transform:scale(.97);transition:transform .4s ease}
+.tile.arming{transform:scale(.97);transition:transform .2s ease}
 .tile.from{outline:2.5px dashed var(--accent);outline-offset:-1px}
 .tile.target{transform:scale(1.04);outline:2.5px solid var(--accent)}
 svg.link{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible;opacity:0;transition:opacity .2s}
@@ -483,7 +483,7 @@ function drawLink(){ // ligne permanente entre les deux dalles sélectionnées
   setLine(a&&tileCenter(a),b&&tileCenter(b),a&&b);
 }
 addEventListener('resize',drawLink);
-// Appui long (≈0,4 s) puis glisser vers une autre dalle. Un glisser simple = défilement normal, aucune action.
+// Appui long (≈0,2 s) puis glisser vers une autre dalle. Un glisser simple = défilement normal, aucune action.
 let tileArmed=false;
 document.addEventListener('touchmove',e=>{if(tileArmed)e.preventDefault()},{passive:false});
 function bindTileDrag(t){
@@ -498,7 +498,7 @@ function bindTileDrag(t){
       try{t.setPointerCapture(e.pointerId)}catch{}
       if(navigator.vibrate)navigator.vibrate(15);
       setLine(tileCenter(t),tileCenter(t),true);
-    },400);
+    },200);
   });
   t.addEventListener('pointermove',e=>{
     if(!start) return;
