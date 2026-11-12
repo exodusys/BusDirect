@@ -998,6 +998,9 @@ async function buildStyle(){
     if(mapDark) for(const [k,v] of Object.entries(ly.paint||{})) if(/color$/.test(k)) ly.paint[k]=mapColor(v);
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
+    if(ly.paint&&ly.paint['fill-pattern']){ // pas de hachures (gares, voies, zones…)
+      delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?'#2b2b2b':'#e9e5df'; ly.paint['fill-opacity']=0.6;
+    }
   });
   return st;
 }
@@ -1109,14 +1112,14 @@ async function openMap(it){
   startMeWatch();
 }
 function drawItinerary(it){
-  const feats=it.legs.map(l=>({type:'Feature',properties:{walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#8e8e93':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
+  const feats=it.legs.map(l=>({type:'Feature',properties:{walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
   const src={type:'FeatureCollection',features:feats};
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
   else{
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8e8e93','line-width':4,'line-dasharray':[0.5,1.8]},layout:{'line-cap':'round'}});
+    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
   }
   if(!mlMap.getSource('walkto')){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
