@@ -111,6 +111,9 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
 .time-bar input.custom{color:var(--accent)}
 #nowBtn.on{background:var(--accent);color:#fff}
+.more-sen{height:40px}
+.more-sen.busy{background:none;display:flex;justify-content:center}
+.more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -741,7 +744,8 @@ async function loadJourneys(){
     const usedPos=pos&&{...pos};
     const data=await nextDepartures(selDest,selFrom);
     lastPlanPos=usedPos;
-    lastJourneys=data; loadedFor=pairKey; prefetchColors(data);
+    if(first) await colorsBeforeRender(data); else prefetchColors(data);
+    lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
     renderJourneyList();
@@ -771,12 +775,31 @@ function renderJourneyList(){
     prev=el;
   });
   existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
-  if(lastJourneys.length>shown){const b=document.createElement('button');b.className='btn ghost';b.id='more';b.style.cssText='width:100%;margin-top:4px';
-    b.textContent=`Afficher 5 de plus (${lastJourneys.length-shown} restants)`;b.onclick=()=>{shown+=5;renderJourneyList()};box.appendChild(b)}
+  // Défilement infini : un repère en bas de liste ; quand il devient visible on ajoute 5 trajets
+  const sen=document.createElement('div'); sen.id='more'; sen.className='more-sen'; box.appendChild(sen);
+  if(!moreObs) moreObs=new IntersectionObserver(es=>{ if(es.some(e=>e.isIntersecting)) loadMoreJourneys() },{rootMargin:'200px'});
+  moreObs.disconnect(); moreObs.observe(sen);
   curList=list;
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
-let curList=[];
+let curList=[], moreObs=null, moreBusy=false;
+async function loadMoreJourneys(){
+  if(moreBusy||!selDest) return;
+  if(lastJourneys.length>shown){ shown+=5; renderJourneyList(); return }
+  // plus rien en réserve : on charge les départs suivants
+  moreBusy=true; const sen=$('#more'); if(sen) sen.classList.add('busy');
+  try{
+    const lastF=firstTransit(lastJourneys.at(-1)); if(!lastF) return;
+    const t=new Date(+new Date(lastF.startTime)+60000);
+    let dest=await nearestStop(selDest), from=selFrom?await nearestStop(selFrom):null;
+    const d=await plan(dest,t,null,from);
+    const known=new Set(lastJourneys.map(jkey));
+    const add=(d.itineraries||[]).filter(it=>firstTransit(it)&&!known.has(jkey(it)))
+      .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
+    if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; renderJourneyList() }
+    else if(sen) sen.remove();
+  }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
+}
 const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650','#fff'],SUBWAY:['#0072bc','#fff'],METRO:['#0072bc','#fff'],
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
@@ -805,7 +828,7 @@ async function osmFetch(){
   // regroupe par zone (~20 km) pour garder des requêtes petites et rapides, toutes lancées en parallèle
   const groups={}; [...osmQueue.entries()].forEach(([k,l])=>{const g=Math.round(l.from.lat*5)+'_'+Math.round(l.from.lon*5);(groups[g]=groups[g]||[]).push([k,l])});
   osmQueue.clear();
-  Object.values(groups).forEach(osmFetchGroup);
+  return Promise.all(Object.values(groups).map(osmFetchGroup));
 }
 async function osmFetchGroup(batch){
   const refs=[...new Set(batch.map(([,l])=>nref(l.routeShortName||l.displayName).replace(/[^A-Z0-9]/g,'')).filter(Boolean))];
@@ -825,6 +848,12 @@ async function osmFetchGroup(batch){
 }
 // Précharge les couleurs de toutes les lignes dès que la liste est reçue (pas seulement celles affichées)
 function prefetchColors(list){ (list||[]).forEach(it=>it.legs.forEach(l=>{ if(l.mode!=='WALK'&&l.from) lineColor(l) })) }
+// Cherche les couleurs AVANT d'afficher la liste (max 1,5 s), pour qu'elle apparaisse déjà colorée
+async function colorsBeforeRender(list){
+  prefetchColors(list); clearTimeout(osmTimer);
+  if(!osmQueue.size) return;
+  await Promise.race([osmFetch(), new Promise(r=>setTimeout(r,1500))]);
+}
 function resetLineColors(){
   OSMC.m={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
   try{localStorage.removeItem('bd_osmc')}catch{}
