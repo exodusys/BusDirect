@@ -220,7 +220,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Ajoute des destinations dans l'onglet <b style="display:inline;font-size:inherit">Parcours</b>.</div>
     <div id="jrHead" class="row between" style="display:none;margin:18px 4px 8px">
       <h3 style="margin:0" id="jrTitle">Prochains départs</h3>
-      <button class="btn ghost sm" onclick="loadJourneys()">↻ Actualiser</button>
+      <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻ Actualiser</button>
     </div>
     <div id="journeys"></div>
   </section>
@@ -434,7 +434,27 @@ function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.
 
 /* ========= Horaires ========= */
 let selFrom=null; // null = ma position
-function pickPair(from,to){shown=5;loadedFor=null;$('#journeys').innerHTML='';selFrom=from;selDest=to;renderTiles();loadJourneys()}
+// Position fraîche (pas de cache) avant de calculer la liste
+function freshPos(){
+  return new Promise(res=>{
+    if(!navigator.geolocation) return res(pos);
+    navigator.geolocation.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
+      ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+  });
+}
+async function pickPair(from,to){
+  shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles();
+  $('#jrHead').style.display='flex';$('#jrTitle').textContent=(from?from.name+' → ':'Vers ')+to.name;
+  $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
+  if(!from) await freshPos();
+  if(selDest===to&&selFrom===from) loadJourneys();
+}
+// Suivi continu de la position : la liste reste calée sur l'endroit où tu es
+let lastPlanPos=null;
+if(navigator.geolocation) navigator.geolocation.watchPosition(p=>{
+  pos={lat:p.coords.latitude,lon:p.coords.longitude};
+  if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
+},()=>{},{enableHighAccuracy:true,maximumAge:15000});
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
@@ -486,7 +506,9 @@ async function loadJourneys(){
   if(first){box.innerHTML='<div class="spin"></div>';lastJourneys=[]}
   loading=true; $('#jrHead').classList.add('busy');
   try{
+    const usedPos=pos&&{...pos};
     const data=await nextDepartures(selDest,selFrom);
+    lastPlanPos=usedPos;
     lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
