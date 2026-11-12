@@ -298,14 +298,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 110px)}
 .walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
-.veh-m{will-change:transform;gap:4px;padding:0 8px 0 6px;position:relative;
-display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
+.veh-m{will-change:transform;display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
   box-shadow:0 0 0 3px #fff,0 4px 12px rgba(0,0,0,.4)}
-.veh-m svg{flex:none;color:inherit}
-.veh-m span{font-weight:800}
-.veh-m.live::after{content:"";position:absolute;inset:-6px;border-radius:14px;border:3px solid #34c759;opacity:.0;animation:livePulse 1.8s ease-out infinite;pointer-events:none}
-.veh-m.live::before{content:"";position:absolute;top:-4px;right:-4px;width:10px;height:10px;border-radius:50%;background:#34c759;box-shadow:0 0 0 2px #fff}
-@keyframes livePulse{0%{opacity:.7;transform:scale(.9)}100%{opacity:0;transform:scale(1.35)}}
 .me-m{width:22px;height:22px;position:relative}
 .me-m .dot{position:absolute;inset:3px;border-radius:50%;background:#0a84ff;box-shadow:0 0 0 3px #fff,0 0 0 8px rgba(10,132,255,.25)}
 .me-m .cone{position:absolute;left:50%;bottom:50%;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:34px solid rgba(10,132,255,.35);
@@ -473,6 +467,7 @@ display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-sy
     <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
   </div>
   <div class="map-ctrl glass">
+    <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule">🚌</button>
     <button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button>
     <button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button>
     <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
@@ -1558,7 +1553,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
-  delayTarget=0; delayShown=null; vehShown=null;
+  delayTarget=0; delayShown=null; vehShown=null; followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
@@ -1574,7 +1569,7 @@ async function openMap(it,walkLeg){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
     mlMap.on('zoom',updateLblZoom);
     // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
-    ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
+    ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved(); if(followVeh&&e.originalEvent&&ev==='dragstart'){followVeh=false;$('#btnFollow').classList.remove('on')} }));
     ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
     await new Promise(r=>mlMap.once('load',r));
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
@@ -1686,7 +1681,7 @@ function mapFit(){
   if(!mlMap||!mapIt) return;
   const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach(l=>legCoords(l).forEach(c=>b.extend(c)));
   if(pos) b.extend([pos.lon,pos.lat]);
-  navOn=false; $('#walkBtn').textContent='▶︎ Lancer';
+  navOn=false; $('#walkBtn').textContent='▶︎ Lancer'; followVeh=false; $('#btnFollow')?.classList.remove('on');
   mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:is3D?55:0,bearing:0,duration:600});
 }
 function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){GEO.clearWatch(meWatch);meWatch=null} }
@@ -1743,7 +1738,13 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
-let delayTarget=0, delayShown=null;
+let delayTarget=0, delayShown=null, followVeh=false;
+// Suivre le véhicule : la carte reste centrée sur lui pendant qu'il roule
+function toggleFollowVeh(){
+  if(!vehMk||!vehShown){ toast('Position du véhicule pas encore disponible'); return }
+  followVeh=!followVeh; $('#btnFollow').classList.toggle('on',followVeh);
+  if(followVeh){ if(navOn) stopNav(); mlMap.easeTo({center:vehShown,zoom:Math.max(mlMap.getZoom(),16),duration:700}); toast('Suivi du véhicule activé') }
+}
 function vehPosAt(t){
   if(!vehState) return null;
   if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-(delayShown??delayTarget)) }
@@ -1763,17 +1764,13 @@ function startVehAnim(){
       const k=d>0.8?1:0.25;                       // suit la position calculée (déjà continue), lissage léger
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
       vehMk.setLngLat(vehShown);
+      if(followVeh&&!mlMap.isEasing?.()&&Date.now()-(lastUserMove||0)>400) mlMap.jumpTo({center:vehShown});
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=firstTransit(mapIt); drawApproach(vehState.trip,vehShown,ft) }
     }
     vehRaf=requestAnimationFrame(tick);
   };
   vehRaf=requestAnimationFrame(tick);
 }
-const VEH_ICON={
-  bus:'<svg viewBox="0 0 24 24" width="16" height="16"><rect x="4" y="3" width="16" height="15" rx="3" fill="currentColor"/><rect x="6" y="5.5" width="12" height="5.5" rx="1" fill="var(--vbg)" opacity=".85"/><circle cx="8" cy="14.5" r="1.3" fill="var(--vbg)"/><circle cx="16" cy="14.5" r="1.3" fill="var(--vbg)"/><rect x="5.5" y="18" width="3" height="3" rx="1" fill="currentColor"/><rect x="15.5" y="18" width="3" height="3" rx="1" fill="currentColor"/></svg>',
-  tram:'<svg viewBox="0 0 24 24" width="16" height="16"><path d="M8 2h8M12 2v3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/><rect x="7" y="7.5" width="10" height="5" rx="1" fill="var(--vbg)" opacity=".85"/><circle cx="9" cy="15.5" r="1.2" fill="var(--vbg)"/><circle cx="15" cy="15.5" r="1.2" fill="var(--vbg)"/><path d="M8 19l-2 3M16 19l2 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-  train:'<svg viewBox="0 0 24 24" width="16" height="16"><rect x="5" y="2" width="14" height="16" rx="4" fill="currentColor"/><rect x="7" y="5" width="10" height="5" rx="1.5" fill="var(--vbg)" opacity=".85"/><circle cx="9" cy="14" r="1.3" fill="var(--vbg)"/><circle cx="15" cy="14" r="1.3" fill="var(--vbg)"/><path d="M7 18l-2 4M17 18l2 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-  boat:'<svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 13h16l-3 6H7z" fill="currentColor"/><rect x="9" y="6" width="6" height="5" rx="1" fill="currentColor"/><path d="M3 21c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>'};
 async function updateVehicle(){
   if(!mapIt||!mlMap) return;
   const ft=firstTransit(mapIt); if(!ft) return;
@@ -1804,10 +1801,7 @@ async function updateVehicle(){
   drawApproach(trip,p,ft);
   if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} $('#mapSub').textContent=`Départ ${hm(ft.startTime)} · position du véhicule pas encore disponible`; return }
   if(!vehMk){const el=document.createElement('div');el.className='veh-m';vehMk=new maplibregl.Marker({element:el}).setLngLat(p).addTo(mlMap)}
-  const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.background=bg; el.style.color=fg; el.style.setProperty('--vbg',bg);
-  const ico=/TRAM/.test(ft.mode)?VEH_ICON.tram:/RAIL|LONG|SUBURBAN|SUBWAY|METRO/.test(ft.mode)?VEH_ICON.train:/FERRY/.test(ft.mode)?VEH_ICON.boat:VEH_ICON.bus;
-  const html=`${ico}<span>${esc(ft.routeShortName||'')}</span>`; if(el._h!==html){el.innerHTML=html;el._h=html}
-  el.classList.toggle('live',live);
+  const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
@@ -1884,6 +1878,7 @@ async function toggleNav(){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
   if(S.settings.motionOn!==false){ addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient) } else toast('Mouvement désactivé : orientation selon ta marche');
   is3D=false; $('#btn3d').textContent='3D';
+  followVeh=false; $('#btnFollow')?.classList.remove('on');
   navOn=true; $('#walkBtn').textContent='■ Arrêter'; onMyPos(true);
 }
 function stopNav(){
