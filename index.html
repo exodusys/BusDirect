@@ -163,6 +163,8 @@ body.classic .btn,body.classic .map-btn,body.classic .seg,body.classic .seg butt
 body.classic .lb.main{border-radius:6px}body.classic .lb.mini{border-radius:4px}
 body.classic .quai{border-radius:3px}
 #jrHead{display:none!important}
+body.list-inline #listTop{margin-top:18px}
+body.list-inline .list-title{font-size:16px}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
 .list-title{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
@@ -350,7 +352,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 
   <!-- LISTE DES PARCOURS (page séparée) -->
   <section class="view" id="v-list">
-    <div class="list-top">
+    <div class="list-top" id="listTop">
       <button class="back-btn" onclick="closeList()" aria-label="Retour">‹</button>
       <h2 id="jrTitle" class="list-title">Prochains départs</h2>
       <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻</button>
@@ -419,6 +421,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
+    <h3>Horaires</h3>
+    <div class="card glass">
+      <div class="set"><div><b>📄 Listes sur une page séparée</b><div class="muted" style="font-size:12px">Sinon, la liste s'affiche sous les dalles</div></div>
+        <label class="switch"><input type="checkbox" id="listSepOn" onchange="setListPage(this.checked)"><span></span></label></div>
+    </div>
     <h3>Itinéraires</h3>
     <div class="card glass">
       <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
@@ -556,14 +563,37 @@ const MODE_ICON = {BUS:'🚌',TRAM:'🚋',SUBWAY:'🚇',METRO:'🚇',RAIL:'🚆'
 const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 
 /* ========= Navigation ========= */
-const listOpen=()=>$('#v-list').classList.contains('active');
+const listSep=()=>S.settings.listPage!==false;
+const listOpen=()=>listSep()?$('#v-list').classList.contains('active'):($('#v-horaires').classList.contains('active')&&!!selDest);
+// place la liste soit sur sa propre page, soit sous les dalles
+function applyListMode(){
+  const host=listSep()?$('#v-list'):$('#v-horaires');
+  ['#listTop','#jrHead','#timeBar','#journeys'].forEach(id=>{const n=$(id); if(n&&n.parentElement!==host) host.appendChild(n)});
+  document.body.classList.toggle('list-inline',!listSep());
+  if($('#listSepOn')) $('#listSepOn').checked=listSep();
+  if(!listSep()&&$('#v-list').classList.contains('active')) document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
+  $('#listTop').style.display=(listSep()||selDest)?'':'none';
+}
+/* Glisser depuis le bord gauche vers la droite pour revenir aux dalles (liste séparée) */
+let edge=null;
+document.addEventListener('touchstart',e=>{ if(!listSep()||!$('#v-list').classList.contains('active')) return;
+  const t=e.touches[0]; edge=t.clientX<28?{x:t.clientX,y:t.clientY,dx:0,on:false}:null },{passive:true});
+document.addEventListener('touchmove',e=>{ if(!edge) return; const t=e.touches[0], dx=t.clientX-edge.x, dy=Math.abs(t.clientY-edge.y);
+  if(!edge.on){ if(dy>20&&dy>dx){edge=null;return} if(dx>10) edge.on=true }
+  if(edge.on){ edge.dx=Math.max(0,dx); const v=$('#v-list'); v.style.transition='none'; v.style.transform=`translateX(${edge.dx}px)`; v.style.opacity=String(1-Math.min(.5,edge.dx/innerWidth)) } },{passive:true});
+document.addEventListener('touchend',()=>{ if(!edge) return; const v=$('#v-list'), go=edge.on&&edge.dx>Math.min(110,innerWidth*.28); edge=null;
+  v.style.transition='transform .25s ease, opacity .25s ease';
+  if(go){ v.style.transform=`translateX(${innerWidth}px)`; v.style.opacity='0'; setTimeout(()=>{ closeList(); v.style.transition='none'; v.style.transform=''; v.style.opacity='' },230) }
+  else { v.style.transform=''; v.style.opacity='' } },{passive:true});
+function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast(on?'Listes sur une page séparée':'Listes sous les dalles') }
 function openList(){
+  if(!listSep()){ $('#listTop').style.display=''; return }
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-list'));
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   window.scrollTo({top:0});
 }
 function closeList(){
-  deselectTile();
+  deselectTile(); if(!listSep()){ $('#listTop').style.display='none'; return }
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
   window.scrollTo({top:0});
 }
@@ -833,7 +863,8 @@ let selFrom=null; // null = ma position
 // Désélection : la liste disparaît et son actualisation s'arrête
 function deselectTile(){
   selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[];
-  renderTiles(); $('#jrHead').style.display='none'; $('#timeBar').style.display='none'; $('#journeys').innerHTML='';
+  planTime=null; try{syncTimeBar()}catch{}   // la date choisie ne reste pas active pour les dalles suivantes
+  renderTiles(); if(!listSep()) $('#listTop').style.display='none'; $('#jrHead').style.display='none'; $('#timeBar').style.display='none'; $('#journeys').innerHTML='';
 }
 // Position fraîche (pas de cache) avant de calculer la liste
 function freshPos(){
@@ -1868,6 +1899,7 @@ function toggleInfo(on){
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
 /* ========= Init ========= */
+applyListMode();
 syncNearestUI();
 setTimeout(()=>S.dests.filter(d=>d.type!=='STOP'&&!(d.nearStop&&d.nearStop.id)).forEach(d=>nearestStop(d)),1500);
 updateSuivisTab();
