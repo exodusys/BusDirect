@@ -662,17 +662,28 @@ async function plan(dest, time, cursor, from){
 }
 // Récupère tous les prochains départs (plusieurs pages), sans doublons, triés par heure de départ
 // Arrêt le plus proche d'une adresse / d'un lieu (mis en cache sur la destination)
+// Arrêt le plus proche d'une adresse / d'un POI (mémorisé sur la destination)
 async function nearestStop(p){
   if(!p||p.type==='STOP') return p;
-  if(p.nearStop) return p.nearStop;
-  for(const v of ['v1','v5']){
-    try{const r=await fetch(`${API}/${v}/reverse-geocode?place=${p.lat},${p.lon}&type=STOP`);if(!r.ok)continue;
-      const list=(await r.json()).filter(x=>x.type==='STOP'&&x.id);
-      if(!list.length) break;
-      list.sort((a,b)=>dist(p,a)-dist(p,b));
-      const st=list[0]; p.nearStop={type:'STOP',id:st.id,name:st.name,lat:st.lat,lon:st.lon}; save(); return p.nearStop;
-    }catch{}
+  if(p.nearStop&&p.nearStop.id) return p.nearStop;
+  const pick=list=>{ list=list.filter(x=>x&&x.lat!=null&&(x.stopId||x.id)); if(!list.length) return null;
+    list.sort((a,b)=>dist(p,a)-dist(p,b)); const st=list[0];
+    return {type:'STOP',id:st.stopId||st.id,name:st.name,lat:st.lat,lon:st.lon,walk:Math.round(dist(p,st)*1000)} };
+  let found=null;
+  // 1) arrêts dans un carré d'environ 1,5 km autour (élargi si rien)
+  for(const d of [0.007,0.015,0.03]){
+    for(const v of ['v1','v5','v2']){
+      try{const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
+        found=pick(await r.json()); break}catch{}
+    }
+    if(found) break;
   }
+  // 2) sinon géocodage inverse
+  if(!found) for(const v of ['v1','v5']){
+    try{const r=await fetch(`${API}/${v}/reverse-geocode?place=${p.lat},${p.lon}&type=STOP`); if(!r.ok) continue;
+      found=pick((await r.json()).filter(x=>x.type==='STOP')); break}catch{}
+  }
+  if(found){ p.nearStop=found; const d=S.dests.find(x=>x.uid===p.uid); if(d) d.nearStop=found; save(); renderTiles?.(); return found }
   return p;
 }
 function cleanList(all){
@@ -714,7 +725,7 @@ function addDest(r){
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
   S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
     area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
-  save(); renderDests(); renderTiles(); toast('Destination ajoutée');
+  save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
 }
 function renderDests(){
@@ -760,7 +771,7 @@ GEO.watchPosition(p=>{
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
-    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('')
+    <div><div class="nm">${esc(d.name)}</div><div class="sub">${d.type!=='STOP'&&d.nearStop?'🚏 '+esc(d.nearStop.name)+(d.nearStop.walk?' · '+d.nearStop.walk+' m':''):esc(d.area)}</div></div></div>`).join('')
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
   document.querySelectorAll('.tile').forEach(bindTileDrag);
   drawLink();
@@ -1766,6 +1777,7 @@ function toggleInfo(on){
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
 /* ========= Init ========= */
+setTimeout(()=>S.dests.filter(d=>d.type!=='STOP'&&!(d.nearStop&&d.nearStop.id)).forEach(d=>nearestStop(d)),1500); // arrêts proches des adresses/POI
 updateSuivisTab();
 applySmsTab();
 applySettings();
