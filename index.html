@@ -586,7 +586,12 @@ document.addEventListener('touchend',()=>{ if(!edge) return; const v=$('#v-list'
   if(go){ v.style.transform=`translateX(${innerWidth}px)`; v.style.opacity='0'; setTimeout(()=>{ closeList(); v.style.transition='none'; v.style.transform=''; v.style.opacity='' },230) }
   else { v.style.transform=''; v.style.opacity='' } },{passive:true});
 function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast(on?'Listes sur une page séparée':'Listes sous les dalles') }
+// Évite le « clic fantôme » : après l'appui sur une dalle, le clic arrivait sur le champ date de la nouvelle page
+let clickShieldUntil=0;
+['click','focusin','mousedown'].forEach(ev=>document.addEventListener(ev,e=>{ if(Date.now()<clickShieldUntil){ e.preventDefault(); e.stopPropagation(); if(ev==='focusin') e.target.blur?.() } },true));
 function openList(){
+  clickShieldUntil=Date.now()+500; $('#planTime')?.blur();
+  const tb=$('#timeBar'); if(tb){ tb.style.pointerEvents='none'; setTimeout(()=>tb.style.pointerEvents='',550) }
   if(!listSep()){ $('#listTop').style.display=''; return }
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-list'));
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
