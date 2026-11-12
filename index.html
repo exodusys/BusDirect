@@ -325,6 +325,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <div class="map-bar glass">
     <button class="map-btn" onclick="closeMap()">✕</button>
     <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
+    <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
     <button class="map-btn" onclick="mapFit()">⤢</button>
   </div>
   <div class="walk-card glass" id="walkCard">
@@ -804,6 +805,8 @@ $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySetting
 function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
 /* ========= Carte OpenFreeMap (MapLibre) ========= */
+let is3D=false; // la marche démarre en 2D
+function toggle3D(){is3D=!is3D;$('#btn3d').textContent=is3D?'2D':'3D';if(mlMap)mlMap.easeTo({pitch:is3D?55:0,duration:500})}
 let mlMap=null, mapIt=null, vehMk=null, meMk=null, navOn=false, heading=null, mapTimers=[], walkGeo=null, boardStop=null;
 function decodePoly(str,prec){let i=0,lat=0,lng=0,out=[],f=Math.pow(10,prec||6);
   while(i<str.length){for(const k of [0,1]){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=r&1?~(r>>1):r>>1;k?lng+=d:lat+=d}out.push([lng/f,lat/f])}return out} // [lon,lat]
@@ -881,7 +884,7 @@ function mapFit(){
   const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach(l=>legCoords(l).forEach(c=>b.extend(c)));
   if(pos) b.extend([pos.lon,pos.lat]);
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer';
-  mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:is3D?55:0,bearing:0,duration:600});
 }
 function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){navigator.geolocation.clearWatch(meWatch);meWatch=null} }
 
@@ -945,7 +948,7 @@ async function onMyPos(){
   const wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((+new Date(firstTransit(mapIt).startTime)-Date.now())/60000);
   $('#walkTitle').textContent=`Marche jusqu'à ${boardStop.name}${boardStop.track?' · Quai '+boardStop.track:''}`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied · départ dans ${left} min ${wmin>left?'<span class="late">— presse le pas !</span>':''}`;
-  if(navOn){ mlMap.easeTo({center:me,bearing:hd??bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]),pitch:55,zoom:18,duration:800}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
+  if(navOn){ mlMap.easeTo({center:me,bearing:hd??bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]),pitch:is3D?55:0,zoom:18,duration:800}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
 }
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
@@ -971,12 +974,13 @@ async function toggleNav(){
   try{ if(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
   addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient);
+  is3D=false; $('#btn3d').textContent='3D';
   navOn=true; $('#walkBtn').textContent='■ Arrêter'; onMyPos();
 }
 function stopNav(){
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer';
   removeEventListener('deviceorientationabsolute',onOrient); removeEventListener('deviceorientation',onOrient); heading=null;
-  if(mlMap) mlMap.easeTo({pitch:0,duration:500});
+  if(mlMap&&!is3D) mlMap.easeTo({pitch:0,duration:500});
 }
 
 /* ========= Init ========= */
