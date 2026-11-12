@@ -41,7 +41,7 @@ body.noglass .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background
 header{position:fixed;top:0;left:0;right:0;z-index:20;padding:calc(var(--safe-t) + 10px) 16px 10px;
   display:flex;align-items:center;gap:10px;border-radius:0 0 var(--radius) var(--radius);border-top:none}
 .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;overflow:hidden;
-  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:20px;box-shadow:0 4px 12px rgba(227,6,19,.35)}
+  color:#5ec26a;font-size:20px}
 .logo img{width:100%;height:100%;object-fit:cover}
 .appname{font-weight:800;font-size:20px;letter-spacing:-.3px}
 .appname span{color:var(--accent)}
@@ -195,6 +195,17 @@ nav button.active{color:var(--accent);background:rgba(var(--glass-rgb),.6)}
 .switch input:checked+span{background:#34c759}
 .switch input:checked+span::after{transform:translateX(20px)}
 input[type=range]{width:55%;accent-color:var(--accent)}
+.picker2{display:grid;gap:8px}
+.picker2.logos{grid-template-columns:repeat(auto-fill,minmax(64px,1fr))}
+.picker2.walls{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
+.pick2{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px 10px;border-radius:16px;background:rgba(127,127,127,.12);border:2px solid transparent;cursor:pointer;text-align:center}
+.pick2 span{font-size:11.5px;font-weight:700;line-height:1.15}
+.pick2.on{border-color:#5ec26a;background:rgba(94,194,106,.15)}
+.pick2 .pv{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background-size:cover;background-position:center;font-size:22px;color:var(--muted)}
+.pick2 .logo-pv{color:#5ec26a}
+.pick2 .wall-pv{width:100%;height:auto;aspect-ratio:3/4;border-radius:12px;background:#0b0b0d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.pick2.add .pv{background:rgba(127,127,127,.18)}
+.pick2 .pick-x{top:-6px;right:-6px}
 .picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:10px;margin-top:10px}
 .pick{aspect-ratio:1;border-radius:16px;cursor:pointer;display:grid;place-items:center;font-size:24px;color:#fff;border:2px solid transparent;background-size:cover;background-position:center;overflow:hidden}
 .pick.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(227,6,19,.25)}
@@ -334,10 +345,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <div class="set"><span>Transparence</span><input type="range" id="alpha" min="10" max="95"></div>
       <div class="set"><span>Saturation</span><input type="range" id="sat" min="100" max="250"></div>
     </div>
-    <h3>Logo de l'app</h3>
-    <div class="card glass"><div class="picker" id="logoPicker"></div></div>
-    <h3>Fond d'écran</h3>
-    <div class="card glass"><div class="picker" id="wallPicker"></div></div>
+    <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
+    <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
     <h3>Tickets</h3>
     <div class="card glass">
       <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets dans la barre du bas</div></div>
@@ -399,7 +408,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'auto',accent:'#e30613',glass:true,blur:22,alpha:55,sat:180,logo:'bus',wall:'aurora',customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'auto',accent:'#e30613',glass:true,blur:22,alpha:55,sat:180,logo:'original',wall:'none',customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
@@ -957,17 +966,47 @@ function renderSMS(){
 }
 
 /* ========= Settings ========= */
-const LOGOS={bus:{bg:'linear-gradient(135deg,#e30613,#ff5a5f)',ic:'🚌'},tram:{bg:'linear-gradient(135deg,#0a84ff,#64d2ff)',ic:'🚋'},
-  train:{bg:'linear-gradient(135deg,#1c1c1e,#48484a)',ic:'🚆'},night:{bg:'linear-gradient(135deg,#2b1055,#7597de)',ic:'🌙'},
-  green:{bg:'linear-gradient(135deg,#00a650,#9be15d)',ic:'🍃'},gold:{bg:'linear-gradient(135deg,#f7971e,#ffd200)',ic:'⚡'},
-  letter:{bg:'linear-gradient(135deg,#e30613,#8b0000)',ic:'<b style="font-family:system-ui;font-size:20px">B</b>'}};
-const WALLS={none:'none',
-  aurora:'radial-gradient(at 20% 10%,#ff5a5f55 0,transparent 50%),radial-gradient(at 80% 30%,#0a84ff55 0,transparent 50%),radial-gradient(at 40% 90%,#34c75944 0,transparent 50%)',
-  geneva:'linear-gradient(160deg,#0a3d62 0%,#3c6382 45%,#e55039 100%)',
-  lake:'linear-gradient(180deg,#89f7fe 0%,#66a6ff 100%)',
-  sunset:'linear-gradient(135deg,#ff9a8b 0%,#ff6a88 55%,#ff99ac 100%)',
-  night:'linear-gradient(180deg,#0f2027,#203a43,#2c5364)',
-  mesh:'radial-gradient(at 0 0,#e30613aa 0,transparent 55%),radial-gradient(at 100% 100%,#5856d6aa 0,transparent 55%),linear-gradient(#111,#111)'};
+/* Logos (SVG 64×64 : forme en couleur, détails en blanc) */
+const W='#fff';
+const LOGOS={
+  original:{n:'Original',s:`<rect x="10" y="8" width="44" height="40" rx="9" fill="currentColor"/><rect x="15" y="13" width="34" height="15" rx="4" fill="${W}" opacity=".9"/><rect x="15" y="33" width="34" height="3" rx="1.5" fill="${W}" opacity=".8"/><circle cx="20" cy="41" r="3" fill="${W}"/><circle cx="44" cy="41" r="3" fill="${W}"/><rect x="13" y="47" width="10" height="9" rx="3" fill="${W}"/><rect x="41" y="47" width="10" height="9" rx="3" fill="${W}"/>`},
+  pastille:{n:'Pastille',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><rect x="21" y="17" width="22" height="26" rx="6" fill="${W}"/><rect x="25" y="21" width="14" height="8" rx="2" fill="currentColor"/><circle cx="26.5" cy="36" r="2.2" fill="currentColor"/><circle cx="37.5" cy="36" r="2.2" fill="currentColor"/><rect x="23" y="43" width="5" height="5" rx="2" fill="${W}"/><rect x="36" y="43" width="5" height="5" rx="2" fill="${W}"/>`},
+  tram:{n:'Tram',s:`<rect x="22" y="4" width="20" height="3" rx="1.5" fill="currentColor"/><rect x="30.5" y="6" width="3" height="7" fill="currentColor"/><rect x="14" y="13" width="36" height="34" rx="9" fill="currentColor"/><rect x="19" y="18" width="26" height="11" rx="4" fill="${W}"/><circle cx="23" cy="38" r="2.6" fill="${W}"/><circle cx="41" cy="38" r="2.6" fill="${W}"/><path d="M20 50l-5 6M44 50l5 6" stroke="#111" stroke-width="3" stroke-linecap="round"/>`},
+  train:{n:'Train',s:`<rect x="16" y="6" width="32" height="40" rx="10" fill="currentColor"/><rect x="21" y="11" width="22" height="11" rx="4" fill="${W}"/><circle cx="25" cy="34" r="2.6" fill="${W}"/><circle cx="39" cy="34" r="2.6" fill="${W}"/><path d="M10 52h44M18 48l-6 8M46 48l6 8" stroke="#111" stroke-width="3" stroke-linecap="round"/>`},
+  repere:{n:'Repère',s:`<path d="M32 60C20 46 10 36 10 24a22 22 0 0144 0c0 12-10 22-22 36z" fill="currentColor"/><rect x="21" y="13" width="22" height="22" rx="6" fill="${W}"/><rect x="25" y="17" width="14" height="7" rx="2" fill="currentColor"/><circle cx="27" cy="29.5" r="2" fill="currentColor"/><circle cx="37" cy="29.5" r="2" fill="currentColor"/>`},
+  boussole:{n:'Boussole',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><circle cx="32" cy="32" r="22" fill="none" stroke="${W}" stroke-width="2.5" opacity=".8"/><path d="M32 12l7 20H25z" fill="${W}"/><path d="M32 52l-7-20h14z" fill="#1b3d22"/><circle cx="32" cy="32" r="3" fill="#111"/>`},
+  itineraire:{n:'Itinéraire',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><circle cx="18" cy="46" r="5" fill="${W}"/><circle cx="27" cy="41" r="2.2" fill="${W}"/><circle cx="34" cy="37" r="2.2" fill="${W}"/><circle cx="40" cy="31" r="2.2" fill="${W}"/><path d="M46 30c-5-6-8-9-8-13a8 8 0 0116 0c0 4-3 7-8 13z" fill="${W}"/><circle cx="46" cy="17" r="3" fill="currentColor"/>`},
+  ticket:{n:'Ticket',s:`<path d="M6 16h52v10a6 6 0 000 12v10H6V38a6 6 0 000-12z" fill="currentColor"/><text x="21" y="38" font-family="-apple-system,system-ui,sans-serif" font-weight="900" font-size="15" fill="${W}" text-anchor="middle">BD</text><path d="M40 20v24" stroke="${W}" stroke-width="2.5" stroke-dasharray="3 3"/>`},
+  monogramme:{n:'Monogramme',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><text x="32" y="38" font-family="-apple-system,system-ui,sans-serif" font-weight="900" font-size="22" fill="${W}" text-anchor="middle">BD</text><rect x="20" y="44" width="24" height="3.5" rx="1.75" fill="${W}" opacity=".85"/>`},
+  horloge:{n:'Horloge',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><circle cx="32" cy="32" r="21" fill="${W}"/><path d="M32 18v14l9 6" stroke="#111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="32" cy="32" r="3" fill="#111"/>`},
+  metro:{n:'Métro',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><path d="M18 46V20l14 16 14-16v26" stroke="${W}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+  bateau:{n:'Bateau',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><rect x="24" y="14" width="16" height="9" rx="2" fill="${W}"/><path d="M14 26h36l-6 12H20z" fill="${W}"/><path d="M12 46c4-3 6-3 10 0s6 3 10 0 6-3 10 0 6 3 10 0" stroke="${W}" stroke-width="3" fill="none" stroke-linecap="round"/>`},
+  arret:{n:'Arrêt',s:`<rect x="29.5" y="30" width="5" height="30" rx="2.5" fill="#222"/><circle cx="32" cy="20" r="16" fill="currentColor"/><circle cx="32" cy="20" r="11.5" fill="${W}"/><text x="32" y="26.5" font-family="-apple-system,system-ui,sans-serif" font-weight="900" font-size="17" fill="currentColor" text-anchor="middle">H</text>`},
+  volant:{n:'Volant',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><circle cx="32" cy="32" r="20" fill="none" stroke="${W}" stroke-width="5"/><path d="M13 30h38M32 36v15" stroke="${W}" stroke-width="5" stroke-linecap="round"/><circle cx="32" cy="33" r="5" fill="${W}"/>`},
+  fleche:{n:'Flèche',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><path d="M16 32h30M34 20l12 12-12 12" stroke="${W}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+  reseau:{n:'Réseau',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><path d="M14 24h12l12 20h12M14 44h12l12-20h12" stroke="${W}" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="32" cy="34" r="4" fill="${W}"/>`},
+  endirect:{n:'En direct',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><path d="M16 28a23 23 0 0132 0M21 34a15 15 0 0122 0" stroke="${W}" stroke-width="5" stroke-linecap="round" fill="none"/><circle cx="32" cy="42" r="4.5" fill="${W}"/>`},
+  mobilite:{n:'Mobilité',s:`<circle cx="32" cy="32" r="28" fill="currentColor"/><circle cx="21" cy="38" r="8" fill="none" stroke="${W}" stroke-width="3.5"/><circle cx="43" cy="38" r="8" fill="none" stroke="${W}" stroke-width="3.5"/><path d="M21 38l7-12h9l6 12M28 26l4 12M33 22h6" stroke="${W}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>`},
+  hexagone:{n:'Hexagone',s:`<path d="M32 4l24 14v28L32 60 8 46V18z" fill="currentColor"/><rect x="21" y="19" width="22" height="24" rx="6" fill="${W}"/><rect x="25" y="23" width="14" height="7" rx="2" fill="currentColor"/><circle cx="27" cy="36" r="2.2" fill="currentColor"/><circle cx="37" cy="36" r="2.2" fill="currentColor"/>`},
+  favori:{n:'Favori',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><path d="M32 14l5.3 11.2 12.2 1.5-9 8.4 2.4 12.1L32 41.3 21.1 47.2l2.4-12.1-9-8.4 12.2-1.5z" fill="${W}"/>`}
+};
+const logoSvg=k=>`<svg viewBox="0 0 64 64" width="100%" height="100%">${(LOGOS[k]||LOGOS.original).s}</svg>`;
+/* Fonds d'écran : fond sombre avec trois halos de couleur */
+const wallOf=(a,b,c)=>`radial-gradient(circle at 12% 6%,${a}cc 0,transparent 42%),radial-gradient(circle at 92% 16%,${b}bb 0,transparent 38%),radial-gradient(circle at 50% 104%,${c}cc 0,transparent 46%)`;
+const WALLS={
+  none:{n:'Aucun',g:'none'},
+  ocean:{n:'Océan',g:wallOf('#2b4bd6','#2aa7c9','#4b4bd0')},
+  sunset:{n:'Coucher de soleil',g:wallOf('#d9601e','#c2385f','#d4a020')},
+  forest:{n:'Forêt',g:wallOf('#2f8a3a','#6aa72a','#2f9a5a')},
+  lavender:{n:'Lavande',g:wallOf('#6a3fd0','#a43bc4','#c25fa0')},
+  lagoon:{n:'Lagon',g:wallOf('#2a8a7a','#2aa0b0','#3a9a5a')},
+  raspberry:{n:'Framboise',g:wallOf('#b0203a','#c23a5a','#d0702a')},
+  aurora:{n:'Aurore boréale',g:wallOf('#2a9a4a','#2a9ac0','#7a4ad0')},
+  sun:{n:'Soleil',g:wallOf('#c0901a','#d08a2a','#8ab02a')},
+  night:{n:'Nuit',g:wallOf('#2a2ad0','#2a4ad0','#8a2ad0')},
+  slate:{n:'Ardoise',g:wallOf('#3a4a5a','#5a6a7a','#2a8ac0')},
+  grey:{n:'Gris',g:wallOf('#444444','#8a8a8a','#b0b0b0')}
+};
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -978,30 +1017,31 @@ function applySettings(){
   root.style.setProperty('--glass-a',s.alpha/100);
   root.style.setProperty('--sat',s.sat+'%');
   document.body.classList.toggle('noglass',!s.glass);
-  const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]||'none'));
+  if(!s.wall.startsWith('c:')&&!WALLS[s.wall]) s.wall='none'; if(!s.logo.startsWith('c:')&&!LOGOS[s.logo]) s.logo='original';
+  const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]?.g||'none'));
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
-  else{const L=LOGOS[s.logo]||LOGOS.bus;lg.style.background=L.bg;lg.innerHTML=L.ic}
+  else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
   $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
   renderPickers();
 }
 function renderPickers(){
   const s=S.settings;
-  $('#logoPicker').innerHTML=Object.entries(LOGOS).map(([k,L])=>`<div class="pick ${s.logo===k?'on':''}" data-k="${k}" style="background:${L.bg}">${L.ic}</div>`).join('')
-    +s.customLogos.map(c=>`<div class="pick ${s.logo==='c:'+c.id?'on':''}" data-k="c:${c.id}" style="background-image:url(${c.url})"><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
-    +`<div class="pick add" data-k="+logo">＋</div>`;
-  $('#wallPicker').innerHTML=Object.entries(WALLS).map(([k,W])=>`<div class="pick ${s.wall===k?'on':''}" data-k="${k}" style="background:${W==='none'?'var(--bg)':W+',var(--bg)'}">${k==='none'?'∅':''}</div>`).join('')
-    +s.customWalls.map(c=>`<div class="pick ${s.wall==='c:'+c.id?'on':''}" data-k="c:${c.id}" style="background-image:url(${c.url})"><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
-    +`<div class="pick add" data-k="+wall">＋</div>`;
+  $('#logoPicker').innerHTML=Object.entries(LOGOS).map(([k,L])=>`<div class="pick2 ${s.logo===k?'on':''}" data-k="${k}"><div class="pv logo-pv">${logoSvg(k)}</div><span>${L.n}</span></div>`).join('')
+    +s.customLogos.map((c,i)=>`<div class="pick2 ${s.logo==='c:'+c.id?'on':''}" data-k="c:${c.id}"><div class="pv" style="background-image:url(${c.url})"></div><span>Perso ${i+1}</span><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
+    +`<div class="pick2 add" data-k="+logo"><div class="pv">＋</div><span>Ajouter</span></div>`;
+  $('#wallPicker').innerHTML=Object.entries(WALLS).map(([k,W])=>`<div class="pick2 ${s.wall===k?'on':''}" data-k="${k}"><div class="pv wall-pv" style="background:${W.g==='none'?'':W.g+','}#0b0b0d">${k==='none'?'<svg viewBox="0 0 24 24" width="40%" fill="none" stroke="#9a9aa0" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M6 18L18 6"/></svg>':''}</div><span>${W.n}</span></div>`).join('')
+    +s.customWalls.map((c,i)=>`<div class="pick2 ${s.wall==='c:'+c.id?'on':''}" data-k="c:${c.id}"><div class="pv wall-pv" style="background-image:url(${c.url})"></div><span>Perso ${i+1}</span><button class="pick-x" data-del="${c.id}" aria-label="Supprimer">✕</button></div>`).join('')
+    +`<div class="pick2 add" data-k="+wall"><div class="pv wall-pv">＋</div><span>Ajouter</span></div>`;
 }
-$('#logoPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('logo',del);return}const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
-$('#wallPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
+$('#logoPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('logo',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
+$('#wallPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
 function delCustom(type,id){
   const s=S.settings, key=type==='logo'?'customLogos':'customWalls';
   s[key]=s[key].filter(x=>x.id!==id);
-  if(type==='logo'&&s.logo==='c:'+id) s.logo='bus';
-  if(type==='wall'&&s.wall==='c:'+id) s.wall='aurora';
+  if(type==='logo'&&s.logo==='c:'+id) s.logo='original';
+  if(type==='wall'&&s.wall==='c:'+id) s.wall='none';
   save();applySettings();toast(type==='logo'?'Logo supprimé':'Fond d\'écran supprimé');
 }
 $('#fileIn').onchange=e=>{
