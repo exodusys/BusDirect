@@ -96,6 +96,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .lb.rail{font-style:normal}
 .cd{flex:none;text-align:right;line-height:1.15;align-self:flex-start;padding-top:2px}
 .cd-t{display:block;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.3px;white-space:nowrap}
+.cd-date{display:block;font-size:15px;font-weight:800;white-space:nowrap;text-transform:capitalize}
+.dep-lbl{color:var(--muted);opacity:.7;font-weight:600}
 .cd-t.soon{color:#ff8a00}
 .cd .late,.cd .ontime{font-size:12px;font-weight:700}
 .alert{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border-radius:12px;background:rgba(255,159,10,.16);color:var(--text);font-size:13px}
@@ -510,7 +512,7 @@ async function renderSensors(){
   else if(SENS.mot.perm==='denied') m.innerHTML=dotHTML('bad','Refusé — réactive pour redemander l\'accès');
   else if(SENS.mot.t&&Date.now()-SENS.mot.t<5000){const d=SENS.mot.heading,dir=['N','NE','E','SE','S','SO','O','NO'][Math.round(d/45)%8];
     m.innerHTML=dotHTML('ok',`Actif · boussole ${d}° ${dir} <span class="compass" style="transform:rotate(${-d}deg)">➤</span>`)}
-  else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'interrupteur pour autoriser':'En attente de données…');
+  else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'écran pour réactiver':'En attente de données…');
 }
 setInterval(()=>{if($('#v-parametres').classList.contains('active'))renderSensors()},1000);
 function locate(force){
@@ -810,6 +812,7 @@ function lineColor(l){
 }
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
+function fmtDay(d){const t=new Date(d);return t.toLocaleDateString('fr-CH',{weekday:'short',day:'numeric',month:'short'})}
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
 setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
@@ -854,6 +857,8 @@ function journeyHTML(it,i,tracked){
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span> <button class="walk-map" data-act="walk" data-leg="${li}">🗺️ Voir la marche</button>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
     <div class="muted" style="font-size:12px;margin-top:2px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
+  const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
+  const pastPick=!!planTime&&+planTime<Date.now();
   const al=alertsOf(it);
   const big=inMin<=0?'<span class="ontime">0</span>':inMin<60?inMin:hm(depAt);
   return `<div class="jr glass" data-i="${i}">
@@ -863,10 +868,10 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="cd"><span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>${dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
+      <div class="cd">${otherDay?`<span class="cd-date">${esc(fmtDay(depAt))}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
     </div>
     <div class="jr-times">
-      <div class="tt"><b>${hm(depAt)}</b><small>${inMin<=0?'<span class="ontime">maintenant</span>':inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
+      <div class="tt"><b>${hm(depAt)}</b><small>${inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
       <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
       <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
@@ -1448,7 +1453,7 @@ function onOrient(e){
 }
 async function toggleNav(){
   if(navOn){stopNav();mapFit();return}
-  try{ if(S.settings.motionOn!==false&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
+  try{ if(S.settings.motionOn!==false&&SENS.mot.perm!=='granted'&&window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function'){
       const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') toast('Boussole refusée : orientation selon ta marche') } }catch{}
   if(S.settings.motionOn!==false){ addEventListener('deviceorientationabsolute',onOrient); addEventListener('deviceorientation',onOrient) } else toast('Mouvement désactivé : orientation selon ta marche');
   is3D=false; $('#btn3d').textContent='3D';
@@ -1461,7 +1466,22 @@ function stopNav(){
 }
 
 /* ========= Init ========= */
-applySettings(); if(S.settings.motionOn!==false && !(window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function')) motionListen(true);
+applySettings();
+/* Mouvement & orientation : l'état choisi est mémorisé et réappliqué à chaque ouverture.
+   Sur iPhone, Safari exige un geste de l'utilisateur pour réactiver le capteur : on le fait au premier toucher, sans rien demander d'autre. */
+(function restoreMotion(){
+  if(S.settings.motionOn===false) return;
+  const needsPerm=window.DeviceOrientationEvent&&typeof DeviceOrientationEvent.requestPermission==='function';
+  if(!needsPerm){ motionListen(true); SENS.mot.perm='granted'; return }
+  const arm=async()=>{
+    document.removeEventListener('touchend',arm,true); document.removeEventListener('click',arm,true);
+    if(S.settings.motionOn===false) return;
+    try{SENS.mot.perm=await DeviceOrientationEvent.requestPermission()}catch{SENS.mot.perm='denied'}
+    if(SENS.mot.perm==='granted'){ motionListen(true); if(typeof navOn!=='undefined'&&navOn){addEventListener('deviceorientationabsolute',onOrient);addEventListener('deviceorientation',onOrient)} }
+    renderSensors();
+  };
+  document.addEventListener('touchend',arm,true); document.addEventListener('click',arm,true);
+})();
 renderDests(); renderTiles(); renderSMS(); locate();
 </script>
 </body>
