@@ -1552,6 +1552,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
+  delayTarget=0; delayShown=null; vehShown=null;
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
@@ -1693,14 +1694,29 @@ async function loadTrip(ft){
     try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`); if(!r.ok) continue;
       const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
       const coords=legCoords(leg);
-      const stops=[{...leg.from,t:leg.startTime},...(leg.intermediateStops||[]).map(s=>({...s,t:s.departure||s.arrival})),{...leg.to,t:leg.endTime}];
-      return tripCache[ft.tripId]={coords,stops};
+      const raw=[{...leg.from,arr:leg.startTime,dep:leg.startTime},...(leg.intermediateStops||[]).map(s=>({...s,arr:s.arrival||s.departure,dep:s.departure||s.arrival})),{...leg.to,arr:leg.endTime,dep:leg.endTime}];
+      // distances cumulées le long du tracé + position de chaque arrêt sur ce tracé (calculées une fois)
+      const cum=[0]; for(let i=1;i<coords.length;i++) cum.push(cum[i-1]+kmDist(coords[i-1],coords[i]));
+      let from=0; const stops=raw.map(st=>{ let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){const d=kmDist(coords[i],[st.lon,st.lat]);if(d<bd){bd=d;bi=i}}
+        from=bi; return {...st,t:st.dep,a:+new Date(st.arr),d:+new Date(st.dep),km:cum[bi]} });
+      return tripCache[ft.tripId]={coords,cum,stops};
     }catch{}
   }
   return tripCache[ft.tripId]=null;
 }
 function nearestIdx(coords,p){let bi=0,bd=Infinity;coords.forEach((c,i)=>{const d=kmDist(c,p);if(d<bd){bd=d;bi=i}});return bi}
+function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return c[0]; if(km>=cum.at(-1)) return c.at(-1);
+  let lo=0,hi=cum.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(cum[m]<km) lo=m; else hi=m}
+  const f=(km-cum[lo])/((cum[hi]-cum[lo])||1); return [c[lo][0]+(c[hi][0]-c[lo][0])*f, c[lo][1]+(c[hi][1]-c[lo][1])*f] }
+// Position continue sur toute la course : arrêt pendant la halte, puis départ en douceur (accélération/freinage)
+function kmOnTrip(trip,t){ const st=trip.stops; if(!st||!st.length||!trip.cum) return null;
+  if(t<=st[0].d) return st[0].km;
+  for(let i=1;i<st.length;i++){ const A=st[i-1],B=st[i];
+    if(t<=B.a){ const p=Math.max(0,Math.min(1,(t-A.d)/((B.a-A.d)||1))); const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2; return A.km+(B.km-A.km)*e }
+    if(t<=B.d) return B.km; }
+  return st.at(-1).km }
 function estimateOnTrip(trip,now){ // position estimée selon l'horaire de la course
+  if(trip.cum){ const k=kmOnTrip(trip,now); return k==null?null:pointAtKm(trip,k) }
   const st=trip.stops; if(!st.length) return null;
   if(now<=+new Date(st[0].t)) return [st[0].lon,st[0].lat];
   for(let i=1;i<st.length;i++){const a=+new Date(st[i-1].t),b=+new Date(st[i].t);
@@ -1721,8 +1737,10 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
+let delayTarget=0, delayShown=null;
 function vehPosAt(t){
   if(!vehState) return null;
+  if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-(delayShown??delayTarget)) }
   if(vehState.kind==='seg') return alongLine(vehState.line,(t-vehState.dep)/((vehState.arr-vehState.dep)||1));
   return estimateOnTrip(vehState.trip,t);
 }
@@ -1731,11 +1749,12 @@ function startVehAnim(){
   const tick=()=>{
     vehRaf=null;
     if(!vehMk||!vehState||!$('#mapView').classList.contains('open')) return;
+    if(delayShown==null) delayShown=delayTarget; delayShown+=(delayTarget-delayShown)*0.03;   // le retard évolue progressivement : pas de saut
     const target=vehPosAt(Date.now());
     if(target){
       if(!vehShown) vehShown=target.slice();
       const d=kmDist(vehShown,target);
-      const k=d>0.5?1:0.12;                       // gros saut (nouvelle donnée lointaine) : direct ; sinon glissement doux
+      const k=d>0.8?1:0.25;                       // suit la position calculée (déjà continue), lissage léger
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
       vehMk.setLngLat(vehShown);
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=firstTransit(mapIt); drawApproach(vehState.trip,vehShown,ft) }
@@ -1759,7 +1778,11 @@ async function updateVehicle(){
       const seg=segs.find(s=>(s.trips||[]).some(t=>t.tripId&&t.tripId===ft.tripId)&&now>=+new Date(s.departure)-30000&&now<=+new Date(s.arrival)+30000);
       if(seg){const sc=seg.polyline?(()=>{for(const pr of [6,5,7]){const c=decodePoly(seg.polyline,pr);if(Math.abs(c[0][1]-seg.from.lat)<.05)return c}})():null;
         const line=sc||[[seg.from.lon,seg.from.lat],[seg.to.lon,seg.to.lat]];
-        vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip};
+        if(trip&&trip.cum){ // temps réel → on en déduit le retard sur la course entière
+          const nm=String(seg.from?.name||''); const sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
+          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3) delayTarget=0;
+          vehState={kind:'trip',trip};
+        } else vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip};
         p=vehPosAt(now); live=!!seg.realTime}
       break;
     }
