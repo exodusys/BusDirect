@@ -9,7 +9,7 @@
 <title>BusDirect</title>
 <style>
 :root{
-  --accent:#e30613; --accent2:#ff5a5f;
+  --accent:#5ec26a; --accent2:#8fd897;
   --bg:#eef2f7; --text:#0d1424; --muted:#5b6578;
   --glass-rgb:255,255,255; --glass-a:.55; --blur:22px; --sat:180%;
   --border:rgba(255,255,255,.6); --shadow:0 8px 30px rgba(15,23,42,.12);
@@ -408,8 +408,9 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'auto',accent:'#e30613',glass:true,blur:22,alpha:55,sat:180,logo:'original',wall:'none',customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'auto',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'original',wall:'none',customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
+if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
   if(s.customLogo){s.customLogos.push({id:'l'+Date.now(),url:s.customLogo});if(s.logo==='custom')s.logo='c:'+s.customLogos.at(-1).id}
@@ -740,7 +741,7 @@ async function loadJourneys(){
     const usedPos=pos&&{...pos};
     const data=await nextDepartures(selDest,selFrom);
     lastPlanPos=usedPos;
-    lastJourneys=data; loadedFor=pairKey;
+    lastJourneys=data; loadedFor=pairKey; prefetchColors(data);
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
     renderJourneyList();
@@ -789,31 +790,41 @@ function osmSave(){try{localStorage.setItem('bd_osmc',JSON.stringify(OSMC))}catc
 function osmWant(l){
   if(!l||!l.from||l.mode==='WALK') return;
   const k=osmKey(l); if(OSMC.m[k]||OSMC.miss[k]||osmQueue.has(k)) return;
-  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,400);
+  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,60);
 }
 const norm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
-async function osmFetch(){
-  if(osmBusy||!osmQueue.size) return; osmBusy=true;
-  const batch=[...osmQueue.entries()].slice(0,25); batch.forEach(([k])=>osmQueue.delete(k));
-  const refs=[...new Set(batch.map(([,l])=>nref(l.routeShortName||l.displayName)).filter(Boolean))].map(r=>r.replace(/[^A-Z0-9]/g,'')).filter(Boolean);
-  const pts=[...new Map(batch.map(([,l])=>[cellOf(l.from.lat,l.from.lon),l.from])).values()];
-  const rx='^('+refs.join('|')+')$';
-  const q=`[out:json][timeout:20];(${pts.map(p=>`relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref~"${rx}",i][colour](around:1500,${p.lat},${p.lon});`).join('')});out tags;`;
-  let els=null;
-  for(const ep of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter']){
-    try{const r=await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});if(r.ok){els=(await r.json()).elements;break}}catch{}
-  }
-  if(els){
-    batch.forEach(([k,l])=>{
-      const ref=nref(l.routeShortName||l.displayName), ag=norm2(l.agencyName);
-      const cands=els.filter(e=>nref(e.tags.ref)===ref);
-      const best=cands.find(e=>ag&&[e.tags.operator,e.tags.network].some(x=>x&&(norm2(x).includes(ag)||ag.includes(norm2(x)))))||cands[0];
-      if(best){const t=best.tags;OSMC.m[k]=[t.colour,t['colour:text']||t.text_colour||null]} else OSMC.miss[k]=1;
-    });
-    osmSave(); refreshColorsUI();
-  }
-  osmBusy=false; if(osmQueue.size) osmTimer=setTimeout(osmFetch,1500);
+const OSM_EPS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+async function overpassRace(q){ // interroge tous les miroirs en parallèle, garde le premier qui répond
+  const ctl=new AbortController();
+  try{ return await Promise.any(OSM_EPS.map(ep=>fetch(ep,{method:'POST',signal:ctl.signal,body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}})
+      .then(r=>{if(!r.ok)throw 0;return r.json()}).then(j=>{ctl.abort();return j.elements}))) }
+  catch{ return null }
 }
+async function osmFetch(){
+  if(!osmQueue.size) return;
+  // regroupe par zone (~20 km) pour garder des requêtes petites et rapides, toutes lancées en parallèle
+  const groups={}; [...osmQueue.entries()].forEach(([k,l])=>{const g=Math.round(l.from.lat*5)+'_'+Math.round(l.from.lon*5);(groups[g]=groups[g]||[]).push([k,l])});
+  osmQueue.clear();
+  Object.values(groups).forEach(osmFetchGroup);
+}
+async function osmFetchGroup(batch){
+  const refs=[...new Set(batch.map(([,l])=>nref(l.routeShortName||l.displayName).replace(/[^A-Z0-9]/g,'')).filter(Boolean))];
+  if(!refs.length) return;
+  const lats=batch.map(([,l])=>l.from.lat), lons=batch.map(([,l])=>l.from.lon), pad=0.012;
+  const bbox=`${Math.min(...lats)-pad},${Math.min(...lons)-pad},${Math.max(...lats)+pad},${Math.max(...lons)+pad}`;
+  const q=`[out:json][timeout:10][bbox:${bbox}];relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref~"^(${refs.join('|')})$",i][colour];out tags;`;
+  const els=await overpassRace(q);
+  if(!els){ batch.forEach(([k,l])=>setTimeout(()=>osmWant(l),20000)); return }
+  batch.forEach(([k,l])=>{
+    const ref=nref(l.routeShortName||l.displayName), ag=norm2(l.agencyName);
+    const cands=els.filter(e=>nref(e.tags.ref)===ref);
+    const best=cands.find(e=>ag&&[e.tags.operator,e.tags.network].some(x=>x&&(norm2(x).includes(ag)||ag.includes(norm2(x)))))||cands[0];
+    if(best){const t=best.tags;OSMC.m[k]=[t.colour,t['colour:text']||t.text_colour||null]} else OSMC.miss[k]=1;
+  });
+  osmSave(); refreshColorsUI();
+}
+// Précharge les couleurs de toutes les lignes dès que la liste est reçue (pas seulement celles affichées)
+function prefetchColors(list){ (list||[]).forEach(it=>it.legs.forEach(l=>{ if(l.mode!=='WALK'&&l.from) lineColor(l) })) }
 function resetLineColors(){
   OSMC.m={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
   try{localStorage.removeItem('bd_osmc')}catch{}
