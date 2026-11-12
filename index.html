@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0b1220">
+<meta name="theme-color" id="themeColor" content="#0b0b0d">
 <title>BusDirect</title>
 <style>
 :root{
@@ -23,6 +23,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
+html,body{background-color:var(--page-bg,var(--bg))!important} /* couleur reprise par Safari sous ses barres */
 /* Fond d'écran sur un calque fixe de la taille de l'écran : il ne bouge ni ne s'étire quand la liste change (iOS ignore background-attachment:fixed) */
 body::before{content:"";position:fixed;left:0;right:0;top:-160px;bottom:-160px;z-index:-1;pointer-events:none;
   background:var(--wall) center/cover no-repeat,var(--bg);transform:translateZ(0)}
@@ -1216,6 +1217,10 @@ const WALLS={
   slate:{n:'Ardoise',g:wallOf('#3a4a5a','#5a6a7a','#2a8ac0')},
   grey:{n:'Gris',g:wallOf('#444444','#8a8a8a','#b0b0b0')}
 };
+// mélange les couleurs du fond d'écran sur le noir de base → teinte sombre proche de ce qu'on voit
+function mixDark(hexes){ if(!hexes.length) return '#0b0b0d'; let r=0,g=0,b=0;
+  hexes.forEach(h=>{const n=parseInt(h.slice(1),16);r+=n>>16&255;g+=n>>8&255;b+=n&255}); const k=hexes.length, a=0.28;
+  const f=(v)=>Math.round(11*(1-a)+(v/k)*a).toString(16).padStart(2,'0'); return '#'+f(r)+f(g)+f(b) }
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1227,6 +1232,12 @@ function applySettings(){
   root.style.setProperty('--sat',s.sat+'%');
   document.body.classList.toggle('noglass',!s.glass);
   if(!s.wall.startsWith('c:')&&!WALLS[s.wall]) s.wall='none'; if(!s.logo.startsWith('c:')&&!LOGOS[s.logo]) s.logo='original';
+  { // fond de page = couleur dominante du fond d'écran (Safari l'affiche sous la barre d'adresse et la barre d'outils)
+    const W0=WALLS[s.wall]; let base=getComputedStyle(root).getPropertyValue('--bg').trim()||'#070b14';
+    if(s.wall.startsWith('c:')) base='#0b0b0d';
+    else if(W0&&W0.g!=='none'){ const m=W0.g.match(/#[0-9a-f]{6}/gi)||[]; base=mixDark(m) }
+    root.style.setProperty('--page-bg',base); $('#themeColor')?.setAttribute('content',base);
+  }
   const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]?.g||'none'));
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
