@@ -1319,7 +1319,9 @@ function journeyHTML(it,i,tracked){
     <div class="muted" style="font-size:12px;margin-top:2px">${esc(/^start$/i.test(l.from?.name||'')?'Ma position':l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(/^end$/i.test(l.to?.name||'')?'Destination':l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
-  const pastPick=!!planTime&&+planTime<Date.now();
+  const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
+  const pastPick=(!!planTime&&+planTime<Date.now())||isPast;
+  const dmy=d=>{const t=new Date(d);return String(t.getDate()).padStart(2,'0')+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+t.getFullYear()};
   const al=alertsOf(it);
   const big=inMin<=0?'<span class="ontime">0</span>':inMin<60?inMin:hm(depAt);
   return `<div class="jr glass" data-i="${i}">
@@ -1329,7 +1331,7 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="cd">${otherDay?`<span class="cd-date">${esc(fmtDay(depAt))}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
+      <div class="cd">${isPast?`<span class="cd-date">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${esc(fmtDay(depAt))}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
     </div>
     <div class="jr-times">
       <div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
