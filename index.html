@@ -122,6 +122,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input.future{color:#30d158}
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
+.load-more{height:0!important;overflow:hidden;opacity:0;transition:height .18s ease,opacity .18s ease}
+.load-more.insisting,.load-more.busy{height:64px!important;opacity:1}
 .load-more span{flex-basis:100%;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);opacity:calc(.5 + var(--ins)*.5)}
 .load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.18;transition:opacity .12s}
 .load-more.insisting i:nth-of-type(1){opacity:calc(.18 + min(1,var(--ins)*4)*.82)}
@@ -183,6 +185,7 @@ body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
 .list-title{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
+.list-title .lt-line{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .list-title .lt-from{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .list-title .lt-dest{font-size:19px;font-weight:800;letter-spacing:-.3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .list-title .lt-stop{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -396,7 +399,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
       <button class="btn ghost sm" id="nowBtn" onclick="goNow()">Maintenant</button>
     </div>
-    <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de tirer vers le bas</span></div>
+    <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de faire défiler</span></div>
     <div id="journeys"></div>
   </section>
 
@@ -610,7 +613,7 @@ function setListTitle(){
   const el=$('#jrTitle'); if(!el||!selDest) return;
   const from=selFrom?selFrom.name:'Ma position';
   const stop=S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?selDest.nearStop.name:'';
-  el.innerHTML=`<span class="lt-from">${selFrom?'Depuis':'📍'} ${esc(from)}</span><span class="lt-dest">${esc(selDest.name)}</span>${stop?`<span class="lt-stop">🚏 Arrêt ${esc(stop)}</span>`:''}`;
+  el.innerHTML=`<span class="lt-line">Depuis - ${esc(from)}</span><span class="lt-line">Vers - ${esc(selDest.name)}</span>`;
   requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||52; document.documentElement.style.setProperty('--lt-h',h+'px') });
 }
 const listSep=()=>S.settings.listPage!==false;
@@ -1016,9 +1019,9 @@ function syncTimeBar(){
   inp.value=toLocalInput(planTime||new Date());
   inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
 }
-function goNow(){
+function goNow(){   // retour à l'affichage de départ : les 5 prochains départs à partir de maintenant
   window.scrollTo({top:0,behavior:'smooth'});
-  if(planTime) setPlanTime(''); else { syncTimeBar(); requestAnimationFrame(followTimeBar) }
+  setPlanTime('');
 }
 function setPlanTime(v){
   pastFloor=null;
@@ -1103,11 +1106,11 @@ function insistSet(v){ insist=Math.max(0,Math.min(1,v)); const sen=$('#more'); i
   sen.style.setProperty('--ins',insist); sen.classList.toggle('insisting',insist>0&&!moreBusy) }
 function insistDone(){ if(insist>=1&&!moreBusy){ if(navigator.vibrate) navigator.vibrate(10); loadMoreJourneys() } insistSet(0) }
 document.addEventListener('touchstart',e=>{ insStart=(listOpen()&&$('#more')&&atEnd())?e.touches[0].clientY:null },{passive:true});
-document.addEventListener('touchmove',e=>{ if(insStart==null) return; if(!atEnd()){insistSet(0);return}
-  insistSet((insStart-e.touches[0].clientY)/110) },{passive:true});
+document.addEventListener('touchmove',e=>{ if(insStart==null) return; if(!atEnd()&&insist===0){return}
+  insistSet((insStart-e.touches[0].clientY)/170) },{passive:true});
 document.addEventListener('touchend',()=>{ if(insStart!=null){insStart=null;insistDone()} },{passive:true});
 addEventListener('wheel',e=>{ if(!listOpen()||!$('#more')||!atEnd()||e.deltaY<=0) return;
-  insistSet(insist+e.deltaY/600); clearTimeout(insT); insT=setTimeout(insistDone,180) },{passive:true});
+  insistSet(insist+e.deltaY/900); clearTimeout(insT); insT=setTimeout(insistDone,180) },{passive:true});
 /* Même geste en haut de la liste : tirer vers le bas en insistant pour voir les parcours déjà passés */
 let insTop=0, insTopStart=null, insTopT=null;
 const atTop=()=>window.scrollY<=2;
@@ -1116,12 +1119,12 @@ function insistTopSet(v){ insTop=Math.max(0,Math.min(1,v)); const sen=$('#moreTo
 function insistTopDone(){ if(insTop>=1&&!pastBusy){ if(navigator.vibrate) navigator.vibrate(10); loadPastJourneys() } insistTopSet(0) }
 document.addEventListener('touchstart',e=>{ insTopStart=(listOpen()&&lastJourneys.length&&atTop())?e.touches[0].clientY:null },{passive:true});
 document.addEventListener('touchmove',e=>{ if(insTopStart==null) return; if(!atTop()){insistTopSet(0);return}
-  insistTopSet((e.touches[0].clientY-insTopStart)/110) },{passive:true});
+  insistTopSet((e.touches[0].clientY-insTopStart)/170) },{passive:true});
 document.addEventListener('touchend',()=>{ if(insTopStart!=null){insTopStart=null;insistTopDone()} },{passive:true});
 // bloque le rafraîchissement de Safari quand on tire vers le bas en haut de la liste
 document.addEventListener('touchmove',e=>{ if(insTopStart!=null&&atTop()&&e.touches[0].clientY>insTopStart&&e.cancelable) e.preventDefault() },{passive:false});
 addEventListener('wheel',e=>{ if(!listOpen()||!lastJourneys.length||!atTop()||e.deltaY>=0) return;
-  insistTopSet(insTop-e.deltaY/600); clearTimeout(insTopT); insTopT=setTimeout(insistTopDone,180) },{passive:true});
+  insistTopSet(insTop-e.deltaY/900); clearTimeout(insTopT); insTopT=setTimeout(insistTopDone,180) },{passive:true});
 async function loadPastJourneys(){
   if(pastBusy||!selDest||!lastJourneys.length) return;
   pastBusy=true; const sen=$('#moreTop'); sen.classList.add('busy','pulling');
