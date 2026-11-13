@@ -316,7 +316,16 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #map .maplibregl-canvas{transition:opacity .3s}
 .map-bar{position:absolute;z-index:5;left:12px;right:12px;top:calc(var(--safe-t) + 12px);border-radius:20px;padding:10px 12px;display:flex;align-items:center;gap:10px}
 .map-bar .t{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.map-bar .t small .sub1,.map-bar .t small .sub2{display:block;overflow:hidden;text-overflow:ellipsis}
+.map-bar .t small .sub1,.map-bar .t small .sub2,.map-bar .t small .sub3{display:block;overflow:hidden;text-overflow:ellipsis}
+.map-bar .t small .sub3{color:var(--text);font-weight:700;margin-top:1px}
+.map-bar .t small .sub3 .cd-t{display:inline;font-size:inherit;letter-spacing:0}
+.ns-wrap{pointer-events:none}
+.ns-b{position:relative;background:rgba(var(--glass-rgb),.96);color:var(--text);border:2px solid var(--c);border-radius:12px;padding:5px 9px;
+  font:600 12px/1.25 -apple-system,system-ui,sans-serif;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.35);white-space:nowrap}
+.ns-b small{display:block;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.ns-b b{display:block;font-size:13px}
+.ns-b em{display:block;font-style:normal;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ns-b::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--c);border-bottom:0}
 .map-bar .t small{display:block;font-weight:500;font-size:12px;color:var(--muted)}
 #mapView .map-btn.on{background:var(--accent);color:#fff}
 .map-btn{width:38px;height:38px;border-radius:12px;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:17px;cursor:pointer;flex:none}
@@ -1684,7 +1693,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
-  delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
+  delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
@@ -1700,7 +1709,8 @@ async function openMap(it,walkLeg){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
     mlMap.on('zoom',updateLblZoom);
     // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
-    ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved(); if(followVeh&&e.originalEvent&&ev==='dragstart'){followVeh=false;$('#btnFollow').classList.remove('on')} }));
+    ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved(); if(followVeh&&e.originalEvent) lastFollowGesture=Date.now(); }));
+    ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(followVeh&&e.originalEvent) lastFollowGesture=Date.now() }));
     ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved() }));
     await new Promise(r=>mlMap.once('load',r));
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
@@ -1906,7 +1916,7 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
-let delayTarget=0, delayShown=null, followVeh=false;
+let delayTarget=0, delayShown=null, followVeh=false, lastFollowGesture=0, followResume=false, nextStopMk=null, lastNextStop=0;
 // Suivre le véhicule : la carte reste centrée sur lui pendant qu'il roule
 // Tronçon en transport correspondant à l'heure actuelle : celui en cours, sinon le prochain (après une correspondance)
 function activeLeg(it){
@@ -1919,9 +1929,22 @@ async function toggleFollowVeh(){
   if(!followVeh){ await updateVehicle(); }                 // repère l'heure actuelle et le bon véhicule avant de suivre
   if(!vehMk||!vehShown){ toast('Position du véhicule pas encore disponible'); return }
   followVeh=!followVeh; $('#btnFollow').classList.toggle('on',followVeh);
-  if(followVeh){ if(navOn) stopNav(); mlMap.easeTo({center:vehShown,zoom:Math.max(mlMap.getZoom(),16),duration:700}); toast('Suivi du véhicule activé') }
+  if(followVeh){ if(navOn) stopNav(); lastFollowGesture=0; mlMap.easeTo({center:vehShown,zoom:14.3,duration:700}); toast('Suivi du véhicule activé') }
   else if(pos){ mlMap.easeTo({center:[pos.lon,pos.lat],zoom:Math.max(mlMap.getZoom(),16),duration:700}) }   // retour à ma position
 }
+// Bulle « prochain arrêt » du véhicule
+function drawNextStop(){
+  const tr=vehState?.trip; if(!tr||!tr.stops||!vehMk){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
+  const t=Date.now()-(delayShown??delayTarget);
+  const ns=tr.stops.find(x=>x.a>t+5000); if(!ns){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
+  const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#5ec26a';
+  const html=`<div class="ns-b" style="--c:${col}"><small>Prochain arrêt</small><b>${esc(ns.name)}</b><em>${hm(ns.arr)}</em></div>`;
+  if(!nextStopMk){ const el=document.createElement('div'); el.className='ns-wrap'; nextStopMk=new maplibregl.Marker({element:el,anchor:'bottom',offset:[0,-10],subpixelPositioning:true}).setLngLat([ns.lon,ns.lat]).addTo(mlMap) }
+  const el=nextStopMk.getElement(); if(el._h!==html){ el.innerHTML=html; el._h=html } nextStopMk.setLngLat([ns.lon,ns.lat]);
+}
+// Arrêt déterminant pour moi : où je monte (avant) ou où je descends (pendant le trajet)
+function decisiveStop(ft){ const now=Date.now();
+  return now<+new Date(ft.startTime)?{name:ft.from?.name,at:+new Date(ft.startTime),lbl:'Montée'}:{name:ft.to?.name,at:+new Date(ft.endTime),lbl:'Descente'} }
 function vehPosAt(t){
   if(!vehState) return null;
   if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-(delayShown??delayTarget)) }
@@ -1940,7 +1963,13 @@ function startVehAnim(){
       const d=kmDist(vehShown,target);
       const k=d>0.8?1:0.18;                       // suit la position calculée (déjà continue), lissage léger
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
-      if(followVeh&&!mlMap.isEasing?.()) mlMap.jumpTo({center:vehShown});   // caméra puis marqueur dans la même image : pas de tremblement
+      if(followVeh&&!mlMap.isEasing?.()){
+        const idle=Date.now()-lastFollowGesture>3000;          // déplacement/zoom libres ; recentrage après 3 s sans geste
+        if(idle&&followResume){ followResume=false; mlMap.easeTo({center:vehShown,duration:600}) }
+        else if(idle) mlMap.jumpTo({center:vehShown});
+        else followResume=true;
+      }
+      if(Date.now()-lastNextStop>1000){ lastNextStop=Date.now(); drawNextStop() }
       vehMk.setLngLat(vehShown);
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=activeLeg(mapIt); drawApproach(vehState.trip,vehShown,ft) }
     }
@@ -1985,7 +2014,7 @@ async function updateVehicle(){
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
-  if(mapWalk==null) $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à '+hm(ft.startTime):'Départ '+hm(ft.startTime)}</span>`;
+  if(mapWalk==null) $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à '+hm(ft.startTime):'Départ '+hm(ft.startTime)}</span>${(()=>{const d=decisiveStop(ft);return `<span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')} · dans <span class="cd-t" data-at="${d.at}">${fmtCd(d.at)}</span></span>`})()}`;
 }
 
 /* Ma position, marche vers l'arrêt et navigation orientée */
