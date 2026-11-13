@@ -681,7 +681,10 @@ $('#tabs').addEventListener('click',e=>{
 /* ========= Services capteurs (activables dans Paramètres) ========= */
 const SENS={geo:{state:'—',acc:null,t:0,err:null},mot:{heading:null,t:0,perm:null}};
 const geoWatches=new Map(); let geoWid=0;
-const geoWrap=ok=>p=>{SENS.geo.acc=Math.round(p.coords.accuracy);SENS.geo.t=Date.now();SENS.geo.err=null;renderSensors();ok(p)};
+const posHist=[];   // dernières positions (pour connaître ma direction de déplacement)
+const geoWrap=ok=>p=>{SENS.geo.acc=Math.round(p.coords.accuracy);SENS.geo.t=Date.now();SENS.geo.err=null;
+  posHist.push({lat:p.coords.latitude,lon:p.coords.longitude,t:Date.now(),h:p.coords.heading,v:p.coords.speed}); while(posHist.length>30) posHist.shift();
+  renderSensors();ok(p)};
 const geoErr=ko=>e=>{SENS.geo.err=e&&e.code===1?'refusée':'indisponible';renderSensors();ko&&ko(e)};
 const GEO={
   get on(){return S.settings.geoOn!==false&&!!navigator.geolocation},
@@ -1062,6 +1065,21 @@ async function fetchTripItinerary(tripId){
   }
   return null;
 }
+// Ma direction de déplacement (degrés) : cap GPS si en mouvement, sinon calculée sur les positions récentes
+function myHeading(){
+  const now=Date.now(), last=posHist.at(-1);
+  if(last&&now-last.t<8000&&last.h!=null&&!isNaN(last.h)&&last.v>1) return last.h;
+  const rec=posHist.filter(x=>now-x.t<30000); if(rec.length<2) return null;
+  const a=rec[0], b=rec.at(-1); if(dist(a,b)<0.02) return null;            // moins de 20 m : direction pas fiable
+  return bearing([a.lon,a.lat],[b.lon,b.lat]);
+}
+async function waitHeading(ms){ // si besoin, observe le déplacement quelques secondes
+  let h=myHeading(); const end=Date.now()+ms;
+  while(h==null&&Date.now()<end){ await new Promise(r=>setTimeout(r,1000)); await freshPos(); h=myHeading() }
+  return h;
+}
+function segHeadingNow(sg,now){ const p1=segPosNow(sg,now-4000), p2=segPosNow(sg,now+4000);
+  return (Math.abs(p1[0]-p2[0])+Math.abs(p1[1]-p2[1])<1e-7)?null:bearing(p1,p2) }
 async function locateMyTrip(){
   const btn=$('#whereBtn'); btn.classList.add('busy');
   try{
@@ -1070,10 +1088,13 @@ async function locateMyTrip(){
     const qs=`zoom=16&min=${pos.lat+dd},${pos.lon-dd*1.4}&max=${pos.lat-dd},${pos.lon+dd*1.4}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
     let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(r.ok){ segs=await r.json(); break } }catch{} }
     if(!segs||!segs.length){ toast('Aucun véhicule détecté autour de toi'); return }
+    toast('Analyse de ta direction…'); const myH=await waitHeading(6000);
+    if(myH==null){ toast('Tu ne sembles pas te déplacer : impossible de déterminer ton transport'); return }
     let best=null;
     segs.forEach(sg=>{ if(!(sg.trips||[]).length) return; if(now<+new Date(sg.departure)-30000||now>+new Date(sg.arrival)+30000) return;
+      if(myH!=null){ const vh=segHeadingNow(sg,now); if(vh==null) return; const diff=Math.abs(((vh-myH+540)%360)-180); if(diff>50) return }   // même direction uniquement
       const p=segPosNow(sg,now); const km=dist(pos,{lat:p[1],lon:p[0]}); if(!best||km<best.km) best={sg,km} });
-    if(!best||best.km>0.25){ toast('Tu ne sembles pas être dans un transport en ce moment'); return }
+    if(!best||best.km>0.25){ toast(myH==null?'Tu ne sembles pas te déplacer : impossible de déterminer ton transport':'Aucun transport ne va dans ta direction près de toi'); return }
     const t=best.sg.trips[0]; const itin=await fetchTripItinerary(t.tripId);
     if(!itin){ toast('Course introuvable'); return }
     const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
