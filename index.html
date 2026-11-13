@@ -1210,7 +1210,7 @@ function journeyHTML(it,i,tracked){
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
   const legs=it.legs.map((l,li)=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span> <button class="walk-map" data-act="walk" data-leg="${li}">🗺️ Voir la marche</button>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
-    <div class="muted" style="font-size:12px;margin-top:2px">${esc(l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
+    <div class="muted" style="font-size:12px;margin-top:2px">${esc(/^start$/i.test(l.from?.name||'')?'Ma position':l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(/^end$/i.test(l.to?.name||'')?'Destination':l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const pastPick=!!planTime&&+planTime<Date.now();
@@ -1683,7 +1683,8 @@ function focusWalk(){
   const prev=mapIt.legs[mapWalk-1], next=mapIt.legs[mapWalk+1];
   $('#mapTitle').textContent=`🚶 Marche · ${Math.max(1,mins(l.duration))} min`;
   const len=(l.distance||0)>0?` · ${l.distance<1000?Math.round(l.distance)+' m':(l.distance/1000).toFixed(1)+' km'}`:'';
-  $('#mapSub').textContent=`${l.from?.name||'Départ'} → ${l.to?.name||'Arrivée'}${next?.from?.track?' · Quai '+next.from.track:''}${len}`;
+  const nmF=n=>!n||/^start$/i.test(n)?'Ma position':/^end$/i.test(n)?'Destination':n;
+  $('#mapSub').textContent=`${nmF(l.from?.name)} → ${nmF(l.to?.name)}${next?.from?.track?' · Quai '+next.from.track:''}${len}`;
   setRouteDim(true);
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
   mlMap.fitBounds(b,{padding:{top:120,bottom:160,left:50,right:70},maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
@@ -1909,6 +1910,8 @@ async function onMyPos(force){
   // évite deux pointillés superposés : quand l'itinéraire à pied vers l'arrêt est affiché, on masque la 1re marche du parcours (même trajet)
   if(mlMap.getLayer('route-walk')){ const firstWalk=mapIt.legs[0]?.mode==='WALK'&&mapIt.legs[0]!==firstTransit(mapIt);
     mlMap.setFilter('route-walk',show&&firstWalk&&mapWalk!==0?['all',['==',['get','walk'],1],['!=',['get','idx'],0]]:['==',['get','walk'],1]) }
+  // en vue « Voir la marche » de cette 1re marche : on garde la marche du parcours et on masque l'itinéraire recalculé (même chemin)
+  if(mlMap.getLayer('walkto')) mlMap.setLayoutProperty('walkto','visibility',show&&mapWalk===0?'none':'visible');
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
   if(!walkGeo||Date.now()-lastWalkFetch>60000||kmDist(me,walkGeo[0])>0.05){ lastWalkFetch=Date.now(); walkGeo=await walkRoute(me,boardStop) }
   mlMap.getSource('walkto')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:walkGeo}});
