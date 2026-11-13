@@ -1638,11 +1638,11 @@ function drawItinerary(it){
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
+    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.9,2.8]},layout:{'line-cap':'round'}});
   }
   if(!mlMap.getSource('walkto')){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
+    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.9,2.8]},layout:{'line-cap':'round'}});
   }
   // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
