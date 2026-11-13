@@ -169,23 +169,25 @@ body.classic .lb.main{border-radius:6px}body.classic .lb.mini{border-radius:4px}
 body.classic .quai{border-radius:3px}
 #jrHead{display:none!important}
 body.list-inline #listTop{margin-top:18px}
-body.list-inline .list-title{font-size:16px}
+body.list-inline .list-title .lt-dest{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
 body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 6px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
-body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 58px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 8px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
 body.list-page #listTop::before{content:"";position:absolute;inset:0 0 -64px;z-index:-1;pointer-events:none;
   backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));
   -webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
-body.list-page #v-list{padding-top:112px}
+body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 66px)}
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
-.load-more.top{flex-direction:row;height:0;overflow:hidden;opacity:0;transition:height .2s,opacity .2s}
-.load-more.top.pulling{height:64px;opacity:1}
-.load-more.top span{order:-1}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
-.list-title{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-title{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
+.list-title .lt-from{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-title .lt-dest{font-size:19px;font-weight:800;letter-spacing:-.3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.list-title .lt-stop{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-top{align-items:flex-start}
+.list-top .back-btn,.list-top .btn{margin-top:4px}
 .back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
 body.classic .back-btn{border-radius:6px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
@@ -392,9 +394,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <div id="timeBar" class="time-bar glass" style="display:none">
       <span>🕒</span>
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
-      <button class="btn ghost sm" id="nowBtn" onclick="setPlanTime('')">Maintenant</button>
+      <button class="btn ghost sm" id="nowBtn" onclick="goNow()">Maintenant</button>
     </div>
-    <div id="moreTop" class="load-more top" style="display:none"><span>Continue de tirer pour les parcours précédents</span><i></i><i></i><i></i><i></i></div>
+    <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de tirer vers le bas</span></div>
     <div id="journeys"></div>
   </section>
 
@@ -603,6 +605,14 @@ const MODE_ICON = {BUS:'🚌',TRAM:'🚋',SUBWAY:'🚇',METRO:'🚇',RAIL:'🚆'
 const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 
 /* ========= Navigation ========= */
+// Bandeau du titre de la liste : départ en petit, destination en gros (2 lignes max), arrêt utilisé en dessous
+function setListTitle(){
+  const el=$('#jrTitle'); if(!el||!selDest) return;
+  const from=selFrom?selFrom.name:'Ma position';
+  const stop=S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?selDest.nearStop.name:'';
+  el.innerHTML=`<span class="lt-from">${selFrom?'Depuis':'📍'} ${esc(from)}</span><span class="lt-dest">${esc(selDest.name)}</span>${stop?`<span class="lt-stop">🚏 Arrêt ${esc(stop)}</span>`:''}`;
+  requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||52; document.documentElement.style.setProperty('--lt-h',h+'px') });
+}
 const listSep=()=>S.settings.listPage!==false;
 const listOpen=()=>listSep()?$('#v-list').classList.contains('active'):($('#v-horaires').classList.contains('active')&&!!selDest);
 // place la liste soit sur sa propre page, soit sous les dalles
@@ -929,7 +939,7 @@ function freshPos(){
 }
 async function pickPair(from,to){
   shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
-  $('#jrHead').style.display='flex';$('#jrTitle').textContent=(from?from.name+' → ':'Vers ')+to.name;
+  $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
   if(!from&&!recent) await freshPos();                 // position récente : pas d'attente GPS
@@ -1006,6 +1016,10 @@ function syncTimeBar(){
   inp.value=toLocalInput(planTime||new Date());
   inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
 }
+function goNow(){
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(planTime) setPlanTime(''); else { syncTimeBar(); requestAnimationFrame(followTimeBar) }
+}
 function setPlanTime(v){
   pastFloor=null;
   planTime=v?new Date(v):null;
@@ -1016,7 +1030,7 @@ setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTim
 let loadedFor=null, loading=false;
 async function loadJourneys(){
   if(!selDest||loading) return;
-  $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
+  $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
   const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
@@ -1037,7 +1051,7 @@ async function loadJourneys(){
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
-    $('#jrTitle').textContent=(selFrom?selFrom.name+' → ':'Vers ')+selDest.name+(S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?' · arrêt '+selDest.nearStop.name:'');
+    setListTitle();
     renderJourneyList();
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; else toast('Actualisation impossible') }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
