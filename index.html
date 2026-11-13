@@ -1684,7 +1684,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
-  delayTarget=0; delayShown=null; vehShown=null; apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
+  delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   $('#mapView').classList.add('open');
@@ -1908,7 +1908,15 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
 let delayTarget=0, delayShown=null, followVeh=false;
 // Suivre le véhicule : la carte reste centrée sur lui pendant qu'il roule
-function toggleFollowVeh(){
+// Tronçon en transport correspondant à l'heure actuelle : celui en cours, sinon le prochain (après une correspondance)
+function activeLeg(it){
+  const tl=(it?.legs||[]).filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR'); if(!tl.length) return null;
+  const now=Date.now();
+  return tl.find(l=>now<=+new Date(l.endTime))||tl.at(-1);
+}
+let vehLegKey='';
+async function toggleFollowVeh(){
+  if(!followVeh){ await updateVehicle(); }                 // repère l'heure actuelle et le bon véhicule avant de suivre
   if(!vehMk||!vehShown){ toast('Position du véhicule pas encore disponible'); return }
   followVeh=!followVeh; $('#btnFollow').classList.toggle('on',followVeh);
   if(followVeh){ if(navOn) stopNav(); mlMap.easeTo({center:vehShown,zoom:Math.max(mlMap.getZoom(),16),duration:700}); toast('Suivi du véhicule activé') }
@@ -1934,7 +1942,7 @@ function startVehAnim(){
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
       if(followVeh&&!mlMap.isEasing?.()) mlMap.jumpTo({center:vehShown});   // caméra puis marqueur dans la même image : pas de tremblement
       vehMk.setLngLat(vehShown);
-      if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=firstTransit(mapIt); drawApproach(vehState.trip,vehShown,ft) }
+      if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=activeLeg(mapIt); drawApproach(vehState.trip,vehShown,ft) }
     }
     vehRaf=requestAnimationFrame(tick);
   };
@@ -1942,7 +1950,10 @@ function startVehAnim(){
 }
 async function updateVehicle(){
   if(!mapIt||!mlMap) return;
-  const ft=firstTransit(mapIt); if(!ft) return;
+  const ft=activeLeg(mapIt); if(!ft) return;
+  const lk=(ft.tripId||'')+'|'+ft.startTime;
+  if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
+    const ttl=$('#mapTitle'); if(ttl&&mapWalk==null) ttl.textContent=`${ft.routeShortName||''} → ${ft.headsign||ft.to?.name||''}` }
   let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
   const coords=trip?.coords||legCoords(ft);
   let p=null, live=false;
