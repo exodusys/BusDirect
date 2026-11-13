@@ -23,6 +23,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
+html,body{overscroll-behavior-y:none} /* pas de « tirer pour rafraîchir » du navigateur */
 html,body{background-color:var(--page-bg,var(--bg))!important} /* couleur reprise par Safari sous ses barres */
 /* Fond d'écran sur un calque fixe de la taille de l'écran : il ne bouge ni ne s'étire quand la liste change (iOS ignore background-attachment:fixed) */
 body::before{content:"";position:fixed;left:0;right:0;top:-160px;bottom:-160px;z-index:-1;pointer-events:none;
@@ -1088,6 +1089,8 @@ document.addEventListener('touchstart',e=>{ insTopStart=(listOpen()&&lastJourney
 document.addEventListener('touchmove',e=>{ if(insTopStart==null) return; if(!atTop()){insistTopSet(0);return}
   insistTopSet((e.touches[0].clientY-insTopStart)/110) },{passive:true});
 document.addEventListener('touchend',()=>{ if(insTopStart!=null){insTopStart=null;insistTopDone()} },{passive:true});
+// bloque le rafraîchissement de Safari quand on tire vers le bas en haut de la liste
+document.addEventListener('touchmove',e=>{ if(insTopStart!=null&&atTop()&&e.touches[0].clientY>insTopStart&&e.cancelable) e.preventDefault() },{passive:false});
 addEventListener('wheel',e=>{ if(!listOpen()||!lastJourneys.length||!atTop()||e.deltaY>=0) return;
   insistTopSet(insTop-e.deltaY/600); clearTimeout(insTopT); insTopT=setTimeout(insistTopDone,180) },{passive:true});
 async function loadPastJourneys(){
