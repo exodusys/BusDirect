@@ -174,6 +174,9 @@ body.classic .back-btn{border-radius:6px}
   backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))}
 .edge-blur.bottom{bottom:0;height:calc(var(--safe-b) + 120px);
   -webkit-mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%);mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%)}
+.edge-blur.top{top:0;height:calc(var(--safe-t) + 110px);
+  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%)}
+body.classic .edge-blur{display:none}
 body.noglass .edge-blur{display:none}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
@@ -469,6 +472,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   </section>
 </main>
 
+<div class="edge-blur top" aria-hidden="true"></div>
 <div class="edge-blur bottom" aria-hidden="true"></div>
 <nav class="glass" id="tabs">
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button>
