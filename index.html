@@ -177,13 +177,13 @@ body.classic{--hdr:72px}
 body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 6px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
 body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 8px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
 body.list-page #listTop{background:rgba(var(--glass-rgb),.96);border-radius:0 0 18px 18px}
-body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 66px)}
+body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 78px)}   /* un peu plus d'espace sous la date et l'heure */
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
 .list-title{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
-.list-title .lt-line{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-title .lt-line{font-size:13.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .list-title .lt-from{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .list-title .lt-dest{font-size:19px;font-weight:800;letter-spacing:-.3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .list-title .lt-stop{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1013,12 +1013,15 @@ function syncTimeBar(){
   inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
 }
 function goNow(){   // retour à l'affichage de départ : le prochain départ en direct en haut, puis les 4 suivants
-  if(planTime){ window.scrollTo({top:0}); setPlanTime(''); return }   // autre date choisie → nouvelle recherche à partir de maintenant
+  if(planTime){ window.scrollTo({top:0}); setPlanTime(''); setTimeout(()=>window.scrollTo({top:0}),600); return }   // autre date choisie → nouvelle recherche à partir de maintenant
   pastFloor=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
-  renderJourneyList(); syncTimeBar();
+  insistSet(0); insistTopSet(0); $('#moreTop')?.classList.remove('busy','pulling','insisting');
+  renderJourneyList(); syncTimeBar(); setListTitle();
   window.scrollTo({top:0,behavior:'smooth'});
-  if(!loading) loadJourneys();                                      // actualisation en direct, sans vider la liste
-  setTimeout(followTimeBar,400);
+  const toTop=()=>{ if(window.scrollY!==0) window.scrollTo({top:0}) };  // la liste revient exactement tout en haut
+  setTimeout(toTop,450); setTimeout(toTop,1200);
+  if(!loading) loadJourneys().then(()=>setTimeout(toTop,50));         // actualisation en direct, sans vider la liste
+  setTimeout(followTimeBar,500);
 }
 function setPlanTime(v){
   pastFloor=null;
