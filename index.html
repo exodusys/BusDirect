@@ -194,6 +194,9 @@ body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) 
 .list-title{justify-content:center;align-self:stretch}
 .back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
 body.classic .back-btn{border-radius:6px}
+.target-btn{width:40px;height:40px;border-radius:50%;border:none;background:rgba(127,127,127,.18);color:var(--accent);display:grid;place-items:center;cursor:pointer;margin-right:4px}
+.target-btn.busy svg{animation:r 1s linear infinite}
+body.classic .target-btn{border-radius:6px}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -390,7 +393,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 <main>
   <!-- HORAIRES -->
   <section class="view active" id="v-horaires">
-    <h2>Horaires</h2>
+    <div class="row between"><h2>Horaires</h2><button class="target-btn" id="whereBtn" onclick="locateMyTrip()" aria-label="Dans quel parcours suis-je ?"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
     <div class="tiles" id="tiles"></div>
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Ajoute des destinations dans l'onglet <b style="display:inline;font-size:inherit">Parcours</b>.</div>
   </section>
@@ -616,7 +619,7 @@ const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 // Bandeau du titre de la liste : départ en petit, destination en gros (2 lignes max), arrêt utilisé en dessous
 function setListTitle(){
   const el=$('#jrTitle'); if(!el||!selDest) return;
-  const from=selFrom?selFrom.name:'Ma position';
+  const from=selDest.fromLabel||(selFrom?selFrom.name:'Ma position');
   const stop=S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?selDest.nearStop.name:'';
   el.innerHTML=`<span class="lt-line">Depuis - ${esc(from)}</span><span class="lt-line">Vers - ${esc(selDest.name)}</span>`;
   requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||52; document.documentElement.style.setProperty('--lt-h',h+'px') });
@@ -1042,9 +1045,52 @@ function setPlanTime(v){
   syncTimeBar(); shown=5; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
+/* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
+function segPosNow(sg,now){
+  let line=null; if(sg.polyline){ for(const pr of [6,5,7]){ const c=decodePoly(sg.polyline,pr); if(c.length&&Math.abs(c[0][1]-sg.from.lat)<.05){line=c;break} } }
+  line=line||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
+  const a=+new Date(sg.departure), b=+new Date(sg.arrival); const f=Math.max(0,Math.min(1,(now-a)/((b-a)||1)));
+  // position le long du tracé
+  const d=[0]; for(let i=1;i<line.length;i++) d.push(d[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]));
+  const g=d.at(-1)*f; for(let i=1;i<line.length;i++) if(d[i]>=g){const k=(g-d[i-1])/((d[i]-d[i-1])||1);return [line[i-1][0]+(line[i][0]-line[i-1][0])*k,line[i-1][1]+(line[i][1]-line[i-1][1])*k]}
+  return line.at(-1);
+}
+async function fetchTripItinerary(tripId){
+  for(const v of ['v5','v4','v3','v2','v1']){
+    try{ const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(tripId)}`,{cache:'no-store'}); if(!r.ok) continue; const d=await r.json(); if(d&&d.legs) return d }catch{}
+  }
+  return null;
+}
+async function locateMyTrip(){
+  const btn=$('#whereBtn'); btn.classList.add('busy');
+  try{
+    await freshPos(); if(!pos){ toast('Position indisponible'); return }
+    const now=Date.now(), dd=0.004;
+    const qs=`zoom=16&min=${pos.lat+dd},${pos.lon-dd*1.4}&max=${pos.lat-dd},${pos.lon+dd*1.4}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
+    let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(r.ok){ segs=await r.json(); break } }catch{} }
+    if(!segs||!segs.length){ toast('Aucun véhicule détecté autour de toi'); return }
+    let best=null;
+    segs.forEach(sg=>{ if(!(sg.trips||[]).length) return; if(now<+new Date(sg.departure)-30000||now>+new Date(sg.arrival)+30000) return;
+      const p=segPosNow(sg,now); const km=dist(pos,{lat:p[1],lon:p[0]}); if(!best||km<best.km) best={sg,km} });
+    if(!best||best.km>0.25){ toast('Tu ne sembles pas être dans un transport en ce moment'); return }
+    const t=best.sg.trips[0]; const itin=await fetchTripItinerary(t.tripId);
+    if(!itin){ toast('Course introuvable'); return }
+    const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
+    selFrom=null; selDest={uid:'_trip',type:'TRIP',tripId:t.tripId,name:leg.headsign||leg.to?.name||'Terminus',fromLabel:`À bord du ${leg.routeShortName||t.routeShortName||''}`.trim()};
+    shown=5; pastFloor=null; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
+    $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
+    renderJourneyList(); const c=document.querySelector('#journeys > .jr'); if(c) c.classList.add('open');
+    toast(`Tu es dans le ${leg.routeShortName||''} → ${leg.headsign||''}`);
+  } finally { btn.classList.remove('busy') }
+}
+async function refreshMyTrip(){ // actualisation en direct de la course suivie
+  const itin=await fetchTripItinerary(selDest.tripId); if(!itin||selDest?.type!=='TRIP') return;
+  lastJourneys=[itin]; renderJourneyList();
+}
 let loadedFor=null, loading=false;
 async function loadJourneys(){
   if(!selDest||loading) return;
+  if(selDest.type==='TRIP') return refreshMyTrip();
   $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
@@ -1076,7 +1122,7 @@ const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?
 // Met à jour la liste en place : seules les cartes qui changent sont modifiées
 function renderJourneyList(){
   const box=$('#journeys');
-  lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
+  if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.slice(0,shown);
   box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
@@ -1969,7 +2015,6 @@ function startVehAnim(){
         else if(idle) mlMap.jumpTo({center:vehShown});
         else followResume=true;
       }
-      if(Date.now()-lastNextStop>1000){ lastNextStop=Date.now(); drawNextStop() }
       vehMk.setLngLat(vehShown);
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=activeLeg(mapIt); drawApproach(vehState.trip,vehShown,ft) }
     }
