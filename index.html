@@ -671,6 +671,7 @@ function openList(){
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   window.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
+  setTimeout(()=>vl.classList.remove('pg-in'),420);   // après l'animation : plus aucune transformation, les bandeaux restent bien fixes
 }
 function closeList(noAnim){
   const vl=$('#v-list');
