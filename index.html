@@ -668,7 +668,6 @@ function openList(){
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   window.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
-  setTimeout(()=>vl.classList.remove('pg-in'),420);
 }
 function closeList(noAnim){
   const vl=$('#v-list');
@@ -679,7 +678,6 @@ function closeList(noAnim){
     document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
     window.scrollTo({top:0});
     const vh=$('#v-horaires'); vh.classList.remove('pg-back'); void vh.offsetWidth; vh.classList.add('pg-back');      // les dalles reviennent en douceur
-    setTimeout(()=>vh.classList.remove('pg-back'),420);
   };
   if(noAnim===true||!vl.classList.contains('active')) return finish();
   vl.classList.remove('pg-in'); void vl.offsetWidth; vl.classList.add('pg-out');   // la liste repart vers la droite
@@ -689,6 +687,7 @@ $('#tabs').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x===b));
   if(listOpen()) deselectTile();   // quitter la liste arrête son actualisation
+  document.querySelectorAll('.pg-in,.pg-back,.pg-out').forEach(v=>v.classList.remove('pg-in','pg-back','pg-out'));
   document.body.classList.remove('list-page');
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
