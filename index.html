@@ -1118,7 +1118,7 @@ function insistTopSet(v){ insTop=Math.max(0,Math.min(1,v)); const sen=$('#moreTo
   sen.style.setProperty('--ins',insTop); sen.classList.toggle('insisting',insTop>0&&!pastBusy); sen.classList.toggle('pulling',insTop>0) }
 function insistTopDone(){ if(insTop>=1&&!pastBusy){ if(navigator.vibrate) navigator.vibrate(10); loadPastJourneys() } insistTopSet(0) }
 document.addEventListener('touchstart',e=>{ insTopStart=(listOpen()&&lastJourneys.length&&atTop())?e.touches[0].clientY:null },{passive:true});
-document.addEventListener('touchmove',e=>{ if(insTopStart==null) return; if(!atTop()){insistTopSet(0);return}
+document.addEventListener('touchmove',e=>{ if(insTopStart==null) return; if(!atTop()&&insTop===0){return}
   insistTopSet((e.touches[0].clientY-insTopStart)/170) },{passive:true});
 document.addEventListener('touchend',()=>{ if(insTopStart!=null){insTopStart=null;insistTopDone()} },{passive:true});
 // bloque le rafraîchissement de Safari quand on tire vers le bas en haut de la liste
@@ -1127,7 +1127,7 @@ addEventListener('wheel',e=>{ if(!listOpen()||!lastJourneys.length||!atTop()||e.
   insistTopSet(insTop-e.deltaY/900); clearTimeout(insTopT); insTopT=setTimeout(insistTopDone,180) },{passive:true});
 async function loadPastJourneys(){
   if(pastBusy||!selDest||!lastJourneys.length) return;
-  pastBusy=true; const sen=$('#moreTop'); sen.classList.add('busy','pulling');
+  pastBusy=true; const sen=$('#moreTop'); sen.classList.add('busy','pulling'); const t0=Date.now();
   try{
     const firstDep=+new Date(firstTransit(lastJourneys[0]).startTime);
     let dest=await nearestStop(selDest), from=selFrom?await nearestStop(selFrom):null;
@@ -1136,6 +1136,7 @@ async function loadPastJourneys(){
     let add=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<firstDep})
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime)).slice(-5);
     if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add=withFinalWalk(add,selDest,dest,fw) }
+    await new Promise(r=>setTimeout(r,Math.max(0,700-(Date.now()-t0))));   // même temps de chargement qu'en bas
     if(add.length){
       prefetchColors(add);
       const anchor=document.querySelector('#journeys > .jr'), top0=anchor?anchor.getBoundingClientRect().top:0;
@@ -1144,7 +1145,6 @@ async function loadPastJourneys(){
       appending=true; renderJourneyList(); appending=false;
       if(anchor) window.scrollBy(0,anchor.getBoundingClientRect().top-top0);   // la liste ne saute pas : les anciens parcours apparaissent au-dessus
       document.querySelectorAll('#journeys > .jr').forEach((c,i)=>{ if(i<add.length&&!c.dataset.shown){c.dataset.shown=1;c.classList.add('pop')} });
-      setTimeout(()=>window.scrollBy({top:-Math.min(260,innerHeight*.3),behavior:'smooth'}),60);
     } else toast('Pas de parcours plus tôt');
   }catch{} finally{ pastBusy=false; sen.classList.remove('busy','pulling') }
 }
@@ -1180,7 +1180,7 @@ async function loadMoreJourneys(){
     shown+=5; appending=true; renderJourneyList(); appending=false; animNew();
     moreBusy=false; $('#more')?.classList.remove('busy'); return }
   // plus rien en réserve : on charge les départs suivants
-  moreBusy=true; const sen=$('#more'); if(sen) sen.classList.add('busy');
+  moreBusy=true; const sen=$('#more'); if(sen) sen.classList.add('busy'); const t0b=Date.now();
   try{
     const lastF=firstTransit(lastJourneys.at(-1)); if(!lastF) return;
     const t=new Date(+new Date(lastF.startTime)+60000);
@@ -1190,6 +1190,7 @@ async function loadMoreJourneys(){
     const add=(d.itineraries||[]).filter(it=>firstTransit(it)&&!known.has(jkey(it)))
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
     if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add.splice(0,add.length,...withFinalWalk(add,selDest,dest,fw)) }
+    await new Promise(r=>setTimeout(r,Math.max(0,700-(Date.now()-t0b))));
     if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
     else if(sen) sen.remove();
   }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
