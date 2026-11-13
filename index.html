@@ -299,6 +299,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 110px)}
 .walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
+.walk-dep{margin-top:2px}
+.walk-dep .cd-t{display:inline;font-size:inherit;font-weight:700;color:var(--text);letter-spacing:0}
 .veh-m{will-change:transform;transition:none!important;display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
   box-shadow:0 0 0 3px #fff,0 4px 12px rgba(0,0,0,.4)}
 .me-m{width:22px;height:22px;position:relative}
@@ -1886,7 +1888,9 @@ async function onMyPos(force){
   let len=0; for(let i=1;i<walkGeo.length;i++) len+=kmDist(walkGeo[i-1],walkGeo[i]);
   const wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((+new Date(firstTransit(mapIt).startTime)-Date.now())/60000);
   $('#walkTitle').textContent=`Marche jusqu'à ${boardStop.name}${boardStop.track?' · Quai '+boardStop.track:''}`;
-  $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied · départ dans ${left} min ${wmin>left?'<span class="late">— presse le pas !</span>':''}`;
+  const depAtMs=+new Date(firstTransit(mapIt).startTime);
+  $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied`
+    +`<div class="walk-dep">Départ dans <span class="cd-t" data-at="${depAtMs}">${fmtCd(depAtMs)}</span>${wmin>left?' <span class="late">— presse le pas !</span>':''}</div>`;
   if(navOn){ if(hd==null) bearTarget=bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]); if(force) mlMap.easeTo({center:meShown||me,bearing:bearTarget??0,pitch:is3D?55:0,zoom:Math.max(mlMap.getZoom(),17.5),duration:600}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
 }
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
