@@ -1019,9 +1019,13 @@ function syncTimeBar(){
   inp.value=toLocalInput(planTime||new Date());
   inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
 }
-function goNow(){   // retour à l'affichage de départ : les 5 prochains départs à partir de maintenant
+function goNow(){   // retour à l'affichage de départ : le prochain départ en direct en haut, puis les 4 suivants
+  if(planTime){ window.scrollTo({top:0}); setPlanTime(''); return }   // autre date choisie → nouvelle recherche à partir de maintenant
+  pastFloor=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
+  renderJourneyList(); syncTimeBar();
   window.scrollTo({top:0,behavior:'smooth'});
-  setPlanTime('');
+  if(!loading) loadJourneys();                                      // actualisation en direct, sans vider la liste
+  setTimeout(followTimeBar,400);
 }
 function setPlanTime(v){
   pastFloor=null;
