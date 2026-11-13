@@ -184,6 +184,13 @@ body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 76px)}
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
+.pg-in{animation:pgIn .38s cubic-bezier(.2,.8,.25,1) both!important}
+.pg-out{animation:pgOut .3s cubic-bezier(.4,0,.7,.4) both!important}
+.pg-back{animation:pgBack .36s cubic-bezier(.2,.8,.25,1) both!important}
+@keyframes pgIn{from{transform:translateX(100%);opacity:.6}to{transform:none;opacity:1}}
+@keyframes pgOut{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.4}}
+@keyframes pgBack{from{transform:translateX(-30%);opacity:.3}to{transform:none;opacity:1}}
+body:has(.pg-in),body:has(.pg-out),body:has(.pg-back){overflow-x:hidden}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
 .list-title{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
 .list-title{-webkit-font-smoothing:antialiased;transform:translateZ(0)}
@@ -646,7 +653,7 @@ document.addEventListener('touchmove',e=>{ if(!edge) return; const t=e.touches[0
   if(edge.on){ edge.dx=Math.max(0,dx); const v=$('#v-list'); v.style.transition='none'; v.style.transform=`translateX(${edge.dx}px)`; v.style.opacity=String(1-Math.min(.5,edge.dx/innerWidth)) } },{passive:true});
 document.addEventListener('touchend',()=>{ if(!edge) return; const v=$('#v-list'), go=edge.on&&edge.dx>Math.min(110,innerWidth*.28); edge=null;
   v.style.transition='transform .25s ease, opacity .25s ease';
-  if(go){ v.style.transform=`translateX(${innerWidth}px)`; v.style.opacity='0'; setTimeout(()=>{ closeList(); v.style.transition='none'; v.style.transform=''; v.style.opacity='' },230) }
+  if(go){ v.style.transform=`translateX(${innerWidth}px)`; v.style.opacity='0'; setTimeout(()=>{ closeList(true); v.style.transition='none'; v.style.transform=''; v.style.opacity='' },230) }
   else { v.style.transform=''; v.style.opacity='' } },{passive:true});
 function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast(on?'Listes sur une page séparée':'Listes sous les dalles') }
 // Évite le « clic fantôme » : après l'appui sur une dalle, le clic arrivait sur le champ date de la nouvelle page
@@ -660,12 +667,23 @@ function openList(){
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-list'));
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   window.scrollTo({top:0});
+  const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
+  setTimeout(()=>vl.classList.remove('pg-in'),420);
 }
-function closeList(){
-  document.body.classList.remove('list-page');
-  deselectTile(); if(!listSep()){ $('#listTop').style.display='none'; return }
-  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
-  window.scrollTo({top:0});
+function closeList(noAnim){
+  const vl=$('#v-list');
+  const finish=()=>{
+    vl.classList.remove('pg-out');
+    document.body.classList.remove('list-page');
+    deselectTile(); if(!listSep()){ $('#listTop').style.display='none'; return }
+    document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
+    window.scrollTo({top:0});
+    const vh=$('#v-horaires'); vh.classList.remove('pg-back'); void vh.offsetWidth; vh.classList.add('pg-back');      // les dalles reviennent en douceur
+    setTimeout(()=>vh.classList.remove('pg-back'),420);
+  };
+  if(noAnim===true||!vl.classList.contains('active')) return finish();
+  vl.classList.remove('pg-in'); void vl.offsetWidth; vl.classList.add('pg-out');   // la liste repart vers la droite
+  setTimeout(finish,300);
 }
 $('#tabs').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
