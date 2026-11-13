@@ -169,6 +169,12 @@ body.list-inline .list-title{font-size:16px}
 .list-title{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
 body.classic .back-btn{border-radius:6px}
+/* Flou sous la barre d'onglets, réglé par les options Liquid Glass (flou, saturation) */
+.edge-blur{position:fixed;left:0;right:0;z-index:19;pointer-events:none;
+  backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))}
+.edge-blur.bottom{bottom:0;height:calc(var(--safe-b) + 120px);
+  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%);mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%)}
+body.noglass .edge-blur{display:none}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -463,6 +469,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   </section>
 </main>
 
+<div class="edge-blur bottom" aria-hidden="true"></div>
 <nav class="glass" id="tabs">
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button>
   <button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
