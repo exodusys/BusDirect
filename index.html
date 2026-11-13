@@ -169,15 +169,6 @@ body.list-inline .list-title{font-size:16px}
 .list-title{flex:1;min-width:0;margin:0;font-size:20px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .back-btn{width:38px;height:38px;flex:none;border-radius:50%;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:26px;line-height:1;cursor:pointer;padding-bottom:3px}
 body.classic .back-btn{border-radius:6px}
-/* Flou sous la barre d'onglets, réglé par les options Liquid Glass (flou, saturation) */
-.edge-blur{position:fixed;left:0;right:0;z-index:19;pointer-events:none;
-  backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))}
-.edge-blur.bottom{bottom:0;height:calc(var(--safe-b) + 120px);
-  -webkit-mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%);mask-image:linear-gradient(to top,#000 0%,#000 55%,transparent 100%)}
-.edge-blur.top{top:0;height:calc(var(--safe-t) + 110px);
-  -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%)}
-body.classic .edge-blur{display:none}
-body.noglass .edge-blur{display:none}
 .tile{min-height:72px;touch-action:pan-y;user-select:none;-webkit-touch-callout:none;-webkit-user-select:none;position:relative;z-index:1}
 .tiles{position:relative}
 .tile.arming{transform:scale(.97);transition:transform .2s ease}
@@ -472,8 +463,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   </section>
 </main>
 
-<div class="edge-blur top" aria-hidden="true"></div>
-<div class="edge-blur bottom" aria-hidden="true"></div>
 <nav class="glass" id="tabs">
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button>
   <button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
@@ -1602,7 +1591,7 @@ async function openMap(it,walkLeg){
   drawItinerary(it);
   if(mapWalk!=null) focusWalk(); else mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
-  updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));
+  updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000));
   startMeWatch();
 }
 /* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
@@ -1714,6 +1703,20 @@ function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(c
 /* Position du véhicule : suivi Transitous (map/trips) sinon estimation sur l'horaire */
 /* Course complète du véhicule (tous ses arrêts + tracé), via Transitous /trip */
 const tripCache={};
+// Horaires en direct de la course : on recharge les heures de passage (temps réel) sans recalculer le tracé
+async function refreshTripTimes(ft,trip){
+  if(!trip||!ft?.tripId||Date.now()-(trip._t||0)<20000) return trip;
+  trip._t=Date.now();
+  for(const v of ['v5','v4','v3','v2','v1']){
+    try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`,{cache:'no-store'}); if(!r.ok) continue;
+      const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
+      const fresh=[{arr:leg.startTime,dep:leg.startTime},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival})),{arr:leg.endTime,dep:leg.endTime}];
+      if(fresh.length===trip.stops.length) fresh.forEach((f,i)=>{ trip.stops[i].a=+new Date(f.arr); trip.stops[i].d=+new Date(f.dep); trip.stops[i].arr=f.arr; trip.stops[i].t=f.dep });
+      trip.rt=!!leg.realTime; break;
+    }catch{}
+  }
+  return trip;
+}
 async function loadTrip(ft){
   if(!ft?.tripId) return null; if(tripCache[ft.tripId]!==undefined) return tripCache[ft.tripId];
   for(const v of ['v5','v4','v3','v2','v1']){
@@ -1821,7 +1824,7 @@ function startVehAnim(){
 async function updateVehicle(){
   if(!mapIt||!mlMap) return;
   const ft=firstTransit(mapIt); if(!ft) return;
-  const now=Date.now(), trip=await loadTrip(ft);
+  let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
   const coords=trip?.coords||legCoords(ft);
   let p=null, live=false;
   try{
@@ -1835,14 +1838,14 @@ async function updateVehicle(){
         const line=sc||[[seg.from.lon,seg.from.lat],[seg.to.lon,seg.to.lat]];
         if(trip&&trip.cum){ // temps réel → on en déduit le retard sur la course entière
           const nm=String(seg.from?.name||''); const sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
-          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3) delayTarget=0;
+          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3||Math.abs(delayTarget)<15000) delayTarget=0;
           vehState={kind:'trip',trip};
         } else vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip};
         p=vehPosAt(now); live=!!seg.realTime}
       break;
     }
   }catch{}
-  if(!p&&trip){ vehState={kind:'trip',trip}; p=vehPosAt(now) }
+  if(!p&&trip){ vehState={kind:'trip',trip}; if(trip.rt) delayTarget=0; p=vehPosAt(now) }   // horaires en direct déjà intégrés aux heures de passage
   if(!p){const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(now>=a&&now<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip}; p=vehPosAt(now) }}
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
@@ -1852,7 +1855,7 @@ async function updateVehicle(){
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
-  if(mapWalk==null) $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':'Position estimée'}</span><span class="sub2">${before?'Arrive à ton arrêt à '+hm(ft.startTime):'Départ '+hm(ft.startTime)}</span>`;
+  if(mapWalk==null) $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à '+hm(ft.startTime):'Départ '+hm(ft.startTime)}</span>`;
 }
 
 /* Ma position, marche vers l'arrêt et navigation orientée */
