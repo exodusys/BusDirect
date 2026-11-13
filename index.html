@@ -566,7 +566,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'auto',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'original',wall:'none',customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 // migration ancienne version (une seule image perso)
