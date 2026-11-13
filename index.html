@@ -117,6 +117,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
 .time-bar input.custom{color:var(--accent)}
 .time-bar input.past{color:#ff453a}
+.tb-ph{height:0}
+.time-bar.pinned{position:fixed;left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
 .time-bar input.future{color:#30d158}
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
@@ -170,12 +172,15 @@ body.list-inline #listTop{margin-top:18px}
 body.list-inline .list-title{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
-body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + var(--hdr) - 8px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
-body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + var(--hdr) + 44px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
+body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 6px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 58px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
 body.list-page #listTop::before{content:"";position:absolute;inset:0 0 -64px;z-index:-1;pointer-events:none;
   backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));
   -webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
-body.list-page #v-list{padding-top:118px}
+body.list-page #v-list{padding-top:112px}
+/* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
+body.list-page header,body.list-page nav{display:none}
+body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
 .load-more.top{flex-direction:row;height:0;overflow:hidden;opacity:0;transition:height .2s,opacity .2s}
 .load-more.top.pulling{height:64px;opacity:1}
 .load-more.top span{order:-1}
@@ -383,6 +388,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻</button>
     </div>
     <div id="jrHead" style="display:none"></div>
+    <div id="timeBarPh" class="tb-ph"></div>
     <div id="timeBar" class="time-bar glass" style="display:none">
       <span>🕒</span>
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
@@ -602,7 +608,7 @@ const listOpen=()=>listSep()?$('#v-list').classList.contains('active'):($('#v-ho
 // place la liste soit sur sa propre page, soit sous les dalles
 function applyListMode(){
   const host=listSep()?$('#v-list'):$('#v-horaires');
-  ['#listTop','#jrHead','#timeBar','#moreTop','#journeys'].forEach(id=>{const n=$(id); if(n&&n.parentElement!==host) host.appendChild(n)});
+  ['#listTop','#jrHead','#timeBarPh','#timeBar','#moreTop','#journeys'].forEach(id=>{const n=$(id); if(n&&n.parentElement!==host) host.appendChild(n)});
   document.body.classList.toggle('list-inline',!listSep()); if(!listSep()) document.body.classList.remove('list-page');
   if($('#listSepOn')) $('#listSepOn').checked=listSep();
   if(!listSep()&&$('#v-list').classList.contains('active')) document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
@@ -909,7 +915,8 @@ let selFrom=null; // null = ma position
 // Désélection : la liste disparaît et son actualisation s'arrête
 function deselectTile(){
   selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[];
-  planTime=null; pastFloor=null; try{syncTimeBar()}catch{}   // la date choisie ne reste pas active pour les dalles suivantes
+  planTime=null; pastFloor=null; try{syncTimeBar()}catch{}
+  try{ $('#timeBar').classList.remove('pinned'); $('#timeBarPh').style.height='0' }catch{}   // la date choisie ne reste pas active pour les dalles suivantes
   renderTiles(); if(!listSep()) $('#listTop').style.display='none'; $('#jrHead').style.display='none'; $('#timeBar').style.display='none'; $('#journeys').innerHTML='';
 }
 // Position fraîche (pas de cache) avant de calculer la liste
@@ -1134,7 +1141,17 @@ function followTimeBar(){
   const inp=$('#planTime'), v=toLocalInput(new Date(f.startTime)); if(inp.value!==v) inp.value=v;
   const tt=+new Date(f.startTime); inp.classList.toggle('past',tt<Date.now()-30000); inp.classList.toggle('future',tt>=Date.now()-30000); inp.classList.remove('custom');
 }
-addEventListener('scroll',()=>requestAnimationFrame(followTimeBar),{passive:true});
+addEventListener('scroll',()=>requestAnimationFrame(()=>{pinTimeBar();followTimeBar()}),{passive:true});
+// Liste sous les dalles : la date et l'heure restent épinglées sous la barre BusDirect pendant le défilement
+function pinTimeBar(){
+  const tb=$('#timeBar'), ph=$('#timeBarPh'); if(!tb||!ph) return;
+  const inline=!listSep()&&selDest&&tb.style.display!=='none';
+  if(!inline){ tb.classList.remove('pinned'); ph.style.height='0'; return }
+  const hdr=$('header').getBoundingClientRect().bottom+8;
+  const ref=(tb.classList.contains('pinned')?ph:tb).getBoundingClientRect().top;
+  const pin=ref<hdr;
+  if(pin!==tb.classList.contains('pinned')){ ph.style.height=pin?tb.offsetHeight+'px':'0'; tb.classList.toggle('pinned',pin); tb.style.top=pin?hdr+'px':'' }
+}
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
   cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.classList.add('pop')}); // seules les nouvelles cartes s'animent
