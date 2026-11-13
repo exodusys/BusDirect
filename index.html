@@ -116,6 +116,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .time-bar{display:flex;align-items:center;gap:8px;border-radius:16px;padding:6px 6px 6px 12px;margin:0 0 10px}
 .time-bar input{flex:1;min-width:0;border:none;background:transparent;color:var(--text);font:600 15px -apple-system,system-ui,sans-serif;padding:6px 0;outline:none}
 .time-bar input.custom{color:var(--accent)}
+.time-bar input.past{color:#ff453a}
+.time-bar input.future{color:#30d158}
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
 .load-more span{flex-basis:100%;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);opacity:calc(.5 + var(--ins)*.5)}
@@ -168,9 +170,12 @@ body.list-inline #listTop{margin-top:18px}
 body.list-inline .list-title{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
-#v-list .list-top{position:sticky;top:calc(var(--safe-t) + var(--hdr) - 8px);z-index:15;margin:0 -14px;padding:8px 14px 6px;
-  background:linear-gradient(to bottom,rgba(var(--glass-rgb),.0),rgba(var(--glass-rgb),.0));backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))}
-#v-list #timeBar{position:sticky;top:calc(var(--safe-t) + var(--hdr) + 44px);z-index:15;margin-bottom:10px}
+body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + var(--hdr) - 8px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + var(--hdr) + 44px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
+body.list-page #listTop::before{content:"";position:absolute;inset:0 0 -64px;z-index:-1;pointer-events:none;
+  backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));
+  -webkit-mask-image:linear-gradient(#000 75%,transparent);mask-image:linear-gradient(#000 75%,transparent)}
+body.list-page #v-list{padding-top:118px}
 .load-more.top{flex-direction:row;height:0;overflow:hidden;opacity:0;transition:height .2s,opacity .2s}
 .load-more.top.pulling{height:64px;opacity:1}
 .load-more.top span{order:-1}
@@ -242,7 +247,7 @@ svg.link circle{fill:var(--accent);stroke:#fff;stroke-width:2.5}
 .del{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
 
 /* Footer tabs */
-nav{position:fixed;left:10px;right:10px;bottom:calc(var(--safe-b) + 10px);z-index:20;border-radius:28px;
+nav{position:fixed;left:10px;right:10px;bottom:calc(var(--safe-b) + 10px);z-index:30;border-radius:28px;
   display:flex;justify-content:space-around;padding:6px;max-width:700px;margin:0 auto}
 nav button{flex:1;background:none;border:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;
   font-size:10.5px;font-weight:600;padding:7px 2px;border-radius:20px;cursor:pointer;transition:.2s}
@@ -598,7 +603,7 @@ const listOpen=()=>listSep()?$('#v-list').classList.contains('active'):($('#v-ho
 function applyListMode(){
   const host=listSep()?$('#v-list'):$('#v-horaires');
   ['#listTop','#jrHead','#timeBar','#moreTop','#journeys'].forEach(id=>{const n=$(id); if(n&&n.parentElement!==host) host.appendChild(n)});
-  document.body.classList.toggle('list-inline',!listSep());
+  document.body.classList.toggle('list-inline',!listSep()); if(!listSep()) document.body.classList.remove('list-page');
   if($('#listSepOn')) $('#listSepOn').checked=listSep();
   if(!listSep()&&$('#v-list').classList.contains('active')) document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
   $('#listTop').style.display=(listSep()||selDest)?'':'none';
@@ -619,6 +624,7 @@ function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast
 let clickShieldUntil=0;
 ['click','focusin','mousedown'].forEach(ev=>document.addEventListener(ev,e=>{ if(Date.now()<clickShieldUntil){ e.preventDefault(); e.stopPropagation(); if(ev==='focusin') e.target.blur?.() } },true));
 function openList(){
+  if(listSep()) document.body.classList.add('list-page');
   clickShieldUntil=Date.now()+500; $('#planTime')?.blur();
   const tb=$('#timeBar'); if(tb){ tb.style.pointerEvents='none'; setTimeout(()=>tb.style.pointerEvents='',550) }
   if(!listSep()){ $('#listTop').style.display=''; return }
@@ -627,6 +633,7 @@ function openList(){
   window.scrollTo({top:0});
 }
 function closeList(){
+  document.body.classList.remove('list-page');
   deselectTile(); if(!listSep()){ $('#listTop').style.display='none'; return }
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
   window.scrollTo({top:0});
@@ -635,6 +642,7 @@ $('#tabs').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x===b));
   if(listOpen()) deselectTile();   // quitter la liste arrête son actualisation
+  document.body.classList.remove('list-page');
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
   if(b.dataset.v==='tickets') renderSMS();
@@ -1124,7 +1132,7 @@ function followTimeBar(){
   const cards=[...document.querySelectorAll('#journeys > .jr')]; const vis=cards.find(c=>c.getBoundingClientRect().bottom>limit);
   if(!vis) return; const it=curList[+vis.dataset.i]; if(!it) return; const f=firstTransit(it); if(!f) return;
   const inp=$('#planTime'), v=toLocalInput(new Date(f.startTime)); if(inp.value!==v) inp.value=v;
-  inp.classList.toggle('custom',window.scrollY>4||!!planTime);
+  const tt=+new Date(f.startTime); inp.classList.toggle('past',tt<Date.now()-30000); inp.classList.toggle('future',tt>=Date.now()-30000); inp.classList.remove('custom');
 }
 addEventListener('scroll',()=>requestAnimationFrame(followTimeBar),{passive:true});
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
