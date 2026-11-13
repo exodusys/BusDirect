@@ -437,6 +437,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <div class="set"><div><b>📄 Listes sur une page séparée</b><div class="muted" style="font-size:12px">Sinon, la liste s'affiche sous les dalles</div></div>
         <label class="switch"><input type="checkbox" id="listSepOn" onchange="setListPage(this.checked)"><span></span></label></div>
     </div>
+    <h3>Carte</h3>
+    <div class="card glass">
+      <div class="set"><div><b>🚶 Trottoirs et chemins</b><div class="muted" style="font-size:12px">Affiche les trottoirs, chemins piétons et escaliers sur la carte</div></div>
+        <label class="switch"><input type="checkbox" id="pathsOn" onchange="setShowPaths(this.checked)"><span></span></label></div>
+    </div>
     <h3>Itinéraires</h3>
     <div class="card glass">
       <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
@@ -716,6 +721,10 @@ async function renderSensors(){
   else m.innerHTML=dotHTML('warn',typeof DeviceOrientationEvent.requestPermission==='function'&&SENS.mot.perm!=='granted'?'Touche l\'écran pour réactiver':'En attente de données…');
 }
 setInterval(()=>{if($('#v-parametres').classList.contains('active'))renderSensors()},1000);
+async function setShowPaths(on){
+  S.settings.showPaths=on; save(); toast(on?'Trottoirs affichés sur la carte':'Trottoirs masqués sur la carte');
+  if(typeof mlMap!=='undefined'&&mlMap){ try{ mlMap.setStyle(await buildStyle(),{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); applyBuildings(); if(mapIt){ drawItinerary(mapIt); if(mapWalk!=null) setRouteDim(true) } }catch{} }
+}
 function setNearestOnly(on){
   S.settings.nearestOnly=on; save(); syncNearestUI();
   try{Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>sessionStorage.removeItem(k))}catch{}
@@ -1452,7 +1461,7 @@ async function buildStyle(){
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
     if(/hatch/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
-    if(ly.type==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track|bridleway/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';   // pas de trottoirs ni de chemins sur la carte
+    if(!S.settings.showPaths&&ly.type==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track|bridleway/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';   // pas de trottoirs ni de chemins sur la carte
     if(/shield/i.test(ly.id)||(ly.type==='symbol'&&ly['source-layer']==='transportation_name'&&/"ref"|\{ref\}/.test(JSON.stringify(ly.layout||{}))))
       (ly.layout=ly.layout||{}).visibility='none';   // pas de numéros de routes (ex. 112)      // traverses hachurées des voies
     if(ly.paint&&ly.paint['line-pattern']){ delete ly.paint['line-pattern']; ly.paint['line-color']=ly.paint['line-color']||(mapDark?'#5a5d68':'#cfcac2') }
@@ -1991,6 +2000,7 @@ function toggleInfo(on){
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
 /* ========= Init ========= */
+if($('#pathsOn')) $('#pathsOn').checked=!!S.settings.showPaths;
 applyListMode();
 syncNearestUI();
 setTimeout(()=>S.dests.filter(d=>d.type!=='STOP'&&!(d.nearStop&&d.nearStop.id)).forEach(d=>nearestStop(d)),1500);
