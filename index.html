@@ -1452,6 +1452,7 @@ async function buildStyle(){
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
     if(/hatch/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
+    if(ly.type==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track|bridleway/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';   // pas de trottoirs ni de chemins sur la carte
     if(/shield/i.test(ly.id)||(ly.type==='symbol'&&ly['source-layer']==='transportation_name'&&/"ref"|\{ref\}/.test(JSON.stringify(ly.layout||{}))))
       (ly.layout=ly.layout||{}).visibility='none';   // pas de numéros de routes (ex. 112)      // traverses hachurées des voies
     if(ly.paint&&ly.paint['line-pattern']){ delete ly.paint['line-pattern']; ly.paint['line-color']=ly.paint['line-color']||(mapDark?'#5a5d68':'#cfcac2') }
