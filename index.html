@@ -174,13 +174,13 @@ body.list-inline #listTop{margin-top:18px}
 body.list-inline .list-title .lt-dest{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
-body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 18px);left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
-body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 20px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
+body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 10px);   /* même distance que la barre BusDirect */left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;margin:0 auto;z-index:18}
 body.list-page #listTop{left:10px;right:10px;max-width:700px;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
 body.list-page.classic #listTop{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 8px) 14px 8px}
 body.list-page.classic #timeBar{top:calc(8px + var(--lt-h,52px))}
 body:not(.list-page) #listTop{background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
-body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 78px)}
+body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 76px)}
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
