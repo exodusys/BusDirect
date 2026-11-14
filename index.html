@@ -929,9 +929,10 @@ async function nextDepartures(dest,from,onMore){
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
       return lt.to?.stopId===dest.id||(norm2?norm2(lt.to?.name):String(lt.to?.name).toLowerCase())===nm }) };
   let all=onlyStop(d.itineraries); if(!all.length&&(d.itineraries||[]).length) all=d.itineraries;   // sécurité : jamais de liste vide à cause du filtre
+  const curs={prev:d.previousPageCursor||null,next:d.nextPageCursor||null};   // curseurs Transitous de cette recherche
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
-    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; onMore(await fin(cleanList(all)))}catch{break} } })();
-  return fin(cleanList(all));
+    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
+  const out=await fin(cleanList(all)); out._cur=curs; return out;
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -985,7 +986,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  shown=5;pastReserve=[];pastCur=null;nextCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
+  shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -1065,7 +1066,7 @@ function syncTimeBar(){
 }
 function goNow(){   // retour à l'affichage de départ : le prochain départ en direct en haut, puis les 4 suivants
   if(planTime){ window.scrollTo({top:0}); setPlanTime(''); setTimeout(()=>window.scrollTo({top:0}),600); return }   // autre date choisie → nouvelle recherche à partir de maintenant
-  pastFloor=null; pastReserve=[];pastCur=null;nextCur=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
+  pastFloor=null; pastReserve=[];pastCur=null;nextCur=null;listCur=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
   insistSet(0); insistTopSet(0); $('#moreTop')?.classList.remove('busy','pulling','insisting');
   renderJourneyList(); syncTimeBar(); setListTitle();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1078,7 +1079,7 @@ function setPlanTime(v){
   pastFloor=null;
   planTime=v?new Date(v):null;
   if(planTime&&Math.abs(planTime-Date.now())<60000) planTime=null;
-  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
+  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 /* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
@@ -1131,7 +1132,7 @@ async function locateMyTrip(){
     if(!itin){ toast('Course introuvable'); return }
     const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
     selFrom=null; selDest={uid:'_trip',type:'TRIP',tripId:t.tripId,name:leg.headsign||leg.to?.name||'Terminus',fromLabel:`À bord du ${leg.routeShortName||t.routeShortName||''}`.trim()};
-    shown=5; pastFloor=null; pastReserve=[];pastCur=null;nextCur=null; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
+    shown=5; pastFloor=null; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
     $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
     renderJourneyList(); const c=document.querySelector('#journeys > .jr'); if(c) c.classList.add('open');
     toast(`Tu es dans le ${leg.routeShortName||''} → ${leg.headsign||''}`);
@@ -1164,6 +1165,7 @@ async function loadJourneys(){
     if(selDest!==reqDest||selFrom!==reqFrom) return;   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
+    if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
     lastJourneys=data; loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
@@ -1210,7 +1212,7 @@ function renderJourneyList(){
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
-let curList=[], moreObs=null, moreBusy=false, appending=false, pastFloor=null, pastBusy=false, pastReserve=[], pastCur=null, nextCur=null;
+let curList=[], moreObs=null, moreBusy=false, appending=false, pastFloor=null, pastBusy=false, pastReserve=[], pastCur=null, nextCur=null, listCur=null;
 /* Il faut insister en bas de liste pour charger la suite : les barres se remplissent avec l'effort */
 let insist=0, insStart=null, insT=null;
 const atEnd=()=>window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4;
@@ -1250,6 +1252,7 @@ async function loadPastJourneys(){
       tries++; dest=dest||await nearestStop(selDest); from=from||(selFrom?await nearestStop(selFrom):null);
       const oldest=cursor;
       // curseur « page précédente » de Transitous : la page juste avant, en une requête ; sinon recherche par heure
+      if(!pastCur&&!pastReserve.length&&listCur?.prev&&tries===1) pastCur=listCur.prev;
       const d=pastCur?await plan(dest,new Date(oldest),pastCur,from):await plan(dest,new Date(oldest-step*60000),null,from);
       pastCur=d.previousPageCursor||null;
       let got=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<oldest});
@@ -1311,6 +1314,7 @@ async function loadMoreJourneys(){
     let dest=await nearestStop(selDest), from=selFrom?await nearestStop(selFrom):null;
     const known=new Set(lastJourneys.map(jkey)); let found=[];
     // curseur « page suivante » de Transitous : la page juste après, sans doublons ; sinon recherche par heure
+    if(!nextCur&&listCur?.next) nextCur=listCur.next;
     for(let k=0;k<3&&found.length<5;k++){
       const d=nextCur?await plan(dest,t,nextCur,from):await plan(dest,t,null,from);
       nextCur=d.nextPageCursor||null;
