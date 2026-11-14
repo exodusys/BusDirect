@@ -345,6 +345,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 130px)}
 .walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
+#walkTitle .wt1{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}
+#walkTitle .wt2{display:block;font-size:14.5px;font-weight:700;line-height:1.25}
 .walk-dep{margin-top:2px}
 .walk-dep .cd-t{display:inline;font-size:inherit;font-weight:700;color:var(--text);letter-spacing:0}
 .veh-m{will-change:transform;transition:none!important;display:flex;align-items:center;justify-content:center;font:800 13px/1 -apple-system,system-ui,sans-serif;border-radius:9px;padding:0 7px;height:28px;min-width:32px;color:#fff;
@@ -1917,6 +1919,17 @@ function mapFit(){
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer'; followVeh=false; $('#btnFollow')?.classList.remove('on');
   mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:is3D?55:0,bearing:0,duration:600});
 }
+/* Glisser depuis le bord gauche de la carte pour revenir à la liste */
+(()=>{ const mv=document.getElementById('mapView'); let sw=null;
+  mv.addEventListener('touchstart',e=>{ const t=e.touches[0]; if(e.touches.length===1&&t.clientX<28){ sw={x:t.clientX,y:t.clientY,dx:0,on:false}; e.stopPropagation() } else sw=null },{capture:true,passive:true});
+  mv.addEventListener('touchmove',e=>{ if(!sw) return; e.stopPropagation(); const t=e.touches[0], dx=t.clientX-sw.x, dy=Math.abs(t.clientY-sw.y);
+    if(!sw.on){ if(dy>24&&dy>dx){ sw=null; return } if(dx>10) sw.on=true }
+    if(sw.on){ if(e.cancelable) e.preventDefault(); sw.dx=Math.max(0,dx); mv.style.transition='none'; mv.style.transform=`translateX(${sw.dx}px)`; mv.style.opacity=String(1-Math.min(.5,sw.dx/innerWidth)) } },{capture:true,passive:false});
+  mv.addEventListener('touchend',e=>{ if(!sw) return; e.stopPropagation(); const go=sw.on&&sw.dx>Math.min(110,innerWidth*.28); sw=null;
+    mv.style.transition='transform .25s ease, opacity .25s ease';
+    if(go){ mv.style.transform=`translateX(${innerWidth}px)`; mv.style.opacity='0'; setTimeout(()=>{ closeMap(); mv.style.transition='none'; mv.style.transform=''; mv.style.opacity='' },230) }
+    else { mv.style.transform=''; mv.style.opacity='' } },{capture:true});
+})();
 function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){GEO.clearWatch(meWatch);meWatch=null} }
 
 /* Position du véhicule : suivi Transitous (map/trips) sinon estimation sur l'horaire */
@@ -2157,7 +2170,7 @@ async function onMyPos(force){
   let len=0; for(let i=1;i<walkGeo.length;i++) len+=kmDist(walkGeo[i-1],walkGeo[i]);
   const depAtMs=tg.at, wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((depAtMs-Date.now())/60000);
   const nmS=n=>/^end$/i.test(n||'')?'la destination':n;
-  $('#walkTitle').textContent=`Marche jusqu'à ${nmS(boardStop.name)}${boardStop.track?' · '+(tg.rail?'Voie ':'Quai ')+boardStop.track:''}`;
+  $('#walkTitle').innerHTML=`<span class="wt1">Marche jusqu'à :</span><span class="wt2">${esc(nmS(boardStop.name))}${boardStop.track?' · '+(tg.rail?'Voie ':'Quai ')+esc(boardStop.track):''}</span>`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied`
     +(tg.final?`<div class="walk-dep">Arrivée prévue à ${hm(depAtMs)}</div>`
       :`<div class="walk-dep">${tg.leg?.routeShortName?esc(tg.leg.routeShortName)+' · ':''}Départ dans <span class="cd-t" data-at="${depAtMs}">${fmtCd(depAtMs)}</span>${wmin>left?' <span class="late">— presse le pas !</span>':''}</div>`);
