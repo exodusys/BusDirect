@@ -70,6 +70,11 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .tile{border-radius:20px;padding:14px;cursor:pointer;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .15s}
 .tile:active{transform:scale(.97)}
 .tile.sel{outline:2.5px solid var(--accent)}
+/* thèmes pastel des dalles */
+.tile.themed{background:var(--tbg)!important;border-color:rgba(0,0,0,.04)!important;color:#1f2733;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.tile.themed .sub{color:rgba(31,39,51,.6)}
+.tile .ti{position:absolute;top:11px;right:12px;width:18px;height:18px;opacity:.45;color:inherit}
+.tile:not(.themed) .ti{display:none}
 .tile .ico{font-size:22px}
 .tile .nm{font-weight:700;font-size:15px;line-height:1.2}
 .tile .sub{font-size:11px;color:var(--muted)}
@@ -502,6 +507,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
         <label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div>
     </div>
+    <h3>Dalles</h3>
+    <div class="card glass">
+      <div class="set"><div><b>🎨 Thèmes des dalles</b><div class="muted" style="font-size:12px">Couleurs pastel selon le type : bus, tram, train, adresse ou lieu</div></div>
+        <label class="switch"><input type="checkbox" id="tileThemeOn" onchange="setTileThemes(this.checked)"><span></span></label></div>
+    </div>
     <h3>Tickets</h3>
     <div class="card glass">
       <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div>
@@ -616,7 +626,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,tileThemes:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 // migration ancienne version (une seule image perso)
@@ -957,7 +967,7 @@ $('#q').addEventListener('input',e=>{
 });
 function addDest(r){
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
-  S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
+  S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,modes:r.modes||null,th:Math.floor(Math.random()*5),
     area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
   save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
@@ -1004,11 +1014,48 @@ GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
+// Thèmes pastel épurés : 5 teintes par catégorie, une tirée au hasard pour chaque dalle
+const TILE_THEMES={
+  bus:['#f7d9d6','#fbe3d2','#f6d8e3','#fde6dc','#f3ddd5'],
+  tram:['#d6eedd','#e0f2e3','#e3f1d3','#d2ece4','#e7f0dc'],
+  train:['#d8e4f5','#dde3f7','#d5eaf3','#e2e1f5','#d3e6ef'],
+  adresse:['#e9e3f3','#efe7ef','#e5e6ee','#efe9e0','#e6eaf0'],
+  poi:['#f8efcf','#f6ead5','#fbf1da','#f1eed4','#f8e8cd']};
+const TILE_ICON={
+  bus:'<rect x="5" y="3" width="14" height="15" rx="3"/><path d="M5 11h14M8 21v-3M16 21v-3"/><circle cx="8.5" cy="14.5" r=".6"/><circle cx="15.5" cy="14.5" r=".6"/>',
+  tram:'<rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 3h6M12 3v3M9 21l1.5-3M15 21l-1.5-3M6 12h12"/>',
+  train:'<rect x="5" y="3" width="14" height="14" rx="4"/><path d="M5 10h14M8 21l2-4M16 21l-2-4"/>',
+  adresse:'<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>',
+  poi:'<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'};
+function tileKind(d){
+  if(d.type==='ADDRESS') return 'adresse';
+  if(d.type!=='STOP') return 'poi';
+  const m=(d.modes||[]).map(x=>String(x).toUpperCase());
+  if(d.kind) return d.kind;
+  if(m.some(x=>/RAIL|TRAIN|SUBURBAN|LONG_DISTANCE|HIGHSPEED|REGIONAL/.test(x))) return 'train';
+  if(m.some(x=>/TRAM/.test(x))) return 'tram';
+  if(m.length) return 'bus';
+  if(/\b(gare|bahnhof|station|stazione|hbf|cff|sbb)\b/i.test(d.name)) return 'train';
+  return 'bus';
+}
+// arrêt sans « modes » connus : on apprend le type depuis le dernier trajet vers cet arrêt
+function learnKind(dest,its){
+  if(!dest||dest.type!=='STOP'||dest.kind||(dest.modes||[]).length) return;
+  const it=(its||[])[0]; const l=it&&[...it.legs].reverse().find(x=>x.mode!=='WALK'); if(!l) return;
+  const M=String(l.mode).toUpperCase(), k=/TRAM/.test(M)?'tram':/BUS|COACH/.test(M)?'bus':/RAIL|TRAIN|SUBURBAN|SUBWAY|METRO/.test(M)?'train':null;
+  const d=S.dests.find(x=>x.uid===dest.uid); if(k&&d){d.kind=k;save();renderTiles()}
+}
+function setTileThemes(on){S.settings.tileThemes=on;save();renderTiles();toast(on?'Thèmes des dalles activés':'Thèmes des dalles désactivés')}
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
-  $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
-    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('')
+  const thOn=S.settings.tileThemes!==false; let fix=false;
+  $('#tiles').innerHTML=S.dests.map(d=>{ if(d.th==null){d.th=Math.floor(Math.random()*5);fix=true}
+    const k=tileKind(d), bg=TILE_THEMES[k][d.th%5];
+    return `<div class="tile glass ${thOn?'themed':''} ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}" style="--tbg:${bg}">
+    <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${TILE_ICON[k]}</svg>
+    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>` }).join('')
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
+  if(fix) save();
   document.querySelectorAll('.tile').forEach(bindTileDrag);
   drawLink();
   if(!selDest){$('#jrHead').style.display='none';$('#timeBar').style.display='none';$('#journeys').innerHTML=''}
@@ -1170,7 +1217,7 @@ async function loadJourneys(){
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
-    lastJourneys=data; loadedFor=pairKey;
+    lastJourneys=data; loadedFor=pairKey; learnKind(selDest,data);
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
@@ -1655,6 +1702,7 @@ function applySettings(){
   else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
   updateAppIcon(cl?cl.url:null,s.logo);
   document.body.classList.toggle('classic',s.look==='classic');
+  if($('#tileThemeOn')) $('#tileThemeOn').checked=s.tileThemes!==false;
   document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
   $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
