@@ -394,6 +394,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 @keyframes r{to{transform:rotate(360deg)}}
 #cardFull{position:fixed;inset:0;z-index:9999;background:#fff;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
 #cardFull.on{display:flex}#cardFull img{max-width:100%;max-height:100%;object-fit:contain}
+.cardimg{padding:14px;box-sizing:border-box;}
+#scanView{position:fixed;inset:0;z-index:9998;background:#000;display:none}#scanView.on{display:block}
+#scanVid{width:100%;height:100%;object-fit:cover}
+.scan-frame{position:absolute;left:10%;right:10%;top:30%;height:30%;border:3px solid var(--accent);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+.scan-bar{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 18px);display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;font-weight:600;font-size:14px}
 .cardimg{display:block;width:100%;border-radius:16px;margin:0 0 12px;cursor:zoom-in;background:#fff}
 .cardrow{display:flex;align-items:center;gap:12px;padding:10px 4px}.cardrow img{width:72px;height:46px;object-fit:cover;border-radius:8px;background:#fff}
 .cardrow .z{flex:1;min-width:0}
@@ -470,7 +475,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <section class="view" id="v-carte">
     <h2>Carte</h2>
     <div id="cardView"></div>
-    <p class="muted" style="font-size:12px;margin:6px;text-align:center">Touche une carte pour l'afficher en plein écran.</p>
+    <p class="muted" style="font-size:12px;margin:6px;text-align:center">Touche un code pour l'afficher en plein écran.</p>
   </section>
   <section class="view" id="v-parametres">
     <div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div>
@@ -512,9 +517,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     <h3>Carte d'abonnement</h3>
     <div class="card glass">
       <div id="cardList"></div>
-      <div class="set"><div><b>💳 Ajouter une carte</b><div class="muted" style="font-size:12px">Photo de la carte, code-barres ou QR code. Affiche l'onglet Carte.</div></div>
-        <button class="btn sm" onclick="document.getElementById('cardIn').click()">Ajouter</button></div>
-      <input type="file" id="cardIn" accept="image/*" hidden>
+      <div class="set"><div><b>💳 Ajouter une carte</b><div class="muted" style="font-size:12px">Scanne le code-barres ou le QR code de ta carte. Affiche l'onglet Carte.</div></div>
+        <button class="btn sm" onclick="openScanner()">Scanner</button></div>
     </div>
     <h3>Capteurs</h3>
     <div class="card glass">
@@ -541,6 +545,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
 
+<div id="scanView"><video id="scanVid" playsinline muted autoplay></video><div class="scan-frame"></div><div class="scan-bar"><span id="scanMsg">Vise le code-barres ou le QR code</span><button class="btn sm" onclick="closeScanner()">Annuler</button></div></div>
 <div id="cardFull" onclick="this.classList.remove('on')"><img alt="Carte d'abonnement"></div>
 <div id="mapView">
   <div id="map"></div>
@@ -598,7 +603,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li>
         <li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul>
       <h4>⚙️ Paramètres</h4>
-      <ul><li>Carte d'abonnement : ajoute une photo, un code-barres ou un QR code pour faire apparaître l'onglet Carte.</li><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
+      <ul><li>Carte d'abonnement : scanne le code-barres ou le QR code de ta carte pour faire apparaître l'onglet Carte.</li><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
       <h4>📡 Sources de données</h4>
       <ul>
         <li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li>
@@ -1559,33 +1564,60 @@ function renderSMS(){
   $('#smsOther').innerHTML=REGIONS.filter(x=>x!==r).map(x=>`<details><summary class="sms" style="cursor:pointer"><b class="z">${esc(x.name)}</b>›</summary>${x.sms.map(smsRow).join('')}</details>`).join('');
 }
 
-/* ========= Carte d'abonnement ========= */
-let CARDS=store.get('cards',[]);
-function saveCards(){try{localStorage.setItem('bd_cards',JSON.stringify(CARDS));return true}catch(e){toast('Image trop lourde pour être enregistrée');return false}}
+/* ========= Carte d'abonnement (scan code-barres / QR) ========= */
+let CARDS=store.get('cards',[]).filter(c=>c&&c.text);   // uniquement les codes scannés
+const CODE_IMG={};
+function loadScript(src){if(Array.isArray(src))return src.reduce((p,u)=>p.catch(()=>loadOne(u)),Promise.reject());return loadOne(src)}
+function loadOne(src){return new Promise((ok,ko)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=ko;document.head.appendChild(e)})}
+const ZXING=['https://cdn.jsdelivr.net/npm/@zxing/library@0.21/umd/index.min.js','https://unpkg.com/@zxing/library@0.21/umd/index.min.js'];
+const BWIP=['https://cdn.jsdelivr.net/npm/bwip-js@4/dist/bwip-js-min.js','https://unpkg.com/bwip-js@4/dist/bwip-js-min.js'];
+const FMT2BWIP={QR_CODE:'qrcode',AZTEC:'azteccode',PDF_417:'pdf417',DATA_MATRIX:'datamatrix',CODE_128:'code128',CODE_39:'code39',CODE_93:'code93',EAN_13:'ean13',EAN_8:'ean8',UPC_A:'upca',UPC_E:'upce',ITF:'interleaved2of5',CODABAR:'rationalizedCodabar'};
+const FMTNAME={QR_CODE:'QR code',AZTEC:'Aztec',PDF_417:'PDF417',DATA_MATRIX:'Data Matrix'};
+function saveCards(){store.set('cards',CARDS)}
 function applyCardTab(){
   const t=$('#tabCarte'); if(t) t.style.display=CARDS.length?'':'none';
   if(!CARDS.length&&$('#v-carte').classList.contains('active')) document.querySelector('#tabs button[data-v="parametres"]').click();
-  $('#cardList').innerHTML=CARDS.map((c,i)=>`<div class="cardrow"><img src="${c.url}" alt=""><div class="z"><b>Carte ${i+1}</b></div><button class="btn sm" onclick="delCard('${c.id}')">Supprimer</button></div>`).join('');
+  $('#cardList').innerHTML=CARDS.map((c,i)=>`<div class="cardrow"><div class="z"><b>Carte ${i+1}</b><div class="muted" style="font-size:12px">${esc(FMTNAME[c.fmt]||'Code-barres')}</div></div><button class="btn sm" onclick="delCard('${c.id}')">Supprimer</button></div>`).join('');
 }
-function renderCards(){
-  $('#cardView').innerHTML=CARDS.map(c=>`<img class="cardimg" src="${c.url}" alt="Carte d'abonnement" onclick="showCard('${c.id}')">`).join('');
+async function codeImg(c){
+  if(CODE_IMG[c.id]) return CODE_IMG[c.id];
+  await loadScript(BWIP);
+  const cv=document.createElement('canvas'), lin=!/^(QR_CODE|AZTEC|PDF_417|DATA_MATRIX)$/.test(c.fmt);
+  bwipjs.toCanvas(cv,{bcid:FMT2BWIP[c.fmt]||'qrcode',text:c.text,scale:5,height:lin?22:undefined,includetext:lin,textxalign:'center',backgroundcolor:'FFFFFF',paddingwidth:4,paddingheight:4});
+  return CODE_IMG[c.id]=cv.toDataURL('image/png');
 }
-function showCard(id){const c=CARDS.find(x=>x.id===id);if(!c)return;const f=$('#cardFull');f.querySelector('img').src=c.url;f.classList.add('on')}
-function delCard(id){CARDS=CARDS.filter(c=>c.id!==id);saveCards();applyCardTab();renderCards();toast('Carte supprimée')}
-function addCardFile(file){
-  if(!file) return; const rd=new FileReader();
-  rd.onload=()=>{const im=new Image();im.onload=()=>{
-    const M=1600, k=Math.min(1,M/Math.max(im.width,im.height)), cv=document.createElement('canvas');
-    cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
-    const g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height); g.drawImage(im,0,0,cv.width,cv.height);
-    CARDS.push({id:'c'+Date.now(),url:cv.toDataURL('image/jpeg',0.92)});
-    if(!saveCards()){CARDS.pop();return}
-    applyCardTab(); renderCards(); toast('Carte ajoutée');
-  };im.src=rd.result};
-  rd.readAsDataURL(file);
+async function renderCards(){
+  const box=$('#cardView'); box.innerHTML='<div class="empty">Chargement…</div>';
+  try{
+    const urls=await Promise.all(CARDS.map(codeImg));
+    box.innerHTML=CARDS.map((c,i)=>`<img class="cardimg" src="${urls[i]}" alt="Code de la carte ${i+1}" onclick="showCard('${c.id}')">`).join('');
+  }catch(e){box.innerHTML='<div class="empty">Impossible d\'afficher le code (connexion requise au premier affichage).</div>'}
 }
-document.getElementById('cardIn').addEventListener('change',e=>{addCardFile(e.target.files[0]);e.target.value=''});
-setTimeout(applyCardTab,0);
+async function showCard(id){const c=CARDS.find(x=>x.id===id);if(!c)return;const f=$('#cardFull');f.querySelector('img').src=await codeImg(c);f.classList.add('on')}
+function delCard(id){CARDS=CARDS.filter(c=>c.id!==id);delete CODE_IMG[id];saveCards();applyCardTab();renderCards();toast('Carte supprimée')}
+let scanReader=null;
+async function openScanner(){
+  if(!navigator.mediaDevices?.getUserMedia){toast('Caméra indisponible');return}
+  $('#scanView').classList.add('on'); $('#scanMsg').textContent='Chargement du lecteur…';
+  try{await loadScript(ZXING)}catch(e){toast('Lecteur indisponible (connexion ?)');closeScanner();return}
+  const hints=new Map(), F=ZXing.BarcodeFormat;
+  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,Object.keys(FMT2BWIP).map(k=>F[k]).filter(v=>v!=null));
+  hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
+  scanReader=new ZXing.BrowserMultiFormatReader(hints,250);
+  $('#scanMsg').textContent='Vise le code-barres ou le QR code';
+  try{
+    await scanReader.decodeFromConstraints({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},$('#scanVid'),(res)=>{
+      if(!res||!scanReader) return;
+      const fmt=F[res.getBarcodeFormat()]||'QR_CODE', text=res.getText();
+      closeScanner();
+      if(CARDS.some(c=>c.text===text&&c.fmt===fmt)){toast('Cette carte est déjà enregistrée');return}
+      CARDS.push({id:'c'+Date.now(),fmt,text}); saveCards(); applyCardTab(); renderCards();
+      navigator.vibrate?.(60); toast('Carte ajoutée');
+    });
+  }catch(e){toast('Accès à la caméra refusé');closeScanner()}
+}
+function closeScanner(){try{scanReader&&scanReader.reset()}catch(e){} scanReader=null; const v=$('#scanVid'); if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null} $('#scanView').classList.remove('on')}
+setTimeout(()=>{saveCards();applyCardTab()},0);
 
 /* ========= Settings ========= */
 /* Logos (SVG 64×64 : forme en couleur, détails en blanc) */
