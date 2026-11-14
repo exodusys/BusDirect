@@ -397,6 +397,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .spin{width:22px;height:22px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r 0.8s linear infinite;margin:20px auto}
 @keyframes r{to{transform:rotate(360deg)}}
+.now-sep{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 12px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;letter-spacing:.2px}
+.now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
+body.classic .now-sep{border-radius:5px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1178,13 +1181,13 @@ async function loadJourneys(){
       if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
     const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
-      prefetchColors(more); lastJourneys=more; renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
+      prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
     try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
     if(selDest!==reqDest||selFrom!==reqFrom) return;   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
-    lastJourneys=data; loadedFor=pairKey;
+    lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
@@ -1192,14 +1195,29 @@ async function loadJourneys(){
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
 let shown=5;
+const jStart=it=>+new Date(firstTransit(it).startTime);
+// Actualisation : garde les parcours passés déjà affichés (et ceux chargés plus bas), remplace seulement les données à jour
+function mergeRefresh(old,data){
+  if(!old.length||!data.length) return data;
+  const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
+  const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
+  const before=old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0), after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
+  const out=before.concat(data,after);
+  if(before.length&&pastFloor==null) pastFloor=jStart(before[0])-60000;
+  shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);   // mêmes dalles visibles qu'avant
+  return out;
+}
 const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?.name}|${f?.scheduledStartTime||f?.startTime}`};
 // Met à jour la liste en place : seules les cartes qui changent sont modifiées
 function renderJourneyList(){
   const box=$('#journeys');
+  // ancre visuelle : la première dalle visible garde exactement sa place à l'écran
+  let anc=null, ancTop=0; if(!appending){ const hh=(document.querySelector('header')?.getBoundingClientRect().bottom)||0;
+    for(const c of box.querySelectorAll(':scope > .jr')){ const r=c.getBoundingClientRect(); if(r.bottom>hh+4){anc=c.dataset.k;ancTop=r.top;break} } }
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.slice(0,shown);
-  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
+  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
@@ -1227,6 +1245,15 @@ function renderJourneyList(){
         sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) } }});
   box.querySelectorAll('.day-sep').forEach(sp=>{ const nx=sp.nextElementSibling; if(!want.has(sp.dataset.for)||!nx||nx.dataset.k!==sp.dataset.for) sp.remove() });
   box.querySelectorAll(':scope > .jr').forEach(el=>{ if(!appending) el.dataset.shown=el.dataset.shown||1 });
+  // bandeau « Maintenant » au-dessus du premier parcours à venir, seulement si des parcours passés sont affichés
+  { let ns=box.querySelector(':scope > .now-sep'); const ref=planTime?+planTime:Date.now();
+    const target=(selDest?.type!=='TRIP'&&pastFloor!=null)?[...box.querySelectorAll(':scope > .jr:not(.leave)')].find(el=>{const it=list[+el.dataset.i];return it&&jStart(it)>=ref-60000&&el.previousElementSibling&&[...box.querySelectorAll(':scope > .jr')].indexOf(el)>0}):null;
+    if(!target){ ns?.remove() }
+    else{ if(!ns){ns=document.createElement('div');ns.className='now-sep';ns.textContent=planTime?'Heure choisie':'Maintenant'}
+      ns.textContent=planTime?'Heure choisie':'Maintenant';
+      const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
+      if(before.previousElementSibling!==ns) before.before(ns) } }
+  if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) window.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
