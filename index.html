@@ -175,8 +175,8 @@ body.list-inline .list-title .lt-dest{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
 body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 10px);   /* même distance que la barre BusDirect */left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
-body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-h,52px));left:10px;right:10px;max-width:700px;box-sizing:border-box;margin:0 auto;z-index:18}
-body.list-page #listTop{left:10px;right:10px;max-width:700px;box-sizing:border-box;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;box-sizing:border-box;margin:0 auto;z-index:18}
+body.list-page #listTop{left:14px;right:14px;max-width:692px;box-sizing:border-box;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
 body.list-page.classic #listTop{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 8px) 14px 8px}
 body.list-page.classic #timeBar{top:calc(8px + var(--lt-h,52px))}
 body:not(.list-page) #listTop{background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -191,6 +191,11 @@ section#v-list{animation:none}   /* la liste a sa propre animation d'entrée (pa
 @keyframes pgIn{from{transform:translateX(100%);opacity:.6}to{transform:none;opacity:1}}
 @keyframes pgOut{from{transform:none;opacity:1}to{transform:translateX(100%);opacity:.4}}
 @keyframes pgBack{from{transform:translateX(-30%);opacity:.3}to{transform:none;opacity:1}}
+/* la liste s'anime élément par élément : #v-list ne reçoit jamais de transformation, les bandeaux fixes gardent leur largeur */
+#v-list.pg-in,#v-list.pg-out,#v-list.pg-back{animation:none!important}
+#v-list.pg-in>*{animation:pgIn .38s cubic-bezier(.2,.8,.25,1) both}
+#v-list.pg-out>*{animation:pgOut .3s cubic-bezier(.4,0,.7,.4) both}
+#v-list.pg-back>*{animation:pgBack .36s cubic-bezier(.2,.8,.25,1) both}
 body:has(.pg-in),body:has(.pg-out),body:has(.pg-back){overflow-x:hidden}
 .list-top{display:flex;align-items:center;gap:10px;margin:4px 0 12px}
 .list-title{flex:1;min-width:0;margin:0;display:flex;flex-direction:column;gap:1px;line-height:1.2}
@@ -656,12 +661,13 @@ document.addEventListener('touchstart',e=>{ if(!listSep()||!$('#v-list').classLi
   if(edge) $('#v-list').classList.remove('pg-in','pg-back') },{passive:true});   // l'animation d'entrée ne doit pas bloquer le glissement
 document.addEventListener('touchmove',e=>{ if(!edge) return; const t=e.touches[0], dx=t.clientX-edge.x, dy=Math.abs(t.clientY-edge.y);
   if(!edge.on){ if(dx>10) edge.on=true }   // depuis le bord : jamais de défilement vertical
-  if(edge.on){ document.documentElement.style.overflowX='hidden'; edge.dx=Math.max(0,dx); const v=$('#v-list'); v.style.transition='none'; v.style.transform=`translateX(${edge.dx}px)`; v.style.opacity=String(1-Math.min(.5,edge.dx/innerWidth)) } },{passive:true});
+  if(edge.on){ document.documentElement.style.overflowX='hidden'; edge.dx=Math.max(0,dx); listKids(k=>{k.style.transition='none'; k.style.transform=`translateX(${edge.dx}px)`; k.style.opacity=String(1-Math.min(.5,edge.dx/innerWidth))}) } },{passive:true});
 document.addEventListener('touchmove',e=>{ if(edge&&e.cancelable) e.preventDefault() },{passive:false});   // la liste ne défile pas pendant le glissement depuis le bord
 document.addEventListener('touchend',()=>{ document.documentElement.style.overflowX=''; if(!edge) return; const v=$('#v-list'), go=edge.on&&edge.dx>Math.min(110,innerWidth*.28); edge=null;
-  v.style.transition='transform .25s ease, opacity .25s ease';
-  if(go){ v.style.transform=`translateX(${innerWidth}px)`; v.style.opacity='0'; setTimeout(()=>{ closeList(true); v.style.transition='none'; v.style.transform=''; v.style.opacity='' },230) }
-  else { v.style.transform=''; v.style.opacity='' } },{passive:true});
+  listKids(k=>k.style.transition='transform .25s ease, opacity .25s ease');
+  if(go){ listKids(k=>{k.style.transform=`translateX(${innerWidth}px)`; k.style.opacity='0'}); setTimeout(()=>{ closeList(true); listKids(k=>{k.style.transition='none'; k.style.transform=''; k.style.opacity=''}) },230) }
+  else listKids(k=>{k.style.transform=''; k.style.opacity=''}) },{passive:true});
+function listKids(f){ [...$('#v-list').children].forEach(f) }
 function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast(on?'Listes sur une page séparée':'Listes sous les dalles') }
 // Évite le « clic fantôme » : après l'appui sur une dalle, le clic arrivait sur le champ date de la nouvelle page
 let clickShieldUntil=0;
