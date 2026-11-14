@@ -1087,9 +1087,22 @@ function setPlanTime(v){
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 /* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
+function segLine(sg){ // tracé réel (route / voie) suivi par le véhicule sur ce segment
+  if(sg._line) return sg._line; let line=null;
+  if(sg.polyline){ for(const pr of [6,5,7]){ const c=decodePoly(sg.polyline,pr); if(c.length&&Math.abs(c[0][1]-sg.from.lat)<.05){line=c;break} } }
+  return sg._line=(line&&line.length>1?line:null);
+}
+// Suis-je sur la même route / voie que ce véhicule ? (position actuelle + positions récentes collées au tracé)
+function onSameWay(sg){
+  const line=segLine(sg); if(!line) return false;                 // sans tracé réel, impossible de vérifier → on refuse
+  const tol=Math.max(0.025,Math.min((SENS.geo.acc||25)/1000,0.05)); // 25 à 50 m selon la précision GPS
+  if(nearestOnLine([pos.lon,pos.lat],line)>tol) return false;
+  const rec=posHist.filter(x=>Date.now()-x.t<20000);
+  const ok=rec.filter(x=>nearestOnLine([x.lon,x.lat],line)<=tol*1.6).length;
+  return rec.length<2||ok/rec.length>=0.7;                         // la grande majorité du trajet récent doit suivre le tracé
+}
 function segPosNow(sg,now){
-  let line=null; if(sg.polyline){ for(const pr of [6,5,7]){ const c=decodePoly(sg.polyline,pr); if(c.length&&Math.abs(c[0][1]-sg.from.lat)<.05){line=c;break} } }
-  line=line||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
+  const line=segLine(sg)||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
   const a=+new Date(sg.departure), b=+new Date(sg.arrival); const f=Math.max(0,Math.min(1,(now-a)/((b-a)||1)));
   // position le long du tracé
   const d=[0]; for(let i=1;i<line.length;i++) d.push(d[i-1]+Math.hypot(line[i][0]-line[i-1][0],line[i][1]-line[i-1][1]));
@@ -1130,8 +1143,9 @@ async function locateMyTrip(){
     let best=null;
     segs.forEach(sg=>{ if(!(sg.trips||[]).length) return; if(now<+new Date(sg.departure)-30000||now>+new Date(sg.arrival)+30000) return;
       if(myH!=null){ const vh=segHeadingNow(sg,now); if(vh==null) return; const diff=Math.abs(((vh-myH+540)%360)-180); if(diff>50) return }   // même direction uniquement
+      if(!onSameWay(sg)) return;                                                                                        // même route / même voie uniquement
       const p=segPosNow(sg,now); const km=dist(pos,{lat:p[1],lon:p[0]}); if(!best||km<best.km) best={sg,km} });
-    if(!best||best.km>0.25){ toast(myH==null?'Tu ne sembles pas te déplacer : impossible de déterminer ton transport':'Aucun transport ne va dans ta direction près de toi'); return }
+    if(!best||best.km>0.25){ toast(myH==null?'Tu ne sembles pas te déplacer : impossible de déterminer ton transport':'Aucun bus ou train ne circule sur ta route / ta voie dans ta direction'); return }
     const t=best.sg.trips[0]; const itin=await fetchTripItinerary(t.tripId);
     if(!itin){ toast('Course introuvable'); return }
     const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
