@@ -2141,24 +2141,38 @@ async function onMyPos(force){
   el.classList.toggle('dir',hd!=null); if(hd!=null) bearTarget=hd;
   // éloigné du tracé ? → itinéraire à pied jusqu'à l'arrêt de montée
   const all=mapIt.legs.flatMap(legCoords), off=nearestOnLine(me,all);
+  // cible de marche selon l'heure : prochain arrêt de montée (départ, puis correspondances), sinon la destination
+  const tg=walkTarget(mapIt); boardStop=tg?.stop||null;
+  const tk=tg?(tg.stop.name+'|'+tg.at):''; if(tk!==walkTargetKey){ walkTargetKey=tk; walkGeo=null }
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
-  const show=toStop>0.025&&boardStop&&Date.now()<+new Date(firstTransit(mapIt).startTime)+60000;
+  const show=toStop>0.025&&!!boardStop;
   $('#walkCard').classList.toggle('on',!!show); $('#mapView').classList.toggle('walking',!!show);
-  // évite deux pointillés superposés : quand l'itinéraire à pied vers l'arrêt est affiché, on masque la 1re marche du parcours (même trajet)
-  if(mlMap.getLayer('route-walk')){ const firstWalk=mapIt.legs[0]?.mode==='WALK'&&mapIt.legs[0]!==firstTransit(mapIt);
-    mlMap.setFilter('route-walk',show&&firstWalk&&mapWalk!==0?['all',['==',['get','walk'],1],['!=',['get','idx'],0]]:['==',['get','walk'],1]) }
-  // en vue « Voir la marche » de cette 1re marche : on garde la marche du parcours et on masque l'itinéraire recalculé (même chemin)
-  if(mlMap.getLayer('walkto')) mlMap.setLayoutProperty('walkto','visibility',show&&mapWalk===0?'none':'visible');
+  // évite deux pointillés superposés : on masque la marche du parcours qui mène à la même cible que l'itinéraire recalculé
+  const wIdx=tg?tg.walkIdx:-1;
+  if(mlMap.getLayer('route-walk')) mlMap.setFilter('route-walk',show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]);
+  if(mlMap.getLayer('walkto')) mlMap.setLayoutProperty('walkto','visibility',show&&mapWalk!=null&&mapWalk===wIdx?'none':'visible');
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
   if(!walkGeo||Date.now()-lastWalkFetch>60000||kmDist(me,walkGeo[0])>0.05){ lastWalkFetch=Date.now(); walkGeo=await walkRoute(me,boardStop) }
   mlMap.getSource('walkto')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:walkGeo}});
   let len=0; for(let i=1;i<walkGeo.length;i++) len+=kmDist(walkGeo[i-1],walkGeo[i]);
-  const wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((+new Date(firstTransit(mapIt).startTime)-Date.now())/60000);
-  $('#walkTitle').textContent=`Marche jusqu'à ${boardStop.name}${boardStop.track?' · Quai '+boardStop.track:''}`;
-  const depAtMs=+new Date(firstTransit(mapIt).startTime);
+  const depAtMs=tg.at, wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((depAtMs-Date.now())/60000);
+  const nmS=n=>/^end$/i.test(n||'')?'la destination':n;
+  $('#walkTitle').textContent=`Marche jusqu'à ${nmS(boardStop.name)}${boardStop.track?' · '+(tg.rail?'Voie ':'Quai ')+boardStop.track:''}`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied`
-    +`<div class="walk-dep">Départ dans <span class="cd-t" data-at="${depAtMs}">${fmtCd(depAtMs)}</span>${wmin>left?' <span class="late">— presse le pas !</span>':''}</div>`;
+    +(tg.final?`<div class="walk-dep">Arrivée prévue à ${hm(depAtMs)}</div>`
+      :`<div class="walk-dep">${tg.leg?.routeShortName?esc(tg.leg.routeShortName)+' · ':''}Départ dans <span class="cd-t" data-at="${depAtMs}">${fmtCd(depAtMs)}</span>${wmin>left?' <span class="late">— presse le pas !</span>':''}</div>`);
   if(navOn){ if(hd==null) bearTarget=bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]); if(force) mlMap.easeTo({center:meShown||me,bearing:bearTarget??0,pitch:is3D?55:0,zoom:Math.max(mlMap.getZoom(),17.5),duration:600}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
+}
+// Marche à faire maintenant : vers le prochain transport à prendre (même après un changement), sinon vers la destination
+let walkTargetKey='';
+function walkTarget(it){
+  if(!it) return null; const now=Date.now(), legs=it.legs;
+  if(legs.some(l=>l.mode!=='WALK'&&now>=+new Date(l.startTime)+60000&&now<+new Date(l.endTime)-60000)) return null;   // à bord : pas de marche à lancer
+  const i=legs.findIndex(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR'&&+new Date(l.startTime)>now-60000);
+  if(i>=0){ const l=legs[i]; return {stop:l.from,at:+new Date(l.startTime),leg:l,rail:/RAIL|LONG|SUBURBAN/.test(l.mode),walkIdx:i>0&&legs[i-1].mode==='WALK'?i-1:-1} }
+  const last=legs.at(-1); const lastT=[...legs].reverse().find(l=>l.mode!=='WALK');
+  if(lastT&&now<+new Date(lastT.endTime)-60000) return null;          // encore à bord du dernier transport
+  return {stop:last.mode==='WALK'?last.to:lastT?.to,at:+new Date(it.endTime),final:true,walkIdx:last.mode==='WALK'?legs.length-1:-1};
 }
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
