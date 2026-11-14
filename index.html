@@ -398,6 +398,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .spin{width:22px;height:22px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r 0.8s linear infinite;margin:20px auto}
 @keyframes r{to{transform:rotate(360deg)}}
 </style>
+<link rel="apple-touch-icon" id="appIcon" href="">
+<link rel="icon" id="favIcon" href="">
 </head>
 <body>
 
@@ -413,7 +415,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <section class="view active" id="v-horaires">
     <div class="row between"><h2>Horaires</h2><button class="target-btn" id="whereBtn" onclick="locateMyTrip()" aria-label="Dans quel parcours suis-je ?"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
     <div class="tiles" id="tiles"></div>
-    <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Ajoute des destinations dans l'onglet <b style="display:inline;font-size:inherit">Parcours</b>.</div>
+    <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Aucune destination enregistrée.<br>Ajoute ta première destination pour voir ici les prochains départs.
+      <button class="btn" style="margin-top:14px" onclick="goAddFirst()">＋ Ajouter une destination</button></div>
   </section>
 
   <!-- LISTE DES PARCOURS (page séparée) -->
@@ -936,6 +939,7 @@ async function nextDepartures(dest,from,onMore){
 }
 
 /* ========= Parcours (search & save) ========= */
+function goAddFirst(){ document.querySelector('#tabs button[data-v="parcours"]').click(); const q=$('#q'); if(q) q.focus({preventScroll:true}) }   // focus immédiat : iOS ouvre le clavier
 let qTimer;
 $('#q').addEventListener('input',e=>{
   clearTimeout(qTimer); const v=e.target.value.trim();
@@ -1592,6 +1596,21 @@ const LOGOS={
   hexagone:{n:'Hexagone',s:`<path d="M32 4l24 14v28L32 60 8 46V18z" fill="currentColor"/><rect x="21" y="19" width="22" height="24" rx="6" fill="${W}"/><rect x="25" y="23" width="14" height="7" rx="2" fill="currentColor"/><circle cx="27" cy="36" r="2.2" fill="currentColor"/><circle cx="37" cy="36" r="2.2" fill="currentColor"/>`},
   favori:{n:'Favori',s:`<rect x="6" y="6" width="52" height="52" rx="12" fill="currentColor"/><path d="M32 14l5.3 11.2 12.2 1.5-9 8.4 2.4 12.1L32 41.3 21.1 47.2l2.4-12.1-9-8.4 12.2-1.5z" fill="${W}"/>`}
 };
+// Icône de l'écran d'accueil = logo choisi (Safari lit l'icône au moment de « Sur l'écran d'accueil »)
+let appIconKey='';
+function updateAppIcon(customUrl,key){
+  const k=(customUrl||key)+'|'+getComputedStyle(document.documentElement).getPropertyValue('--page-bg'); if(k===appIconKey) return; appIconKey=k;
+  const src=customUrl||('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="180" height="180" color="#5ec26a">${(LOGOS[key]||LOGOS.original).s}</svg>`));
+  const im=new Image(); im.crossOrigin='anonymous';
+  im.onload=()=>{ try{
+    const N=180, cv=document.createElement('canvas'); cv.width=cv.height=N; const g=cv.getContext('2d');
+    g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim()||'#0f141c'; g.fillRect(0,0,N,N);
+    const r=Math.min(N/im.width,N/im.height)||1, w=customUrl?Math.max(N,im.width*Math.max(N/im.width,N/im.height)):N, h=customUrl?Math.max(N,im.height*Math.max(N/im.width,N/im.height)):N;
+    g.drawImage(im,(N-w)/2,(N-h)/2,w,h);
+    const url=cv.toDataURL('image/png'); $('#appIcon').href=url; $('#favIcon').href=url;
+  }catch(e){} };
+  im.src=src;
+}
 const logoSvg=k=>`<svg viewBox="0 0 64 64" width="100%" height="100%">${(LOGOS[k]||LOGOS.original).s}</svg>`;
 /* Fonds d'écran : fond sombre avec trois halos de couleur */
 const wallOf=(a,b,c)=>`radial-gradient(circle at 12% 6%,${a}cc 0,transparent 42%),radial-gradient(circle at 92% 16%,${b}bb 0,transparent 38%),radial-gradient(circle at 50% 104%,${c}cc 0,transparent 46%)`;
@@ -1634,6 +1653,7 @@ function applySettings(){
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
   else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
+  updateAppIcon(cl?cl.url:null,s.logo);
   document.body.classList.toggle('classic',s.look==='classic');
   document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
