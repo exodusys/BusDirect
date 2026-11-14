@@ -318,6 +318,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .sms{display:flex;align-items:center;gap:12px;padding:12px 2px;border-bottom:1px solid var(--border)}
 .sms:last-child{border-bottom:none}
 .sms .z{flex:1}
+.sms-p{margin-left:10px;font-weight:800;color:var(--text);font-size:13px;white-space:nowrap}
 .sms code{font-weight:800;font-size:15px}
  /* Carte */
 #mapView{position:fixed;inset:0;z-index:30;display:none;background:var(--bg)}
@@ -1498,18 +1499,18 @@ setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys();
 
 /* ========= Tickets SMS ========= */
 const REGIONS=[
-  {name:'Genève (unireso / tpg)',lat:46.204,lon:6.143,r:25,sms:[{n:'Plein tarif 1h, zone 10',to:'788',kw:'tpg1'},{n:'Tarif réduit 1h, zone 10',to:'788',kw:'tpg2'},{n:'Carte journalière zone 10',to:'788',kw:'tpg3'}]},
-  {name:'Lausanne (Mobilis / tl)',lat:46.52,lon:6.633,r:25,sms:[{n:'Billet 2 zones (11-12)',to:'456',kw:'tl'}]},
-  {name:'Zurich (ZVV)',lat:47.377,lon:8.54,r:30,sms:[{n:'Billet Ville de Zurich 1h',to:'988',kw:'zh'}]},
-  {name:'Bâle (TNW)',lat:47.559,lon:7.588,r:20,sms:[{n:'Billet court trajet',to:'2222',kw:'basel'}]},
-  {name:'Berne (Libero)',lat:46.948,lon:7.447,r:25,sms:[{n:'Billet 2 zones',to:'2266',kw:'bern'}]},
-  {name:'Lucerne (Passepartout)',lat:47.05,lon:8.31,r:20,sms:[{n:'Billet 1 zone',to:'5533',kw:'lu'}]}
+  {name:'Genève (unireso / tpg)',lat:46.204,lon:6.143,r:25,sms:[{n:'Plein tarif 1h, zone 10',to:'788',kw:'tpg1',p:3.00},{n:'Tarif réduit 1h, zone 10',to:'788',kw:'tpg2',p:2.00},{n:'Carte journalière zone 10',to:'788',kw:'tpg3',p:10.00}]},
+  {name:'Lausanne (Mobilis / tl)',lat:46.52,lon:6.633,r:25,sms:[{n:'Billet 2 zones (11-12)',to:'456',kw:'tl',p:3.70}]},
+  {name:'Zurich (ZVV)',lat:47.377,lon:8.54,r:30,sms:[{n:'Billet Ville de Zurich 1h',to:'988',kw:'zh',p:4.60}]},
+  {name:'Bâle (TNW)',lat:47.559,lon:7.588,r:20,sms:[{n:'Billet court trajet',to:'2222',kw:'basel',p:2.60}]},
+  {name:'Berne (Libero)',lat:46.948,lon:7.447,r:25,sms:[{n:'Billet 2 zones',to:'2266',kw:'bern',p:4.60}]},
+  {name:'Lucerne (Passepartout)',lat:47.05,lon:8.31,r:20,sms:[{n:'Billet 1 zone',to:'5533',kw:'lu',p:3.20}]}
 ];
 function dist(a,b){const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLo=(b.lon-a.lon)*Math.PI/180;
   const x=Math.sin(dLa/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 function nearestRegion(){if(!pos)return REGIONS[0];return REGIONS.reduce((a,b)=>dist(pos,a)<dist(pos,b)?a:b)}
 function smsRow(s){const href=`sms:${s.to}${/iPhone|iPad/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(s.kw)}`;
-  return `<div class="sms"><div class="z"><b>${esc(s.n)}</b><div class="muted" style="font-size:12px">Envoyer <code>${esc(s.kw.toUpperCase())}</code> au <code>${esc(s.to)}</code></div></div><a class="btn sm" href="${href}">SMS</a></div>`}
+  return `<div class="sms"><div class="z"><b>${esc(s.n)}</b><div class="muted" style="font-size:12px">Envoyer <code>${esc(s.kw.toUpperCase())}</code> au <code>${esc(s.to)}</code>${s.p!=null?`<span class="sms-p">≈ CHF ${s.p.toFixed(2)}</span>`:''}</div></div><a class="btn sm" href="${href}">SMS</a></div>`}
 function renderSMS(){
   const r=nearestRegion(), inside=pos&&dist(pos,r)<=r.r;
   $('#regionName').textContent=pos?(inside?r.name:'Hors zone couverte'):'Position inconnue';
