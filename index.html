@@ -1647,13 +1647,13 @@ const LOGOS={
 // Icône de l'écran d'accueil = logo choisi (Safari lit l'icône au moment de « Sur l'écran d'accueil »)
 let appIconKey='';
 function updateAppIcon(customUrl,key){
-  const k=(customUrl||key)+'|'+getComputedStyle(document.documentElement).getPropertyValue('--page-bg'); if(k===appIconKey) return; appIconKey=k;
+  const k=(customUrl||key); if(k===appIconKey) return; appIconKey=k;
   const src=customUrl||('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="180" height="180" color="#5ec26a">${(LOGOS[key]||LOGOS.original).s}</svg>`));
   const im=new Image(); im.crossOrigin='anonymous';
   im.onload=()=>{ try{
     const N=180, cv=document.createElement('canvas'); cv.width=cv.height=N; const g=cv.getContext('2d');
-    g.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--page-bg').trim()||'#0f141c'; g.fillRect(0,0,N,N);
-    const r=Math.min(N/im.width,N/im.height)||1, w=customUrl?Math.max(N,im.width*Math.max(N/im.width,N/im.height)):N, h=customUrl?Math.max(N,im.height*Math.max(N/im.width,N/im.height)):N;
+    g.fillStyle='#000000'; g.fillRect(0,0,N,N);   // fond noir
+    const w=customUrl?Math.max(N,im.width*Math.max(N/im.width,N/im.height)):N*.78, h=customUrl?Math.max(N,im.height*Math.max(N/im.width,N/im.height)):N*.78;
     g.drawImage(im,(N-w)/2,(N-h)/2,w,h);
     const url=cv.toDataURL('image/png'); $('#appIcon').href=url; $('#favIcon').href=url;
   }catch(e){} };
