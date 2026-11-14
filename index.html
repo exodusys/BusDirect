@@ -70,10 +70,11 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .tile{border-radius:20px;padding:14px;cursor:pointer;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .15s}
 .tile:active{transform:scale(.97)}
 .tile.sel{outline:2.5px solid var(--accent)}
-/* dessins discrets des dalles */
-.tile .tdeco{position:absolute;right:8px;bottom:6px;width:112px;height:56px;opacity:.13;pointer-events:none;z-index:0;color:var(--text,currentColor)}
-.tile>div{position:relative;z-index:1}
-.tile:not(.themed) .tdeco{display:none}
+/* thèmes pastel des dalles */
+.tile.themed{background:var(--tbg)!important;border-color:rgba(0,0,0,.04)!important;color:#1f2733;-webkit-backdrop-filter:none;backdrop-filter:none;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.tile.themed .sub{color:rgba(31,39,51,.6)}
+.tile .ti{position:absolute;top:11px;right:12px;width:18px;height:18px;opacity:.45;color:inherit}
+.tile:not(.themed) .ti{display:none}
 .tile .ico{font-size:22px}
 .tile .nm{font-weight:700;font-size:15px;line-height:1.2}
 .tile .sub{font-size:11px;color:var(--muted)}
@@ -508,7 +509,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     </div>
     <h3>Dalles</h3>
     <div class="card glass">
-      <div class="set"><div><b>✏️ Dessins des dalles</b><div class="muted" style="font-size:12px">Petit dessin discret selon le type : bus, tram, train, adresse ou lieu</div></div>
+      <div class="set"><div><b>🎨 Thèmes des dalles</b><div class="muted" style="font-size:12px">Couleurs pastel selon le type : bus, tram, train, adresse ou lieu</div></div>
         <label class="switch"><input type="checkbox" id="tileThemeOn" onchange="setTileThemes(this.checked)"><span></span></label></div>
     </div>
     <h3>Tickets</h3>
@@ -1013,39 +1014,19 @@ GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
-// Dessins très discrets : 5 dessins au trait par catégorie, un tiré au hasard pour chaque dalle
-const TDP='fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
-const TILE_DRAW={
-  bus:[
-    '<rect x="14" y="14" width="92" height="30" rx="7"/><path d="M14 26h92M30 14v12M50 14v12M70 14v12M90 14v12"/><circle cx="34" cy="46" r="5"/><circle cx="88" cy="46" r="5"/>',
-    '<path d="M40 54V8"/><rect x="28" y="6" width="24" height="16" rx="4"/><path d="M34 14h12"/><path d="M60 54h52"/><rect x="66" y="30" width="40" height="18" rx="4"/><path d="M66 38h40"/>',
-    '<rect x="38" y="6" width="44" height="44" rx="8"/><path d="M38 26h44M46 40h4M70 40h4M44 50v6M76 50v6M48 12h24"/>',
-    '<path d="M4 52h112M10 52l10-0M30 52h10M50 52h10M70 52h10M90 52h10" stroke-dasharray="6 8"/><rect x="40" y="22" width="56" height="22" rx="6"/><path d="M40 32h56"/><circle cx="52" cy="45" r="4"/><circle cx="84" cy="45" r="4"/>',
-    '<path d="M8 44c20 0 20-28 40-28s20 28 40 28 16-16 24-16"/><circle cx="8" cy="44" r="3"/><circle cx="48" cy="16" r="3"/><circle cx="88" cy="44" r="3"/><circle cx="112" cy="28" r="3"/>'],
-  tram:[
-    '<path d="M2 8h116"/><path d="M52 8l8 10 8-10"/><rect x="18" y="18" width="84" height="26" rx="6"/><path d="M18 30h84M38 18v12M60 18v12M82 18v12"/><path d="M10 50h100"/>',
-    '<path d="M2 10h116M2 16h116"/><path d="M30 10v44M90 10v44"/><path d="M30 20l60 0" stroke-dasharray="3 6"/>',
-    '<path d="M60 4v8M50 12h20"/><rect x="38" y="12" width="44" height="40" rx="9"/><path d="M38 30h44M48 44h4M68 44h4"/>',
-    '<path d="M30 56L56 8M90 56L64 8"/><path d="M36 46h48M42 34h36M48 22h24"/>',
-    '<path d="M20 54V20h40v34"/><path d="M16 20h48"/><path d="M28 30h24"/><path d="M70 54h44"/><rect x="74" y="32" width="36" height="16" rx="5"/>'],
-  train:[
-    '<rect x="8" y="16" width="70" height="26" rx="6"/><path d="M78 16h22a14 14 0 0 1 14 14v12H78"/><path d="M8 28h106M26 16v12M46 16v12M62 16v12"/><path d="M4 50h112"/>',
-    '<path d="M4 34h112M4 46h112"/><path d="M14 30v20M30 30v20M46 30v20M62 30v20M78 30v20M94 30v20M110 30v20"/>',
-    '<rect x="40" y="4" width="40" height="44" rx="12"/><path d="M40 24h40M50 38h4M66 38h4M46 48l-6 8M74 48l6 8"/>',
-    '<path d="M4 50h112M14 50c0-16 18-16 18 0M42 50c0-16 18-16 18 0M70 50c0-16 18-16 18 0M98 50c0-16 18-16 18 0"/><rect x="20" y="16" width="80" height="16" rx="5"/>',
-    '<circle cx="60" cy="28" r="20"/><path d="M60 16v12l8 6"/><path d="M60 48v8"/>'],
-  adresse:[
-    '<path d="M36 52V28l24-20 24 20v24z"/><path d="M54 52V38h12v14"/><path d="M28 52h64"/>',
-    '<path d="M10 52V30l14-12 14 12v22M44 52V24l16-14 16 14v28M82 52V32l14-12 14 12v20"/><path d="M4 52h112"/>',
-    '<rect x="40" y="6" width="40" height="48"/><path d="M48 14h6M66 14h6M48 24h6M66 24h6M48 34h6M66 34h6M56 54V44h8v10"/>',
-    '<rect x="44" y="6" width="32" height="48" rx="3"/><circle cx="70" cy="32" r="2"/><path d="M50 14h20"/>',
-    '<path d="M60 56V32"/><rect x="42" y="14" width="36" height="18" rx="9"/><path d="M78 20h10v6"/><path d="M50 22h12"/>'],
-  poi:[
-    '<path d="M60 52s-16-14-16-26a16 16 0 0 1 32 0c0 12-16 26-16 26z"/><circle cx="60" cy="26" r="6"/>',
-    '<circle cx="44" cy="22" r="14"/><path d="M44 36v18"/><circle cx="80" cy="28" r="10"/><path d="M80 38v16M24 54h76"/>',
-    '<path d="M8 52l30-36 18 20 14-14 36 30z"/><path d="M32 23l6-7 6 7"/>',
-    '<path d="M30 20L60 6l30 14z"/><path d="M36 24v26M52 24v26M68 24v26M84 24v26M28 52h64"/>',
-    '<path d="M50 56V6"/><path d="M50 8h34l-8 9 8 9H50"/>']};
+// Thèmes pastel épurés : 5 teintes par catégorie, une tirée au hasard pour chaque dalle
+const TILE_THEMES={
+  bus:['#f7d9d6','#fbe3d2','#f6d8e3','#fde6dc','#f3ddd5'],
+  tram:['#d6eedd','#e0f2e3','#e3f1d3','#d2ece4','#e7f0dc'],
+  train:['#d8e4f5','#dde3f7','#d5eaf3','#e2e1f5','#d3e6ef'],
+  adresse:['#e9e3f3','#efe7ef','#e5e6ee','#efe9e0','#e6eaf0'],
+  poi:['#f8efcf','#f6ead5','#fbf1da','#f1eed4','#f8e8cd']};
+const TILE_ICON={
+  bus:'<rect x="5" y="3" width="14" height="15" rx="3"/><path d="M5 11h14M8 21v-3M16 21v-3"/><circle cx="8.5" cy="14.5" r=".6"/><circle cx="15.5" cy="14.5" r=".6"/>',
+  tram:'<rect x="6" y="6" width="12" height="12" rx="3"/><path d="M9 3h6M12 3v3M9 21l1.5-3M15 21l-1.5-3M6 12h12"/>',
+  train:'<rect x="5" y="3" width="14" height="14" rx="4"/><path d="M5 10h14M8 21l2-4M16 21l-2-4"/>',
+  adresse:'<path d="M4 11l8-7 8 7v9H4z"/><path d="M10 20v-5h4v5"/>',
+  poi:'<path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>'};
 
 function tileKind(d){
   if(d.type==='ADDRESS') return 'adresse';
@@ -1065,14 +1046,14 @@ function learnKind(dest,its){
   const M=String(l.mode).toUpperCase(), k=/TRAM/.test(M)?'tram':/BUS|COACH/.test(M)?'bus':/RAIL|TRAIN|SUBURBAN|SUBWAY|METRO/.test(M)?'train':null;
   const d=S.dests.find(x=>x.uid===dest.uid); if(k&&d){d.kind=k;save();renderTiles()}
 }
-function setTileThemes(on){S.settings.tileThemes=on;save();renderTiles();toast(on?'Dessins des dalles activés':'Dessins des dalles désactivés')}
+function setTileThemes(on){S.settings.tileThemes=on;save();renderTiles();toast(on?'Thèmes des dalles activés':'Thèmes des dalles désactivés')}
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   const thOn=S.settings.tileThemes!==false; let fix=false;
   $('#tiles').innerHTML=S.dests.map(d=>{ if(d.th==null){d.th=Math.floor(Math.random()*5);fix=true}
-    const k=tileKind(d);
-    return `<div class="tile glass ${thOn?'themed':''} ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
-    ${thOn?`<svg class="tdeco" viewBox="0 0 120 60" ${TDP}>${TILE_DRAW[k][d.th%5]}</svg>`:''}
+    const k=tileKind(d), bg=TILE_THEMES[k][d.th%5];
+    return `<div class="tile glass ${thOn?'themed':''} ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}" style="--tbg:${bg}">
+    <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${TILE_ICON[k]}</svg>
     <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>` }).join('')
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
   if(fix) save();
