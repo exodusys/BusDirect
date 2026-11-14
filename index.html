@@ -392,6 +392,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .spin{width:22px;height:22px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r 0.8s linear infinite;margin:20px auto}
 @keyframes r{to{transform:rotate(360deg)}}
+#cardFull{position:fixed;inset:0;z-index:9999;background:#fff;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
+#cardFull.on{display:flex}#cardFull img{max-width:100%;max-height:100%;object-fit:contain}
+.cardimg{display:block;width:100%;border-radius:16px;margin:0 0 12px;cursor:zoom-in;background:#fff}
+.cardrow{display:flex;align-items:center;gap:12px;padding:10px 4px}.cardrow img{width:72px;height:46px;object-fit:cover;border-radius:8px;background:#fff}
+.cardrow .z{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -462,6 +467,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   </section>
 
   <!-- PARAMETRES -->
+  <section class="view" id="v-carte">
+    <h2>Carte</h2>
+    <div id="cardView"></div>
+    <p class="muted" style="font-size:12px;margin:6px;text-align:center">Touche une carte pour l'afficher en plein écran.</p>
+  </section>
   <section class="view" id="v-parametres">
     <div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div>
     <h3>Apparence</h3>
@@ -496,8 +506,15 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     </div>
     <h3>Tickets</h3>
     <div class="card glass">
-      <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS est disponible à ta position</div></div>
+      <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div>
         <label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div>
+    </div>
+    <h3>Carte d'abonnement</h3>
+    <div class="card glass">
+      <div id="cardList"></div>
+      <div class="set"><div><b>💳 Ajouter une carte</b><div class="muted" style="font-size:12px">Photo de la carte, code-barres ou QR code. Affiche l'onglet Carte.</div></div>
+        <button class="btn sm" onclick="document.getElementById('cardIn').click()">Ajouter</button></div>
+      <input type="file" id="cardIn" accept="image/*" hidden>
     </div>
     <h3>Capteurs</h3>
     <div class="card glass">
@@ -520,9 +537,11 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
   <button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button>
   <button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
+  <button data-v="carte" id="tabCarte" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>Carte</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
 
+<div id="cardFull" onclick="this.classList.remove('on')"><img alt="Carte d'abonnement"></div>
 <div id="mapView">
   <div id="map"></div>
   <div class="map-bar glass">
@@ -576,10 +595,10 @@ input[type=range]{width:55%;accent-color:var(--accent)}
         <li>Réglage dans Paramètres › Itinéraires.</li>
       </ul>
       <h4>🎫 Tickets</h4>
-      <ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS est disponible à ta position, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li>
+      <ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li>
         <li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul>
       <h4>⚙️ Paramètres</h4>
-      <ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
+      <ul><li>Carte d'abonnement : ajoute une photo, un code-barres ou un QR code pour faire apparaître l'onglet Carte.</li><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
       <h4>📡 Sources de données</h4>
       <ul>
         <li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li>
@@ -608,7 +627,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 // migration ancienne version (une seule image perso)
@@ -700,6 +719,7 @@ $('#tabs').addEventListener('click',e=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
   if(b.dataset.v==='tickets') renderSMS();
+  if(b.dataset.v==='carte') renderCards();
   window.scrollTo({top:0,behavior:'smooth'});
 });
 
@@ -733,7 +753,7 @@ function motionListen(on){
 function askGeo(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res('unsupported');
-    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}res('granted')},
+    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}res('granted')},
       e=>res(e.code===1?'denied':'error'),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
   });
 }
@@ -822,7 +842,7 @@ function locate(force){
   if(!navigator.geolocation){$('#locLabel').textContent='📍 Indisponible';return}
   if(!GEO.on){$('#locLabel').textContent='📍 Désactivée';return}
   GEO.getCurrentPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
     $('#locLabel').textContent='📍 '+nearestRegion().name;
     if(force) toast('Position mise à jour');
     renderSMS();
@@ -974,7 +994,7 @@ function deselectTile(){
 function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
-    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
+    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
       ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
   });
 }
@@ -990,7 +1010,7 @@ async function pickPair(from,to){
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null;
 GEO.watchPosition(p=>{
-  pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
+  pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
 function renderTiles(){
@@ -1500,25 +1520,72 @@ setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys();
 
 /* ========= Tickets SMS ========= */
 const REGIONS=[
-  {name:'Genève (unireso / tpg)',lat:46.204,lon:6.143,r:25,sms:[{n:'Plein tarif 1h, zone 10',to:'788',kw:'tpg1',p:3.00},{n:'Tarif réduit 1h, zone 10',to:'788',kw:'tpg2',p:2.00},{n:'Carte journalière zone 10',to:'788',kw:'tpg3',p:10.00}]},
-  {name:'Lausanne (Mobilis / tl)',lat:46.52,lon:6.633,r:25,sms:[{n:'Billet 2 zones (11-12)',to:'456',kw:'tl',p:3.70}]},
-  {name:'Zurich (ZVV)',lat:47.377,lon:8.54,r:30,sms:[{n:'Billet Ville de Zurich 1h',to:'988',kw:'zh',p:4.60}]},
-  {name:'Bâle (TNW)',lat:47.559,lon:7.588,r:20,sms:[{n:'Billet court trajet',to:'2222',kw:'basel',p:2.60}]},
-  {name:'Berne (Libero)',lat:46.948,lon:7.447,r:25,sms:[{n:'Billet 2 zones',to:'2266',kw:'bern',p:4.60}]},
-  {name:'Lucerne (Passepartout)',lat:47.05,lon:8.31,r:20,sms:[{n:'Billet 1 zone',to:'5533',kw:'lu',p:3.20}]}
+  {name:'Genève (unireso / tpg)',canton:'GE',lat:46.204,lon:6.143,r:25,sms:[{n:'Tout Genève 60 min',to:'788',kw:'tpg1',p:3.00},{n:'Tout Genève 60 min, ½ tarif / enfant',to:'788',kw:'tpg2',p:2.00},{n:'Tout Genève 60 min, AVS/AI',to:'788',kw:'tpg3',p:2.00}]},
+  {name:'Lausanne (Mobilis / tl)',canton:'VD',lat:46.52,lon:6.633,r:10,sms:[{n:'Grand Lausanne (zones 11-12)',to:'456',kw:'GL',p:3.90},{n:'Grand Lausanne, tarif réduit',to:'456',kw:'GLR',p:2.40},{n:'Zones 12 + 15',to:'456',kw:'1215',p:3.90},{n:'Carte journalière 12 + 15',to:'456',kw:'J1215',p:9.80}]},
+  {name:'Morges (Mobilis / MBC)',canton:'VD',lat:46.511,lon:6.498,r:6,sms:[{n:'Zone 30',to:'456',kw:'30',p:3.20},{n:'Zones 30 + 31',to:'456',kw:'3031',p:3.90},{n:'Zones 30 + 33',to:'456',kw:'3033',p:3.90},{n:'Carte journalière 30 + 31',to:'456',kw:'J3031',p:9.80}]},
+  {name:'Cossonay (Mobilis / MBC)',canton:'VD',lat:46.614,lon:6.507,r:4,sms:[{n:'Zone 39',to:'456',kw:'39',p:3.20},{n:'Zones 39 + 44',to:'456',kw:'3944',p:3.90}]},
+  {name:'Nyon (Mobilis / TPN, NStCM)',canton:'VD',lat:46.383,lon:6.239,r:7,sms:[{n:'Zone 20',to:'456',kw:'20',p:3.20},{n:'Zones 20 + 23 (Gland)',to:'456',kw:'2023',p:3.90},{n:'Zones 20 + 91 (Trélex)',to:'456',kw:'2091',p:3.90},{n:'Carte journalière zone 20',to:'456',kw:'J20',p:9.20}]},
+  {name:'Yverdon-les-Bains (Mobilis / Travys)',canton:'VD',lat:46.778,lon:6.641,r:6,sms:[{n:'Zone 40',to:'456',kw:'40',p:3.20},{n:'Zone 40, tarif réduit',to:'456',kw:'40R',p:2.40},{n:'Carte journalière zone 40',to:'456',kw:'J40',p:9.20}]},
+  {name:'Orbe (Mobilis / Travys)',canton:'VD',lat:46.725,lon:6.532,r:4,sms:[{n:'Zone 48 (Urbabus)',to:'456',kw:'48',p:3.20},{n:'Zones 42 + 48 (Orbe – Chavornay)',to:'456',kw:'4248',p:3.90},{n:'Carte journalière zone 48',to:'456',kw:'J48',p:9.20}]},
+  {name:'Vallorbe (Mobilis / Travys)',canton:'VD',lat:46.712,lon:6.378,r:4,sms:[{n:'Zone 110',to:'456',kw:'110',p:3.20},{n:'Carte journalière zone 110',to:'456',kw:'J110',p:9.20}]},
+  {name:'Sainte-Croix (Mobilis / Travys)',canton:'VD',lat:46.822,lon:6.503,r:6,sms:[{n:'Zones 114 + 120',to:'456',kw:'114120',p:3.90},{n:'Carte journalière 114 + 120',to:'456',kw:'J114120',p:9.80}]},
+  {name:'Riviera (Mobilis / VMCV)',canton:'VD',lat:46.45,lon:6.88,r:8,sms:[{n:'Zone 70',to:'456',kw:'70',p:3.20},{n:'Zone 73',to:'456',kw:'73',p:3.20},{n:'Zones 70 + 73',to:'456',kw:'7073',p:3.90},{n:'Carte journalière 70 + 73',to:'456',kw:'J7073',p:9.80}]}
 ];
 function dist(a,b){const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLo=(b.lon-a.lon)*Math.PI/180;
   const x=Math.sin(dLa/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
-function smsAvailable(){if(!pos)return false;const r=nearestRegion();return dist(pos,r)<=r.r}
-function nearestRegion(){if(!pos)return REGIONS[0];return REGIONS.reduce((a,b)=>dist(pos,a)<dist(pos,b)?a:b)}
+let CANTON=null, cantonKey='';
+function fetchCanton(){
+  if(!pos) return; const key=pos.lat.toFixed(2)+','+pos.lon.toFixed(2);
+  if(key===cantonKey) return; cantonKey=key;
+  const cache=store.get('cantonCache',{});
+  if(cache[key]!==undefined){CANTON=cache[key];applySmsTab();if($('#v-tickets').classList.contains('active'))renderSMS();return}
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=5&lat=${pos.lat}&lon=${pos.lon}&accept-language=fr`)
+    .then(r=>r.json()).then(j=>{
+      const a=j&&j.address||{}, iso=a['ISO3166-2-lvl4']||'';
+      CANTON=(a.country_code==='ch'&&/^CH-/.test(iso))?iso.slice(3):'';
+      cache[key]=CANTON; const ks=Object.keys(cache); if(ks.length>200) delete cache[ks[0]];
+      store.set('cantonCache',cache); applySmsTab(); if($('#v-tickets').classList.contains('active'))renderSMS();
+    }).catch(()=>{cantonKey=''});
+}
+function cantonRegions(){return CANTON?REGIONS.filter(r=>r.canton===CANTON):[]}
+function smsAvailable(){if(!pos)return false;if(CANTON!==null)return cantonRegions().length>0;const r=nearestRegion();return dist(pos,r)<=r.r}
+function nearestRegion(){if(!pos)return REGIONS[0];const cr=cantonRegions();return (cr.length?cr:REGIONS).reduce((a,b)=>dist(pos,a)<dist(pos,b)?a:b)}
 function smsRow(s){const href=`sms:${s.to}${/iPhone|iPad/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(s.kw)}`;
   return `<div class="sms"><div class="z"><b>${esc(s.n)}</b><div class="muted" style="font-size:12px">Envoyer <code>${esc(s.kw.toUpperCase())}</code> au <code>${esc(s.to)}</code>${s.p!=null?`<span class="sms-p">≈ CHF ${s.p.toFixed(2)}</span>`:''}</div></div><a class="btn sm" href="${href}">SMS</a></div>`}
 function renderSMS(){
-  const r=nearestRegion(), inside=pos&&dist(pos,r)<=r.r;
+  const r=nearestRegion(), inside=pos&&(CANTON!==null?r.canton===CANTON:dist(pos,r)<=r.r);
   $('#regionName').textContent=pos?(inside?r.name:'Hors zone couverte'):'Position inconnue';
   $('#smsList').innerHTML=(pos&&!inside)?'<div class="empty">Aucun ticket SMS à proximité.</div>':r.sms.map(smsRow).join('');
   $('#smsOther').innerHTML=REGIONS.filter(x=>x!==r).map(x=>`<details><summary class="sms" style="cursor:pointer"><b class="z">${esc(x.name)}</b>›</summary>${x.sms.map(smsRow).join('')}</details>`).join('');
 }
+
+/* ========= Carte d'abonnement ========= */
+let CARDS=store.get('cards',[]);
+function saveCards(){try{localStorage.setItem('bd_cards',JSON.stringify(CARDS));return true}catch(e){toast('Image trop lourde pour être enregistrée');return false}}
+function applyCardTab(){
+  const t=$('#tabCarte'); if(t) t.style.display=CARDS.length?'':'none';
+  if(!CARDS.length&&$('#v-carte').classList.contains('active')) document.querySelector('#tabs button[data-v="parametres"]').click();
+  $('#cardList').innerHTML=CARDS.map((c,i)=>`<div class="cardrow"><img src="${c.url}" alt=""><div class="z"><b>Carte ${i+1}</b></div><button class="btn sm" onclick="delCard('${c.id}')">Supprimer</button></div>`).join('');
+}
+function renderCards(){
+  $('#cardView').innerHTML=CARDS.map(c=>`<img class="cardimg" src="${c.url}" alt="Carte d'abonnement" onclick="showCard('${c.id}')">`).join('');
+}
+function showCard(id){const c=CARDS.find(x=>x.id===id);if(!c)return;const f=$('#cardFull');f.querySelector('img').src=c.url;f.classList.add('on')}
+function delCard(id){CARDS=CARDS.filter(c=>c.id!==id);saveCards();applyCardTab();renderCards();toast('Carte supprimée')}
+function addCardFile(file){
+  if(!file) return; const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const M=1600, k=Math.min(1,M/Math.max(im.width,im.height)), cv=document.createElement('canvas');
+    cv.width=Math.round(im.width*k); cv.height=Math.round(im.height*k);
+    const g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height); g.drawImage(im,0,0,cv.width,cv.height);
+    CARDS.push({id:'c'+Date.now(),url:cv.toDataURL('image/jpeg',0.92)});
+    if(!saveCards()){CARDS.pop();return}
+    applyCardTab(); renderCards(); toast('Carte ajoutée');
+  };im.src=rd.result};
+  rd.readAsDataURL(file);
+}
+document.getElementById('cardIn').addEventListener('change',e=>{addCardFile(e.target.files[0]);e.target.value=''});
+setTimeout(applyCardTab,0);
 
 /* ========= Settings ========= */
 /* Logos (SVG 64×64 : forme en couleur, détails en blanc) */
@@ -2127,7 +2194,7 @@ let meWatch=null;
 function startMeWatch(){
   if(!navigator.geolocation||meWatch!=null) return;
   meWatch=GEO.watchPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
     if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>0.5&&heading==null) gpsHeading=p.coords.heading;
     onMyPos();
   },()=>{},{enableHighAccuracy:true,maximumAge:3000});
