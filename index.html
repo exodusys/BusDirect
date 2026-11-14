@@ -985,7 +985,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  shown=5;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
+  shown=5;pastReserve=[];pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -1065,7 +1065,7 @@ function syncTimeBar(){
 }
 function goNow(){   // retour à l'affichage de départ : le prochain départ en direct en haut, puis les 4 suivants
   if(planTime){ window.scrollTo({top:0}); setPlanTime(''); setTimeout(()=>window.scrollTo({top:0}),600); return }   // autre date choisie → nouvelle recherche à partir de maintenant
-  pastFloor=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
+  pastFloor=null; pastReserve=[]; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
   insistSet(0); insistTopSet(0); $('#moreTop')?.classList.remove('busy','pulling','insisting');
   renderJourneyList(); syncTimeBar(); setListTitle();
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1078,7 +1078,7 @@ function setPlanTime(v){
   pastFloor=null;
   planTime=v?new Date(v):null;
   if(planTime&&Math.abs(planTime-Date.now())<60000) planTime=null;
-  syncTimeBar(); shown=5; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
+  syncTimeBar(); shown=5; pastReserve=[]; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 /* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
@@ -1131,7 +1131,7 @@ async function locateMyTrip(){
     if(!itin){ toast('Course introuvable'); return }
     const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
     selFrom=null; selDest={uid:'_trip',type:'TRIP',tripId:t.tripId,name:leg.headsign||leg.to?.name||'Terminus',fromLabel:`À bord du ${leg.routeShortName||t.routeShortName||''}`.trim()};
-    shown=5; pastFloor=null; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
+    shown=5; pastFloor=null; pastReserve=[]; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
     $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
     renderJourneyList(); const c=document.querySelector('#journeys > .jr'); if(c) c.classList.add('open');
     toast(`Tu es dans le ${leg.routeShortName||''} → ${leg.headsign||''}`);
@@ -1210,7 +1210,7 @@ function renderJourneyList(){
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
-let curList=[], moreObs=null, moreBusy=false, appending=false, pastFloor=null, pastBusy=false;
+let curList=[], moreObs=null, moreBusy=false, appending=false, pastFloor=null, pastBusy=false, pastReserve=[];
 /* Il faut insister en bas de liste pour charger la suite : les barres se remplissent avec l'effort */
 let insist=0, insStart=null, insT=null;
 const atEnd=()=>window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4;
@@ -1242,12 +1242,19 @@ async function loadPastJourneys(){
   pastBusy=true; const sen=$('#moreTop'); sen.classList.add('busy','pulling'); const t0=Date.now();
   try{
     const firstDep=+new Date(firstTransit(lastJourneys[0]).startTime);
-    let dest=await nearestStop(selDest), from=selFrom?await nearestStop(selFrom):null;
-    const d=await plan(dest,new Date(firstDep-75*60000),null,from);
-    const known=new Set(lastJourneys.map(jkey));
-    let add=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<firstDep})
-      .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime)).slice(-5);
-    if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add=withFinalWalk(add,selDest,dest,fw) }
+    const known=new Set(lastJourneys.map(jkey).concat(pastReserve.map(jkey)));
+    // comme en bas : toujours 5 parcours de plus ; on remonte le temps jusqu'à en avoir 5 en réserve
+    let dest=null, from=null, tries=0;
+    while(pastReserve.length<5&&tries<4){
+      tries++; dest=dest||await nearestStop(selDest); from=from||(selFrom?await nearestStop(selFrom):null);
+      const oldest=pastReserve.length?+new Date(firstTransit(pastReserve[0]).startTime):firstDep;
+      const d=await plan(dest,new Date(oldest-75*60000),null,from);
+      let got=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<oldest});
+      if(got.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); got=withFinalWalk(got,selDest,dest,fw) }
+      got.forEach(it=>known.add(jkey(it)));
+      pastReserve=got.concat(pastReserve).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
+    }
+    const add=pastReserve.slice(-5); pastReserve=pastReserve.slice(0,-5);
     await new Promise(r=>setTimeout(r,Math.max(0,700-(Date.now()-t0))));   // même temps de chargement qu'en bas
     if(add.length){
       prefetchColors(add);
