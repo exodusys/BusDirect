@@ -401,16 +401,33 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
-#jrPage{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;transform:translateX(100%);transition:transform .26s ease}
-#jrPage.on{display:block;animation:jpIn .3s ease forwards}
-#jrPage.out{animation:jpOut .26s ease forwards}
+#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;transition:transform .26s ease;overscroll-behavior:contain}
+#jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
+#jrPage.out,.sub-page.out{animation:jpOut .26s ease forwards}
 @keyframes jpIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 @keyframes jpOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
-#jrPage .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
-#jrPage .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#jrPage .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 30px)}
-body.classic #jrPage .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
+#jrPage .jp-bar,.sub-page .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
+#jrPage .jp-title,.sub-page .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 30px)}
+body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
+#stopPage{z-index:31}
+#stopPage .stl{padding:14px}
+.legs > .leg.tap{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
+.legs > .leg.tap:active{background:rgba(127,127,127,.15)}
+.legs > .leg.tap > div:last-child::after{content:'Arrêts ›';display:block;margin-top:4px;font-size:12px;font-weight:700;color:var(--accent)}
+.stl-in{position:relative}
+.stl-rail{position:absolute;left:7px;top:17px;bottom:17px;width:4px;border-radius:2px;background:var(--c)}
+.stl-r{position:absolute;left:0;right:0;height:34px;display:flex;align-items:center;gap:10px;font-size:14px}
+.stl-r i{flex:none;width:18px;height:18px;display:grid;place-items:center}
+.stl-r i::before{content:'';width:10px;height:10px;border-radius:50%;background:var(--page-bg,#111);border:3px solid var(--c);box-sizing:border-box}
+.stl-r span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stl-r small{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+.stl-r.pre span{color:var(--muted)}
+.stl-r.me span{font-weight:800}
+.stl-r.me i::before{width:14px;height:14px}
+.stl-r.done{opacity:.45}
+.stl-veh{position:absolute;left:-4px;top:4px;width:26px;height:26px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:transform 1s linear;z-index:1}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1503,7 +1520,7 @@ function journeyHTML(it,i,tracked){
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
   const legs=it.legs.map((l,li)=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span> <button class="walk-map" data-act="walk" data-leg="${li}">🗺️ Voir la marche</button>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
-    <div class="muted" style="font-size:12px;margin-top:2px">${esc(/^start$/i.test(l.from?.name||'')?'Ma position':l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''} → ${esc(/^end$/i.test(l.to?.name||'')?'Destination':l.to?.name)} · ${hm(l.endTime)}</div></div></div>`).join('');
+    <div class="muted" style="font-size:12px;margin-top:2px">${esc(/^start$/i.test(l.from?.name||'')?'Ma position':l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''}<br>${esc(/^end$/i.test(l.to?.name||'')?'Destination':l.to?.name)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
@@ -1544,7 +1561,7 @@ function bindJourneys(box,list,tracked){
 /* ========= Page de détail d'un parcours (glisse depuis la droite) ========= */
 let jpIt=null, jpKey=null, jpTracked=false, jpTimer=null;
 function openJourneyPage(it,tracked){
-  if(!it) return; jpIt=it; jpKey=jkey(it); jpTracked=!!tracked;
+  if(!it) return; if(jkey(it)!==jpKey) jpOpenLegs=new Set(); jpIt=it; jpKey=jkey(it); jpTracked=!!tracked;
   let pg=$('#jrPage');
   if(!pg){ pg=document.createElement('div'); pg.id='jrPage';
     pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeJourneyPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"></div>';
@@ -1559,19 +1576,71 @@ function renderJourneyPage(){
   pg.querySelector('.jp-title').textContent=`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim();
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
+  jpAttachStops(card);
   card.onclick=e=>{ const act=e.target.dataset.act;
+    const row=!act&&e.target.closest('.legs > .leg.tap'); if(row){ openStopsPage(+row.dataset.li); return }
     if(act==='map'){openMap(jpIt);return} if(act==='walk'){openMap(jpIt,+e.target.dataset.leg);return}
     if(act==='track'){trackIt(jpIt);return} };
 }
+/* Liste de tous les arrêts d'une ligne, avec le véhicule qui avance en direct */
+let jpOpenLegs=new Set(), jpVehTimer=null;
+const STL_H=34;
+function stopIdx(trip,place,from=0){ if(!place) return -1; const st=trip.stops;
+  let i=st.findIndex((x,k)=>k>=from&&x.name===place.name); if(i>=0) return i;
+  let bi=from,bd=Infinity; for(let k=from;k<st.length;k++){const d=kmDist([st[k].lon,st[k].lat],[place.lon,place.lat]); if(d<bd){bd=d;bi=k}} return bi }
+function jpAttachStops(card){   // chaque bandeau de transport devient cliquable
+  const firstT=jpIt.legs.findIndex(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
+  card.querySelectorAll('.legs > .leg').forEach((row,li)=>{ const l=jpIt.legs[li];
+    if(l&&l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR'&&l.tripId){ row.classList.add('tap'); row.dataset.li=li; row.dataset.first=li===firstT?1:'' } });
+}
+function openStopsPage(li){
+  const l=jpIt.legs[li]; if(!l) return; const first=jpIt.legs.findIndex(x=>x.mode!=='WALK'&&x.mode!=='BIKE'&&x.mode!=='CAR')===li;
+  let pg=$('#stopPage');
+  if(!pg){ pg=document.createElement('div'); pg.id='stopPage'; pg.className='sub-page';
+    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeStopsPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"><div class="card glass stl"></div></div>';
+    document.body.appendChild(pg); jpSwipe(pg,closeStopsPage) }
+  pg.querySelector('.jp-title').innerHTML=`${badge(l,'mini')} → ${esc(l.headsign||l.to?.name||'')}`;
+  const box=pg.querySelector('.stl'); box._v=null; box.innerHTML='<div class="spin"></div>';
+  pg.scrollTop=0; pg.classList.remove('out'); pg.classList.add('on'); clickShieldUntil=Date.now()+400;
+  loadTrip(l).then(trip=>{ if(!pg.classList.contains('on')) return;
+    if(!trip||!trip.stops?.length){ box.innerHTML='<div class="muted" style="font-size:14px;padding:6px 0">Arrêts indisponibles</div>'; return }
+    const b=stopIdx(trip,l.from), e=Math.max(b,stopIdx(trip,l.to,b));
+    const s0=first?0:b, list=trip.stops.slice(s0,e+1), c=lineColor(l)[0];
+    box._v={trip,l,s0,e,b};
+    box.innerHTML=`<div class="stl-in" style="--c:${c};height:${list.length*STL_H}px"><i class="stl-rail"></i>`+list.map((st,k)=>{const gi=s0+k, me=gi===b||gi===e;
+      return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}</span><small>${hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
+      +`<div class="stl-veh" style="--c:${c}">🚌</div></div>`;
+    jpMoveVehicles();
+    // le véhicule visible à l'écran
+    const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
+  });
+  clearInterval(jpVehTimer); jpVehTimer=setInterval(jpMoveVehicles,1000);
+}
+function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
+  pg.classList.add('out'); setTimeout(()=>pg.classList.remove('on','out'),260) }
+function jpMoveVehicles(){
+  document.querySelectorAll('#stopPage .stl').forEach(box=>{ const v=box._v; if(!v) return; const {trip,l,s0,e}=v, now=Date.now();
+    refreshTripTimes(l,trip).then(()=>{ box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx} r.classList.toggle('done',st&&st.d<now-15000)}) });
+    const veh=box.querySelector('.stl-veh'); if(!veh) return;
+    const km=kmOnTrip(trip,now); const st=trip.stops;
+    if(km==null||now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; return }
+    let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
+    else for(let i=s0;i<e;i++){ if(km<=st[i+1].km){ y=(i-s0+Math.max(0,Math.min(1,(km-st[i].km)/((st[i+1].km-st[i].km)||1))))*STL_H; break } }
+    veh.style.display=''; veh.style.transform=`translateY(${y}px)`;
+  });
+}
 function closeJourneyPage(){
-  const pg=$('#jrPage'); if(!pg) return; clearInterval(jpTimer);
+  const pg=$('#jrPage'); if(!pg) return; clearInterval(jpTimer); clearInterval(jpVehTimer); jpOpenLegs=new Set();
   pg.classList.add('out'); document.documentElement.classList.remove('jp-lock');
   setTimeout(()=>{ pg.classList.remove('on','out'); pg.style.transform='' },260);
 }
-function jpSwipe(pg){ let s=null;
+function jpSwipe(pg,close=closeJourneyPage){ let s=null;
+  // les gestes de la liste (tirer en haut / insister en bas / bord gauche) ne doivent pas bloquer le défilement de cette page
+  ['touchstart','touchmove','touchend'].forEach(ev=>pg.addEventListener(ev,e=>e.stopPropagation(),{passive:true}));
+  pg.addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
   pg.addEventListener('touchstart',e=>{ const x=e.touches[0].clientX; s=x<28?{x,dx:0}:null; if(s) pg.style.transition='none' },{passive:true});
   pg.addEventListener('touchmove',e=>{ if(!s) return; s.dx=Math.max(0,e.touches[0].clientX-s.x); pg.style.transform=`translateX(${s.dx}px)`; if(e.cancelable) e.preventDefault() },{passive:false});
-  pg.addEventListener('touchend',()=>{ if(!s) return; pg.style.transition=''; if(s.dx>Math.min(110,innerWidth*.28)) closeJourneyPage(); else pg.style.transform=''; s=null },{passive:true});
+  pg.addEventListener('touchend',()=>{ if(!s) return; pg.style.transition=''; if(s.dx>Math.min(110,innerWidth*.28)) close(); else pg.style.transform=''; s=null },{passive:true});
 }
 
 /* ========= Suivis ========= */
