@@ -1244,14 +1244,17 @@ async function loadPastJourneys(){
     const firstDep=+new Date(firstTransit(lastJourneys[0]).startTime);
     const known=new Set(lastJourneys.map(jkey).concat(pastReserve.map(jkey)));
     // comme en bas : toujours 5 parcours de plus ; on remonte le temps jusqu'à en avoir 5 en réserve
-    let dest=null, from=null, tries=0;
-    while(pastReserve.length<5&&tries<4){
+    // on remonte aussi sur les jours précédents : chaque recherche vide recule plus loin (nuit sans service)
+    let dest=null, from=null, tries=0, cursor=pastReserve.length?+new Date(firstTransit(pastReserve[0]).startTime):firstDep, step=75;
+    while(pastReserve.length<5&&tries<8&&firstDep-cursor<3*86400000){
       tries++; dest=dest||await nearestStop(selDest); from=from||(selFrom?await nearestStop(selFrom):null);
-      const oldest=pastReserve.length?+new Date(firstTransit(pastReserve[0]).startTime):firstDep;
-      const d=await plan(dest,new Date(oldest-75*60000),null,from);
+      const oldest=cursor;
+      const d=await plan(dest,new Date(oldest-step*60000),null,from);
       let got=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<oldest});
       if(got.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); got=withFinalWalk(got,selDest,dest,fw) }
       got.forEach(it=>known.add(jkey(it)));
+      if(got.length){ cursor=Math.min(...got.map(it=>+new Date(firstTransit(it).startTime))); step=75 }
+      else { cursor-=step*60000; step=Math.min(step*2,720) }
       pastReserve=got.concat(pastReserve).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
     }
     const add=pastReserve.slice(-5); pastReserve=pastReserve.slice(0,-5);
