@@ -392,14 +392,12 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .spin{width:22px;height:22px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r 0.8s linear infinite;margin:20px auto}
 @keyframes r{to{transform:rotate(360deg)}}
-#cardFull{position:fixed;inset:0;z-index:9999;background:#fff;display:none;align-items:center;justify-content:center;padding:env(safe-area-inset-top) 12px env(safe-area-inset-bottom)}
-#cardFull.on{display:flex}#cardFull img{max-width:100%;max-height:100%;object-fit:contain}
 .cardimg{padding:14px;box-sizing:border-box;}
 #scanView{position:fixed;inset:0;z-index:9998;background:#000;display:none}#scanView.on{display:block}
 #scanVid{width:100%;height:100%;object-fit:cover}
 .scan-frame{position:absolute;left:10%;right:10%;top:30%;height:30%;border:3px solid var(--accent);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
 .scan-bar{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 18px);display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;font-weight:600;font-size:14px}
-.cardimg{display:block;width:100%;border-radius:16px;margin:0 0 12px;cursor:zoom-in;background:#fff}
+.cardimg{display:block;width:100%;border-radius:16px;margin:0 0 12px;background:#fff}
 .cardrow{display:flex;align-items:center;gap:12px;padding:10px 4px}.cardrow img{width:72px;height:46px;object-fit:cover;border-radius:8px;background:#fff}
 .cardrow .z{flex:1;min-width:0}
 </style>
@@ -475,7 +473,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <section class="view" id="v-carte">
     <h2>Carte</h2>
     <div id="cardView"></div>
-    <p class="muted" style="font-size:12px;margin:6px;text-align:center">Touche un code pour l'afficher en plein écran.</p>
   </section>
   <section class="view" id="v-parametres">
     <div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div>
@@ -546,7 +543,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 </nav>
 
 <div id="scanView"><video id="scanVid" playsinline muted autoplay></video><div class="scan-frame"></div><div class="scan-bar"><span id="scanMsg">Vise le code-barres ou le QR code</span><button class="btn sm" onclick="closeScanner()">Annuler</button></div></div>
-<div id="cardFull" onclick="this.classList.remove('on')"><img alt="Carte d'abonnement"></div>
 <div id="mapView">
   <div id="map"></div>
   <div class="map-bar glass">
@@ -1590,10 +1586,9 @@ async function renderCards(){
   const box=$('#cardView'); box.innerHTML='<div class="empty">Chargement…</div>';
   try{
     const urls=await Promise.all(CARDS.map(codeImg));
-    box.innerHTML=CARDS.map((c,i)=>`<img class="cardimg" src="${urls[i]}" alt="Code de la carte ${i+1}" onclick="showCard('${c.id}')">`).join('');
+    box.innerHTML=CARDS.map((c,i)=>`<img class="cardimg" src="${urls[i]}" alt="Code de la carte ${i+1}">`).join('');
   }catch(e){box.innerHTML='<div class="empty">Impossible d\'afficher le code (connexion requise au premier affichage).</div>'}
 }
-async function showCard(id){const c=CARDS.find(x=>x.id===id);if(!c)return;const f=$('#cardFull');f.querySelector('img').src=await codeImg(c);f.classList.add('on')}
 function delCard(id){CARDS=CARDS.filter(c=>c.id!==id);delete CODE_IMG[id];saveCards();applyCardTab();renderCards();toast('Carte supprimée')}
 let scanReader=null;
 async function openScanner(){
