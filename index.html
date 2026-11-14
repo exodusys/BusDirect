@@ -392,14 +392,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .toast.show{opacity:1;transform:translateX(-50%)}
 .spin{width:22px;height:22px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r 0.8s linear infinite;margin:20px auto}
 @keyframes r{to{transform:rotate(360deg)}}
-.cardimg{padding:14px;box-sizing:border-box;}
-#scanView{position:fixed;inset:0;z-index:9998;background:#000;display:none}#scanView.on{display:block}
-#scanVid{width:100%;height:100%;object-fit:cover}
-.scan-frame{position:absolute;left:10%;right:10%;top:30%;height:30%;border:3px solid var(--accent);border-radius:18px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
-.scan-bar{position:absolute;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom) + 18px);display:flex;align-items:center;justify-content:space-between;gap:10px;color:#fff;font-weight:600;font-size:14px}
-.cardimg{display:block;width:100%;border-radius:16px;margin:0 0 12px;background:#fff}
-.cardrow{display:flex;align-items:center;gap:12px;padding:10px 4px}.cardrow img{width:72px;height:46px;object-fit:cover;border-radius:8px;background:#fff}
-.cardrow .z{flex:1;min-width:0}
 </style>
 </head>
 <body>
@@ -470,10 +462,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   </section>
 
   <!-- PARAMETRES -->
-  <section class="view" id="v-carte">
-    <h2>Carte</h2>
-    <div id="cardView"></div>
-  </section>
   <section class="view" id="v-parametres">
     <div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div>
     <h3>Apparence</h3>
@@ -511,12 +499,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div>
         <label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div>
     </div>
-    <h3>Carte d'abonnement</h3>
-    <div class="card glass">
-      <div id="cardList"></div>
-      <div class="set"><div><b>💳 Ajouter une carte</b><div class="muted" style="font-size:12px">Scanne le code-barres ou le QR code de ta carte. Affiche l'onglet Carte.</div></div>
-        <button class="btn sm" onclick="openScanner()">Scanner</button></div>
-    </div>
     <h3>Capteurs</h3>
     <div class="card glass">
       <div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div>
@@ -538,11 +520,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
   <button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button>
   <button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button>
   <button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button>
-  <button data-v="carte" id="tabCarte" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>Carte</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
 
-<div id="scanView"><video id="scanVid" playsinline muted autoplay></video><div class="scan-frame"></div><div class="scan-bar"><span id="scanMsg">Vise le code-barres ou le QR code</span><button class="btn sm" onclick="closeScanner()">Annuler</button></div></div>
 <div id="mapView">
   <div id="map"></div>
   <div class="map-bar glass">
@@ -599,7 +579,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
       <ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li>
         <li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul>
       <h4>⚙️ Paramètres</h4>
-      <ul><li>Carte d'abonnement : scanne le code-barres ou le QR code de ta carte pour faire apparaître l'onglet Carte.</li><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
+      <ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
       <h4>📡 Sources de données</h4>
       <ul>
         <li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li>
@@ -628,7 +608,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 // migration ancienne version (une seule image perso)
@@ -720,7 +700,6 @@ $('#tabs').addEventListener('click',e=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
   if(b.dataset.v==='tickets') renderSMS();
-  if(b.dataset.v==='carte') renderCards();
   window.scrollTo({top:0,behavior:'smooth'});
 });
 
@@ -1559,60 +1538,6 @@ function renderSMS(){
   $('#smsList').innerHTML=(pos&&!inside)?'<div class="empty">Aucun ticket SMS à proximité.</div>':r.sms.map(smsRow).join('');
   $('#smsOther').innerHTML=REGIONS.filter(x=>x!==r).map(x=>`<details><summary class="sms" style="cursor:pointer"><b class="z">${esc(x.name)}</b>›</summary>${x.sms.map(smsRow).join('')}</details>`).join('');
 }
-
-/* ========= Carte d'abonnement (scan code-barres / QR) ========= */
-let CARDS=store.get('cards',[]).filter(c=>c&&c.text);   // uniquement les codes scannés
-const CODE_IMG={};
-function loadScript(src){if(Array.isArray(src))return src.reduce((p,u)=>p.catch(()=>loadOne(u)),Promise.reject());return loadOne(src)}
-function loadOne(src){return new Promise((ok,ko)=>{if(document.querySelector(`script[src="${src}"]`))return ok();const e=document.createElement('script');e.src=src;e.onload=ok;e.onerror=ko;document.head.appendChild(e)})}
-const ZXING=['https://cdn.jsdelivr.net/npm/@zxing/library@0.21/umd/index.min.js','https://unpkg.com/@zxing/library@0.21/umd/index.min.js'];
-const BWIP=['https://cdn.jsdelivr.net/npm/bwip-js@4/dist/bwip-js-min.js','https://unpkg.com/bwip-js@4/dist/bwip-js-min.js'];
-const FMT2BWIP={QR_CODE:'qrcode',AZTEC:'azteccode',PDF_417:'pdf417',DATA_MATRIX:'datamatrix',CODE_128:'code128',CODE_39:'code39',CODE_93:'code93',EAN_13:'ean13',EAN_8:'ean8',UPC_A:'upca',UPC_E:'upce',ITF:'interleaved2of5',CODABAR:'rationalizedCodabar'};
-const FMTNAME={QR_CODE:'QR code',AZTEC:'Aztec',PDF_417:'PDF417',DATA_MATRIX:'Data Matrix'};
-function saveCards(){store.set('cards',CARDS)}
-function applyCardTab(){
-  const t=$('#tabCarte'); if(t) t.style.display=CARDS.length?'':'none';
-  if(!CARDS.length&&$('#v-carte').classList.contains('active')) document.querySelector('#tabs button[data-v="parametres"]').click();
-  $('#cardList').innerHTML=CARDS.map((c,i)=>`<div class="cardrow"><div class="z"><b>Carte ${i+1}</b><div class="muted" style="font-size:12px">${esc(FMTNAME[c.fmt]||'Code-barres')}</div></div><button class="btn sm" onclick="delCard('${c.id}')">Supprimer</button></div>`).join('');
-}
-async function codeImg(c){
-  if(CODE_IMG[c.id]) return CODE_IMG[c.id];
-  await loadScript(BWIP);
-  const cv=document.createElement('canvas'), lin=!/^(QR_CODE|AZTEC|PDF_417|DATA_MATRIX)$/.test(c.fmt);
-  bwipjs.toCanvas(cv,{bcid:FMT2BWIP[c.fmt]||'qrcode',text:c.text,scale:5,height:lin?22:undefined,includetext:lin,textxalign:'center',backgroundcolor:'FFFFFF',paddingwidth:4,paddingheight:4});
-  return CODE_IMG[c.id]=cv.toDataURL('image/png');
-}
-async function renderCards(){
-  const box=$('#cardView'); box.innerHTML='<div class="empty">Chargement…</div>';
-  try{
-    const urls=await Promise.all(CARDS.map(codeImg));
-    box.innerHTML=CARDS.map((c,i)=>`<img class="cardimg" src="${urls[i]}" alt="Code de la carte ${i+1}">`).join('');
-  }catch(e){box.innerHTML='<div class="empty">Impossible d\'afficher le code (connexion requise au premier affichage).</div>'}
-}
-function delCard(id){CARDS=CARDS.filter(c=>c.id!==id);delete CODE_IMG[id];saveCards();applyCardTab();renderCards();toast('Carte supprimée')}
-let scanReader=null;
-async function openScanner(){
-  if(!navigator.mediaDevices?.getUserMedia){toast('Caméra indisponible');return}
-  $('#scanView').classList.add('on'); $('#scanMsg').textContent='Chargement du lecteur…';
-  try{await loadScript(ZXING)}catch(e){toast('Lecteur indisponible (connexion ?)');closeScanner();return}
-  const hints=new Map(), F=ZXing.BarcodeFormat;
-  hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,Object.keys(FMT2BWIP).map(k=>F[k]).filter(v=>v!=null));
-  hints.set(ZXing.DecodeHintType.TRY_HARDER,true);
-  scanReader=new ZXing.BrowserMultiFormatReader(hints,250);
-  $('#scanMsg').textContent='Vise le code-barres ou le QR code';
-  try{
-    await scanReader.decodeFromConstraints({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}},$('#scanVid'),(res)=>{
-      if(!res||!scanReader) return;
-      const fmt=F[res.getBarcodeFormat()]||'QR_CODE', text=res.getText();
-      closeScanner();
-      if(CARDS.some(c=>c.text===text&&c.fmt===fmt)){toast('Cette carte est déjà enregistrée');return}
-      CARDS.push({id:'c'+Date.now(),fmt,text}); saveCards(); applyCardTab(); renderCards();
-      navigator.vibrate?.(60); toast('Carte ajoutée');
-    });
-  }catch(e){toast('Accès à la caméra refusé');closeScanner()}
-}
-function closeScanner(){try{scanReader&&scanReader.reset()}catch(e){} scanReader=null; const v=$('#scanVid'); if(v.srcObject){v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null} $('#scanView').classList.remove('on')}
-setTimeout(()=>{saveCards();applyCardTab()},0);
 
 /* ========= Settings ========= */
 /* Logos (SVG 64×64 : forme en couleur, détails en blanc) */
