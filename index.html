@@ -1212,7 +1212,8 @@ const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?
 function renderJourneyList(){
   const box=$('#journeys');
   // ancre visuelle : la première dalle visible garde exactement sa place à l'écran
-  let anc=null, ancTop=0; if(!appending){ const hh=(document.querySelector('header')?.getBoundingClientRect().bottom)||0;
+  let anc=null, ancTop=0; if(!appending&&window.scrollY>2){   // en haut de liste : pas d'ancre, le premier départ en direct reste visible
+    const hh=(document.querySelector('header')?.getBoundingClientRect().bottom)||0;
     for(const c of box.querySelectorAll(':scope > .jr')){ const r=c.getBoundingClientRect(); if(r.bottom>hh+4){anc=c.dataset.k;ancTop=r.top;break} } }
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
@@ -1507,7 +1508,7 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="cd">${isPast?`<span class="cd-date">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${esc(fmtDay(depAt))}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
+      <div class="cd">${isPast?`<span class="cd-date">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
     </div>
     <div class="jr-times">
       <div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
