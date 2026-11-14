@@ -401,6 +401,16 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
+#jrPage{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;transform:translateX(100%);transition:transform .26s ease}
+#jrPage.on{display:block;animation:jpIn .3s ease forwards}
+#jrPage.out{animation:jpOut .26s ease forwards}
+@keyframes jpIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes jpOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
+#jrPage .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
+#jrPage .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jrPage .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 30px)}
+body.classic #jrPage .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
+html.jp-lock,html.jp-lock body{overflow:hidden}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1528,8 +1538,40 @@ function bindJourneys(box,list,tracked){
     if(act==='walk'){e.stopPropagation();openMap(it,+e.target.dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');return}
-    el.classList.toggle('open');
+    openJourneyPage(it,tracked);
   });
+}
+/* ========= Page de détail d'un parcours (glisse depuis la droite) ========= */
+let jpIt=null, jpKey=null, jpTracked=false, jpTimer=null;
+function openJourneyPage(it,tracked){
+  if(!it) return; jpIt=it; jpKey=jkey(it); jpTracked=!!tracked;
+  let pg=$('#jrPage');
+  if(!pg){ pg=document.createElement('div'); pg.id='jrPage';
+    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeJourneyPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"></div>';
+    document.body.appendChild(pg); jpSwipe(pg) }
+  renderJourneyPage(); clickShieldUntil=Date.now()+400;
+  pg.scrollTop=0; pg.classList.remove('out'); pg.style.transform=''; pg.classList.add('on');
+  document.documentElement.classList.add('jp-lock');
+  clearInterval(jpTimer); jpTimer=setInterval(()=>{ const f=curList.find(x=>jkey(x)===jpKey); if(f) jpIt=f; renderJourneyPage() },10000);
+}
+function renderJourneyPage(){
+  const pg=$('#jrPage'); if(!pg||!jpIt) return; const ft=firstTransit(jpIt);
+  pg.querySelector('.jp-title').textContent=`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim();
+  const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
+  const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
+  card.onclick=e=>{ const act=e.target.dataset.act;
+    if(act==='map'){openMap(jpIt);return} if(act==='walk'){openMap(jpIt,+e.target.dataset.leg);return}
+    if(act==='track'){trackIt(jpIt);return} };
+}
+function closeJourneyPage(){
+  const pg=$('#jrPage'); if(!pg) return; clearInterval(jpTimer);
+  pg.classList.add('out'); document.documentElement.classList.remove('jp-lock');
+  setTimeout(()=>{ pg.classList.remove('on','out'); pg.style.transform='' },260);
+}
+function jpSwipe(pg){ let s=null;
+  pg.addEventListener('touchstart',e=>{ const x=e.touches[0].clientX; s=x<28?{x,dx:0}:null; if(s) pg.style.transition='none' },{passive:true});
+  pg.addEventListener('touchmove',e=>{ if(!s) return; s.dx=Math.max(0,e.touches[0].clientX-s.x); pg.style.transform=`translateX(${s.dx}px)`; if(e.cancelable) e.preventDefault() },{passive:false});
+  pg.addEventListener('touchend',()=>{ if(!s) return; pg.style.transition=''; if(s.dx>Math.min(110,innerWidth*.28)) closeJourneyPage(); else pg.style.transform=''; s=null },{passive:true});
 }
 
 /* ========= Suivis ========= */
