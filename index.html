@@ -1201,9 +1201,8 @@ function mergeRefresh(old,data){
   if(!old.length||!data.length) return data;
   const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
   const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
-  const before=old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0), after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
+  const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor)   // passés gardés seulement si tu les as affichés, after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
   const out=before.concat(data,after);
-  if(before.length&&pastFloor==null) pastFloor=jStart(before[0])-60000;
   shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);   // mêmes dalles visibles qu'avant
   return out;
 }
