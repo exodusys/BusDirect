@@ -496,7 +496,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
     </div>
     <h3>Tickets</h3>
     <div class="card glass">
-      <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets dans la barre du bas</div></div>
+      <div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS est disponible à ta position</div></div>
         <label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div>
     </div>
     <h3>Capteurs</h3>
@@ -576,7 +576,8 @@ input[type=range]{width:55%;accent-color:var(--accent)}
         <li>Réglage dans Paramètres › Itinéraires.</li>
       </ul>
       <h4>🎫 Tickets</h4>
-      <ul><li>Tickets SMS de la région où tu te trouves. L'onglet peut être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li></ul>
+      <ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS est disponible à ta position, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li>
+        <li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul>
       <h4>⚙️ Paramètres</h4>
       <ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul>
       <h4>📡 Sources de données</h4>
@@ -732,7 +733,7 @@ function motionListen(on){
 function askGeo(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res('unsupported');
-    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};res('granted')},
+    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}res('granted')},
       e=>res(e.code===1?'denied':'error'),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
   });
 }
@@ -812,16 +813,16 @@ function setSmsTab(on){
   toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
 }
 function applySmsTab(){
-  const on=S.settings.smsOn!==false, tab=$('#tabTickets');
-  if(tab) tab.style.display=on?'':'none';
+  const on=S.settings.smsOn!==false, avail=smsAvailable(), tab=$('#tabTickets');
+  if(tab) tab.style.display=(on&&avail)?'':'none';
   if($('#smsOn')) $('#smsOn').checked=on;
-  if(!on&&$('#v-tickets').classList.contains('active')) document.querySelector('#tabs button[data-v="horaires"]').click();
+  if(!(on&&avail)&&$('#v-tickets').classList.contains('active')) document.querySelector('#tabs button[data-v="horaires"]').click();
 }
 function locate(force){
   if(!navigator.geolocation){$('#locLabel').textContent='📍 Indisponible';return}
   if(!GEO.on){$('#locLabel').textContent='📍 Désactivée';return}
   GEO.getCurrentPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
     $('#locLabel').textContent='📍 '+nearestRegion().name;
     if(force) toast('Position mise à jour');
     renderSMS();
@@ -973,7 +974,7 @@ function deselectTile(){
 function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
-    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
+    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
       ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
   });
 }
@@ -989,7 +990,7 @@ async function pickPair(from,to){
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null;
 GEO.watchPosition(p=>{
-  pos={lat:p.coords.latitude,lon:p.coords.longitude};
+  pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
 function renderTiles(){
@@ -1508,6 +1509,7 @@ const REGIONS=[
 ];
 function dist(a,b){const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLo=(b.lon-a.lon)*Math.PI/180;
   const x=Math.sin(dLa/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
+function smsAvailable(){if(!pos)return false;const r=nearestRegion();return dist(pos,r)<=r.r}
 function nearestRegion(){if(!pos)return REGIONS[0];return REGIONS.reduce((a,b)=>dist(pos,a)<dist(pos,b)?a:b)}
 function smsRow(s){const href=`sms:${s.to}${/iPhone|iPad/.test(navigator.userAgent)?'&':'?'}body=${encodeURIComponent(s.kw)}`;
   return `<div class="sms"><div class="z"><b>${esc(s.n)}</b><div class="muted" style="font-size:12px">Envoyer <code>${esc(s.kw.toUpperCase())}</code> au <code>${esc(s.to)}</code>${s.p!=null?`<span class="sms-p">≈ CHF ${s.p.toFixed(2)}</span>`:''}</div></div><a class="btn sm" href="${href}">SMS</a></div>`}
@@ -2125,7 +2127,7 @@ let meWatch=null;
 function startMeWatch(){
   if(!navigator.geolocation||meWatch!=null) return;
   meWatch=GEO.watchPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab()}catch(e){}
     if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>0.5&&heading==null) gpsHeading=p.coords.heading;
     onMyPos();
   },()=>{},{enableHighAccuracy:true,maximumAge:3000});
@@ -2268,6 +2270,7 @@ const COVERAGE=[
 function toggleInfo(on){
   const v=$('#infoView'); if(on&&!$('#countryList').innerHTML)
     $('#countryList').innerHTML=COVERAGE.map(([c,t])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('');
+  if(on) $('#smsCities').innerHTML=REGIONS.map(r=>`<div class="cov"><b>${esc(r.name)}</b><span>${r.sms.map(x=>esc(x.n)+(x.p!=null?' · ≈ CHF '+x.p.toFixed(2):'')).join(' — ')}</span></div>`).join('');
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
 /* ========= Init ========= */
