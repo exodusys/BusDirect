@@ -463,7 +463,7 @@ body.classic .legs > .leg{border-radius:6px}
 .map-ctrl .map-btn{filter:grayscale(1);color:#9aa0a6;background:rgba(127,127,127,.16)}
 .map-ctrl .map-btn.on,#mapView .map-ctrl .map-btn.on{background:#6b7075;color:#fff;filter:grayscale(1) brightness(1.15)}
 
-/* Fond global partagé ; actions ancrées sous le titre du détail. */
+/* Détail et liste des arrêts : fond global unique. */
 #jrPage,#stopPage{background:transparent!important;background-image:none!important}
 body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
 body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
@@ -471,8 +471,10 @@ body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
 body.classic #jrPage > .jp-action-bar{top:calc(var(--jp-title-height,52px) + 8px);border-radius:0}
 body.noglass #jrPage > .jp-action-bar{background:rgba(var(--glass-rgb),.96);backdrop-filter:none;-webkit-backdrop-filter:none}
 body:has(#mapView.open) .jp-action-bar{display:none!important}
-/* Bandeau de la carte, largeur des textes et marches uniformes. */
-.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px}
+/* Étapes de la carte : thème commun, largeur des textes, défilement natif. */
+.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px;scroll-behavior:auto;user-select:none;-webkit-user-select:none;cursor:grab;direction:ltr}
+.map-steps:active{cursor:grabbing}
+.map-steps *{touch-action:pan-x}
 body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 .map-steps::-webkit-scrollbar{display:none}
 .map-steps.full-width{left:12px;right:12px;width:calc(100% - 24px);max-width:none}
@@ -488,7 +490,7 @@ body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop
 .map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer}
 .map-steps .ms.on{box-shadow:none}
 .map-steps .ms-item:has(> .ms.on)::after{content:'';position:absolute;inset:0;border:2.5px solid #fff;border-radius:inherit;pointer-events:none;box-sizing:border-box;z-index:2}
-/* Fondus renforcés et apparition progressive des couleurs sur 64 px. */
+/* Fondus progressifs et chevrons animés. */
 .map-steps{--fade-start:0px;--fade-end:0px;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%)}
 .map-steps:has(~ .map-step-hint.left.visible){--fade-start:64px}
 .map-steps:has(~ .map-step-hint.right.visible){--fade-end:64px}
@@ -502,6 +504,11 @@ body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop
 @media(prefers-reduced-motion:reduce){.map-step-hint span{animation:none}}
 #mapNoticeDialog{color:var(--text);width:min(480px,calc(100% - 48px));max-height:75dvh;overflow:auto;border-radius:24px;padding:18px;box-sizing:border-box}
 #mapNoticeDialog::backdrop{background:rgba(0,0,0,.55)}
+/* Prolongement de la carte vers les bords de Safari. */
+html.map-edge,html.map-edge body{background-color:var(--map-edge-color,#3a3d47)!important}
+html.map-edge body::before{visibility:hidden}
+html.map-edge #mapView{overflow:visible;background:transparent}
+html.map-edge #map{top:-160px;bottom:-160px;height:auto}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -2252,29 +2259,33 @@ function focusWalk(){
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
 function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
-function showMapLegNotices(i){
- const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');
- if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}
- d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');
- d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal();
+function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
+function setupStepScroll(el){
+ if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
+ el.addEventListener('touchstart',e=>{e.stopPropagation();touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,moved:false}:null},{passive:true});
+ el.addEventListener('touchmove',e=>{e.stopPropagation();if(touch&&Math.hypot(e.touches[0].clientX-touch.x,e.touches[0].clientY-touch.y)>7){touch.moved=true;el._noClickUntil=performance.now()+600}},{passive:true});
+ el.addEventListener('touchend',e=>{e.stopPropagation();if(touch?.moved)el._noClickUntil=performance.now()+450;touch=null},{passive:true});
+ el.addEventListener('touchcancel',e=>{e.stopPropagation();touch=null;el._noClickUntil=performance.now()+450},{passive:true});
+ el.addEventListener('click',e=>{e.stopPropagation();if(performance.now()<(el._noClickUntil||0)){e.preventDefault();e.stopImmediatePropagation()}},true);
+ el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;mouse={x:e.clientX,left:el.scrollLeft,moved:false,id:e.pointerId};});
+ el.addEventListener('pointermove',e=>{if(!mouse||e.pointerId!==mouse.id)return;const dx=e.clientX-mouse.x;if(!mouse.moved&&Math.abs(dx)>7){mouse.moved=true;el.setPointerCapture(e.pointerId)}if(mouse.moved){e.preventDefault();el.scrollLeft=mouse.left-dx;el._noClickUntil=performance.now()+450}});
+ const end=()=>{if(mouse?.moved)el._noClickUntil=performance.now()+450;mouse=null};window.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);el.addEventListener('lostpointercapture',end);
+ el.addEventListener('dragstart',e=>e.preventDefault());
+ el.addEventListener('wheel',e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(el.scrollWidth>el.clientWidth&&dx){const before=el.scrollLeft;el.scrollLeft+=dx;if(before!==el.scrollLeft)e.preventDefault()}e.stopPropagation()},{passive:false});
 }
-function setupStepHints(el){
- const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});
- el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();const left=el.scrollLeft>6,right=el.scrollWidth-el.clientWidth-el.scrollLeft>6;
- hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',el.classList.contains('ready')&&(i?right:left))})};
- if(!el._hintBound){el._hintBound=true;el.addEventListener('scroll',()=>el._hintUpdate(),{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate);
-}
+function setupStepHints(el){const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();const left=el.scrollLeft>2,right=el.scrollWidth-el.clientWidth-el.scrollLeft>2;hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',el.classList.contains('ready')&&(i?right:left))})};if(!el._hintBound){el._hintBound=true;let frame=0;el.addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;el._hintUpdate()})},{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)}
 function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
   const WALK_IC='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="13.5" cy="4" r="2"/><path d="M13 7.5c-1.2 0-2 .5-2.6 1.4L8 13l1.7 1 2-3.2.8 3.4L10 21h2.2l2-5 1.6 2.2V21H18v-3.8l-2.3-3.1-.6-2.8 1 1.5 3 1v-2l-2.2-.8-1.6-2.5c-.5-.7-1.3-1-2.3-1z"/></svg>';
   const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))}));   // toutes les marches, même de quelques mètres
   if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
+  const savedScroll=el.scrollLeft;
   el.classList.add('glass');
   el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
-  el.classList.toggle('full-width',segs.length>3);
-  el.onclick=e=>{const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
-  setupStepHints(el);
+  el.classList.toggle('full-width',segs.length>3);el.scrollLeft=savedScroll;
+  el.onclick=e=>{if(performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
+  setupStepScroll(el);setupStepHints(el);
   markMapStep(); placeMapSteps();
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
   clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);   // sans position : affiché quand même
@@ -2302,7 +2313,7 @@ function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) re
   const B=16, hasSteps=!!el.innerHTML, on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
   if(wc) wc.style.bottom=`calc(var(--safe-b) + ${B}px)`;
   const sb=on?B+wc.offsetHeight+8:B; el.style.bottom=`calc(var(--safe-b) + ${sb}px)`;
-  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${sb+(hasSteps?46+8:0)}px)`;
+  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${sb+(hasSteps?el.offsetHeight+8:0)}px)`;
   placeAttrib();
 }
 // (i) OpenFreeMap : en haut à droite, juste sous la barre du titre
@@ -2346,7 +2357,7 @@ function mapFit(){
 }
 /* Glisser depuis le bord gauche de la carte pour revenir à la liste */
 (()=>{ const mv=document.getElementById('mapView'); let sw=null;
-  mv.addEventListener('touchstart',e=>{ const t=e.touches[0]; if(e.touches.length===1&&t.clientX<28){ sw={x:t.clientX,y:t.clientY,dx:0,on:false}; e.stopPropagation() } else sw=null },{capture:true,passive:true});
+  mv.addEventListener('touchstart',e=>{ if(e.target.closest('#mapSteps,.map-step-hint')){sw=null;return} const t=e.touches[0]; if(e.touches.length===1&&t.clientX<28){ sw={x:t.clientX,y:t.clientY,dx:0,on:false}; e.stopPropagation() } else sw=null },{capture:true,passive:true});
   mv.addEventListener('touchmove',e=>{ if(!sw) return; e.stopPropagation(); const t=e.touches[0], dx=t.clientX-sw.x, dy=Math.abs(t.clientY-sw.y);
     if(!sw.on){ if(dy>24&&dy>dx){ sw=null; return } if(dx>10) sw.on=true }
     if(sw.on){ if(e.cancelable) e.preventDefault(); sw.dx=Math.max(0,dx); mv.style.transition='none'; mv.style.transform=`translateX(${sw.dx}px)`; mv.style.opacity=String(1-Math.min(.5,sw.dx/innerWidth)) } },{capture:true,passive:false});
@@ -2721,5 +2732,31 @@ applySettings();
 })();
 renderDests(); renderTiles(); renderSMS(); locate();
 </script>
+
+<script>
+(() => {
+ const view=document.getElementById('mapView'),root=document.documentElement;
+ if(!view)return;
+ let active=false,themeNode=null,themeParent=null,themeNext=null;
+ const sync=()=>{
+  const open=view.classList.contains('open');
+  root.style.setProperty('--map-edge-color',document.getElementById('map')?.classList.contains('dk')?'#3a3d47':'#f2efe9');
+  if(open===active)return;active=open;
+  if(open){themeNode=document.querySelector('meta[name="theme-color"]');if(themeNode){themeParent=themeNode.parentNode;themeNext=themeNode.nextSibling;themeNode.remove()}root.classList.add('map-edge')}
+  else{root.classList.remove('map-edge');if(themeNode&&themeParent&&!document.querySelector('meta[name="theme-color"]'))themeParent.insertBefore(themeNode,themeNext?.parentNode===themeParent?themeNext:null);themeNode=null}
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+   if(typeof mlMap==='undefined'||!mlMap)return;mlMap.resize();
+   if(typeof placeMapSteps==='function')placeMapSteps();
+   if(!open)return;
+   if(typeof mapStepSel!=='undefined'&&mapStepSel!=null)focusStep(mapStepSel,true);
+   else if(typeof mapWalk!=='undefined'&&mapWalk!=null)focusWalk();
+   else if(typeof mapFit==='function')mapFit();
+  }));
+ };
+ new MutationObserver(sync).observe(view,{attributes:true,attributeFilter:['class']});
+ const map=document.getElementById('map');if(map)new MutationObserver(sync).observe(map,{attributes:true,attributeFilter:['class']});sync();
+})();
+</script>
+
 </body>
 </html>
