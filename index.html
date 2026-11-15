@@ -506,14 +506,19 @@ html.map-edge body::before{visibility:hidden}
 html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
 html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));width:100%;height:auto;max-height:none;margin:0;padding:0;border:0}
 #mapSub .map-countdown{white-space:nowrap;font-variant-numeric:tabular-nums}
-.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;border:0;border-radius:14px;background:rgba(127,127,127,.16);color:var(--text);cursor:pointer;touch-action:manipulation}
-.home-btn svg{display:block;width:23px;height:23px;pointer-events:none}
-.home-btn:active{background:rgba(127,127,127,.3)}
+/* Maison discrète ; zone d'appui inchangée. */
+.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
+.home-btn svg{display:block;width:18px;height:18px;stroke-width:1.7;opacity:.75;pointer-events:none}
+.home-btn:active{background:rgba(127,127,127,.08);color:var(--text)}
+.home-btn:active svg,.home-btn:focus-visible svg{opacity:1}
 .home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 #jrPage .jp-title,#stopPage .jp-title{flex:1;min-width:0}
 #mapView .map-bar .t{flex:1;min-width:0}
 #mapView .map-bar .home-btn,#jrPage .jp-bar .home-btn,#stopPage .jp-bar .home-btn,#listTop .home-btn{margin-left:auto}
 #toast{transition:opacity .25s,transform .25s}
+#journeys.edge-pulling,#v-horaires.edge-pulling{transition:none;will-change:transform}
+#journeys.edge-returning,#v-horaires.edge-returning{transition:transform .42s cubic-bezier(.22,1.5,.36,1);will-change:transform}
+@media(prefers-reduced-motion:reduce){#journeys.edge-returning,#v-horaires.edge-returning{transition:none}}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -2806,6 +2811,51 @@ renderDests(); renderTiles(); renderSMS(); locate();
   requestAnimationFrame(()=>requestAnimationFrame(()=>{if(typeof mlMap==='undefined'||!mlMap)return;mlMap.resize();if(typeof placeMapSteps==='function')placeMapSteps();if(!open)return;if(typeof mapStepSel!=='undefined'&&mapStepSel!=null)focusStep(mapStepSel,true);else if(typeof mapWalk!=='undefined'&&mapWalk!=null)focusWalk();else if(typeof mapFit==='function')mapFit()}));
  };
  new MutationObserver(sync).observe(view,{attributes:true,attributeFilter:['class']});const map=document.getElementById('map');if(map)new MutationObserver(sync).observe(map,{attributes:true,attributeFilter:['class']});sync();
+})();
+</script>
+
+
+<script>
+/* Rebond commun à l'accueil et à la liste ; bandeaux fixes immobiles. */
+(() => {
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ let content=null,gesture=null,raw=0,resetTimer=null,wheelTimer=null,blockedUntil=0;
+ const context=()=>{
+  if(reduced.matches||document.querySelector('#jrPage.on,#stopPage.on,#mapView.open')||(typeof tileArmed!=='undefined'&&tileArmed))return null;
+  const list=document.getElementById('journeys'),home=document.getElementById('v-horaires');
+  if(document.body.classList.contains('list-page')&&document.getElementById('v-list')?.classList.contains('active')&&list?.querySelector('.jr'))return {content:list,zone:document.getElementById('v-list'),isList:true};
+  if(!document.body.classList.contains('list-page')&&home?.classList.contains('active'))return {content:home,zone:home,isList:false};
+  return null;
+ };
+ const limits=()=>{const sc=document.scrollingElement||document.documentElement;return {top:window.scrollY<=2,bottom:window.scrollY+window.innerHeight>=sc.scrollHeight-4}};
+ const clear=()=>{clearTimeout(resetTimer);clearTimeout(wheelTimer);if(content){content.classList.remove('edge-pulling','edge-returning');content.style.removeProperty('transform')}content=null;raw=0;gesture=null};
+ const pull=value=>{if(!content)return;clearTimeout(resetTimer);content.classList.remove('edge-returning');content.classList.add('edge-pulling');const y=Math.sign(value)*24*(1-Math.exp(-Math.abs(value)/90));content.style.transform=`translate3d(0,${y.toFixed(2)}px,0)`};
+ const release=()=>{gesture=null;raw=0;if(!content?.classList.contains('edge-pulling'))return;content.classList.remove('edge-pulling');content.classList.add('edge-returning');content.style.transform='translate3d(0,0,0)';clearTimeout(resetTimer);resetTimer=setTimeout(clear,460)};
+ document.addEventListener('touchstart',e=>{
+  const scope=context();if(!scope||e.touches.length!==1||!scope.zone.contains(e.target)||e.target.closest('button,input,select,textarea,a')){release();return}
+  const t=e.touches[0];if(scope.isList&&t.clientX<28){release();return}
+  clear();content=scope.content;blockedUntil=0;gesture={x:t.clientX,y:t.clientY,lastY:t.clientY,moved:false};
+ },{passive:true});
+ document.addEventListener('touchmove',e=>{
+  if(!gesture)return;if(context()?.content!==content||e.touches.length!==1){release();return}
+  const t=e.touches[0],dx=t.clientX-gesture.x,dy=t.clientY-gesture.y,step=t.clientY-gesture.lastY;gesture.lastY=t.clientY;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>10){release();return}if(Math.abs(dy)<8)return;
+  const edge=limits();
+  if(raw!==0){raw+=step;if((raw>0&&!edge.top)||(raw<0&&!edge.bottom)){release();return}}
+  else if(edge.top&&step>0)raw=step;else if(edge.bottom&&step<0)raw=step;else return;
+  gesture.moved=true;blockedUntil=performance.now()+450;pull(raw);if(e.cancelable)e.preventDefault();
+ },{passive:false});
+ document.addEventListener('touchend',()=>{if(gesture?.moved)blockedUntil=performance.now()+350;release()},{passive:true});
+ document.addEventListener('touchcancel',release,{passive:true});
+ document.addEventListener('click',e=>{if(content?.contains(e.target)&&e.detail!==0&&performance.now()<blockedUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
+ window.addEventListener('wheel',e=>{
+  const scope=context();if(!scope||gesture||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;const edge=limits();
+  if(!((edge.top&&e.deltaY<0)||(edge.bottom&&e.deltaY>0)))return;
+  if(content!==scope.content){clear();content=scope.content}
+  raw=Math.max(-150,Math.min(150,raw-e.deltaY*.45));pull(raw);clearTimeout(wheelTimer);wheelTimer=setTimeout(release,90);
+ },{passive:true});
+ new MutationObserver(()=>{if(content&&context()?.content!==content)clear()}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+ window.addEventListener('resize',clear,{passive:true});
 })();
 </script>
 
