@@ -506,6 +506,7 @@ html.map-edge body::before{visibility:hidden}
 html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
 html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));width:100%;height:auto;max-height:none;margin:0;padding:0;border:0}
 #mapSub .map-countdown{white-space:nowrap;font-variant-numeric:tabular-nums}
+/* Maison discrète ; zone d'appui inchangée. */
 .home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
 .home-btn svg{display:block;width:18px;height:18px;stroke-width:1.7;opacity:.75;pointer-events:none}
 .home-btn:active{background:rgba(127,127,127,.08);color:var(--text)}
@@ -515,11 +516,9 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 #mapView .map-bar .t{flex:1;min-width:0}
 #mapView .map-bar .home-btn,#jrPage .jp-bar .home-btn,#stopPage .jp-bar .home-btn,#listTop .home-btn{margin-left:auto}
 #toast{transition:opacity .25s,transform .25s}
-.edge-pulling{transition:none!important;will-change:transform}
-.edge-returning{transition:transform .6s cubic-bezier(.18,1.55,.3,1)!important;will-change:transform}
-@media(prefers-reduced-motion:reduce){.edge-returning{transition:none!important}}
-#results .nearby-result{padding-left:28px;border-left:2px solid var(--border)}
-#results .res .a,#destList .res .a{white-space:normal;line-height:1.4;font-size:12px;margin-top:3px}
+#journeys.edge-pulling,#v-horaires.edge-pulling{transition:none;will-change:transform}
+#journeys.edge-returning,#v-horaires.edge-returning{transition:transform .42s cubic-bezier(.22,1.5,.36,1);will-change:transform}
+@media(prefers-reduced-motion:reduce){#journeys.edge-returning,#v-horaires.edge-returning{transition:none}}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -778,7 +777,7 @@ function setListTitle(){
   const el=$('#jrTitle'); if(!el||!selDest) return;
   const from=selDest.fromLabel||(selFrom?selFrom.name:'Ma position');
   const stop=S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?selDest.nearStop.name:'';
-  el.innerHTML=`<span class="lt-line">Depuis - ${esc(from)}</span><span class="lt-line">Vers - ${esc(selDest._primaryStation?.name||selDest.name)}</span>`;
+  el.innerHTML=`<span class="lt-line">Depuis - ${esc(from)}</span><span class="lt-line">Vers - ${esc(selDest.name)}</span>`;
   requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||52; document.documentElement.style.setProperty('--lt-h',h+'px') });
 }
 const listSep=()=>true;   // les listes s'affichent toujours sur leur propre page
@@ -986,126 +985,35 @@ function locate(force){
 
 /* ========= Transitous ========= */
 function searchName(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
-function compactCityName(value){const parts=String(value||'').split(',').map(part=>part.trim()).filter(Boolean);return parts.length>1&&new Set(parts.map(searchName)).size===1?parts[0]:String(value||'').trim()}
-function railModesOf(place){return JSON.stringify(place.modes||place.vehicleModes||place.transportModes||[])}
-function busOnlyStop(place){const modes=railModesOf(place);return /bus|tram|coach/i.test(modes)&&!/rail|train|long_distance|regional/i.test(modes)}
-function knownCityStation(destination,name){const key=searchName(compactCityName(name));if(!['lucerne','luzern','lucernegare','garedelucerne'].includes(key))return null;if(Number.isFinite(Number(destination.lat))&&Number.isFinite(Number(destination.lon))&&(Number(destination.lat)<45||Number(destination.lat)>49||Number(destination.lon)<5||Number(destination.lon)>11))return null;return {query:'Luzern',uic:'8505000',aliases:['luzern','lucerne']}}
-function matchesUic(place,uic){return [place.id,place.stopId,place.stopCode,place.code,place.uic].some(value=>new RegExp('(^|[^0-9])'+uic+'([^0-9]|$)').test(String(value||'')))}
 function citySearchResult(r,query){
  if(!r||r.type==='STOP'||r.type==='ADDRESS')return false;
  const meta=[r.type,r.category,r.subtype,r.placeType,r.osmValue,r.osmType,r.class,JSON.stringify(r.tags||{})].join(' ').toLowerCase();
- if(/\b(amenity|tourism|shop|leisure|attraction|museum|hospital|school|hotel|restaurant)\b/.test(meta))return false;
  if(/\b(city|town|village|municipality|locality|hamlet|administrative|commune)\b/.test(meta))return true;
- if(r.type==='PLACE'&&knownCityStation(r,r.name))return true;
- const n=searchName(r.name);return !!n&&(r.areas||[]).some(area=>searchName(area.name)===n);
+ if(/\b(amenity|tourism|shop|leisure|attraction|museum|hospital|school|hotel|restaurant)\b/.test(meta))return false;
+ const n=searchName(r.name);return (r.areas||[]).some(area=>searchName(area.name)===n)||(r.type==='PLACE'&&n===searchName(query));
 }
-function bareCityStop(place,query){if(place.type!=='STOP'||busOnlyStop(place)||place._explicitStop)return false;const name=compactCityName(place.name);return searchName(name)===searchName(compactCityName(query))&&!/[,;]|\b(gare|bahnhof|station|hbf|platz|quai|strasse|street|rue)\b/i.test(name)}
 function stationSearchResult(r,city){
- if(r.type!=='STOP'||!(r.id||r.stopId)||busOnlyStop(r))return false;
- const name=String(r.name||'');if(/bahnhof(quai|platz|strasse)|gare routi[eè]re|busbahnhof|bushof|\b(rue|street|avenue|strasse)\b/i.test(name))return false;
- const profile=city&&knownCityStation(city,city.name);
- return !!(profile&&matchesUic(r,profile.uic))||/rail|train|long_distance|regional/i.test(railModesOf(r))||/\b(gare|bahnhof|station|hauptbahnhof|hbf|stazione|estacion|estação)\b/i.test(name)||!!city&&searchName(compactCityName(name))===searchName(compactCityName(city.name));
+ if(r.type!=='STOP'||!(r.id||r.stopId))return false;const name=String(r.name||''),modes=JSON.stringify(r.modes||r.vehicleModes||r.transportModes||[]);
+ return /rail|train|long_distance|regional/i.test(modes)||/\b(gare|bahnhof|station|hauptbahnhof|hbf|stazione|estacion|estação)\b/i.test(name)||searchName(name)===searchName(city?.name);
 }
-async function fetchPlaceList(url){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),8000);try{const response=await fetch(url,{signal:controller.signal});if(!response.ok)throw new Error('geocode');const data=await response.json();return Array.isArray(data)?data:(data.results||data.places||data.stops||[])}finally{clearTimeout(timeout)}}
-async function searchPlacesRaw(text,place,language='fr',stopsOnly=false){return fetchPlaceList(`${API}/v1/geocode?text=${encodeURIComponent(text)}&language=${encodeURIComponent(language)}`+(stopsOnly?'&type=STOP&numResults=30':'')+(place?`&place=${place.lat},${place.lon}`:''))}
-const closestSearchStopCache=new Map();
-async function closestSearchStop(place){
- if(!Number.isFinite(Number(place.lat))||!Number.isFinite(Number(place.lon)))return null;
- const key=Number(place.lat).toFixed(6)+','+Number(place.lon).toFixed(6);if(closestSearchStopCache.has(key))return closestSearchStopCache.get(key);
- const task=(async()=>{
-  const pick=list=>list.map(r=>r.place||r).filter(r=>(r.type==='STOP'||!r.type)&&(r.id||r.stopId)&&Number.isFinite(Number(r.lat))&&Number.isFinite(Number(r.lon))).sort((a,b)=>dist(place,a)-dist(place,b))[0];
-  let stop=null;try{stop=pick(await fetchPlaceList(`${API}/v1/reverse-geocode?place=${place.lat},${place.lon}&type=STOP`))}catch{}
-  if(!stop)for(const radius of [.007,.02]){try{stop=pick(await fetchPlaceList(`${API}/v1/map/stops?min=${Number(place.lat)-radius},${Number(place.lon)-radius*1.4}&max=${Number(place.lat)+radius},${Number(place.lon)+radius*1.4}`))}catch{}if(stop)break}
-  return stop?{...stop,type:'STOP',id:stop.stopId||stop.id,name:stop.name,lat:Number(stop.lat),lon:Number(stop.lon),areas:stop.areas||[],_explicitStop:true}:null;
- })();closestSearchStopCache.set(key,task);const result=await task;if(!result)closestSearchStopCache.delete(key);return result;
-}
-function stationCityLabel(city,station){const base=compactCityName(city.name),name=compactCityName(station.name),profile=knownCityStation(city,base);if(searchName(name)===searchName(base)||profile?.aliases.includes(searchName(name)))return base;let suffix=name;if(name.toLowerCase().startsWith(base.toLowerCase()))suffix=name.slice(base.length).replace(/^[\s,–—-]+/,'');return suffix?`${base} — ${suffix}`:base}
-function resultModes(r){const modes=railModesOf(r),out=[];if(/rail|train|long_distance|regional/i.test(modes))out.push('Train');if(/bus|coach/i.test(modes))out.push('Bus');if(/tram/i.test(modes))out.push('Tram');if(/subway|metro/i.test(modes))out.push('Métro');if(/ferry/i.test(modes))out.push('Bateau');return out}
-function resultKind(r){if(r._stationChoice||r._primaryStation||r._explicitStation||resultModes(r).includes('Train'))return 'Gare';if(r.type==='STOP')return busOnlyStop(r)?'Arrêt de bus':'Arrêt de transport';if(r.type==='ADDRESS')return 'Adresse';return 'Lieu / point d’intérêt'}
-function resultRegion(r){const primary=new Set([searchName(compactCityName(r._displayName||r.name)),searchName(compactCityName(r.name))]);const values=(r.areas||[]).map(a=>a.name).concat([r.city,r.municipality,r.region,r.canton,r.country].filter(v=>typeof v==='string'));const seen=new Set();return values.map(v=>String(v||'').trim()).filter(v=>{const k=searchName(v);if(!k||primary.has(k)||seen.has(k))return false;seen.add(k);return true}).slice(0,4).join(', ')}
-function searchResultSubtitle(r){
- const parts=[r._nearFor?`Arrêt le plus proche de ${r._nearFor}`:resultKind(r)];
- if(r._nearOrigin){const meters=Math.round(dist(r,r._nearOrigin)*1000);if(Number.isFinite(meters))parts.push(meters<1000?`${meters} m à vol d’oiseau`:`${(meters/1000).toFixed(1)} km à vol d’oiseau`)}
- const modes=resultModes(r);if(modes.length)parts.push(modes.join(' / '));
- if(r._stationChoice&&searchName(compactCityName(r.name))!==searchName(compactCityName(r._stationCity)))parts.push(compactCityName(r.name));
- const platform=r.platformCode||r.platform?.name||r.track;if(platform)parts.push(`Quai ${platform}`);
- const address=typeof r.address==='string'?r.address:[r.street||r.streetName||r.address?.street,r.houseNumber||r.address?.houseNumber,r.postcode||r.postalCode||r.address?.postcode].filter(Boolean).join(' ');
- if(address&&searchName(address)!==searchName(r.name))parts.push(address);
- const region=resultRegion(r);if(region)parts.push(region);
- const lines=Array.isArray(r.routes)?r.routes.map(route=>typeof route==='string'?route:route.shortName||route.routeShortName).filter(Boolean):[];if(lines.length)parts.push(`Lignes ${[...new Set(lines)].slice(0,6).join(', ')}`);
- const code=r.stopCode||r.code;if(code)parts.push(`Code arrêt ${code}`);
- return [...new Set(parts)].join(' · ');
-}
-function destinationSubtitle(d){if(d.detail)return d.detail;const kind=resultKind(d),name=compactCityName(d._primaryStation?.name||d.name),parts=[kind];if(d._primaryStation&&searchName(name)!==searchName(compactCityName(d.name)))parts.push(name);if(d.area&&searchName(d.area)!==searchName(compactCityName(d.name)))parts.push(d.area);return parts.join(' · ')}
-function sameSearchStop(a,b){
- if(a.type!=='STOP'||b.type!=='STOP')return false;const aid=a.id||a.stopId,bid=b.id||b.stopId;if(aid&&aid===bid)return true;
- if(busOnlyStop(a)!==busOnlyStop(b))return false;
- const ap=a.platformCode||a.platform?.name||a.track,bp=b.platformCode||b.platform?.name||b.track;if(ap&&bp&&String(ap)!==String(bp))return false;
- if(![a.lat,a.lon,b.lat,b.lon].every(v=>Number.isFinite(Number(v))))return false;
- const railA=a._stationChoice||resultModes(a).includes('Train'),railB=b._stationChoice||resultModes(b).includes('Train');
- const clean=r=>searchName(compactCityName(String(r.name||'').replace(/\b(gare|bahnhof|station)\b/gi,'')));
- return clean(a)===clean(b)&&dist(a,b)<((railA&&railB)?0.15:0.003);
-}
-async function cityStationRows(city){
- const profile=knownCityStation(city,city.name),query=profile?.query||compactCityName(city.name);
- const groups=await Promise.allSettled([searchPlacesRaw(query,city,'de',true),searchPlacesRaw(`${query} gare`,city,'fr',true),searchPlacesRaw(`${query} Bahnhof`,city,'de',true)]),out=[];
- for(const r of groups.flatMap(g=>g.status==='fulfilled'?g.value:[])){
-  if(!stationSearchResult(r,city)||!Number.isFinite(Number(r.lat))||!Number.isFinite(Number(r.lon)))continue;if(Number.isFinite(Number(city.lat))&&Number.isFinite(Number(city.lon))&&dist(city,r)>20)continue;
-  if(profile&&!matchesUic(r,profile.uic)&&!(/rail|train|long_distance|regional/i.test(railModesOf(r))&&profile.aliases.includes(searchName(compactCityName(r.name)))))continue;
-  const row={...r,id:r.id||r.stopId,_displayName:stationCityLabel(city,r),_stationCity:compactCityName(city.name),_stationChoice:true,_explicitRailSelection:true};
-  const old=out.findIndex(item=>sameSearchStop(item,row));if(old<0)out.push(row);else if((r.areas||[]).length>(out[old].areas||[]).length)out[old]=row;
- }
- return out.slice(0,8);
-}
-function primaryStationError(destination,choices){const error=new Error('primary_station_choice');error.destination=destination;error.stationChoices=choices;return error}
-async function resolveCityStationDestination(destination){
- if(!destination||destination._explicitStop)return destination;
- const cityName=compactCityName(destination._cityQuery||destination.name),profile=knownCityStation(destination,cityName);
- if(destination._primaryStation?.id&&destination._primaryStationResolutionVersion===3)return destination._primaryStation;
- if(destination._primaryStation){delete destination._primaryStation;delete destination.nearStop;delete destination._fw}
- if(!profile&&(destination._explicitStation||destination._primaryChecked))return destination;
- if(!profile&&!destination._cityQuery&&!bareCityStop(destination,cityName)&&!citySearchResult(destination,cityName))return destination;
- const query=profile?.query||cityName;
- const groups=await Promise.allSettled([searchPlacesRaw(query,destination,'fr',true),searchPlacesRaw(query,destination,'de',true),searchPlacesRaw(`${query} gare principale`,destination,'fr',true),searchPlacesRaw(`${query} Hauptbahnhof`,destination,'de',true)]);
- const arrays=groups.map(group=>group.status==='fulfilled'?group.value:[]),all=arrays.flat();if(groups.every(group=>group.status==='rejected'))throw new Error('station_lookup_failed');
- const aliases=new Set([searchName(cityName),...(profile?.aliases||[])]),stationQueryIds=new Set(arrays.slice(2).flat().map(place=>place.id||place.stopId));
- for(const place of arrays[1])if(place.type==='STOP'&&!busOnlyStop(place)&&/^[^ ,;]+$/.test(place.name||'')&&stationQueryIds.has(place.id||place.stopId))aliases.add(searchName(place.name));
- const unique=new Map();
- for(const place of all){
-  const id=place.id||place.stopId;if(place.type!=='STOP'||!id||busOnlyStop(place)||!Number.isFinite(Number(place.lat))||!Number.isFinite(Number(place.lon)))continue;
-  if(Number.isFinite(Number(destination.lat))&&Number.isFinite(Number(destination.lon))&&dist(destination,place)>20)continue;
-  const name=place.name||'',n=searchName(compactCityName(name)),rail=/rail|train|long_distance|regional/i.test(railModesOf(place)),uic=!!profile&&matchesUic(place,profile.uic);
-  const main=/hauptbahnhof|\bhbf\b|gare (principale|centrale)|central station|stazione centrale/i.test(name)||place.isMainStation===true,match=aliases.has(n);
-  if(profile&&!uic&&!(rail&&match))continue;if(!rail&&!main&&!match&&!stationSearchResult(place))continue;
-  let score=(uic?1000:0)+(main?120:0)+(match?80:0)+(rail?40:0)+(!name.includes(',')?10:0);if(/bahnhof(quai|platz|strasse)|bus station|gare routi[eè]re|busbahnhof|bushof/i.test(name))score-=160;if(score<0)continue;
-  if(!unique.has(id)||unique.get(id).score<score)unique.set(id,{place:{type:'STOP',id,name,lat:Number(place.lat),lon:Number(place.lon)},score});
- }
- const ranked=[...unique.values()].sort((a,b)=>b.score-a.score),top=ranked[0],second=ranked.find(candidate=>top&&searchName(candidate.place.name)!==searchName(top.place.name));
- if(!top||top.score<80||(second&&top.score-second.score<20))throw primaryStationError(destination,ranked.slice(0,8).map(candidate=>candidate.place));
- destination._primaryStation=top.place;destination._primaryStationResolutionVersion=3;destination._cityQuery=cityName;delete destination.nearStop;delete destination._fw;if(destination.uid){save();setListTitle()}return top.place;
-}
+async function searchPlacesRaw(text,place){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);try{const u=`${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(place?`&place=${place.lat},${place.lon}`:'');const response=await fetch(u,{signal:controller.signal});if(!response.ok)throw new Error('geocode');const data=await response.json();return Array.isArray(data)?data:(data.results||data.places||[])}finally{clearTimeout(timeout)}}
 async function geocode(text){
- const initial=await searchPlacesRaw(text,pos),places=initial.filter(r=>r.type!=='STOP'&&!citySearchResult(r,text)).slice(0,5);
- const cityMap=new Map(initial.filter(r=>citySearchResult(r,text)).map(city=>[searchName(city.name),city]));
- for(const place of places){const area=(place.areas||[]).find(a=>/^(city|town|village|municipality|commune)$/i.test(a.type||a.placeType||a.level||''));if(area?.name&&!cityMap.has(searchName(area.name)))cityMap.set(searchName(area.name),{type:'PLACE',category:'city',name:area.name,lat:area.lat??place.lat,lon:area.lon??place.lon})}
- const cities=[...cityMap.values()].slice(0,2);
- const [pairs,stationGroups]=await Promise.all([Promise.all(places.map(async place=>{const stop=await closestSearchStop(place).catch(()=>null);return stop?[place,{...stop,_nearFor:place.name,_nearOrigin:{lat:place.lat,lon:place.lon}}]:[place]})),Promise.all(cities.map(city=>cityStationRows(city)))]);
- const nearStops=pairs.flat().filter(r=>r._nearFor),stations=[];for(const row of stationGroups.flat())if(!stations.some(other=>sameSearchStop(other,row))&&!nearStops.some(other=>sameSearchStop(other,row)))stations.push(row);
- const otherStops=[];
- for(const source of initial.filter(r=>r.type==='STOP'&&(r.id||r.stopId))){
-  const r={...source,_displayName:compactCityName(source.name),...(bareCityStop(source,text)?{_cityQuery:compactCityName(text)}:{})};
-  if([...stations,...nearStops,...otherStops].some(other=>sameSearchStop(other,r)))continue;
-  if(!busOnlyStop(r)&&stations.some(st=>searchName(compactCityName(r.name))===searchName(st._stationCity)&&Number.isFinite(Number(r.lat))&&Number.isFinite(Number(r.lon))&&dist(r,st)<1))continue;
-  otherStops.push(r);
- }
- const cityQuery=cities.some(city=>searchName(compactCityName(city.name))===searchName(compactCityName(text)));
- return cityQuery?[...stations,...pairs.flat(),...otherStops]:[...pairs.flat(),...stations,...otherStops];
+ const initial=await searchPlacesRaw(text,pos),cities=initial.filter(r=>citySearchResult(r,text)).slice(0,2);
+ const extra=(await Promise.all(cities.map(async city=>{
+  const groups=await Promise.allSettled([searchPlacesRaw(`${city.name} gare`,city),searchPlacesRaw(`${city.name} Bahnhof`,city)]);
+  let stops=groups.flatMap(g=>g.status==='fulfilled'?g.value:[]).filter(r=>r.type==='STOP'&&(r.id||r.stopId));
+  stops=stops.filter(r=>!Number.isFinite(Number(city.lat))||!Number.isFinite(Number(city.lon))||!Number.isFinite(Number(r.lat))||!Number.isFinite(Number(r.lon))||dist(city,r)<20);
+  const railway=stops.filter(r=>stationSearchResult(r,city)),candidates=railway.length?railway:stops.filter(r=>!String(r.name||'').includes(','));
+  return candidates.slice(0,8).map(r=>({...r,id:r.id||r.stopId,_stationChoice:true}));
+ }))).flat();
+ const combined=[...extra,...initial.filter(r=>!citySearchResult(r,text))],seen=new Set();
+ const unique=combined.filter(r=>{if(r.type==='STOP'&&!(r.id||r.stopId))return false;const key=r.type==='STOP'?'stop:'+(r.id||r.stopId):r.type+':'+r.name+':'+r.lat+','+r.lon;if(seen.has(key))return false;seen.add(key);return true});
+ return unique.sort((a,b)=>Number(!!b._stationChoice||stationSearchResult(b))-Number(!!a._stationChoice||stationSearchResult(a)));
 }
 
 let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
 async function plan(dest, time, cursor, from){
-  dest=dest?._primaryStation||dest;
   if(!from&&!pos) throw new Error('nopos');
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
@@ -1122,7 +1030,6 @@ async function plan(dest, time, cursor, from){
 // Arrêt le plus proche d'une adresse / d'un lieu (mis en cache sur la destination)
 // Arrêt le plus proche d'une adresse / d'un POI (mémorisé sur la destination)
 async function nearestStop(p){
-  if(p?._primaryStation?.id&&p._primaryStationResolutionVersion===3)return p._primaryStation;
   if(!p||p.type==='STOP'||S.settings.nearestOnly===false) return p;   // option : accepter d'autres arrêts → on vise l'adresse elle-même
   if(p.nearStop&&p.nearStop.id) return p.nearStop;
   const pick=list=>{ list=(list||[]).filter(x=>x&&x.lat!=null&&(x.stopId||x.id)); if(!list.length) return null;
@@ -1181,7 +1088,6 @@ function withFinalWalk(list,orig,stop,fw){
   });
 }
 async function nextDepartures(dest,from,onMore){
-  dest=await resolveCityStationDestination(dest);
   const origDest=dest;
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
   const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
@@ -1208,28 +1114,28 @@ $('#q').addEventListener('input',e=>{
   qTimer=setTimeout(async()=>{
     const box=$('#results'); box.style.display='block'; box.innerHTML='<div class="spin"></div>';
     try{
-      const res=await geocode(v);
+      const res=(await geocode(v)).slice(0,10);
       if($('#q').value.trim()!==v)return;
-      if(!res.length){box.innerHTML='<div class="empty">Aucune adresse, aucun lieu ou arrêt trouvé.</div>';return}
-      box.innerHTML=res.map((r,i)=>`<div class="res${r._nearFor?' nearby-result':''}" data-i="${i}"><div class="ic">${r._stationChoice?'🚉':TYPE_ICON[r.type]||'📍'}</div>
-        <div style="flex:1"><div class="n">${esc(r._displayName||r.name)}</div><div class="a">${esc(searchResultSubtitle(r))}</div></div><span>＋</span></div>`).join('');
+      if(!res.length){box.innerHTML='<div class="empty">Aucun arrêt ou gare trouvé. Précise le nom de la gare.</div>';return}
+      box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${r._stationChoice?'🚉':TYPE_ICON[r.type]||'📍'}</div>
+        <div style="flex:1"><div class="n">${esc(r.name)}</div><div class="a">${esc((r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2).join(', ')||r.type)}</div></div><span>＋</span></div>`).join('');
       box.querySelectorAll('.res').forEach(el=>el.onclick=()=>addDest(res[+el.dataset.i]));
     }catch{if($('#q').value.trim()===v)box.innerHTML='<div class="empty">Recherche indisponible</div>'}
   },300);
 });
 function addDest(r){
-  if(citySearchResult(r,$('#q').value.trim())){toast("Choisis une gare, une adresse ou un lieu précis.");return}
+  if(citySearchResult(r,$('#q').value.trim())){toast("Choisis un arrêt de gare, pas la ville seule.");return}
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
-  S.dests.push({uid:Date.now().toString(36),id:r.id||r.stopId,type:r.type,name:r._displayName||r.name,lat:r.lat,lon:r.lon,detail:searchResultSubtitle(r),
-    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||'',...(r._explicitStop?{_explicitStop:true}:{}),...(r._cityQuery?{_cityQuery:r._cityQuery}:{}),...(r._stationChoice?{_explicitStation:true,_primaryStation:{type:'STOP',id:r.id||r.stopId,name:r.name,lat:r.lat,lon:r.lon},_primaryStationResolutionVersion:3}:{})});
-  save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1)).catch(()=>{});
+  S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
+    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
+  save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
 }
 function renderDests(){
   const el=$('#destList');
   if(!S.dests.length){el.innerHTML='<div class="empty"><b>⭐</b>Recherche un arrêt, une adresse ou un lieu.</div>';return}
   el.innerHTML=S.dests.map((d,i)=>`<div class="res" style="padding:10px 4px"><div class="ic">${TYPE_ICON[d.type]||'📍'}</div>
-    <div style="flex:1"><div class="n">${esc(d.name)}</div><div class="a">${esc(destinationSubtitle(d))}</div></div>
+    <div style="flex:1"><div class="n">${esc(d.name)}</div><div class="a">${esc(d.area)}</div></div>
     <button class="del" onclick="moveDest(${i},-1)">↑</button><button class="del" onclick="delDest('${d.uid}')">✕</button></div>`).join('');
 }
 function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===uid||selFrom?.uid===uid){selDest=null;selFrom=null}save();renderDests();renderTiles()}
@@ -1270,7 +1176,7 @@ GEO.watchPosition(p=>{
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
-    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(destinationSubtitle(d))}</div></div></div>`).join('')
+    <div><div class="nm">${esc(d.name)}</div><div class="sub">${esc(d.area)}</div></div></div>`).join('')
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
   document.querySelectorAll('.tile').forEach(bindTileDrag);
   drawLink();
@@ -1436,7 +1342,7 @@ async function loadJourneys(){
   try{
     const usedPos=pos&&{...pos};
     // affichage instantané depuis le cache (si récent), puis mise à jour
-    const ck='bd_jc_primary3_'+pairKey+(selDest._primaryStation?.id||'')+(planTime?'@'+(+planTime):'');
+    const ck='bd_jc_'+pairKey+(planTime?'@'+(+planTime):'');
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
       if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
@@ -1448,16 +1354,10 @@ async function loadJourneys(){
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
-    if(!data.length){box.innerHTML=`<div class="card glass empty">Aucun parcours trouvé vers ${esc(selDest._primaryStation?.name||selDest.name)} à l’horaire choisi.</div>`;return}
+    if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
-  }catch(e){
- if(e.message==='primary_station_choice'){
-  if(selDest!==e.destination)return;
-  box.innerHTML='<div class="card glass empty">Choisis la gare à utiliser : la gare principale ne peut pas être identifiée avec certitude.</div>'+e.stationChoices.map((station,i)=>`<button type="button" class="btn ghost" style="display:block;width:100%;margin:8px 0" data-primary-choice="${i}">${esc(station.name)}</button>`).join('')+(e.stationChoices.length?'':'<div class="card glass empty">La gare ferroviaire n’a pas été trouvée. Réessaie la recherche avec son nom exact.</div>');
-  box.querySelectorAll('[data-primary-choice]').forEach(button=>button.onclick=()=>{const destination=e.destination;if(selDest!==destination)return;destination._primaryStation=e.stationChoices[Number(button.dataset.primaryChoice)];destination._primaryStationResolutionVersion=3;delete destination.nearStop;save();loadedFor=null;setListTitle();loadJourneys()});
- }else if(first)box.innerHTML=e.message==='station_lookup_failed'?'<div class="card glass empty">Impossible de vérifier la gare pour le moment. Réessaie dans un instant.</div>':'<div class="card glass empty">Impossible de joindre Transitous.</div>';
- }
+  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
 let shown=5;
@@ -1468,7 +1368,6 @@ function mergeRefresh(old,data){
   const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
   const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
   const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor)   // passés gardés seulement si tu les as affichés, after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
-  const after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
   const out=before.concat(data,after);
   shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);   // mêmes dalles visibles qu'avant
   return out;
@@ -2917,34 +2816,46 @@ renderDests(); renderTiles(); renderSMS(); locate();
 
 
 <script>
-/* Même physique de rebond sur toutes les pages défilantes. */
+/* Rebond commun à l'accueil et à la liste ; bandeaux fixes immobiles. */
 (() => {
- const MAX_PULL=60,RESISTANCE=95,RETURN_MS=650;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- let active=null,gesture=null,raw=0,resetTimer=null,wheelTimer=null,blockedUntil=0;
+ let content=null,gesture=null,raw=0,resetTimer=null,wheelTimer=null,blockedUntil=0;
  const context=()=>{
-  if(reduced.matches||document.querySelector('#mapView.open,dialog[open]')||(typeof tileArmed!=='undefined'&&tileArmed))return null;
-  for(const id of ['stopPage','jrPage']){const page=document.getElementById(id);if(page?.classList.contains('on')&&!page.classList.contains('out')){const content=page.querySelector('.jp-body');return content?{content,scroll:page,edgeBack:true}:null}}
-  const view=document.querySelector('main > .view.active');if(!view)return null;
-  if(view.id==='v-list'){const content=document.getElementById('journeys');return content?.querySelector('.jr')?{content,scroll:document.scrollingElement||document.documentElement,edgeBack:true}:null}
-  return {content:view,scroll:document.scrollingElement||document.documentElement,edgeBack:false};
+  if(reduced.matches||document.querySelector('#jrPage.on,#stopPage.on,#mapView.open')||(typeof tileArmed!=='undefined'&&tileArmed))return null;
+  const list=document.getElementById('journeys'),home=document.getElementById('v-horaires');
+  if(document.body.classList.contains('list-page')&&document.getElementById('v-list')?.classList.contains('active')&&list?.querySelector('.jr'))return {content:list,zone:document.getElementById('v-list'),isList:true};
+  if(!document.body.classList.contains('list-page')&&home?.classList.contains('active'))return {content:home,zone:home,isList:false};
+  return null;
  };
- const limits=scope=>{const el=scope.scroll,isWindow=el===document.scrollingElement||el===document.documentElement,y=isWindow?window.scrollY:el.scrollTop,height=isWindow?window.innerHeight:el.clientHeight;return {top:y<=2,bottom:y+height>=el.scrollHeight-4}};
- const hasInnerScroller=(target,scope)=>{for(let el=target;el&&el!==scope.content;el=el.parentElement){if(el===scope.scroll)break;if(el.scrollHeight>el.clientHeight+3&&/auto|scroll/.test(getComputedStyle(el).overflowY))return true}return false};
- const clear=()=>{clearTimeout(resetTimer);clearTimeout(wheelTimer);if(active){active.content.classList.remove('edge-pulling','edge-returning');active.content.style.removeProperty('transform')}active=null;raw=0;gesture=null};
- const pull=value=>{if(!active)return;clearTimeout(resetTimer);active.content.classList.remove('edge-returning');active.content.classList.add('edge-pulling');const y=Math.sign(value)*MAX_PULL*(1-Math.exp(-Math.abs(value)/RESISTANCE));active.content.style.transform=`translate3d(0,${y.toFixed(2)}px,0)`};
- const release=()=>{gesture=null;raw=0;if(!active)return;if(!active.content.classList.contains('edge-pulling')){if(!active.content.classList.contains('edge-returning'))clear();return}active.content.classList.remove('edge-pulling');active.content.classList.add('edge-returning');active.content.style.transform='translate3d(0,0,0)';clearTimeout(resetTimer);resetTimer=setTimeout(clear,RETURN_MS)};
- document.addEventListener('touchstart',e=>{const scope=context();if(!scope||e.touches.length!==1||!scope.content.contains(e.target)||e.target.closest('button,input,select,textarea,a,[contenteditable="true"]')||hasInnerScroller(e.target,scope)){release();return}const touch=e.touches[0];if(scope.edgeBack&&touch.clientX<28){release();return}clear();active=scope;blockedUntil=0;gesture={x:touch.clientX,y:touch.clientY,lastY:touch.clientY,moved:false}},{capture:true,passive:true});
+ const limits=()=>{const sc=document.scrollingElement||document.documentElement;return {top:window.scrollY<=2,bottom:window.scrollY+window.innerHeight>=sc.scrollHeight-4}};
+ const clear=()=>{clearTimeout(resetTimer);clearTimeout(wheelTimer);if(content){content.classList.remove('edge-pulling','edge-returning');content.style.removeProperty('transform')}content=null;raw=0;gesture=null};
+ const pull=value=>{if(!content)return;clearTimeout(resetTimer);content.classList.remove('edge-returning');content.classList.add('edge-pulling');const y=Math.sign(value)*24*(1-Math.exp(-Math.abs(value)/90));content.style.transform=`translate3d(0,${y.toFixed(2)}px,0)`};
+ const release=()=>{gesture=null;raw=0;if(!content?.classList.contains('edge-pulling'))return;content.classList.remove('edge-pulling');content.classList.add('edge-returning');content.style.transform='translate3d(0,0,0)';clearTimeout(resetTimer);resetTimer=setTimeout(clear,460)};
+ document.addEventListener('touchstart',e=>{
+  const scope=context();if(!scope||e.touches.length!==1||!scope.zone.contains(e.target)||e.target.closest('button,input,select,textarea,a')){release();return}
+  const t=e.touches[0];if(scope.isList&&t.clientX<28){release();return}
+  clear();content=scope.content;blockedUntil=0;gesture={x:t.clientX,y:t.clientY,lastY:t.clientY,moved:false};
+ },{passive:true});
  document.addEventListener('touchmove',e=>{
-  if(!gesture)return;if(context()?.content!==active?.content||e.touches.length!==1){release();return}
-  const touch=e.touches[0],dx=touch.clientX-gesture.x,dy=touch.clientY-gesture.y,step=touch.clientY-gesture.lastY;gesture.lastY=touch.clientY;if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>10){release();return}if(Math.abs(dy)<8)return;
-  const edge=limits(active);if(raw!==0){raw=Math.max(-360,Math.min(360,raw+step));if((raw>0&&!edge.top)||(raw<0&&!edge.bottom)){release();return}}else if(edge.top&&step>0)raw=Math.min(360,step);else if(edge.bottom&&step<0)raw=Math.max(-360,step);else return;
+  if(!gesture)return;if(context()?.content!==content||e.touches.length!==1){release();return}
+  const t=e.touches[0],dx=t.clientX-gesture.x,dy=t.clientY-gesture.y,step=t.clientY-gesture.lastY;gesture.lastY=t.clientY;
+  if(Math.abs(dx)>Math.abs(dy)&&Math.abs(dx)>10){release();return}if(Math.abs(dy)<8)return;
+  const edge=limits();
+  if(raw!==0){raw+=step;if((raw>0&&!edge.top)||(raw<0&&!edge.bottom)){release();return}}
+  else if(edge.top&&step>0)raw=step;else if(edge.bottom&&step<0)raw=step;else return;
   gesture.moved=true;blockedUntil=performance.now()+450;pull(raw);if(e.cancelable)e.preventDefault();
- },{capture:true,passive:false});
- document.addEventListener('touchend',()=>{if(gesture?.moved)blockedUntil=performance.now()+350;release()},{capture:true,passive:true});document.addEventListener('touchcancel',release,{capture:true,passive:true});
- document.addEventListener('click',e=>{if(active?.content.contains(e.target)&&e.detail!==0&&performance.now()<blockedUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
- document.addEventListener('wheel',e=>{const scope=context();if(!scope||gesture||!scope.content.contains(e.target)||hasInnerScroller(e.target,scope)||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;const edge=limits(scope);if(!((edge.top&&e.deltaY<0)||(edge.bottom&&e.deltaY>0)))return;if(active?.content!==scope.content){clear();active=scope}const delta=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?scope.scroll.clientHeight:1);raw=Math.max(-240,Math.min(240,raw-delta*.55));pull(raw);clearTimeout(wheelTimer);wheelTimer=setTimeout(release,100)},{capture:true,passive:true});
- new MutationObserver(()=>{if(active&&context()?.content!==active.content)clear()}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});window.addEventListener('resize',clear,{passive:true});
+ },{passive:false});
+ document.addEventListener('touchend',()=>{if(gesture?.moved)blockedUntil=performance.now()+350;release()},{passive:true});
+ document.addEventListener('touchcancel',release,{passive:true});
+ document.addEventListener('click',e=>{if(content?.contains(e.target)&&e.detail!==0&&performance.now()<blockedUntil){e.preventDefault();e.stopImmediatePropagation()}},true);
+ window.addEventListener('wheel',e=>{
+  const scope=context();if(!scope||gesture||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;const edge=limits();
+  if(!((edge.top&&e.deltaY<0)||(edge.bottom&&e.deltaY>0)))return;
+  if(content!==scope.content){clear();content=scope.content}
+  raw=Math.max(-150,Math.min(150,raw-e.deltaY*.45));pull(raw);clearTimeout(wheelTimer);wheelTimer=setTimeout(release,90);
+ },{passive:true});
+ new MutationObserver(()=>{if(content&&context()?.content!==content)clear()}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+ window.addEventListener('resize',clear,{passive:true});
 })();
 </script>
 
