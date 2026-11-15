@@ -539,7 +539,6 @@ html.map-edge #appWallpaper{visibility:hidden}
 .set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
 header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-/* Style arrondi appliqué à tous les bandeaux */
 body:not(.classic) header,body:not(.classic) #listTop,body:not(.classic) .jp-bar,body:not(.classic) .map-bar,body:not(.classic) .map-ctrl,body:not(.classic) .time-bar{border-radius:28px}
 .pick2 .pv,.pick2 .logo-pv{color:var(--accent)}
 .maplibregl-popup{z-index:1!important}
@@ -770,7 +769,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
@@ -1937,7 +1936,7 @@ function updateAppIcon(customUrl,key){
     const N=180, cv=document.createElement('canvas'); cv.width=cv.height=N; const g=cv.getContext('2d');
     g.fillStyle='#000'; g.fillRect(0,0,N,N);
     const r=Math.min(N/im.width,N/im.height)||1, w=customUrl?Math.max(N,im.width*Math.max(N/im.width,N/im.height)):N, h=customUrl?Math.max(N,im.height*Math.max(N/im.width,N/im.height)):N;
-    g.drawImage(im,(N-w)/2,(N-h)/2,w,h);
+    if(!customUrl){const scale=0.7,sw=N*scale,sh=N*scale;g.drawImage(im,(N-sw)/2,(N-sh)/2,sw,sh)}else{g.drawImage(im,(N-w)/2,(N-h)/2,w,h)}
     const url=cv.toDataURL('image/png'); $('#appIcon').href=url; $('#favIcon').href=url;
   }catch(e){} };
   im.src=src;
