@@ -349,7 +349,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .map-btn{width:38px;height:38px;border-radius:12px;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:17px;cursor:pointer;flex:none}
 .map-ctrl{position:absolute;z-index:5;right:12px;bottom:calc(var(--safe-b) + 48px);display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:18px;transition:bottom .25s ease}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 130px)}
-.walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
+.walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 40px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
 #walkTitle .wt1{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}
 #walkTitle .wt2{display:block;font-size:14.5px;font-weight:700;line-height:1.25}
@@ -438,16 +438,18 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;transition:bottom .2s;background:#141414!important}
+.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 40px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
+.map-steps:not(.ready),.map-ctrl:not(.ready){visibility:hidden}
 .map-steps .ms{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
 .map-steps .ms:first-child{margin-left:0;padding-left:8px}
 .map-steps .ms b{overflow:hidden;text-overflow:ellipsis}
 .map-steps .ms.rail b{font-style:italic}
-.map-steps .ms.w{flex-grow:1!important;max-width:64px}
+.map-steps .ms.w{flex-grow:1.4!important;max-width:88px}
+.map-steps .ms.w svg{width:23px;height:23px}
 .map-steps .ms.on{box-shadow:inset 0 0 0 2.5px #fff}
 
-#map.overview .stop-lbl{display:none}
+#map.z-lo .stop-lbl{display:none}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2047,7 +2049,7 @@ async function openMap(it,walkLeg){
   let style; try{style=await buildStyle()}catch{style=mapStyleUrl()}
   if(!mlMap){
     mlMap=new maplibregl.Map({container:'map',style,center:[boardStop?.lon||6.14,boardStop?.lat||46.2],zoom:14,attributionControl:{compact:true}});
-    mlMap.on('zoom',updateLblZoom);
+    mlMap.on('zoom',updateLblZoom); ['resize','styledata','load'].forEach(ev=>mlMap.on(ev,()=>setTimeout(collapseAttrib,0)));
     // Pendant la navigation : déplacement / zoom libres, recentrage auto 3 s après le dernier geste
     ['dragstart','zoomstart','rotatestart','pitchstart','touchstart','wheel'].forEach(ev=>mlMap.on(ev,e=>{ if(navOn&&e.originalEvent) userMoved(); if(followVeh&&e.originalEvent) lastFollowGesture=Date.now(); }));
     ['dragend','zoomend','rotateend','pitchend','touchend'].forEach(ev=>mlMap.on(ev,e=>{ if(followVeh&&e.originalEvent) lastFollowGesture=Date.now() }));
@@ -2055,7 +2057,7 @@ async function openMap(it,walkLeg){
     await new Promise(r=>mlMap.once('load',r));
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
   if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
-  mlMap.once('idle',()=>$('#map').classList.remove('loading')); setTimeout(()=>$('#map').classList.remove('loading'),2500);
+  collapseAttrib(); mlMap.once('idle',()=>{ $('#map').classList.remove('loading'); collapseAttrib() }); setTimeout(()=>$('#map').classList.remove('loading'),2500);
   drawItinerary(it); renderMapSteps();
   if(mapWalk!=null) focusWalk(); else mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
@@ -2133,10 +2135,12 @@ function drawItinerary(it){
   }
 }
 let stopLbls=[];
+// Crédits OpenFreeMap : toujours repliés, seul le (i) reste visible (touche-le pour les lire)
+function collapseAttrib(){ document.querySelectorAll('#map .maplibregl-ctrl-attrib').forEach(a=>{ a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open') }) }
 function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
-function setMapOverview(on){ $('#map')?.classList.toggle('overview',!!on); if(!on) setTimeout(fitLabels,650) }
+function setMapOverview(on){ if(!on) setTimeout(fitLabels,650) }   // les étiquettes dépendent seulement du niveau de zoom
 // Une étiquette qui déborderait à droite de l'écran passe à gauche de son arrêt
-function fitLabels(){ if(!mlMap||$('#map').classList.contains('overview')) return; const W=$('#map').clientWidth;
+function fitLabels(){ if(!mlMap) return; const W=$('#map').clientWidth;
   stopLbls.forEach(m=>{ const el=m.getElement(); if(!el.offsetWidth) return; const major=el.classList.contains('major'), gap=major?14:9;
     const pt=mlMap.project(m.getLngLat()); const flip=pt.x+gap+el.offsetWidth>W-6&&pt.x-gap-el.offsetWidth>6;
     if(flip!==!!m._flip){ m._flip=flip; m.setOffset(flip?[-(gap+el.offsetWidth),0]:[gap,0]) } }) }
@@ -2166,7 +2170,10 @@ function renderMapSteps(){
     return `<button class="ms${x.w?' w':''}${rail?' rail':''}" data-i="${x.i}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k};flex-grow:${x.w?1:Math.max(2,Math.min(5,x.m/6))}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>` }).join('');
   el.onclick=e=>{ const b=e.target.closest('.ms'); if(b) focusStep(+b.dataset.i) };
   markMapStep(); placeMapSteps();
+  $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
+  clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);   // sans position : affiché quand même
 }
+function showMapSteps(){ clearTimeout(renderMapSteps._t); $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
 function markMapStep(){ document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel)) }
 function focusStep(i){
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
@@ -2182,7 +2189,7 @@ function focusStep(i){
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
   const on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
-  const base=on?16+wc.offsetHeight+8:16; el.style.bottom=`calc(var(--safe-b) + ${base}px)`;
+  const base=on?40+wc.offsetHeight+8:40;   // 40 px : laisse voir le (i) OpenFreeMap en bas el.style.bottom=`calc(var(--safe-b) + ${base}px)`;
   const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${base+(el.innerHTML?46+8:0)}px)`;   // icônes de droite au-dessus du bandeau
 }
 setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
@@ -2446,8 +2453,9 @@ async function onMyPos(force){
   const tg=walkTarget(mapIt); boardStop=tg?.stop||null;
   const tk=tg?(tg.stop.name+'|'+tg.at):''; if(tk!==walkTargetKey){ walkTargetKey=tk; walkGeo=null }
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
-  const show=toStop>0.025&&!!boardStop;
+  const show=!!boardStop||navOn;   // la marche peut être lancée même pour quelques mètres
   $('#walkCard').classList.toggle('on',!!show); $('#mapView').classList.toggle('walking',!!show);
+  placeMapSteps(); showMapSteps();   // bandeau du parcours affiché en même temps que « Lancer la marche »
   // évite deux pointillés superposés : on masque la marche du parcours qui mène à la même cible que l'itinéraire recalculé
   const wIdx=tg?tg.walkIdx:-1;
   if(mlMap.getLayer('route-walk')) mlMap.setFilter('route-walk',show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]);
