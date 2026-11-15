@@ -505,6 +505,7 @@ html.map-edge,html.map-edge body{background-color:var(--map-edge-color,#3a3d47)!
 html.map-edge body::before{visibility:hidden}
 html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
 html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));width:100%;height:auto;max-height:none;margin:0;padding:0;border:0}
+#mapSub .map-countdown{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -1557,6 +1558,8 @@ function lineColor(l){
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtDay(d){const t=new Date(d);return t.toLocaleDateString('fr-CH',{weekday:'short',day:'numeric',month:'short'})}
+function fmtMapCountdown(at){const seconds=Math.max(0,Math.ceil((Number(at)-Date.now())/1000));if(!Number.isFinite(seconds))return '(0h 0m 0s)';return `(${Math.floor(seconds/3600)}h ${Math.floor(seconds%3600/60)}m ${seconds%60}s)`}
+setInterval(()=>document.querySelectorAll('#mapSub .map-countdown').forEach(el=>{const text=fmtMapCountdown(el.dataset.at);if(el.textContent!==text)el.textContent=text}),1000);
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
 setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
@@ -2177,39 +2180,19 @@ function stairPoints(legs){
 }
 const STAIRS_DETAIL_ZOOM=16.5;
 function updateStairVisibility(){
- if(!mlMap)return;
- const closeZoom=mlMap.getZoom()>=STAIRS_DETAIL_ZOOM;
- const selectedLeg=mapWalk!=null?mapIt?.legs[mapWalk]:null;
- const accessWalk=mapStepSel===-1||navOn;
- const mapRect=document.getElementById('map').getBoundingClientRect();
- const viewRect=document.getElementById('mapView').getBoundingClientRect();
- for(const [group,markers] of Object.entries(stairMks))for(const marker of markers){
-  if(marker._stairKind!=='stairs')continue;
-  const point=mlMap.project(marker.getLngLat());
-  const x=point.x+mapRect.left,y=point.y+mapRect.top;
-  const inView=x>=viewRect.left-24&&x<=viewRect.right+24&&y>=viewRect.top-24&&y<=viewRect.bottom+24;
-  const selected=group==='walk'?accessWalk:!!selectedLeg&&marker._walkLeg===selectedLeg;
-  const visible=inView&&(selected||closeZoom);
-  const el=marker.getElement();el.style.visibility=visible?'visible':'hidden';el.style.pointerEvents=visible?'auto':'none';el.setAttribute('aria-hidden',String(!visible));
-  if(!visible){const popup=marker.getPopup();if(popup?.isOpen())popup.remove()}
- }
+ if(!mlMap)return;const closeZoom=mlMap.getZoom()>=STAIRS_DETAIL_ZOOM,selectedLeg=mapWalk!=null?mapIt?.legs[mapWalk]:null,accessWalk=mapStepSel===-1||navOn;
+ const mr=document.getElementById('map').getBoundingClientRect(),vr=document.getElementById('mapView').getBoundingClientRect();
+ for(const [group,markers] of Object.entries(stairMks))for(const marker of markers){if(marker._stairKind!=='stairs')continue;const p=mlMap.project(marker.getLngLat()),x=p.x+mr.left,y=p.y+mr.top;
+ const selected=group==='walk'?accessWalk:!!selectedLeg&&marker._walkLeg===selectedLeg;
+ const visible=x>=vr.left-24&&x<=vr.right+24&&y>=vr.top-24&&y<=vr.bottom+24&&(selected||closeZoom);
+ const el=marker.getElement();el.style.visibility=visible?'visible':'hidden';el.style.pointerEvents=visible?'auto':'none';el.setAttribute('aria-hidden',String(!visible));if(!visible&&marker.getPopup()?.isOpen())marker.getPopup().remove();}
 }
 function drawStairs(which,legs){
- stairMks[which].forEach(m=>m.remove());stairMks[which]=[];
- if(!mlMap)return;
- if(!mlMap._stairsVisibilityBound){
-  mlMap._stairsVisibilityBound=true;let frame=0;
-  const schedule=()=>{if(frame)return;frame=requestAnimationFrame(()=>{frame=0;updateStairVisibility()})};
-  mlMap.on('move',schedule);mlMap.on('zoom',schedule);mlMap.on('resize',schedule);mlMap.on('moveend',updateStairVisibility);
- }
- stairPoints(legs).forEach(point=>{
-  const el=document.createElement('div');el.className='stair-m';
-  if(point.kind==='stairs')el.style.visibility='hidden';
-  el.innerHTML=point.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${point.up===null?'':`<b>${point.up?'↑':'↓'}</b>`}`;
-  const marker=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(point.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(point.t1)}</b>${point.t2?`<br><span style="color:var(--muted)">${esc(point.t2)}</span>`:''}`)).addTo(mlMap);
-  marker._stairKind=point.kind;marker._walkLeg=point.leg;stairMks[which].push(marker);
- });
- updateStairVisibility();
+ stairMks[which].forEach(m=>m.remove());stairMks[which]=[];if(!mlMap)return;
+ if(!mlMap._stairsVisibilityBound){mlMap._stairsVisibilityBound=true;let frame=0;const schedule=()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;updateStairVisibility()})};['move','zoom','resize'].forEach(ev=>mlMap.on(ev,schedule));mlMap.on('moveend',updateStairVisibility)}
+ stairPoints(legs).forEach(point=>{const el=document.createElement('div');el.className='stair-m';if(point.kind==='stairs')el.style.visibility='hidden';
+ el.innerHTML=point.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${point.up===null?'':`<b>${point.up?'↑':'↓'}</b>`}`;
+ const marker=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(point.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(point.t1)}</b>${point.t2?`<br><span style="color:var(--muted)">${esc(point.t2)}</span>`:''}`)).addTo(mlMap);marker._stairKind=point.kind;marker._walkLeg=point.leg;stairMks[which].push(marker)});updateStairVisibility();
 }
 function drawItinerary(it){
   drawStairs('route',it.legs);
@@ -2294,8 +2277,7 @@ function setupStepScroll(el){
  el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;el._noClickUntil=0;mouse={x:e.clientX,left:el.scrollLeft,moved:false,id:e.pointerId};});
  el.addEventListener('pointermove',e=>{if(!mouse||e.pointerId!==mouse.id)return;const dx=e.clientX-mouse.x;if(!mouse.moved&&Math.abs(dx)>8){mouse.moved=true;el.setPointerCapture(e.pointerId)}if(mouse.moved){e.preventDefault();el.scrollLeft=mouse.left-dx;el._noClickUntil=performance.now()+350}});
  const end=()=>{if(mouse?.moved)el._noClickUntil=performance.now()+350;mouse=null};window.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);el.addEventListener('lostpointercapture',end);
- el.addEventListener('dragstart',e=>e.preventDefault());
- el.addEventListener('wheel',e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(el.scrollWidth>el.clientWidth&&dx){const before=el.scrollLeft;el.scrollLeft+=dx;if(before!==el.scrollLeft)e.preventDefault()}e.stopPropagation()},{passive:false});
+ el.addEventListener('dragstart',e=>e.preventDefault());el.addEventListener('wheel',e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(el.scrollWidth>el.clientWidth&&dx){const before=el.scrollLeft;el.scrollLeft+=dx;if(before!==el.scrollLeft)e.preventDefault()}e.stopPropagation()},{passive:false});
 }
 function setupStepHints(el){const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();const left=el.scrollLeft>2,right=el.scrollWidth-el.clientWidth-el.scrollLeft>2;hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',el.classList.contains('ready')&&(i?right:left))})};if(!el._hintBound){el._hintBound=true;let frame=0;el.addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(()=>{frame=0;el._hintUpdate()})},{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)}
 function renderMapSteps(){
@@ -2570,13 +2552,16 @@ async function updateVehicle(){
   if(!p){const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(now>=a&&now<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip}; p=vehPosAt(now) }}
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
-  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} $('#mapSub').textContent=`Départ ${hm(ft.startTime)} · position du véhicule pas encore disponible`; return }
+  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Départ':'Arrivée'} ${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
   if(!vehMk){const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
   const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.zIndex='5'; el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
-  if(mapWalk==null) $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à '+hm(ft.startTime):'Départ '+hm(ft.startTime)}</span>${(()=>{const d=decisiveStop(ft);return `<span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')} · dans <span class="cd-t" data-at="${d.at}">${fmtCd(d.at)}</span></span>`})()}`;
+  if(mapWalk==null){
+    const d=decisiveStop(ft);
+    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
+  }
 }
 
 /* Ma position, marche vers l'arrêt et navigation orientée */
