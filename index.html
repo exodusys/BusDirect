@@ -410,10 +410,10 @@ body.classic .now-sep{border-radius:5px}
 @keyframes jpOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
 #jrPage .jp-bar,.sub-page .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
 #jrPage .jp-title,.sub-page .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 30px)}
+#jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
-#stopPage{z-index:31;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;overscroll-behavior:contain;touch-action:pan-y}
+#stopPage{z-index:31;background-color:var(--page-bg,var(--bg));background-image:var(--wall);background-position:center;background-repeat:var(--wall-repeat,no-repeat);background-size:var(--wall-size,cover);background-attachment:fixed;overscroll-behavior:contain;touch-action:pan-y}
 #stopPage .jp-body{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 #stopPage .stl{padding:14px;background:rgba(var(--glass-rgb),var(--glass-a))}
 
@@ -442,16 +442,16 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.jp-action-bar{position:sticky;bottom:calc(var(--safe-b,0px) + 8px);z-index:6;padding:9px;margin:12px 0 4px;border:1px solid var(--border);border-radius:18px;background:rgba(var(--glass-rgb),.94);backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));box-shadow:var(--shadow)}
+.jp-action-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b,0px) + 10px);width:min(calc(100% - 28px),664px);box-sizing:border-box;z-index:40;padding:9px;margin:0;border:1px solid var(--border);border-radius:18px;background:rgba(var(--glass-rgb),.94);backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));box-shadow:var(--shadow)}
 .jp-action-bar .btn{flex:1 1 auto;min-width:0;white-space:nowrap}
 .map-steps{position:absolute;z-index:5;left:12px;right:auto;width:max-content;max-width:calc(100% - 24px);bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
 .map-steps:not(.ready),.map-ctrl:not(.ready){visibility:hidden}
 .map-steps .ms{position:relative;flex:0 0 auto;min-width:38px;max-width:150px;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
-.map-steps .ms:first-child{margin-left:0;padding-left:8px}
+.map-steps .ms:not(.w){flex:0 0 72px;min-width:72px;max-width:110px;padding-left:24px;padding-right:10px}\n.map-steps .ms:first-child{margin-left:0;padding-left:8px}\n.map-steps .ms.w:first-child{padding-left:8px}
 .map-steps .ms b{overflow:hidden;text-overflow:ellipsis}
 .map-steps .ms.rail b{font-style:italic}
-.map-steps .ms.w{flex-grow:1.4!important;max-width:88px}
+.map-steps .ms.w{flex:0 0 42px!important;width:42px;min-width:42px;max-width:42px;padding-left:8px;padding-right:8px;margin-left:-16px}
 .map-steps .ms.w svg{width:23px;height:23px}
 .map-steps .ms.on{box-shadow:inset 0 0 0 2.5px #fff}
 
@@ -1580,7 +1580,7 @@ function journeyHTML(it,i,tracked){
     </div>
     ${alertBanner(al)}
     <div class="chain">${chain}</div>
-    <div class="legs">${alertDetails(al)}${legs}<div class="row" style="margin-top:8px">
+    <div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div>
   </div>`;
 }
@@ -2160,7 +2160,7 @@ function drawItinerary(it){
   pts.forEach(f=>{const p=f.properties, el=document.createElement('div');
     el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
     el.innerHTML=`<b>${esc(p.name)}</b>${p.time?`<em class="lt">${esc(p.time)}${p.late?` <span class="late">${esc(p.late)}</span>`:''}</em>`:''}${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
-    stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
+    el.style.zIndex=p.major?'30':'20'; stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
   updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) }
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
@@ -2467,8 +2467,8 @@ async function updateVehicle(){
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
   if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} $('#mapSub').textContent=`Départ ${hm(ft.startTime)} · position du véhicule pas encore disponible`; return }
-  if(!vehMk){const el=document.createElement('div');el.className='veh-m';vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
-  const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
+  if(!vehMk){const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
+  const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.zIndex='5'; el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
