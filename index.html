@@ -484,11 +484,14 @@ body:has(#mapView.open) .jp-action-bar{display:none!important}
 .map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer}
 .map-steps .ms.on{box-shadow:none}
 .map-steps .ms-item:has(> .ms.on)::after{content:'';position:absolute;inset:0;border:2.5px solid #fff;border-radius:inherit;pointer-events:none;box-sizing:border-box;z-index:2}
-#mapStepHint{position:absolute;z-index:6;width:34px;display:none;align-items:center;justify-content:center;pointer-events:none;color:#fff;background:linear-gradient(90deg,transparent,rgba(0,0,0,.88));border-radius:0 24px 24px 0;font:900 26px system-ui;overflow:hidden}
-#mapStepHint.visible{display:flex}
-#mapStepHint span{animation:stepSlideHint 1.4s ease-in-out infinite}
-@keyframes stepSlideHint{0%,100%{transform:translateX(4px);opacity:.4}55%{transform:translateX(-5px);opacity:1}}
-@media(prefers-reduced-motion:reduce){#mapStepHint span{animation:none}}
+.map-step-hint{position:absolute;z-index:6;width:34px;display:none;align-items:center;justify-content:center;pointer-events:none;color:#fff;font:900 26px system-ui;overflow:hidden}
+.map-step-hint.right{background:linear-gradient(90deg,transparent,rgba(0,0,0,.88));border-radius:0 24px 24px 0}
+.map-step-hint.left{background:linear-gradient(270deg,transparent,rgba(0,0,0,.88));border-radius:24px 0 0 24px}
+.map-step-hint.visible{display:flex}
+.map-step-hint span{animation:stepSlideHint 1.4s ease-in-out infinite}
+.map-step-hint.left span{animation-direction:reverse}
+@keyframes stepSlideHint{0%{transform:translateX(4px);opacity:0}55%{transform:translateX(-5px);opacity:1}100%{transform:translateX(-5px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.map-step-hint span{animation:none}}
 #mapNoticeDialog{color:var(--text);width:min(480px,calc(100% - 48px));max-height:75dvh;overflow:auto;border-radius:24px;padding:18px;box-sizing:border-box}
 #mapNoticeDialog::backdrop{background:rgba(0,0,0,.55)}
 
@@ -1648,13 +1651,7 @@ function renderJourneyPage(){
   // de l'écran, même lorsque la liste détaillée défile.
   pg.querySelectorAll(':scope > .jp-action-bar').forEach(x=>x.remove());
   const actionBar=card.querySelector('.jp-action-bar');
-  if(actionBar){
-    pg.insertBefore(actionBar,body);
-    const titleBar=pg.querySelector('.jp-bar');
-    const measure=()=>pg.style.setProperty('--jp-title-height',titleBar.offsetHeight+'px');
-    measure();
-    if(!pg._titleObserver){pg._titleObserver=new ResizeObserver(measure);pg._titleObserver.observe(titleBar)}
-  }
+  if(actionBar){pg.insertBefore(actionBar,body);const bar=pg.querySelector('.jp-bar');const measure=()=>pg.style.setProperty('--jp-title-height',bar.offsetHeight+'px');measure();if(!pg._titleObserver){pg._titleObserver=new ResizeObserver(measure);pg._titleObserver.observe(bar)}}
   jpAttachStops(card);
   card.onclick=e=>{ const act=e.target.dataset.act;
     const wr=e.target.closest('.legs > .leg.walk-row'); if(wr){ openMap(jpIt,+wr.dataset.leg); return }
@@ -2119,6 +2116,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
+  stopNav(); mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
@@ -2142,8 +2140,8 @@ async function openMap(it,walkLeg){
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
   if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
   collapseAttrib(); mlMap.once('idle',()=>{ $('#map').classList.remove('loading'); collapseAttrib() }); setTimeout(()=>$('#map').classList.remove('loading'),2500);
-  drawItinerary(it); renderMapSteps();
-  if(mapWalk!=null) focusWalk(); else mapFit();
+  mlMap.resize(); drawItinerary(it); renderMapSteps();
+  if(mapWalk!=null) focusWalk(); else {setRouteDim(false); mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000));
   startMeWatch();
@@ -2246,7 +2244,11 @@ function focusWalk(){
 let mapStepSel=null;
 function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2>Perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
-function setupStepHint(el){let h=document.getElementById('mapStepHint');if(!h){h=document.createElement('div');h.id='mapStepHint';h.setAttribute('aria-hidden','true');h.innerHTML='<span>‹‹</span>';el.parentElement.appendChild(h)}el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();h.style.top=(r.top-p.top)+'px';h.style.right=Math.max(0,p.right-r.right)+'px';h.style.height=r.height+'px';h.classList.toggle('visible',el.classList.contains('ready')&&el.scrollWidth-el.clientWidth-el.scrollLeft>6)};if(!el._hintBound){el._hintBound=true;el.addEventListener('scroll',()=>el._hintUpdate(),{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)}
+function setupStepHints(el){
+ const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});
+ el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect(),ready=el.classList.contains('ready');hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',ready&&(i?el.scrollWidth-el.clientWidth-el.scrollLeft>6:el.scrollLeft>6))})};
+ if(!el._hintBound){el._hintBound=true;el.addEventListener('scroll',()=>el._hintUpdate(),{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)
+}
 function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
@@ -2256,7 +2258,7 @@ function renderMapSteps(){
   el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
   el.classList.toggle('full-width',segs.length>3);
   el.onclick=e=>{const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
-  setupStepHint(el);
+  setupStepHints(el);
   markMapStep(); placeMapSteps();
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
   clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);   // sans position : affiché quand même
