@@ -2165,7 +2165,8 @@ function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
   const WALK_IC='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="13.5" cy="4" r="2"/><path d="M13 7.5c-1.2 0-2 .5-2.6 1.4L8 13l1.7 1 2-3.2.8 3.4L10 21h2.2l2-5 1.6 2.2V21H18v-3.8l-2.3-3.1-.6-2.8 1 1.5 3 1v-2l-2.2-.8-1.6-2.5c-.5-.7-1.3-1-2.3-1z"/></svg>';
-  const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))})).filter(x=>!(x.w&&x.m<=1&&(x.l.distance||0)<60));
+  const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))}));   // toutes les marches, même de quelques mètres
+  if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
   el.innerHTML=segs.map((x,k)=>{ const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);
     const rail=/RAIL|LONG|SUBURBAN/.test(x.l.mode||'');
     return `<button class="ms${x.w?' w':''}${rail?' rail':''}" data-i="${x.i}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k};flex-grow:${x.w?1:Math.max(2,Math.min(5,x.m/6))}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>` }).join('');
@@ -2180,6 +2181,7 @@ function showMapSteps(){ clearTimeout(renderMapSteps._t);
   $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
 function markMapStep(){ document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel)) }
 function focusStep(i,refit){
+  if(i===-1){ if(!mlMap) return; mapStepSel=-1; markMapStep(); if(!navOn) toggleNav(); return }   // marche jusqu'à l'arrêt : lance la marche
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
   if(mapStepSel===i&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
   mapStepSel=i; markMapStep(); setMapOverview(false);
@@ -2192,11 +2194,11 @@ function focusStep(i,refit){
   mlMap.fitBounds(b,{padding:mapPad(20,Math.min(170,innerWidth*.38)),maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
-  // ordre de bas en haut : bandeau des étapes (tout en bas) → « Marche jusqu'à » → icônes de droite
+  // ordre de bas en haut : « Marche jusqu'à » (tout en bas) → bandeau des étapes → icônes de droite
   const B=16, hasSteps=!!el.innerHTML, on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
-  el.style.bottom=`calc(var(--safe-b) + ${B}px)`;
-  const wb=B+(hasSteps?46+8:0); if(wc) wc.style.bottom=`calc(var(--safe-b) + ${wb}px)`;
-  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${on?wb+wc.offsetHeight+8:wb}px)`;
+  if(wc) wc.style.bottom=`calc(var(--safe-b) + ${B}px)`;
+  const sb=on?B+wc.offsetHeight+8:B; el.style.bottom=`calc(var(--safe-b) + ${sb}px)`;
+  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${sb+(hasSteps?46+8:0)}px)`;
   placeAttrib();
 }
 // (i) OpenFreeMap : en haut à droite, juste sous la barre du titre
