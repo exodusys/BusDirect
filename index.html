@@ -415,7 +415,7 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 #stopPage .stl{padding:14px}
 .legs > .leg.tap{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
 .legs > .leg.tap:active{background:rgba(127,127,127,.15)}
-.legs > .leg.tap > div:last-child::after{content:'Arrêts ›';display:block;margin-top:4px;font-size:12px;font-weight:700;color:var(--accent)}
+
 .stl-in{position:relative}
 .stl-rail{position:absolute;left:7px;top:17px;bottom:17px;width:4px;border-radius:2px;background:var(--c)}
 .stl-r{position:absolute;left:0;right:0;height:34px;display:flex;align-items:center;gap:10px;font-size:14px}
@@ -428,6 +428,16 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .stl-r.me i::before{width:14px;height:14px}
 .stl-r.done{opacity:.45}
 .stl-veh{position:absolute;left:-4px;top:4px;width:26px;height:26px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:transform 1s linear;z-index:1}
+.leg.walk-row{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
+.leg.walk-row:active{background:rgba(127,127,127,.15)}
+.gare{font-weight:700;color:var(--text)}
+/* chaque étape (marche / transport) dans sa propre carte */
+.legs > .leg{padding:10px 12px;margin:0 0 8px;border-radius:14px;background:rgba(127,127,127,.12);border:1px solid var(--border)}
+.legs > .leg.walk-row,.legs > .leg.tap{margin-left:0;margin-right:0;padding:10px 12px}
+.legs > .leg.walk-row{background:rgba(127,127,127,.06);border-style:dashed}
+.legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
+.legs > .leg:active{background:rgba(127,127,127,.2)}
+body.classic .legs > .leg{border-radius:6px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -600,7 +610,7 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
       <ul>
         <li>Parcours complet dans les couleurs des lignes, marches en pointillés bleus, arrêts avec quai ou voie.</li>
         <li>Position du véhicule (temps réel si disponible, sinon estimée) et son trajet en tirets jusqu'à ton arrêt.</li>
-        <li><b>Voir la marche</b> : ouvre une marche à pied seule, avec escaliers et ascenseurs.</li>
+        <li><b>Marche</b> : touche le bandeau de marche pour ouvrir une marche à pied seule, avec escaliers et ascenseurs.</li>
         <li><b>Lancer</b> : marche guidée vers l'arrêt, orientée dans ton sens de marche. Tu peux déplacer ou zoomer, la carte se recentre après 3 s.</li>
         <li>Boutons à droite : clair/sombre, bâtiments 3D, vue 3D/2D, vue d'ensemble.</li>
       </ul>
@@ -1219,7 +1229,7 @@ async function loadJourneys(){
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
-  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; else toast('Actualisation impossible') }
+  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
 let shown=5;
@@ -1518,9 +1528,12 @@ function journeyHTML(it,i,tracked){
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
-  const legs=it.legs.map((l,li)=>`<div class="leg"><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
-    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">Marche ${Math.max(1,mins(l.duration))} min</span> <button class="walk-map" data-act="walk" data-leg="${li}">🗺️ Voir la marche</button>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
-    <div class="muted" style="font-size:12px;margin-top:2px">${esc(/^start$/i.test(l.from?.name||'')?'Ma position':l.from?.name)}${l.from?.track?` · Quai <span class="quai">${esc(l.from.track)}</span>`:''}<br>${esc(/^end$/i.test(l.to?.name||'')?'Destination':l.to?.name)}</div></div></div>`).join('');
+  const isRail=l=>/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
+  const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const gare=l.mode!=='WALK'&&(isRail(l)||/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm));
+    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${isRail(l)?'Voie':'Quai'} <span class="quai">${esc(pl.track)}</span>`:''}` };
+  const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
+    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
+    <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
@@ -1552,7 +1565,7 @@ function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr').forEach(el=>el.onclick=e=>{
     const act=e.target.dataset.act, it=(list||curList)[+el.dataset.i];
     if(act==='map'){e.stopPropagation();openMap(it);return}
-    if(act==='walk'){e.stopPropagation();openMap(it,+e.target.dataset.leg);return}
+    const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');return}
     openJourneyPage(it,tracked);
@@ -1578,6 +1591,7 @@ function renderJourneyPage(){
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
   jpAttachStops(card);
   card.onclick=e=>{ const act=e.target.dataset.act;
+    const wr=e.target.closest('.legs > .leg.walk-row'); if(wr){ openMap(jpIt,+wr.dataset.leg); return }
     const row=!act&&e.target.closest('.legs > .leg.tap'); if(row){ openStopsPage(+row.dataset.li); return }
     if(act==='map'){openMap(jpIt);return} if(act==='walk'){openMap(jpIt,+e.target.dataset.leg);return}
     if(act==='track'){trackIt(jpIt);return} };
