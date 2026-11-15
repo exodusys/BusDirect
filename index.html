@@ -447,6 +447,7 @@ body.classic .legs > .leg{border-radius:6px}
 .map-steps .ms.w{flex-grow:1!important;max-width:64px}
 .map-steps .ms.on{box-shadow:inset 0 0 0 2.5px #fff}
 
+#map.overview .stop-lbl{display:none}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2122,7 +2123,7 @@ function drawItinerary(it){
     el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
     el.innerHTML=`<b>${esc(p.name)}</b>${p.time?`<em class="lt">${esc(p.time)}${p.late?` <span class="late">${esc(p.late)}</span>`:''}</em>`:''}${p.sub?`<small>${esc(p.sub)}</small>`:''}`;
     stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
-  updateLblZoom();
+  updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) }
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
   else{
@@ -2133,9 +2134,16 @@ function drawItinerary(it){
 }
 let stopLbls=[];
 function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
+function setMapOverview(on){ $('#map')?.classList.toggle('overview',!!on); if(!on) setTimeout(fitLabels,650) }
+// Une étiquette qui déborderait à droite de l'écran passe à gauche de son arrêt
+function fitLabels(){ if(!mlMap||$('#map').classList.contains('overview')) return; const W=$('#map').clientWidth;
+  stopLbls.forEach(m=>{ const el=m.getElement(); if(!el.offsetWidth) return; const major=el.classList.contains('major'), gap=major?14:9;
+    const pt=mlMap.project(m.getLngLat()); const flip=pt.x+gap+el.offsetWidth>W-6&&pt.x-gap-el.offsetWidth>6;
+    if(flip!==!!m._flip){ m._flip=flip; m.setOffset(flip?[-(gap+el.offsetWidth),0]:[gap,0]) } }) }
 let mapWalk=null;
 // Vue d'une marche seule : on centre sur ce tronçon et on atténue le reste du parcours
 function focusWalk(){
+  setMapOverview(false);
   const l=mapIt.legs[mapWalk]; if(!l) return mapFit();
   const prev=mapIt.legs[mapWalk-1], next=mapIt.legs[mapWalk+1];
   $('#mapTitle').textContent=`🚶 Marche · ${Math.max(1,mins(l.duration))} min`;
@@ -2163,18 +2171,20 @@ function markMapStep(){ document.querySelectorAll('#mapSteps .ms').forEach(b=>b.
 function focusStep(i){
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
   if(mapStepSel===i){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
-  mapStepSel=i; markMapStep();
+  mapStepSel=i; markMapStep(); setMapOverview(false);
   if(l.mode==='WALK'){ mapWalk=i; focusWalk(); return }
   if(mapWalk!=null){ mapWalk=null; setRouteDim(false) }
   navOn=false; followVeh=false; $('#btnFollow')?.classList.remove('on');
   $('#mapTitle').textContent=`${l.routeShortName||''} → ${l.headsign||l.to?.name||''}`;
   $('#mapSub').textContent=`${hm(l.startTime)} ${l.from?.name||''} → ${hm(l.endTime)} ${l.to?.name||''}`;
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
-  mlMap.fitBounds(b,{padding:{top:120,bottom:200,left:50,right:70},maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:{top:130,bottom:230,left:60,right:Math.min(190,innerWidth*.4)},maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
   const on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
-  el.style.bottom=on?`calc(var(--safe-b) + ${16+wc.offsetHeight+8}px)`:'calc(var(--safe-b) + 16px)' }
+  const base=on?16+wc.offsetHeight+8:16; el.style.bottom=`calc(var(--safe-b) + ${base}px)`;
+  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${base+(el.innerHTML?46+8:0)}px)`;   // icônes de droite au-dessus du bandeau
+}
 setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
 function setRouteDim(on){
   if(!mlMap) return;
@@ -2187,7 +2197,7 @@ function setRouteDim(on){
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
 }
 function mapFit(){
-  mapStepSel=null; try{markMapStep()}catch{}
+  mapStepSel=null; try{markMapStep()}catch{} setMapOverview(true);
   if(mapWalk!=null){mapWalk=null;setRouteDim(false);const ft=firstTransit(mapIt);
     $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
     $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`}
