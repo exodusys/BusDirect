@@ -403,7 +403,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
-#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;transition:transform .26s ease;overscroll-behavior:contain}
+#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;transition:transform .26s ease;overscroll-behavior:contain}
 #jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
 #jrPage.out,.sub-page.out{animation:jpOut .26s ease forwards}
 @keyframes jpIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -413,7 +413,7 @@ body.classic .now-sep{border-radius:5px}
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
-#stopPage{z-index:31;background-color:var(--page-bg,var(--bg));background-image:var(--wall);background-position:center;background-repeat:var(--wall-repeat,no-repeat);background-size:var(--wall-size,cover);background-attachment:fixed;overscroll-behavior:contain;touch-action:pan-y}
+#stopPage{z-index:31;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;overscroll-behavior:contain;touch-action:pan-y}
 #stopPage .jp-body{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 #stopPage .stl{padding:14px;background:rgba(var(--glass-rgb),var(--glass-a))}
 
@@ -442,7 +442,7 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.jp-action-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--safe-b,0px) + 10px);width:min(calc(100% - 28px),664px);box-sizing:border-box;z-index:40;padding:9px;margin:0;border:1px solid var(--border);border-radius:18px;background:rgba(var(--glass-rgb),.94);backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));box-shadow:var(--shadow)}
+.jp-action-bar{position:fixed!important;left:50%;right:auto;top:auto;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);width:min(calc(100% - 28px),664px);box-sizing:border-box;z-index:100;padding:9px;margin:0;border:1px solid var(--border);border-radius:18px;background:rgba(var(--glass-rgb),.94);backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));box-shadow:var(--shadow)}
 .jp-action-bar .btn{flex:1 1 auto;min-width:0;white-space:nowrap}
 .map-steps{position:absolute;z-index:5;left:12px;right:auto;width:max-content;max-width:calc(100% - 24px);bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
@@ -1612,12 +1612,22 @@ function renderJourneyPage(){
   pg.querySelector('.jp-title').textContent=`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim();
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
+  // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
+  // de l'écran, même lorsque la liste détaillée défile.
+  pg.querySelectorAll(':scope > .jp-action-bar').forEach(x=>x.remove());
+  const actionBar=card.querySelector('.jp-action-bar');
+  if(actionBar) pg.appendChild(actionBar);
   jpAttachStops(card);
   card.onclick=e=>{ const act=e.target.dataset.act;
     const wr=e.target.closest('.legs > .leg.walk-row'); if(wr){ openMap(jpIt,+wr.dataset.leg); return }
     const row=!act&&e.target.closest('.legs > .leg.tap'); if(row){ openStopsPage(+row.dataset.li); return }
-    if(act==='map'){openMap(jpIt);return} if(act==='walk'){openMap(jpIt,+e.target.dataset.leg);return}
-    if(act==='track'){trackIt(jpIt);return} };
+    if(act==='walk'){openMap(jpIt,+e.target.dataset.leg);return} };
+  if(actionBar) actionBar.onclick=e=>{
+    const act=e.target.closest('[data-act]')?.dataset.act;
+    if(act==='map'){openMap(jpIt);return}
+    if(act==='track'){trackIt(jpIt);return}
+    if(act==='untrack'){S.tracked.splice(S.tracked.findIndex(x=>jkey(x)===jpKey),1);save();jpTracked=false;renderJourneyPage();updateSuivisTab();renderTracked();toast('Suivi retiré')}
+  };
 }
 /* Liste de tous les arrêts d'une ligne, avec le véhicule qui avance en direct */
 let jpOpenLegs=new Set(), jpVehTimer=null;
