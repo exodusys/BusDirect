@@ -438,6 +438,15 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
+.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);display:flex;align-items:center;gap:2px;padding:5px 6px;border-radius:16px;overflow:hidden;transition:bottom .2s}
+.map-steps:empty{display:none}
+.map-steps .ms{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;border:none;background:none;color:var(--text);padding:4px 3px;border-radius:10px;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer;overflow:hidden;white-space:nowrap}
+.map-steps .ms span{overflow:hidden;text-overflow:ellipsis;color:var(--muted)}
+.map-steps .ms.w{flex-grow:.6!important}
+.map-steps .ms.on{background:var(--accent);color:#fff}.map-steps .ms.on span{color:#fff}
+.map-steps .ms .lb.mini{flex:none;min-width:0;max-width:100%;overflow:hidden}
+.map-steps .ms-sep{flex:none;color:var(--muted);font-style:normal;font-size:13px;opacity:.6}
+body.classic .map-steps{border-radius:6px}body.classic .map-steps .ms{border-radius:4px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -585,6 +594,7 @@ body.classic .legs > .leg{border-radius:6px}
     <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
     <button class="map-btn" onclick="mapFit()">⤢</button>
   </div>
+  <div class="map-steps glass" id="mapSteps"></div>
   <div class="walk-card glass" id="walkCard">
     <div class="row between"><div><b id="walkTitle">Marche jusqu'à l'arrêt</b><div class="muted" id="walkInfo" style="font-size:13px"></div></div>
     <button class="btn sm" id="walkBtn" onclick="toggleNav()">▶︎ Lancer</button></div>
@@ -2045,7 +2055,7 @@ async function openMap(it,walkLeg){
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
   if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
   mlMap.once('idle',()=>$('#map').classList.remove('loading')); setTimeout(()=>$('#map').classList.remove('loading'),2500);
-  drawItinerary(it);
+  drawItinerary(it); renderMapSteps();
   if(mapWalk!=null) focusWalk(); else mapFit();
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000));
@@ -2136,6 +2146,34 @@ function focusWalk(){
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
   mlMap.fitBounds(b,{padding:{top:120,bottom:160,left:50,right:70},maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
 }
+/* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
+let mapStepSel=null;
+function renderMapSteps(){
+  const el=$('#mapSteps'); if(!el||!mapIt){ return }
+  mapStepSel=mapWalk;
+  el.innerHTML=mapIt.legs.map((l,i)=>{ const w=l.mode==='WALK'; const m=Math.max(1,mins(l.duration));
+    if(w&&m<=1&&(l.distance||0)<60) return '';   // micro-marches ignorées
+    return `<button class="ms${w?' w':''}" data-i="${i}" style="flex-grow:${Math.max(1,Math.min(4,m/5))}">${w?'🚶':badge(l,'mini')}<span>${m}′</span></button>` }).filter(Boolean).join('<i class="ms-sep">›</i>');
+  el.onclick=e=>{ const b=e.target.closest('.ms'); if(b) focusStep(+b.dataset.i) };
+  markMapStep(); placeMapSteps();
+}
+function markMapStep(){ document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel)) }
+function focusStep(i){
+  const l=mapIt?.legs[i]; if(!l||!mlMap) return;
+  if(mapStepSel===i){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
+  mapStepSel=i; markMapStep();
+  if(l.mode==='WALK'){ mapWalk=i; focusWalk(); return }
+  if(mapWalk!=null){ mapWalk=null; setRouteDim(false) }
+  navOn=false; followVeh=false; $('#btnFollow')?.classList.remove('on');
+  $('#mapTitle').textContent=`${l.routeShortName||''} → ${l.headsign||l.to?.name||''}`;
+  $('#mapSub').textContent=`${hm(l.startTime)} ${l.from?.name||''} → ${hm(l.endTime)} ${l.to?.name||''}`;
+  const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
+  mlMap.fitBounds(b,{padding:{top:120,bottom:200,left:50,right:70},maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
+}
+function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
+  const on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
+  el.style.bottom=on?`calc(var(--safe-b) + ${16+wc.offsetHeight+8}px)`:'calc(var(--safe-b) + 16px)' }
+setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
 function setRouteDim(on){
   if(!mlMap) return;
   [['route-line','line-opacity'],['route-casing','line-opacity'],['route-walk','line-opacity']].forEach(([id,p])=>{
@@ -2147,6 +2185,7 @@ function setRouteDim(on){
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
 }
 function mapFit(){
+  mapStepSel=null; try{markMapStep()}catch{}
   if(mapWalk!=null){mapWalk=null;setRouteDim(false);const ft=firstTransit(mapIt);
     $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
     $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`}
