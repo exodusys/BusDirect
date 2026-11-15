@@ -466,19 +466,22 @@ body.classic .legs > .leg{border-radius:6px}
 #jrPage,#stopPage{background:transparent!important;background-image:none!important}
 body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
 body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
-/* Actions dans le flux, juste sous le bandeau de titre. */
-#jrPage > .jp-action-bar{position:relative!important;inset:auto!important;transform:none!important;width:calc(100% - 28px);max-width:664px;box-sizing:border-box;margin:0 auto 12px!important;padding:8px 12px;border-radius:28px;z-index:1;gap:10px;background:rgba(var(--glass-rgb),var(--glass-a));box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35)}
-body.classic #jrPage > .jp-action-bar{border-radius:0}
-body.noglass #jrPage > .jp-action-bar{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
+#jrPage > .jp-action-bar{position:relative!important;inset:auto!important;transform:none!important;width:calc(100% - 28px);max-width:664px;box-sizing:border-box;margin:0 auto 12px!important;padding:8px 12px;border-radius:28px;z-index:1;gap:10px;background:rgba(var(--glass-rgb),var(--glass-a));box-shadow:var(--shadow)}
 body:has(#mapView.open) .jp-action-bar{display:none!important}
-.map-steps{box-sizing:border-box}
-.map-steps .ms.w{flex:0 0 64px!important;width:64px;min-width:64px;max-width:64px}
-.map-steps .ms:first-child{margin-left:0;padding-left:8px}
-.map-steps:has(> .ms:nth-child(4)){left:12px;right:12px;width:calc(100% - 24px);max-width:none}
-.map-steps:has(> .ms:nth-child(4)) > .ms{box-sizing:border-box;flex:1 1 0!important;width:auto;min-width:0;max-width:none;margin-left:-22px;padding:0 8px 0 26px}
-.map-steps:has(> .ms:nth-child(4)) > .ms.w{flex:.85 1 0!important;width:auto;min-width:0;max-width:none;margin-left:-16px;padding:0 8px 0 18px}
-.map-steps:has(> .ms:nth-child(4)) > .ms:first-child{margin-left:0;padding-left:8px}
-.map-steps .ms.w svg{flex-shrink:0}
+.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.map-steps::-webkit-scrollbar{display:none}
+.map-steps.full-width{left:12px;right:12px;width:calc(100% - 24px);max-width:none}
+.map-steps .ms-item{position:relative;flex:0 0 auto;display:flex;align-items:stretch;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);margin-left:-22px;padding-left:20px;box-sizing:border-box;min-width:94px}
+.map-steps .ms-item:first-child{margin-left:0;padding-left:0}
+.map-steps .ms-item.walk-item{flex:0 0 84px!important;width:84px;min-width:84px;max-width:84px;margin-left:-16px;padding:0}
+.map-steps .ms-item.walk-item:first-child{margin-left:0}
+.map-steps .ms-item > .ms,.map-steps .ms-item > .ms.w{flex:1 0 auto!important;width:auto;min-width:0;max-width:none;margin:0;padding:0 12px;border:0;background:transparent;border-radius:999px;overflow:visible;box-sizing:border-box}
+.map-steps .ms-item > .ms.w{flex:1 1 auto!important;width:100%;padding:0}
+.map-steps .ms b{overflow:visible;text-overflow:clip;white-space:nowrap}
+.map-steps .ms.w svg{width:23px;height:23px;flex-shrink:0}
+.map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer}
+#mapNoticeDialog{color:var(--text);width:min(480px,calc(100% - 48px));max-height:75dvh;overflow:auto;border-radius:24px;padding:18px;box-sizing:border-box}
+#mapNoticeDialog::backdrop{background:rgba(0,0,0,.55)}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -2226,6 +2229,21 @@ function focusWalk(){
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
+function mapLegNotices(l){
+  const items=(l?.alerts||[]).filter(a=>activeNow(a));
+  if(l?.cancelled||l?.canceled) items.unshift({headerText:'Course supprimée'});
+  return items;
+}
+function showMapLegNotices(i){
+  const l=mapIt?.legs[i]; if(!l) return;
+  const items=mapLegNotices(l); if(!items.length) return;
+  let d=document.getElementById('mapNoticeDialog');
+  if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d);
+    d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}});
+  }
+  d.innerHTML=`<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm" data-close>Fermer</button></div><p>${esc(l.routeShortName||l.displayName||'')} — ${esc(l.headsign||l.to?.name||'')}</p>`+items.map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b>${a.descriptionText?`<p style="white-space:pre-wrap">${esc(a.descriptionText)}</p>`:''}</section>`).join('');
+  d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('[data-close]').onclick=()=>d.close();if(!d.open)d.showModal();
+}
 function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
@@ -2234,8 +2252,10 @@ function renderMapSteps(){
   if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
   el.innerHTML=segs.map((x,k)=>{ const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);
     const rail=/RAIL|LONG|SUBURBAN/.test(x.l.mode||'');
-    return `<button class="ms${x.w?' w':''}${rail?' rail':''}" data-i="${x.i}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k};flex-grow:${x.w?1:Math.max(2,Math.min(5,x.m/6))}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>` }).join('');
-  el.onclick=e=>{ const b=e.target.closest('.ms'); if(b) focusStep(+b.dataset.i) };
+    const notice=!x.w&&mapLegNotices(x.l).length;
+    return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button class="ms${x.w?' w':''}${rail?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${notice?`<button class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>` }).join('');
+  el.classList.toggle('full-width',segs.length>3);
+  el.onclick=e=>{ const n=e.target.closest('[data-notice]'); if(n){e.stopPropagation();showMapLegNotices(+n.dataset.notice);return} const b=e.target.closest('.ms'); if(b) focusStep(+b.dataset.i) };
   markMapStep(); placeMapSteps();
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
   clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);   // sans position : affiché quand même
