@@ -532,6 +532,10 @@ body::before{content:none!important;display:none!important}
 html.map-edge #appWallpaper{visibility:hidden}
 @media(prefers-reduced-motion:reduce){#appWallpaper{transition:none}}
 
+
+.range-value{flex:none;min-width:44px;text-align:right;font:700 13px -apple-system,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
+.set{display:flex;align-items:center;gap:10px}
+
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -622,9 +626,9 @@ html.map-edge #appWallpaper{visibility:hidden}
     <h3>Liquid Glass</h3>
     <div class="card glass">
       <div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div>
-      <div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="50"></div>
-      <div class="set"><span>Transparence</span><input type="range" id="alpha" min="10" max="95"></div>
-      <div class="set"><span>Saturation</span><input type="range" id="sat" min="100" max="250"></div>
+      <div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="50"><output class="range-value" id="blurValue" for="blur">20%</output></div>
+      <div class="set"><span>Transparence</span><input type="range" id="alpha" min="10" max="95"><output class="range-value" id="alphaValue" for="alpha">80%</output></div>
+      <div class="set"><span>Saturation</span><input type="range" id="sat" min="100" max="250"><output class="range-value" id="satValue" for="sat">0%</output></div>
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
@@ -754,9 +758,10 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:22,alpha:55,sat:180,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
+(()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
   if(s.customLogo){s.customLogos.push({id:'l'+Date.now(),url:s.customLogo});if(s.logo==='custom')s.logo='c:'+s.customLogos.at(-1).id}
@@ -1999,6 +2004,13 @@ function syncWallpaperPalette(){
 }
 let wallpaperResizeTimer=null;
 window.addEventListener('resize',()=>{clearTimeout(wallpaperResizeTimer);wallpaperResizeTimer=setTimeout(()=>{if(S.settings.wall.startsWith('c:'))syncWallpaperPalette()},160)},{passive:true});
+
+function updateRangeValues(){
+ const blur=$('#blur'),alpha=$('#alpha'),sat=$('#sat');
+ if(blur)$('#blurValue').textContent=blur.value+'%';
+ if(alpha)$('#alphaValue').textContent=alpha.value+'%';
+ if(sat)$('#satValue').textContent=Math.max(0,+sat.value-100)+'%';
+}
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -2019,7 +2031,7 @@ function applySettings(){
   document.body.classList.toggle('classic',s.look==='classic');
   document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
-  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;
+  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;updateRangeValues();
   renderPickers();
 }
 function renderPickers(){
@@ -2058,6 +2070,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettin
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
 $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySettings()};
 ['blur','alpha','sat'].forEach(k=>$('#'+k).oninput=e=>{S.settings[k]=+e.target.value;save();applySettings()});
+['blur','alpha','sat'].forEach(k=>$('#'+k).addEventListener('input',updateRangeValues));
 function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
 /* ========= Carte OpenFreeMap (MapLibre) ========= */
