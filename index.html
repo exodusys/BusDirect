@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" id="themeColor" content="#0b0b0d">
@@ -540,9 +540,6 @@ html.map-edge #appWallpaper{visibility:hidden}
 /* Effet Liquid Glass sur tous les bandeaux */
 header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-/* Contenu commence sous la barre comme sur le détail */
-main{padding-top:calc(var(--safe-t) + 118px)}
-body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 104px)}
 /* Assombrissement */
 #appWallpaper::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--dim-a,0));pointer-events:none;transition:background-color .2s ease}
 /* Logos Paramètres en couleur d’accent */
@@ -557,9 +554,6 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
-<script>
-if(window.navigator.standalone===true)document.body.classList.add('standalone');
-</script>
 </head>
 <body>
 <div id="appWallpaper" aria-hidden="true"></div>
