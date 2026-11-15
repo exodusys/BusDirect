@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" id="themeColor" content="#0b0b0d">
@@ -537,50 +537,28 @@ html.map-edge #appWallpaper{visibility:hidden}
 .set{display:flex;align-items:center;gap:10px}
 .set>span{flex:0 0 108px;min-width:108px;text-align:left}
 .set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
-/* Effet Liquid Glass appliqué à tous les bandeaux */
+/* Effet Liquid Glass sur tous les bandeaux */
 header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-/* Pages principale et liste : le contenu commence sous la barre, comme sur le détail d’un parcours — aucun bord de dalle ni texte sous le flou */
+/* Contenu commence sous la barre comme sur le détail */
 main{padding-top:calc(var(--safe-t) + 118px)}
 body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 104px)}
-/* Assombrissement du fond */
+/* Assombrissement */
 #appWallpaper::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--dim-a,0));pointer-events:none;transition:background-color .2s ease}
-/* Logos des Paramètres dans la couleur d’accent */
+/* Logos Paramètres en couleur d’accent */
 .pick2 .pv,.pick2 .logo-pv{color:var(--accent)}
-/* Bulles d’arrêt sous les contrôles et bandeaux */
+/* Bulles sous les contrôles */
 .maplibregl-popup{z-index:1!important}
 .map-ctrl,.map-steps,.map-bar{z-index:5!important}
-/* Cible : même fond que les dalles */
+/* Cible comme les dalles */
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
-/* Mode application installée : bandeaux supérieur nets, sans flou ni contour */
-@media (display-mode: standalone) {
-  header,#listTop {
-    background:rgba(var(--glass-rgb),.96)!important;
-    backdrop-filter:none!important;
-    -webkit-backdrop-filter:none!important;
-    border:0!important;
-    box-shadow:none!important;
-    filter:none!important;
-    text-shadow:none!important;
-  }
-}
-html:has(body.standalone) header,
-html:has(body.standalone) #listTop {
-  background:rgba(var(--glass-rgb),.96)!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-  border:0!important;
-  box-shadow:none!important;
-  filter:none!important;
-  text-shadow:none!important;
-}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
 <script>
-document.addEventListener('DOMContentLoaded',()=>{if(window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches)document.body.classList.add('standalone')});
+if(window.navigator.standalone===true)document.body.classList.add('standalone');
 </script>
 </head>
 <body>
