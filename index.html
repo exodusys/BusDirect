@@ -470,7 +470,8 @@ body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
 body.classic #jrPage > .jp-action-bar{top:calc(var(--jp-title-height,52px) + 8px);border-radius:0}
 body.noglass #jrPage > .jp-action-bar{background:rgba(var(--glass-rgb),.96);backdrop-filter:none;-webkit-backdrop-filter:none}
 body:has(#mapView.open) .jp-action-bar{display:none!important}
-.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px}
+body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
 .map-steps::-webkit-scrollbar{display:none}
 .map-steps.full-width{left:12px;right:12px;width:calc(100% - 24px);max-width:none}
 .map-steps .ms-item{position:relative;flex:0 0 auto;display:flex;align-items:stretch;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);margin-left:-22px;padding-left:20px;box-sizing:border-box;min-width:94px}
@@ -485,8 +486,8 @@ body:has(#mapView.open) .jp-action-bar{display:none!important}
 .map-steps .ms.on{box-shadow:none}
 .map-steps .ms-item:has(> .ms.on)::after{content:'';position:absolute;inset:0;border:2.5px solid #fff;border-radius:inherit;pointer-events:none;box-sizing:border-box;z-index:2}
 .map-step-hint{position:absolute;z-index:6;width:34px;display:none;align-items:center;justify-content:center;pointer-events:none;color:#fff;font:900 26px system-ui;overflow:hidden}
-.map-step-hint.right{background:linear-gradient(90deg,transparent,rgba(0,0,0,.88));border-radius:0 24px 24px 0}
-.map-step-hint.left{background:linear-gradient(270deg,transparent,rgba(0,0,0,.88));border-radius:24px 0 0 24px}
+.map-step-hint.right{background:linear-gradient(90deg,transparent,rgba(var(--glass-rgb),.94));border-radius:0 28px 28px 0}
+.map-step-hint.left{background:linear-gradient(270deg,transparent,rgba(var(--glass-rgb),.94));border-radius:28px 0 0 28px}
 .map-step-hint.visible{display:flex}
 .map-step-hint span{animation:stepSlideHint 1.4s ease-in-out infinite}
 .map-step-hint.left span{animation-direction:reverse}
@@ -2006,7 +2007,7 @@ async function buildStyle(){
       (ly.layout=ly.layout||{}).visibility='none';   // pas de numéros de routes (ex. 112)      // traverses hachurées des voies
     if(ly.paint&&ly.paint['line-pattern']){ delete ly.paint['line-pattern']; ly.paint['line-color']=ly.paint['line-color']||(mapDark?'#5a5d68':'#cfcac2') }
     if(ly.paint&&ly.paint['fill-pattern']){ // pas de hachures (gares, voies, zones…)
-      delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?'#41444e':'#e9e5df'; ly.paint['fill-opacity']=mapDark?1:0.6;
+      delete ly.paint['fill-pattern']; ly.paint['fill-color']=mapDark?(isGreenMapLayer(ly)?'#2e4c36':'#41444e'):'#e9e5df'; ly.paint['fill-opacity']=mapDark?1:0.6;
     }
   });
   return st;
@@ -2014,11 +2015,13 @@ async function buildStyle(){
 /* Palette sombre bleu-gris (référence : capture de l'utilisateur) */
 const DK={hue:228/360,sat:0.10};
 function dkHsl(l,sat){const [r,g,b]=hsl2rgb(DK.hue,sat??DK.sat,Math.max(0,Math.min(1,l)));return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`}
+function isGreenMapLayer(ly){return ly.type==='fill'&&/park|forest|wood|grass|garden|recreation|village_green|nature_reserve|cemetery|golf|scrub|heath|meadow|orchard|allotment|wetland/.test((ly.id+' '+JSON.stringify(ly.filter||[])).toLowerCase())}
 function darkFor(ly,prop,v){
   const id=ly.id.toLowerCase(), t=ly.type;
   const conv=c=>{const o=parseColor(c); if(!o) return c; const L=rgb2hsl(o.r,o.g,o.b)[2], a=o.a;
     let out;
     if(/water|river|lake|ocean/.test(id)&&t!=='symbol') out=`rgb(44,58,79)`;
+    else if(t==='fill'&&isGreenMapLayer(ly)) out=/forest|wood/.test(id)?'rgb(37,65,47)':'rgb(46,76,54)';
     else if(t==='background'||(t==='fill'&&!/building/.test(id))) out=dkHsl(0.235+Math.max(0,0.96-L)*0.35);
     else if(/building/.test(id)) out=prop==='fill-outline-color'?dkHsl(0.16):dkHsl(0.29);
     else if(t==='line'&&/rail|transit|subway|tram|funicular|monorail|light_rail/.test(id)) out=dkHsl(/hatch|dash/.test(id)?0.78:0.70,0.14);            // voies ferrées : les plus claires
@@ -2116,7 +2119,7 @@ function alongLine(coords,t){
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
 async function openMap(it,walkLeg){
-  stopNav(); mapStepSel=null;
+ stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
@@ -2140,8 +2143,8 @@ async function openMap(it,walkLeg){
   }else{ mlMap.setStyle(style,{diff:false}); await new Promise(r=>mlMap.once('style.load',r)); mlMap.resize() }
   if(typeof style==='string'){applyMapDark();applyPoiFilter()} applyBuildings();
   collapseAttrib(); mlMap.once('idle',()=>{ $('#map').classList.remove('loading'); collapseAttrib() }); setTimeout(()=>$('#map').classList.remove('loading'),2500);
-  mlMap.resize(); drawItinerary(it); renderMapSteps();
-  if(mapWalk!=null) focusWalk(); else {setRouteDim(false); mapFit();}
+  mlMap.resize();drawItinerary(it); renderMapSteps();
+  if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000));
   startMeWatch();
@@ -2244,17 +2247,14 @@ function focusWalk(){
 let mapStepSel=null;
 function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2>Perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
-function setupStepHints(el){
- const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});
- el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect(),ready=el.classList.contains('ready');hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',ready&&(i?el.scrollWidth-el.clientWidth-el.scrollLeft>6:el.scrollLeft>6))})};
- if(!el._hintBound){el._hintBound=true;el.addEventListener('scroll',()=>el._hintUpdate(),{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)
-}
+function setupStepHints(el){const hints=['left','right'].map(side=>{let h=document.getElementById('mapStepHint-'+side);if(!h){h=document.createElement('div');h.id='mapStepHint-'+side;h.className='map-step-hint '+side;h.setAttribute('aria-hidden','true');h.innerHTML=side==='left'?'<span>››</span>':'<span>‹‹</span>';el.parentElement.appendChild(h)}return h});el._hintUpdate=()=>{const r=el.getBoundingClientRect(),p=el.parentElement.getBoundingClientRect();hints.forEach((h,i)=>{h.style.top=(r.top-p.top)+'px';h.style.height=r.height+'px';h.style[i?'right':'left']=Math.max(0,i?p.right-r.right:r.left-p.left)+'px';h.classList.toggle('visible',el.classList.contains('ready')&&(i?el.scrollWidth-el.clientWidth-el.scrollLeft>6:el.scrollLeft>6))})};if(!el._hintBound){el._hintBound=true;el.addEventListener('scroll',()=>el._hintUpdate(),{passive:true});window.addEventListener('resize',()=>el._hintUpdate());new ResizeObserver(()=>el._hintUpdate()).observe(el);new MutationObserver(()=>el._hintUpdate()).observe(el,{attributes:true,attributeFilter:['class','style']})}requestAnimationFrame(el._hintUpdate)}
 function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
   const WALK_IC='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="13.5" cy="4" r="2"/><path d="M13 7.5c-1.2 0-2 .5-2.6 1.4L8 13l1.7 1 2-3.2.8 3.4L10 21h2.2l2-5 1.6 2.2V21H18v-3.8l-2.3-3.1-.6-2.8 1 1.5 3 1v-2l-2.2-.8-1.6-2.5c-.5-.7-1.3-1-2.3-1z"/></svg>';
   const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))}));   // toutes les marches, même de quelques mètres
   if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
+  el.classList.add('glass');
   el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
   el.classList.toggle('full-width',segs.length>3);
   el.onclick=e=>{const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
