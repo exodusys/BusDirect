@@ -349,7 +349,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .map-btn{width:38px;height:38px;border-radius:12px;border:none;background:rgba(127,127,127,.2);color:var(--text);font-size:17px;cursor:pointer;flex:none}
 .map-ctrl{position:absolute;z-index:5;right:12px;bottom:calc(var(--safe-b) + 48px);display:flex;flex-direction:column;gap:6px;padding:6px;border-radius:18px;transition:bottom .25s ease}
 #mapView.walking .map-ctrl{bottom:calc(var(--safe-b) + 130px)}
-.walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 40px);border-radius:20px;padding:12px 14px;display:none}
+.walk-card{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);border-radius:20px;padding:12px 14px;display:none}
 .walk-card.on{display:block}
 #walkTitle .wt1{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}
 #walkTitle .wt2{display:block;font-size:14.5px;font-weight:700;line-height:1.25}
@@ -438,7 +438,7 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 40px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
+.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
 .map-steps:not(.ready),.map-ctrl:not(.ready){visibility:hidden}
 .map-steps .ms{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
@@ -450,6 +450,7 @@ body.classic .legs > .leg{border-radius:6px}
 .map-steps .ms.on{box-shadow:inset 0 0 0 2.5px #fff}
 
 #map.z-lo .stop-lbl{display:none}
+#map .maplibregl-ctrl-bottom-right .maplibregl-ctrl{margin:0 12px 0 0}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2192,19 +2193,27 @@ function focusStep(i,refit){
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
   // ordre de bas en haut : bandeau des étapes (tout en bas) → « Marche jusqu'à » → icônes de droite
-  const B=40, hasSteps=!!el.innerHTML, on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
+  const B=16, hasSteps=!!el.innerHTML, on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
   el.style.bottom=`calc(var(--safe-b) + ${B}px)`;
   const wb=B+(hasSteps?46+8:0); if(wc) wc.style.bottom=`calc(var(--safe-b) + ${wb}px)`;
   const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${on?wb+wc.offsetHeight+8:wb}px)`;
+  placeAttrib();
 }
+// (i) OpenFreeMap : en haut à droite, juste sous la barre du titre
+function placeAttrib(){ const c=document.querySelector('#map .maplibregl-ctrl-bottom-right'), bar=document.querySelector('#mapView .map-bar'); if(!c||!bar) return;
+  const top=Math.round(bar.getBoundingClientRect().bottom-$('#map').getBoundingClientRect().top+8); c.style.top=top+'px'; c.style.bottom='auto' }
 setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
 // Marges de la carte = place réellement libre entre la barre du haut et les dalles du bas (et les icônes de droite)
 function mapPad(m=20,lblRight=0){
   const mv=$('#map').getBoundingClientRect(), H=mv.height, W=mv.width;
   const bar=document.querySelector('#mapView .map-bar'); const top=bar?bar.getBoundingClientRect().bottom-mv.top+m:110;
   let low=H; ['#mapSteps','#walkCard'].forEach(s=>{ const e=$(s); if(!e||!e.offsetHeight||getComputedStyle(e).display==='none') return; low=Math.min(low,e.getBoundingClientRect().top-mv.top) });
-  const ctl=document.querySelector('#mapView .map-ctrl'); const cw=ctl&&ctl.offsetHeight?(mv.right-ctl.getBoundingClientRect().left):0;
-  const bottom=H-low+m, right=Math.max(cw+m*.6,lblRight,m), left=m+10;
+  try{placeMapSteps()}catch{}   // positions à jour avant de mesurer
+  const ctl=document.querySelector('#mapView .map-ctrl'); let cw=0;
+  if(ctl&&ctl.offsetHeight){ const r=ctl.getBoundingClientRect(); cw=mv.right-r.left;
+    // la colonne d'icônes descend jusqu'aux dalles : on garde toute sa largeur libre à droite
+  }
+  const bottom=H-low+m, right=Math.max(cw+m,lblRight,m), left=Math.max(m+10,Math.min(cw+m,70));   // parcours centré, jamais sous les boutons
   const sc=Math.min(1,(H-80)/(top+bottom),(W-60)/(left+right));   // écran très petit : on réduit proportionnellement
   return {top:top*sc,bottom:bottom*sc,left:left*sc,right:right*sc};
 }
