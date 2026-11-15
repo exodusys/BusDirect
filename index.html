@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="theme-color" id="themeColor" content="#0b0b0d">
 <title>BusDirect</title>
 <style>
@@ -565,25 +565,9 @@ body.list-page #timeBar {
 
 /* Zone de la barre d'état iOS : fond fixe et opaque sous l'heure et les icônes.
    Elle masque le défilement de la page dans cette zone, sur toutes les pages. */
-/* Masque réellement fixe au niveau de la racine : sur iOS PWA, un pseudo-élément
-   porté par body peut défiler avec le document. Le masque couvre toute la zone
-   de la barre d'état, même si safe-area-inset-top est mal reporté par iOS. */
-html::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: max(44px, env(safe-area-inset-top, 0px));
-  z-index: 2147483647;
-  pointer-events: none;
-  background: var(--page-bg, var(--bg));
-}
-
-/* En apparence classique, conserver la couleur de fond de l'application. */
-html:has(body.classic)::before {
-  background: var(--bg);
-}
+/* La barre d'état iOS est rendue opaque par la balise
+   apple-mobile-web-app-status-bar-style=black. Le contenu de la page peut
+   continuer à défiler dans le document sans être composé sous l'heure. */
 
 
 /* iOS : l'accueil et la liste plein écran commencent sous le masque de statut.
@@ -591,6 +575,15 @@ html:has(body.classic)::before {
 html, body { background-color: var(--page-bg, var(--bg)) !important; }
 body:not(.list-page) > main { position: relative; }
 body.list-page > main { position: relative; }
+\n
+/* Réserve la zone système en haut dans le flux de la page.
+   Le scroll de l'accueil et de la liste ne démarre pas dans la zone de statut. */
+body > main {
+  padding-top: calc(var(--safe-t) + 84px);
+}
+body.list-page > main {
+  padding-top: var(--safe-t);
+}
 \n</style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
