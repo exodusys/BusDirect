@@ -510,13 +510,11 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 .home-btn svg{display:block;width:23px;height:23px;pointer-events:none}
 .home-btn:active{background:rgba(127,127,127,.3)}
 .home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#jrPage .jp-title{flex:1;min-width:0}
+#jrPage .jp-title,#stopPage .jp-title{flex:1;min-width:0}
 #mapView .map-bar .t{flex:1;min-width:0}
-#mapView .map-bar .home-btn,#jrPage .jp-bar .home-btn,#listTop .home-btn{margin-left:auto}
-
-
-/* Les messages suivent la position du bandeau sans animation de hauteur. */
+#mapView .map-bar .home-btn,#jrPage .jp-bar .home-btn,#stopPage .jp-bar .home-btn,#listTop .home-btn{margin-left:auto}
 #toast{transition:opacity .25s,transform .25s}
+
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -756,15 +754,11 @@ const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const hm = d => new Date(d).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
 const mins = s => Math.round(s/60);
 function positionMapToast(){
- const message=document.getElementById('toast'),view=document.getElementById('mapView');
- if(!message)return;
+ const message=document.getElementById('toast'),view=document.getElementById('mapView');if(!message)return;
  if(!view?.classList.contains('open')){message.style.removeProperty('bottom');return}
- const steps=document.getElementById('mapSteps'),walk=document.getElementById('walkCard');
- const candidates=[steps,walk].filter(el=>el&&el.offsetHeight>0&&getComputedStyle(el).display!=='none');
+ const candidates=[document.getElementById('mapSteps'),document.getElementById('walkCard')].filter(el=>el&&el.offsetHeight>0&&getComputedStyle(el).display!=='none');
  if(!candidates.length){message.style.removeProperty('bottom');return}
- const top=Math.min(...candidates.map(el=>el.getBoundingClientRect().top));
- const bottom=Math.max(12,window.innerHeight-top+12);
- const value=Math.round(bottom)+'px';if(message.style.bottom!==value)message.style.bottom=value;
+ const top=Math.min(...candidates.map(el=>el.getBoundingClientRect().top)),value=Math.round(Math.max(12,window.innerHeight-top+12))+'px';if(message.style.bottom!==value)message.style.bottom=value;
 }
 window.addEventListener('resize',positionMapToast,{passive:true});
 if(window.visualViewport){window.visualViewport.addEventListener('resize',positionMapToast,{passive:true});window.visualViewport.addEventListener('scroll',positionMapToast,{passive:true})}
@@ -1752,7 +1746,7 @@ function openStopsPage(li){
   const l=jpIt.legs[li]; if(!l) return; const first=jpIt.legs.findIndex(x=>x.mode!=='WALK'&&x.mode!=='BIKE'&&x.mode!=='CAR')===li;
   let pg=$('#stopPage');
   if(!pg){ pg=document.createElement('div'); pg.id='stopPage'; pg.className='sub-page';
-    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeStopsPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"><div class="card glass stl"></div></div>';
+    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeStopsPage()" aria-label="Retour">‹</button><b class="jp-title"></b><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button></div><div class="jp-body"><div class="card glass stl"></div></div>';
     document.body.appendChild(pg); jpSwipe(pg,closeStopsPage);
     pg.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
     pg.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
