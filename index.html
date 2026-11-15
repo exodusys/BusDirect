@@ -2156,7 +2156,7 @@ function focusWalk(){
   $('#mapSub').textContent=`${nmF(l.from?.name)} → ${nmF(l.to?.name)}${next?.from?.track?' · Quai '+next.from.track:''}${len}`;
   setRouteDim(true);
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
-  mlMap.fitBounds(b,{padding:{top:120,bottom:160,left:50,right:70},maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:mapPad(30),maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
@@ -2173,11 +2173,14 @@ function renderMapSteps(){
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
   clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);   // sans position : affiché quand même
 }
-function showMapSteps(){ clearTimeout(renderMapSteps._t); $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
+function showMapSteps(){ clearTimeout(renderMapSteps._t);
+  const first=!$('#mapSteps')?.classList.contains('ready');
+  if(first&&mlMap&&mapIt&&!navOn) setTimeout(()=>{ if(mapStepSel!=null) focusStep(mapStepSel,true); else if(mapWalk!=null) focusWalk(); else mapFit() },30);   // recadre une fois les dalles en place
+  $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
 function markMapStep(){ document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel)) }
-function focusStep(i){
+function focusStep(i,refit){
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
-  if(mapStepSel===i){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
+  if(mapStepSel===i&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
   mapStepSel=i; markMapStep(); setMapOverview(false);
   if(l.mode==='WALK'){ mapWalk=i; focusWalk(); return }
   if(mapWalk!=null){ mapWalk=null; setRouteDim(false) }
@@ -2185,7 +2188,7 @@ function focusStep(i){
   $('#mapTitle').textContent=`${l.routeShortName||''} → ${l.headsign||l.to?.name||''}`;
   $('#mapSub').textContent=`${hm(l.startTime)} ${l.from?.name||''} → ${hm(l.endTime)} ${l.to?.name||''}`;
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
-  mlMap.fitBounds(b,{padding:{top:130,bottom:230,left:60,right:Math.min(190,innerWidth*.4)},maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:mapPad(20,Math.min(170,innerWidth*.38)),maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
   // ordre de bas en haut : bandeau des étapes (tout en bas) → « Marche jusqu'à » → icônes de droite
@@ -2195,6 +2198,16 @@ function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) re
   const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${on?wb+wc.offsetHeight+8:wb}px)`;
 }
 setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
+// Marges de la carte = place réellement libre entre la barre du haut et les dalles du bas (et les icônes de droite)
+function mapPad(m=20,lblRight=0){
+  const mv=$('#map').getBoundingClientRect(), H=mv.height, W=mv.width;
+  const bar=document.querySelector('#mapView .map-bar'); const top=bar?bar.getBoundingClientRect().bottom-mv.top+m:110;
+  let low=H; ['#mapSteps','#walkCard'].forEach(s=>{ const e=$(s); if(!e||!e.offsetHeight||getComputedStyle(e).display==='none') return; low=Math.min(low,e.getBoundingClientRect().top-mv.top) });
+  const ctl=document.querySelector('#mapView .map-ctrl'); const cw=ctl&&ctl.offsetHeight?(mv.right-ctl.getBoundingClientRect().left):0;
+  const bottom=H-low+m, right=Math.max(cw+m*.6,lblRight,m), left=m+10;
+  const sc=Math.min(1,(H-80)/(top+bottom),(W-60)/(left+right));   // écran très petit : on réduit proportionnellement
+  return {top:top*sc,bottom:bottom*sc,left:left*sc,right:right*sc};
+}
 function setRouteDim(on){
   if(!mlMap) return;
   [['route-line','line-opacity'],['route-casing','line-opacity'],['route-walk','line-opacity']].forEach(([id,p])=>{
@@ -2214,7 +2227,7 @@ function mapFit(){
   const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach(l=>legCoords(l).forEach(c=>b.extend(c)));
   if(pos) b.extend([pos.lon,pos.lat]);
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer'; followVeh=false; $('#btnFollow')?.classList.remove('on');
-  mlMap.fitBounds(b,{padding:{top:110,bottom:150,left:40,right:40},pitch:is3D?55:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:mapPad(16),pitch:is3D?55:0,bearing:0,duration:600});
 }
 /* Glisser depuis le bord gauche de la carte pour revenir à la liste */
 (()=>{ const mv=document.getElementById('mapView'); let sw=null;
