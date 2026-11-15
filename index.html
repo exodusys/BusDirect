@@ -403,7 +403,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
-#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:transparent;transition:transform .26s ease;overscroll-behavior:contain}
+#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;transition:transform .26s ease;overscroll-behavior:contain}
 #jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
 #jrPage.out,.sub-page.out{animation:jpOut .26s ease forwards}
 @keyframes jpIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -413,7 +413,7 @@ body.classic .now-sep{border-radius:5px}
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
-#stopPage{z-index:31;background:transparent;overscroll-behavior:contain;touch-action:pan-y}
+#stopPage{z-index:31;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;overscroll-behavior:contain;touch-action:pan-y}
 #stopPage .jp-body{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 #stopPage .stl{padding:14px;background:rgba(var(--glass-rgb),var(--glass-a))}
 
@@ -442,20 +442,18 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.jp-action-bar{position:fixed!important;left:50%;right:auto;top:auto;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);width:min(calc(100% - 28px),664px);box-sizing:border-box;z-index:30;padding:8px 12px;margin:0!important;border-radius:28px;gap:10px}
+.jp-action-bar{position:fixed!important;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 12px);width:min(calc(100% - 28px),664px);box-sizing:border-box;z-index:30;padding:8px 12px;margin:0!important;border-radius:28px;gap:10px}
 body > .jp-action-bar{display:none}
 #jrPage.on:not(.out) ~ .jp-action-bar{display:flex}
 body.classic .jp-action-bar{border-radius:0}
-/* Même calque, cadrage et débordement que le fond global de la liste. */
-#jrPage::before,#stopPage::before{content:"";position:fixed;left:0;right:0;top:-160px;bottom:-160px;z-index:-1;pointer-events:none;background:var(--wall) center/cover no-repeat,var(--bg);transform:translateZ(0)}
-@supports (height:100lvh){#jrPage::before,#stopPage::before{top:-160px;bottom:auto;height:calc(100lvh + 320px)}}
-#jrPage,#stopPage{isolation:isolate}
 .jp-action-bar .btn{flex:1 1 auto;min-width:0;white-space:nowrap}
 .map-steps{position:absolute;z-index:5;left:12px;right:auto;width:max-content;max-width:calc(100% - 24px);bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
 .map-steps:not(.ready),.map-ctrl:not(.ready){visibility:hidden}
 .map-steps .ms{position:relative;flex:0 0 auto;min-width:38px;max-width:150px;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
-.map-steps .ms:not(.w){flex:0 0 72px;min-width:72px;max-width:110px;padding-left:24px;padding-right:10px}\n.map-steps .ms:first-child{margin-left:0;padding-left:8px}\n.map-steps .ms.w:first-child{padding-left:8px}
+.map-steps .ms:not(.w){flex:0 0 72px;min-width:72px;max-width:110px;padding-left:24px;padding-right:10px}
+.map-steps .ms:first-child{margin-left:0;padding-left:8px}
+.map-steps .ms.w:first-child{padding-left:8px}
 .map-steps .ms b{overflow:hidden;text-overflow:ellipsis}
 .map-steps .ms.rail b{font-style:italic}
 .map-steps .ms.w{flex:0 0 42px!important;width:42px;min-width:42px;max-width:42px;padding-left:8px;padding-right:8px;margin-left:-16px}
@@ -467,6 +465,20 @@ body.classic .jp-action-bar{border-radius:0}
 /* icônes verticales de la carte : nuances de gris uniquement */
 .map-ctrl .map-btn{filter:grayscale(1);color:#9aa0a6;background:rgba(127,127,127,.16)}
 .map-ctrl .map-btn.on,#mapView .map-ctrl .map-btn.on{background:#6b7075;color:#fff;filter:grayscale(1) brightness(1.15)}
+
+/* Un seul fond global : aucun fond local ne se recadre entre les barres Safari. */
+#jrPage,#stopPage{background:transparent!important;background-image:none!important}
+body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
+body:has(#stopPage.on) #jrPage > *,body:has(#stopPage.on) > .jp-action-bar{visibility:hidden;pointer-events:none}
+/* Les marches sont plus larges ; à partir de quatre étapes, toute la largeur disponible. */
+.map-steps{box-sizing:border-box}
+.map-steps .ms.w{flex:0 0 64px!important;width:64px;min-width:64px;max-width:64px}
+.map-steps .ms:first-child{margin-left:0;padding-left:8px}
+.map-steps:has(> .ms:nth-child(4)){left:12px;right:12px;width:calc(100% - 24px);max-width:none}
+.map-steps:has(> .ms:nth-child(4)) > .ms{box-sizing:border-box;flex:1 1 0!important;width:auto;min-width:0;max-width:none;margin-left:0;padding:0 6px}
+.map-steps:has(> .ms:nth-child(4)) > .ms.w{flex:.85 1 0!important;width:auto;min-width:0;max-width:none}
+.map-steps .ms.w svg{flex-shrink:0}
+
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
