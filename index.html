@@ -2,9 +2,9 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=contain">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" id="themeColor" content="#0b0b0d">
 <title>BusDirect</title>
 <style>
@@ -535,18 +535,15 @@ html.map-edge #appWallpaper{visibility:hidden}
 
 .range-value{flex:none;width:46px;text-align:right;font:700 13px -apple-system,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
 .set{display:flex;align-items:center;gap:10px}
-.set>span{flex:0 0 108px;min-width:108px;text-align:left}
-.set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
-header{position:fixed;top:calc(var(--safe-t) + 10px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:20;padding:8px 12px;border-radius:28px;display:flex;align-items:center;gap:10px;box-sizing:border-box}
-#listTop{top:calc(var(--safe-t) + 10px);left:14px;right:14px;max-width:692px;margin:0 auto;padding:8px 12px;border-radius:28px;box-sizing:border-box}
-header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
-body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-main{padding:calc(var(--safe-t) + 76px) 14px calc(var(--safe-b) + 100px)}
-body.list-page #v-list{padding-top:calc(var(--safe-t) + 22px + var(--lt-h,52px))}
-#appWallpaper::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--dim-a,0));pointer-events:none;transition:background-color .2s ease}
+.set input[type=range]{flex:1;min-width:0}
+/* Logos des Paramètres dans la couleur d’accent */
 .pick2 .pv,.pick2 .logo-pv{color:var(--accent)}
+/* Les bulles d’arrêt restent sous les boutons et bandeaux de la carte */
 .maplibregl-popup{z-index:1!important}
 .map-ctrl,.map-steps,.map-bar{z-index:5!important}
+/* Barres du haut : même transparence, sans flou supplémentaire */
+header,#listTop{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* Cible : même fond que les dalles */
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
 
@@ -643,7 +640,6 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
       <div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div>
       <div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div>
       <div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div>
-      <div class="set"><span>Assombrir</span><input type="range" id="dim" min="0" max="100"><output class="range-value" id="dimValue" for="dim">20%</output></div>
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
@@ -773,7 +769,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:0,dim:20,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:0,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=0;st.smsOn=false;store.set('settings',S.settings)}})();
@@ -2021,11 +2017,10 @@ let wallpaperResizeTimer=null;
 window.addEventListener('resize',()=>{clearTimeout(wallpaperResizeTimer);wallpaperResizeTimer=setTimeout(()=>{if(S.settings.wall.startsWith('c:'))syncWallpaperPalette()},160)},{passive:true});
 
 function updateRangeValues(){
- const blur=$('#blur'),alpha=$('#alpha'),sat=$('#sat'),dim=$('#dim');
+ const blur=$('#blur'),alpha=$('#alpha'),sat=$('#sat');
  if(blur)$('#blurValue').textContent=blur.value+'%';
  if(alpha)$('#alphaValue').textContent=alpha.value+'%';
  if(sat)$('#satValue').textContent=sat.value+'%';
- if(dim)$('#dimValue').textContent=dim.value+'%';
 }
 function applySettings(){
   const s=S.settings, root=document.documentElement;
@@ -2036,7 +2031,6 @@ function applySettings(){
   root.style.setProperty('--blur',s.blur+'px');
   root.style.setProperty('--glass-a',s.alpha/100);
   root.style.setProperty('--sat',(100+s.sat)+'%');
-  root.style.setProperty('--dim-a',(s.dim||0)/100);
   document.body.classList.toggle('noglass',!s.glass);
   if(!s.wall.startsWith('c:')&&!WALLS[s.wall]) s.wall='none'; if(!s.logo.startsWith('c:')&&!LOGOS[s.logo]) s.logo='original';
   const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]?.g||'none'));
@@ -2048,7 +2042,7 @@ function applySettings(){
   document.body.classList.toggle('classic',s.look==='classic');
   document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
-  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;$('#dim').value=s.dim||0;updateRangeValues();
+  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;updateRangeValues();
   renderPickers();
 }
 function renderPickers(){
@@ -2086,8 +2080,8 @@ $('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.theme=v;s
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettings);
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
 $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySettings()};
-['blur','alpha','sat','dim'].forEach(k=>$('#'+k).oninput=e=>{S.settings[k]=+e.target.value;save();applySettings()});
-['blur','alpha','sat','dim'].forEach(k=>$('#'+k).addEventListener('input',updateRangeValues));
+['blur','alpha','sat'].forEach(k=>$('#'+k).oninput=e=>{S.settings[k]=+e.target.value;save();applySettings()});
+['blur','alpha','sat'].forEach(k=>$('#'+k).addEventListener('input',updateRangeValues));
 function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
 /* ========= Carte OpenFreeMap (MapLibre) ========= */
