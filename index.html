@@ -550,6 +550,8 @@ nav{position:fixed;left:10px;right:10px;bottom:calc(var(--safe-b) + 16px);z-inde
 main{padding-top:calc(var(--safe-t) + 74px + env(safe-area-inset-top,0px))}
 body.list-page main{padding-top:calc(var(--safe-t) + env(safe-area-inset-top,0px))}
 #v-list{padding-top:calc(var(--safe-t) + env(safe-area-inset-top,0px))}
+/* Wallpaper stays fixed while lists scroll on main and next-departures pages */
+#appWallpaper{position:fixed;inset:0;z-index:-1;background-attachment:fixed;background-size:cover;background-position:center}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
