@@ -52,9 +52,9 @@ header{position:fixed;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-inde
 .appname{font-weight:800;font-size:20px;letter-spacing:-.3px}
 .appname span{color:var(--accent)}
 header .spacer{flex:1}
-.loc{font-size:12px;line-height:1.25;color:var(--muted);max-width:50%;text-align:right;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+.loc{font-size:10.5px;line-height:1.2;color:var(--muted);max-width:50%;text-align:right;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
 .loc span{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.loc span:first-child{color:var(--text);font-weight:600}
+.loc span:first-child{color:var(--muted);font-weight:600}
 
 main{padding:calc(var(--safe-t) + 84px) 14px calc(var(--safe-b) + 100px);max-width:720px;margin:0 auto}
 section.view{display:none;animation:fade .25s ease}
@@ -413,8 +413,10 @@ body.classic .now-sep{border-radius:5px}
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 30px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
-#stopPage{z-index:31}
-#stopPage .stl{padding:14px}
+#stopPage{z-index:31;background:var(--page-bg,var(--bg));background-image:var(--wall);background-attachment:fixed;background-size:cover;overscroll-behavior:contain;touch-action:pan-y}
+#stopPage .jp-body{touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#stopPage .stl{padding:14px;background:rgba(var(--glass-rgb),var(--glass-a))}
+
 .legs > .leg.tap{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
 .legs > .leg.tap:active{background:rgba(127,127,127,.15)}
 
@@ -440,10 +442,12 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .legs > .leg.walk-row .bar{background:repeating-linear-gradient(to bottom,var(--muted) 0 4px,transparent 4px 8px)!important;opacity:.8}
 .legs > .leg:active{background:rgba(127,127,127,.2)}
 body.classic .legs > .leg{border-radius:6px}
-.map-steps{position:absolute;z-index:5;left:12px;right:12px;bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
+.jp-action-bar{position:sticky;bottom:calc(var(--safe-b,0px) + 8px);z-index:6;padding:9px;margin:12px 0 4px;border:1px solid var(--border);border-radius:18px;background:rgba(var(--glass-rgb),.94);backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));box-shadow:var(--shadow)}
+.jp-action-bar .btn{flex:1 1 auto;min-width:0;white-space:nowrap}
+.map-steps{position:absolute;z-index:5;left:12px;right:auto;width:max-content;max-width:calc(100% - 24px);bottom:calc(var(--safe-b) + 16px);display:flex;align-items:stretch;height:46px;padding:4px;border-radius:26px;overflow:hidden;background:#141414!important}
 .map-steps:empty{display:none}
 .map-steps:not(.ready),.map-ctrl:not(.ready){visibility:hidden}
-.map-steps .ms{position:relative;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
+.map-steps .ms{position:relative;flex:0 0 auto;min-width:38px;max-width:150px;display:flex;align-items:center;justify-content:center;margin-left:-22px;padding:0 6px 0 26px;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);font:900 17px -apple-system,system-ui,sans-serif;letter-spacing:-.3px;cursor:pointer;overflow:hidden;white-space:nowrap}
 .map-steps .ms:first-child{margin-left:0;padding-left:8px}
 .map-steps .ms b{overflow:hidden;text-overflow:ellipsis}
 .map-steps .ms.rail b{font-style:italic}
@@ -1631,10 +1635,18 @@ function openStopsPage(li){
   let pg=$('#stopPage');
   if(!pg){ pg=document.createElement('div'); pg.id='stopPage'; pg.className='sub-page';
     pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeStopsPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"><div class="card glass stl"></div></div>';
-    document.body.appendChild(pg); jpSwipe(pg,closeStopsPage) }
+    document.body.appendChild(pg); jpSwipe(pg,closeStopsPage);
+    pg.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+    pg.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
+    pg.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});
+    pg.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+    let lastStopTap=0;
+    pg.addEventListener('touchend',e=>{const now=Date.now();if(now-lastStopTap<300)e.preventDefault();lastStopTap=now},{passive:false});
+  }
   pg.querySelector('.jp-title').innerHTML=`${badge(l,'mini')} → ${esc(l.headsign||l.to?.name||'')}`;
   const box=pg.querySelector('.stl'); box._v=null; box.innerHTML='<div class="spin"></div>';
-  pg.scrollTop=0; pg.classList.remove('out'); pg.classList.add('on'); clickShieldUntil=Date.now()+400;
+  pg.scrollTop=0; pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
+  pg.classList.remove('out'); pg.classList.add('on'); clickShieldUntil=Date.now()+400;
   loadTrip(l).then(trip=>{ if(!pg.classList.contains('on')) return;
     if(!trip||!trip.stops?.length){ box.innerHTML='<div class="muted" style="font-size:14px;padding:6px 0">Arrêts indisponibles</div>'; return }
     const b=stopIdx(trip,l.from), e=Math.max(b,stopIdx(trip,l.to,b));
@@ -1650,7 +1662,10 @@ function openStopsPage(li){
   clearInterval(jpVehTimer); jpVehTimer=setInterval(jpMoveVehicles,1000);
 }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
-  pg.classList.add('out'); setTimeout(()=>pg.classList.remove('on','out'),260) }
+  pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
+  void pg.offsetWidth; pg.classList.add('out');
+  setTimeout(()=>{pg.classList.remove('on','out');pg.style.transition='';pg.style.transform='';pg.style.opacity='';pg.scrollTop=0},300)
+}
 function jpMoveVehicles(){
   document.querySelectorAll('#stopPage .stl').forEach(box=>{ const v=box._v; if(!v) return; const {trip,l,s0,e}=v, now=Date.now();
     refreshTripTimes(l,trip).then(()=>{ box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx} r.classList.toggle('done',st&&st.d<now-15000)}) });
