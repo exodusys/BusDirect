@@ -521,11 +521,23 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 .edge-returning{transition:transform .6s cubic-bezier(.18,1.55,.3,1)!important;will-change:transform}
 @media(prefers-reduced-motion:reduce){.edge-returning{transition:none!important}}
 
+
+/* Un seul calque, fixe et indépendant de la hauteur des listes. */
+html{background-color:var(--page-bg,var(--bg))!important}
+body{position:relative;isolation:isolate;min-height:100%;height:auto!important;background:transparent!important}
+body::before{content:none!important;display:none!important}
+#appWallpaper{position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:auto;height:calc(100vh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px));z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
+@supports(height:100lvh){#appWallpaper{height:calc(100lvh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px))}}
+#jrPage,#stopPage,.sub-page,main,section.view{background-color:transparent!important;background-image:none!important}
+html.map-edge #appWallpaper{visibility:hidden}
+@media(prefers-reduced-motion:reduce){#appWallpaper{transition:none}}
+
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
 </head>
 <body>
+<div id="appWallpaper" aria-hidden="true"></div>
 
 <header class="glass">
   <div class="logo" id="logo">🚌</div>
@@ -1934,6 +1946,59 @@ const WALLS={
 function mixDark(hexes){ if(!hexes.length) return '#0b0b0d'; let r=0,g=0,b=0;
   hexes.forEach(h=>{const n=parseInt(h.slice(1),16);r+=n>>16&255;g+=n>>8&255;b+=n&255}); const k=hexes.length, a=0.28;
   const f=(v)=>Math.round(11*(1-a)+(v/k)*a).toString(16).padStart(2,'0'); return '#'+f(r)+f(g)+f(b) }
+const wallpaperImageSamples=new Map();
+let wallpaperPaletteRevision=0,lastWallpaperPaintKey='';
+function wallpaperBlend(base,tint,amount){return base.map((v,i)=>Math.max(0,Math.min(255,Math.round(v*(1-amount)+tint[i]*amount))))}
+function wallpaperHex(rgb){return '#'+rgb.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('')}
+function makeWallpaperPalette(colors,dark){
+ if(!colors?.length)return null;
+ const avg=[0,1,2].map(i=>colors.reduce((sum,c)=>sum+c[i],0)/colors.length);
+ const page=wallpaperBlend(dark?[7,11,20]:[238,242,247],avg,dark?0.40:0.22);
+ const glass=wallpaperBlend(dark?[22,28,44]:[255,255,255],avg,dark?0.38:0.16);
+ const border=wallpaperBlend(avg,[255,255,255],dark?0.40:0.62);
+ return {page,glass,border};
+}
+function paintWallpaperPalette(colors,dark){
+ const root=document.documentElement,palette=makeWallpaperPalette(colors,dark);
+ if(palette){root.style.setProperty('--page-bg',wallpaperHex(palette.page));root.style.setProperty('--glass-rgb',palette.glass.join(','));root.style.setProperty('--border',`rgba(${palette.border.join(',')},${dark?0.23:0.62})`)}
+ else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||(dark?'#070b14':'#eef2f7'));root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
+ document.body.classList.toggle('has-wallpaper',!!palette);
+ if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content',root.style.getPropertyValue('--page-bg'));
+}
+function sampleWallpaperImage(url){
+ const rect=document.getElementById('appWallpaper')?.getBoundingClientRect(),aspect=Math.max(.15,Math.round(((rect?.width||innerWidth)/(rect?.height||innerHeight+320))*100)/100),key=url+'@'+aspect;
+ if(wallpaperImageSamples.has(key))return wallpaperImageSamples.get(key);
+ const entry={ready:false,colors:null,promise:null};
+ entry.promise=new Promise(resolve=>{
+  const image=new Image();if(/^https?:/i.test(url))image.crossOrigin='anonymous';
+  image.onload=()=>{let colors=null;try{
+   const canvas=document.createElement('canvas');canvas.width=48;canvas.height=Math.min(192,Math.max(32,Math.round(48/aspect)));
+   const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw Error('canvas');
+   const scale=Math.max(canvas.width/image.naturalWidth,canvas.height/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;
+   ctx.drawImage(image,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+   const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;let r=0,g=0,b=0,total=0;
+   for(let i=0;i<data.length;i+=4){const alpha=data[i+3]/255;if(alpha<.05)continue;const hi=Math.max(data[i],data[i+1],data[i+2]),lo=Math.min(data[i],data[i+1],data[i+2]),weight=alpha*(.35+.65*(hi?((hi-lo)/hi):0));r+=data[i]*weight;g+=data[i+1]*weight;b+=data[i+2]*weight;total+=weight}
+   if(total)colors=[[r/total,g/total,b/total].map(Math.round)];
+  }catch{}entry.ready=true;entry.colors=colors;resolve(colors)};
+  image.onerror=()=>{entry.ready=true;resolve(null)};image.src=url;
+ });
+ wallpaperImageSamples.set(key,entry);if(wallpaperImageSamples.size>8)wallpaperImageSamples.delete(wallpaperImageSamples.keys().next().value);
+ return entry;
+}
+function syncWallpaperPalette(){
+ const revision=++wallpaperPaletteRevision,settings=S.settings,root=document.documentElement,dark=root.dataset.theme==='dark',custom=customOf(settings.customWalls,settings.wall),paintKey=settings.wall+'|'+dark;
+ if(custom?.url){
+  const entry=sampleWallpaperImage(custom.url);
+  if(entry.ready)paintWallpaperPalette(entry.colors,dark);
+  else{if(lastWallpaperPaintKey!==paintKey)paintWallpaperPalette(null,dark);entry.promise.then(colors=>{if(revision===wallpaperPaletteRevision&&S.settings.wall===settings.wall)paintWallpaperPalette(colors,dark)})}
+ }else{
+  const gradient=WALLS[settings.wall]?.g||'none',colors=(gradient.match(/#[0-9a-f]{6}/gi)||[]).map(hex=>{const n=parseInt(hex.slice(1),16);return [n>>16&255,n>>8&255,n&255]});
+  paintWallpaperPalette(colors,dark);
+ }
+ lastWallpaperPaintKey=paintKey;
+}
+let wallpaperResizeTimer=null;
+window.addEventListener('resize',()=>{clearTimeout(wallpaperResizeTimer);wallpaperResizeTimer=setTimeout(()=>{if(S.settings.wall.startsWith('c:'))syncWallpaperPalette()},160)},{passive:true});
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -1945,13 +2010,8 @@ function applySettings(){
   root.style.setProperty('--sat',s.sat+'%');
   document.body.classList.toggle('noglass',!s.glass);
   if(!s.wall.startsWith('c:')&&!WALLS[s.wall]) s.wall='none'; if(!s.logo.startsWith('c:')&&!LOGOS[s.logo]) s.logo='original';
-  { // fond de page = couleur dominante du fond d'écran (Safari l'affiche sous la barre d'adresse et la barre d'outils)
-    const W0=WALLS[s.wall]; let base=getComputedStyle(root).getPropertyValue('--bg').trim()||'#070b14';
-    if(s.wall.startsWith('c:')) base='#0b0b0d';
-    else if(W0&&W0.g!=='none'){ const m=W0.g.match(/#[0-9a-f]{6}/gi)||[]; base=mixDark(m) }
-    root.style.setProperty('--page-bg',base); $('#themeColor')?.setAttribute('content',base);
-  }
   const cw=customOf(s.customWalls,s.wall); root.style.setProperty('--wall',cw?`url(${cw.url})`:(WALLS[s.wall]?.g||'none'));
+  syncWallpaperPalette();
   const lg=$('#logo');
   const cl=customOf(s.customLogos,s.logo); if(cl){lg.style.background='none';lg.innerHTML=`<img src="${cl.url}" alt="">`}
   else{lg.style.background='none';lg.innerHTML=logoSvg(s.logo)}
