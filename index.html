@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=contain">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" id="themeColor" content="#0b0b0d">
 <title>BusDirect</title>
 <style>
@@ -537,88 +537,18 @@ html.map-edge #appWallpaper{visibility:hidden}
 .set{display:flex;align-items:center;gap:10px}
 .set>span{flex:0 0 108px;min-width:108px;text-align:left}
 .set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
-/* Fond continu identique au détail : page transparente, fond fixe derrière */
-html{background-color:var(--page-bg,var(--bg))!important}
-body{position:relative;isolation:isolate;min-height:100%;height:auto!important;background:transparent!important}
-body::before{content:none!important;display:none!important}
-#appWallpaper{position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:auto;height:calc(100vh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px));z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
-@supports(height:100lvh){#appWallpaper{height:calc(100lvh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px))}}
-#jrPage,#stopPage,.sub-page,main,section.view{background-color:transparent!important;background-image:none!important}
-html.map-edge #appWallpaper{visibility:hidden}
-/* Bandeau du haut strictement identique à .jp-bar du détail */
 header{position:fixed;top:calc(var(--safe-t) + 10px);left:14px;right:14px;max-width:692px;margin:0 auto;z-index:20;padding:8px 12px;border-radius:28px;display:flex;align-items:center;gap:10px;box-sizing:border-box}
 #listTop{top:calc(var(--safe-t) + 10px);left:14px;right:14px;max-width:692px;margin:0 auto;padding:8px 12px;border-radius:28px;box-sizing:border-box}
 header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-/* Le contenu commence après le bandeau, comme .jp-body après .jp-bar */
 main{padding:calc(var(--safe-t) + 76px) 14px calc(var(--safe-b) + 100px)}
 body.list-page #v-list{padding-top:calc(var(--safe-t) + 22px + var(--lt-h,52px))}
-/* Assombrissement */
 #appWallpaper::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--dim-a,0));pointer-events:none;transition:background-color .2s ease}
-/* Logos Paramètres en couleur d’accent */
 .pick2 .pv,.pick2 .logo-pv{color:var(--accent)}
-/* Bulles sous les contrôles */
 .maplibregl-popup{z-index:1!important}
 .map-ctrl,.map-steps,.map-bar{z-index:5!important}
-/* Cible comme les dalles */
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
-/* Maisons discrètes */
-.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
-.home-btn svg{display:block;width:18px;height:18px;opacity:.75;pointer-events:none}
-.home-btn:active{background:rgba(127,127,127,.08);color:var(--text)}
-.home-btn:active svg,.home-btn:focus-visible svg{opacity:1}
-.home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-#jrPage .jp-title,#stopPage .jp-title,#mapView .map-bar .t{flex:1;min-width:0}
-#listTop .home-btn,#jrPage .jp-bar .home-btn,#stopPage .jp-bar .home-btn,#mapView .map-bar .home-btn{margin-left:auto}
-/* Rebond uniforme */
-.edge-pulling{transition:none!important;will-change:transform}
-.edge-returning{transition:transform .6s cubic-bezier(.18,1.55,.3,1)!important;will-change:transform}
-@media(prefers-reduced-motion:reduce){.edge-returning{transition:none!important}}
-/* Carte : fond continu et étapes */
-#jrPage,#stopPage{background:transparent!important;background-image:none!important}
-body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
-body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
-#jrPage > .jp-action-bar{position:sticky!important;left:auto;right:auto;bottom:auto;top:calc(var(--safe-t,0px) + 18px + var(--jp-title-height,52px));transform:none!important;width:calc(100% - 28px);max-width:664px;box-sizing:border-box;margin:0 auto 12px!important;padding:8px 12px;border-radius:28px;z-index:3;gap:10px;background:rgba(var(--glass-rgb),var(--glass-a));box-shadow:var(--shadow)}
-body.classic #jrPage > .jp-action-bar{top:calc(var(--jp-title-height,52px) + 8px);border-radius:0}
-body.noglass #jrPage > .jp-action-bar{background:rgba(var(--glass-rgb),.96);backdrop-filter:none;-webkit-backdrop-filter:none}
-body:has(#mapView.open) .jp-action-bar{display:none!important}
-.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px;scroll-behavior:auto;user-select:none;-webkit-user-select:none;cursor:grab;direction:ltr;pointer-events:auto}
-.map-steps:active{cursor:grabbing}
-.map-steps *{touch-action:pan-x}
-body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
-.map-steps::-webkit-scrollbar{display:none}
-.map-steps.full-width{left:12px;right:12px;width:calc(100% - 24px);max-width:none}
-.map-steps .ms-item{position:relative;flex:0 0 auto;display:flex;align-items:stretch;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);margin-left:-22px;padding-left:20px;box-sizing:border-box;min-width:0}
-.map-steps .ms-item:first-child{margin-left:0;padding-left:0}
-.map-steps .ms-item.walk-item{flex:0 0 64px!important;width:64px;min-width:64px;max-width:64px;margin-left:-16px;padding:0}
-.map-steps .ms-item.walk-item:first-child{margin-left:0}
-.map-steps .ms-item > .ms,.map-steps .ms-item > .ms.w{flex:0 0 auto!important;width:max-content;min-width:0;max-width:none;margin:0;padding:0 12px;border:0;background:transparent;border-radius:999px;overflow:visible;box-sizing:border-box;white-space:nowrap;pointer-events:auto;cursor:pointer}
-.map-steps .ms-item:not(.walk-item){flex:0 0 auto!important;width:max-content;min-width:0;max-width:none}
-.map-steps .ms-item > .ms.w{flex:1 1 auto!important;width:100%;padding:0}
-.map-steps .ms b{display:block;overflow:visible;text-overflow:clip;white-space:nowrap}
-.map-steps .ms.w svg{width:23px;height:23px;flex-shrink:0}
-.map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer;pointer-events:auto}
-.map-steps .ms.on{box-shadow:none}
-.map-steps .ms-item:has(> .ms.on)::after{content:'';position:absolute;inset:0;border:2.5px solid #fff;border-radius:inherit;pointer-events:none;box-sizing:border-box;z-index:2}
-.map-steps{--fade-start:0px;--fade-end:0px;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%)}
-.map-steps:has(~ .map-step-hint.left.visible){--fade-start:64px}
-.map-steps:has(~ .map-step-hint.right.visible){--fade-end:64px}
-.map-step-hint{position:absolute;z-index:6;width:34px;display:none;align-items:center;justify-content:center;pointer-events:none;color:var(--text);font:900 26px system-ui;overflow:hidden}
-.map-step-hint.right{border-radius:0 28px 28px 0;background:linear-gradient(to left,rgba(var(--glass-rgb),1) 0%,rgba(var(--glass-rgb),.98) 40%,rgba(var(--glass-rgb),.82) 72%,rgba(var(--glass-rgb),0) 100%)}
-.map-step-hint.left{border-radius:28px 0 0 28px;background:linear-gradient(to right,rgba(var(--glass-rgb),1) 0%,rgba(var(--glass-rgb),.98) 40%,rgba(var(--glass-rgb),.82) 72%,rgba(var(--glass-rgb),0) 100%)}
-.map-step-hint.visible{display:flex}
-.map-step-hint span{animation:stepSlideHint 1.4s ease-in-out infinite}
-.map-step-hint.left span{animation-direction:reverse}
-@keyframes stepSlideHint{0%{transform:translateX(4px);opacity:0}55%{transform:translateX(-5px);opacity:1}100%{transform:translateX(-5px);opacity:0}}
-@media(prefers-reduced-motion:reduce){.map-step-hint span{animation:none}}
-#mapNoticeDialog{color:var(--text);width:min(480px,calc(100% - 48px));max-height:75dvh;overflow:auto;border-radius:24px;padding:18px;box-sizing:border-box}
-#mapNoticeDialog::backdrop{background:rgba(0,0,0,.55)}
-html.map-edge,html.map-edge body{background-color:var(--map-edge-color,#3a3d47)!important;min-height:100%;overscroll-behavior:none}
-html.map-edge body::before{visibility:hidden}
-html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
-html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));width:100%;height:auto;max-height:none;margin:0;padding:0;border:0}
-#mapSub .map-countdown{white-space:nowrap;font-variant-numeric:tabular-nums}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
