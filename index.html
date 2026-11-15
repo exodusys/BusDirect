@@ -544,10 +544,6 @@ body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map
 .map-ctrl,.map-steps,.map-bar{z-index:5!important}
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
-.tile{overflow:hidden}
-.tile::after{content:'';position:absolute;right:3px;top:10px;bottom:10px;width:8px;pointer-events:none}
-.tile.edge-bus::after{border-radius:4px;background:radial-gradient(circle at 50% 78%,#ffd54a 0 1.6px,transparent 2.2px),radial-gradient(circle at 50% 88%,#ffd54a 0 1.6px,transparent 2.2px),linear-gradient(180deg,#77828f,#2f3644);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
-.tile.edge-train::after{background:radial-gradient(circle at 50% 82%,#ffd54a 0 1.6px,transparent 2.2px),linear-gradient(180deg,#77828f,#2f3644);clip-path:polygon(0 14%,100% 0,100% 100%,0 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -642,7 +638,6 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
       <div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div>
       <div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div>
       <div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div>
-      <div class="set"><div><b>🚌 Contour véhicule</b><div class="muted" style="font-size:12px">Bord droit des dalles : bus ou train</div></div><label class="switch"><input type="checkbox" id="tileEdgeOn" onchange="setTileEdge(this.checked)"><span></span></label></div>
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
@@ -772,7 +767,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,tileEdge:true,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
@@ -1173,36 +1168,6 @@ GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
-
-const tileEdgeQueue=[];let tileEdgeBusy=0,tileEdgeTimer=null;
-function tileEdgeKind(list){
- const modes=(list||[]).slice(0,5).flatMap(it=>it.legs||[]).filter(l=>l.mode&&l.mode!=='WALK').map(l=>l.mode);
- if(modes.some(m=>/RAIL|TRAIN|SUBWAY|METRO|SUBURBAN|FUNICULAR/i.test(m)))return 'train';
- if(modes.some(m=>/BUS|COACH|TRAM/i.test(m)))return 'bus';
- return null;
-}
-function clearTileEdges(){document.querySelectorAll('.tile').forEach(el=>el.classList.remove('edge-bus','edge-train'))}
-function updateTileEdges(){
- clearTimeout(tileEdgeTimer);
- tileEdgeTimer=setTimeout(()=>{
-  if(!S.settings.tileEdge){clearTileEdges();return}
-  tileEdgeQueue.length=0;
-  for(const d of S.dests)if(!d._edgeKind)tileEdgeQueue.push(d);
-  pumpTileEdges();
- },350);
-}
-async function pumpTileEdges(){
- while(tileEdgeBusy<2&&tileEdgeQueue.length){
-  const d=tileEdgeQueue.shift();tileEdgeBusy++;
-  try{
-   const list=await nextDepartures(d);
-   d._edgeKind=tileEdgeKind(list);
-   const el=document.querySelector(`.tile[data-u="${d.uid}"]`);
-   if(el){el.classList.remove('edge-bus','edge-train');if(d._edgeKind)el.classList.add('edge-'+d._edgeKind)}
-  }catch{}
-  finally{tileEdgeBusy--;if(tileEdgeQueue.length)pumpTileEdges()}
- }
-}
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
@@ -1210,7 +1175,6 @@ function renderTiles(){
     +'<svg class="link" id="tileLink"><line id="linkLine"/><circle id="linkA" r="6"/><circle id="linkB" r="6"/></svg>';
   document.querySelectorAll('.tile').forEach(bindTileDrag);
   drawLink();
-  updateTileEdges();
   if(!selDest){$('#jrHead').style.display='none';$('#timeBar').style.display='none';$('#journeys').innerHTML=''}
 }
 function tileCenter(el){const g=$('#tiles').getBoundingClientRect(),r=el.getBoundingClientRect();return [r.left-g.left+r.width/2,r.top-g.top+r.height/2]}
@@ -1990,7 +1954,10 @@ const WALLS={
   sun:{n:'Soleil',g:wallOf('#c0901a','#d08a2a','#8ab02a')},
   night:{n:'Nuit',g:wallOf('#2a2ad0','#2a4ad0','#8a2ad0')},
   slate:{n:'Ardoise',g:wallOf('#3a4a5a','#5a6a7a','#2a8ac0')},
-  grey:{n:'Gris',g:wallOf('#444444','#8a8a8a','#b0b0b0')}
+  grey:{n:'Gris',g:wallOf('#444444','#8a8a8a','#b0b0b0')},
+  midnight:{n:'Minuit',g:wallOf('#0b1020','#101a30','#0a0f1c')},
+  charcoal:{n:'Charbon',g:wallOf('#141414','#1f1f1f','#0d0d0d')},
+  deepforest:{n:'Forêt profonde',g:wallOf('#0d1f14','#12281a','#0a1710')}
 };
 // mélange les couleurs du fond d'écran sur le noir de base → teinte sombre proche de ce qu'on voit
 function mixDark(hexes){ if(!hexes.length) return '#0b0b0d'; let r=0,g=0,b=0;
@@ -2056,7 +2023,6 @@ function updateRangeValues(){
  if(alpha)$('#alphaValue').textContent=alpha.value+'%';
  if(sat)$('#satValue').textContent=sat.value+'%';
 }
-function setTileEdge(on){S.settings.tileEdge=!!on;save();applySettings();renderTiles()}
 function applySettings(){
   const s=S.settings, root=document.documentElement;
   const dark=s.theme==='dark'||(s.theme==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
@@ -2077,7 +2043,7 @@ function applySettings(){
   document.body.classList.toggle('classic',s.look==='classic');
   document.querySelectorAll('#styleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===(s.look||'round')));
   document.querySelectorAll('#themeSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===s.theme));
-  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;$('#tileEdgeOn').checked=!!s.tileEdge;updateRangeValues();
+  $('#accent').value=s.accent;$('#glassOn').checked=s.glass;$('#blur').value=s.blur;$('#alpha').value=s.alpha;$('#sat').value=s.sat;updateRangeValues();
   renderPickers();
 }
 function renderPickers(){
