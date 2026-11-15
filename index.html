@@ -52,7 +52,9 @@ header{position:fixed;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-inde
 .appname{font-weight:800;font-size:20px;letter-spacing:-.3px}
 .appname span{color:var(--accent)}
 header .spacer{flex:1}
-.loc{font-size:12px;color:var(--muted);max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loc{font-size:12px;line-height:1.25;color:var(--muted);max-width:50%;text-align:right;display:flex;flex-direction:column;align-items:flex-end;min-width:0}
+.loc span{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.loc span:first-child{color:var(--text);font-weight:600}
 
 main{padding:calc(var(--safe-t) + 84px) 14px calc(var(--safe-b) + 100px);max-width:720px;margin:0 auto}
 section.view{display:none;animation:fade .25s ease}
@@ -451,6 +453,9 @@ body.classic .legs > .leg{border-radius:6px}
 
 #map.z-lo .stop-lbl{display:none}
 #map .maplibregl-ctrl-bottom-right .maplibregl-ctrl{margin:0 12px 0 0}
+/* icônes verticales de la carte : nuances de gris uniquement */
+.map-ctrl .map-btn{filter:grayscale(1);color:#9aa0a6;background:rgba(127,127,127,.16)}
+.map-ctrl .map-btn.on,#mapView .map-ctrl .map-btn.on{background:#6b7075;color:#fff;filter:grayscale(1) brightness(1.15)}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -461,7 +466,7 @@ body.classic .legs > .leg{border-radius:6px}
   <div class="logo" id="logo">🚌</div>
   <div class="appname">Bus<span>Direct</span></div>
   <div class="spacer"></div>
-  <div class="loc" id="locLabel">📍 Localisation…</div>
+  <div class="loc" id="locLabel">Localisation…</div>
 </header>
 
 <main>
@@ -797,7 +802,7 @@ function motionListen(on){
 function askGeo(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res('unsupported');
-    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}res('granted')},
+    navigator.geolocation.getCurrentPosition(p=>{geoWrap(()=>{})(p);pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}res('granted')},
       e=>res(e.code===1?'denied':'error'),{enableHighAccuracy:true,timeout:15000,maximumAge:0});
   });
 }
@@ -810,9 +815,9 @@ async function setGeo(on){
       showPermHelp('localisation'); return;
     }
     S.settings.geoOn=true; save(); GEO.resumeAll();
-    $('#locLabel').textContent='📍 '+nearestRegion().name; renderSMS(); if(selDest&&!selFrom) loadJourneys();
+    updateAddr(); renderSMS(); if(selDest&&!selFrom) loadJourneys();
     toast(r==='granted'?'Localisation activée':'Localisation activée, signal en attente');
-  }else{ S.settings.geoOn=false; save(); GEO.pauseAll(); pos=null; $('#locLabel').textContent='📍 Désactivée'; SENS.geo.acc=null }
+  }else{ S.settings.geoOn=false; save(); GEO.pauseAll(); pos=null; $('#locLabel').textContent='Désactivée'; SENS.geo.acc=null }
   renderSensors();
 }
 async function setMotion(on){
@@ -883,15 +888,15 @@ function applySmsTab(){
   if(!(on&&avail)&&$('#v-tickets').classList.contains('active')) document.querySelector('#tabs button[data-v="horaires"]').click();
 }
 function locate(force){
-  if(!navigator.geolocation){$('#locLabel').textContent='📍 Indisponible';return}
-  if(!GEO.on){$('#locLabel').textContent='📍 Désactivée';return}
+  if(!navigator.geolocation){$('#locLabel').textContent='Indisponible';return}
+  if(!GEO.on){$('#locLabel').textContent='Désactivée';return}
   GEO.getCurrentPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
-    $('#locLabel').textContent='📍 '+nearestRegion().name;
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
+    updateAddr();
     if(force) toast('Position mise à jour');
     renderSMS();
     if(selDest) loadJourneys();
-  },()=>{$('#locLabel').textContent='📍 Position refusée'},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  },()=>{$('#locLabel').textContent='Position refusée'},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
 
 /* ========= Transitous ========= */
@@ -1040,7 +1045,7 @@ function deselectTile(){
 function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
-    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}$('#locLabel').textContent='📍 '+nearestRegion().name;renderSMS();res(pos)},
+    GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}updateAddr();renderSMS();res(pos)},
       ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
   });
 }
@@ -1056,7 +1061,7 @@ async function pickPair(from,to){
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null;
 GEO.watchPosition(p=>{
-  pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
+  pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
   if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
 function renderTiles(){
@@ -1727,6 +1732,21 @@ const REGIONS=[
 function dist(a,b){const R=6371,dLa=(b.lat-a.lat)*Math.PI/180,dLo=(b.lon-a.lon)*Math.PI/180;
   const x=Math.sin(dLa/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x))}
 let CANTON=null, cantonKey='';
+/* Adresse actuelle (en haut à droite, sur deux lignes) */
+let addrPos=null, addrT=0, addrBusy=false;
+function updateAddr(){
+  const el=$('#locLabel'); if(!el||!pos) return;
+  if(addrBusy||(addrPos&&dist(addrPos,pos)<0.04)||Date.now()-addrT<10000) return;   // nouvelle adresse si déplacement > 40 m
+  addrBusy=true; addrT=Date.now(); const q={...pos};
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=${q.lat}&lon=${q.lon}&accept-language=fr`)
+    .then(r=>r.json()).then(j=>{ const a=j&&j.address||{};
+      const l1=[a.road||a.pedestrian||a.footway||a.square||a.place||a.neighbourhood||a.suburb||'', a.house_number||''].filter(Boolean).join(' ');
+      const l2=[a.postcode||'', a.city||a.town||a.village||a.municipality||a.hamlet||''].filter(Boolean).join(' ');
+      if(l1||l2){ el.innerHTML=`<span>${esc(l1||l2)}</span>${l1&&l2?`<span>${esc(l2)}</span>`:''}`; addrPos=q }
+      else if(!addrPos) el.textContent=nearestRegion().name })
+    .catch(()=>{ if(!addrPos) el.textContent=nearestRegion().name })
+    .finally(()=>{ addrBusy=false });
+}
 function fetchCanton(){
   if(!pos) return; const key=pos.lat.toFixed(2)+','+pos.lon.toFixed(2);
   if(key===cantonKey) return; cantonKey=key;
@@ -2445,7 +2465,7 @@ let meWatch=null;
 function startMeWatch(){
   if(!navigator.geolocation||meWatch!=null) return;
   meWatch=GEO.watchPosition(p=>{
-    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton()}catch(e){}
+    pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
     if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>0.5&&heading==null) gpsHeading=p.coords.heading;
     onMyPos();
   },()=>{},{enableHighAccuracy:true,maximumAge:3000});
