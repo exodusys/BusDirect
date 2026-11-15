@@ -535,9 +535,12 @@ html.map-edge #appWallpaper{visibility:hidden}
 
 .range-value{flex:none;width:46px;text-align:right;font:700 13px -apple-system,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
 .set{display:flex;align-items:center;gap:10px}
+.set>span{flex:0 0 108px;min-width:108px;text-align:left}
 .set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
 /* Effet Liquid Glass appliqué à tous les bandeaux */
 header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
+/* Pages principale et liste : mêmes couleurs/transparence que le détail, mais sans flou */
+header,#listTop{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
 /* Assombrissement du fond */
 #appWallpaper::after{content:'';position:absolute;inset:0;background:rgba(0,0,0,var(--dim-a,0));pointer-events:none;transition:background-color .2s ease}
@@ -648,7 +651,7 @@ if(window.navigator.standalone===true)document.body.classList.add('standalone');
       <div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div>
       <div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div>
       <div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div>
-      <div class="set"><span>Assombrir</span><input type="range" id="dim" min="0" max="100"><output class="range-value" id="dimValue" for="dim">0%</output></div>
+      <div class="set"><span>Assombrir</span><input type="range" id="dim" min="0" max="100"><output class="range-value" id="dimValue" for="dim">20%</output></div>
     </div>
     <div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
@@ -778,10 +781,10 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:0,dim:0,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:0,dim:20,logo:'ticket',wall:'slate',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
-(()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=0;st.smsOn=false;st.dim=0;store.set('settings',S.settings)}})();
+(()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=0;st.smsOn=false;store.set('settings',S.settings)}})();
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
   if(s.customLogo){s.customLogos.push({id:'l'+Date.now(),url:s.customLogo});if(s.logo==='custom')s.logo='c:'+s.customLogos.at(-1).id}
