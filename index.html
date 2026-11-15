@@ -506,7 +506,17 @@ html.map-edge body::before{visibility:hidden}
 html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
 html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));width:100%;height:auto;max-height:none;margin:0;padding:0;border:0}
 #mapSub .map-countdown{white-space:nowrap;font-variant-numeric:tabular-nums}
+.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:8px;box-sizing:border-box;border:0;border-radius:14px;background:rgba(127,127,127,.16);color:var(--text);cursor:pointer;touch-action:manipulation}
+.home-btn svg{display:block;width:23px;height:23px;pointer-events:none}
+.home-btn:active{background:rgba(127,127,127,.3)}
+.home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#jrPage .jp-title{flex:1;min-width:0}
+#mapView .map-bar .t{flex:1;min-width:0}
+#mapView .map-bar .home-btn,#jrPage .jp-bar .home-btn,#listTop .home-btn{margin-left:auto}
 
+
+/* Les messages suivent la position du bandeau sans animation de hauteur. */
+#toast{transition:opacity .25s,transform .25s}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -534,7 +544,7 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
     <div class="list-top glass" id="listTop">
       <button class="back-btn" onclick="closeList()" aria-label="Retour">‹</button>
       <h2 id="jrTitle" class="list-title">Prochains départs</h2>
-      <button class="btn ghost sm" onclick="(selFrom?Promise.resolve():freshPos()).then(loadJourneys)">↻</button>
+      <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
     </div>
     <div id="jrHead" style="display:none"></div>
     <div id="timeBarPh" class="tb-ph"></div>
@@ -646,6 +656,7 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
   <div class="map-bar glass">
     <button class="map-btn" onclick="closeMap()">✕</button>
     <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
+    <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
   </div>
   <div class="map-ctrl glass">
     <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule">🚌</button>
@@ -744,7 +755,20 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const hm = d => new Date(d).toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'});
 const mins = s => Math.round(s/60);
-function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
+function positionMapToast(){
+ const message=document.getElementById('toast'),view=document.getElementById('mapView');
+ if(!message)return;
+ if(!view?.classList.contains('open')){message.style.removeProperty('bottom');return}
+ const steps=document.getElementById('mapSteps'),walk=document.getElementById('walkCard');
+ const candidates=[steps,walk].filter(el=>el&&el.offsetHeight>0&&getComputedStyle(el).display!=='none');
+ if(!candidates.length){message.style.removeProperty('bottom');return}
+ const top=Math.min(...candidates.map(el=>el.getBoundingClientRect().top));
+ const bottom=Math.max(12,window.innerHeight-top+12);
+ const value=Math.round(bottom)+'px';if(message.style.bottom!==value)message.style.bottom=value;
+}
+window.addEventListener('resize',positionMapToast,{passive:true});
+if(window.visualViewport){window.visualViewport.addEventListener('resize',positionMapToast,{passive:true});window.visualViewport.addEventListener('scroll',positionMapToast,{passive:true})}
+function toast(t){const e=$('#toast');e.textContent=t;positionMapToast();e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
 const MODE_ICON = {BUS:'🚌',TRAM:'🚋',SUBWAY:'🚇',METRO:'🚇',RAIL:'🚆',REGIONAL_RAIL:'🚆',REGIONAL_FAST_RAIL:'🚆',HIGHSPEED_RAIL:'🚄',LONG_DISTANCE:'🚄',NIGHT_RAIL:'🚆',SUBURBAN:'🚈',COACH:'🚍',FERRY:'⛴️',AIRPLANE:'✈️',FUNICULAR:'🚞',AERIAL_LIFT:'🚡',WALK:'🚶',BIKE:'🚲',CAR:'🚗'};
 const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 
@@ -796,6 +820,16 @@ function openList(){
   window.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
   setTimeout(()=>vl.classList.remove('pg-in'),420);   // après l'animation : plus aucune transformation, les bandeaux restent bien fixes
+}
+function goHome(){
+ if(document.getElementById('mapView')?.classList.contains('open'))closeMap();
+ clearInterval(jpTimer);clearInterval(jpVehTimer);jpOpenLegs=new Set();document.getElementById('mapNoticeDialog')?.close();
+ for(const id of ['jrPage','stopPage']){const p=document.getElementById(id);if(p){p.classList.remove('on','out');p.style.transform='';p.style.transition='';p.style.opacity='';p.scrollTop=0}}
+ document.documentElement.classList.remove('jp-lock');document.body.classList.remove('list-page');deselectTile();
+ document.querySelectorAll('.pg-in,.pg-back,.pg-out').forEach(el=>el.classList.remove('pg-in','pg-back','pg-out'));
+ document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='v-horaires'));
+ document.querySelectorAll('#tabs button').forEach(el=>el.classList.toggle('active',el.dataset.v==='horaires'));
+ const mv=document.getElementById('mapView');if(mv){mv.style.transform='';mv.style.transition='';mv.style.opacity=''}window.scrollTo({top:0,left:0,behavior:'instant'});
 }
 function closeList(noAnim){
   const vl=$('#v-list');
@@ -951,10 +985,33 @@ function locate(force){
 }
 
 /* ========= Transitous ========= */
-async function geocode(text){
-  const u = `${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(pos?`&place=${pos.lat},${pos.lon}`:'');
-  const r = await fetch(u); if(!r.ok) throw new Error('geocode'); return r.json();
+function searchName(value){return String(value||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'')}
+function citySearchResult(r,query){
+ if(!r||r.type==='STOP'||r.type==='ADDRESS')return false;
+ const meta=[r.type,r.category,r.subtype,r.placeType,r.osmValue,r.osmType,r.class,JSON.stringify(r.tags||{})].join(' ').toLowerCase();
+ if(/\b(city|town|village|municipality|locality|hamlet|administrative|commune)\b/.test(meta))return true;
+ if(/\b(amenity|tourism|shop|leisure|attraction|museum|hospital|school|hotel|restaurant)\b/.test(meta))return false;
+ const n=searchName(r.name);return (r.areas||[]).some(area=>searchName(area.name)===n)||(r.type==='PLACE'&&n===searchName(query));
 }
+function stationSearchResult(r,city){
+ if(r.type!=='STOP'||!(r.id||r.stopId))return false;const name=String(r.name||''),modes=JSON.stringify(r.modes||r.vehicleModes||r.transportModes||[]);
+ return /rail|train|long_distance|regional/i.test(modes)||/\b(gare|bahnhof|station|hauptbahnhof|hbf|stazione|estacion|estação)\b/i.test(name)||searchName(name)===searchName(city?.name);
+}
+async function searchPlacesRaw(text,place){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),10000);try{const u=`${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(place?`&place=${place.lat},${place.lon}`:'');const response=await fetch(u,{signal:controller.signal});if(!response.ok)throw new Error('geocode');const data=await response.json();return Array.isArray(data)?data:(data.results||data.places||[])}finally{clearTimeout(timeout)}}
+async function geocode(text){
+ const initial=await searchPlacesRaw(text,pos),cities=initial.filter(r=>citySearchResult(r,text)).slice(0,2);
+ const extra=(await Promise.all(cities.map(async city=>{
+  const groups=await Promise.allSettled([searchPlacesRaw(`${city.name} gare`,city),searchPlacesRaw(`${city.name} Bahnhof`,city)]);
+  let stops=groups.flatMap(g=>g.status==='fulfilled'?g.value:[]).filter(r=>r.type==='STOP'&&(r.id||r.stopId));
+  stops=stops.filter(r=>!Number.isFinite(Number(city.lat))||!Number.isFinite(Number(city.lon))||!Number.isFinite(Number(r.lat))||!Number.isFinite(Number(r.lon))||dist(city,r)<20);
+  const railway=stops.filter(r=>stationSearchResult(r,city)),candidates=railway.length?railway:stops.filter(r=>!String(r.name||'').includes(','));
+  return candidates.slice(0,8).map(r=>({...r,id:r.id||r.stopId,_stationChoice:true}));
+ }))).flat();
+ const combined=[...extra,...initial.filter(r=>!citySearchResult(r,text))],seen=new Set();
+ const unique=combined.filter(r=>{if(r.type==='STOP'&&!(r.id||r.stopId))return false;const key=r.type==='STOP'?'stop:'+(r.id||r.stopId):r.type+':'+r.name+':'+r.lat+','+r.lon;if(seen.has(key))return false;seen.add(key);return true});
+ return unique.sort((a,b)=>Number(!!b._stationChoice||stationSearchResult(b))-Number(!!a._stationChoice||stationSearchResult(a)));
+}
+
 let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
 async function plan(dest, time, cursor, from){
@@ -1059,14 +1116,16 @@ $('#q').addEventListener('input',e=>{
     const box=$('#results'); box.style.display='block'; box.innerHTML='<div class="spin"></div>';
     try{
       const res=(await geocode(v)).slice(0,10);
-      if(!res.length){box.innerHTML='<div class="empty">Aucun résultat</div>';return}
-      box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${TYPE_ICON[r.type]||'📍'}</div>
+      if($('#q').value.trim()!==v)return;
+      if(!res.length){box.innerHTML='<div class="empty">Aucun arrêt ou gare trouvé. Précise le nom de la gare.</div>';return}
+      box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${r._stationChoice?'🚉':TYPE_ICON[r.type]||'📍'}</div>
         <div style="flex:1"><div class="n">${esc(r.name)}</div><div class="a">${esc((r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2).join(', ')||r.type)}</div></div><span>＋</span></div>`).join('');
       box.querySelectorAll('.res').forEach(el=>el.onclick=()=>addDest(res[+el.dataset.i]));
-    }catch{box.innerHTML='<div class="empty">Recherche indisponible</div>'}
+    }catch{if($('#q').value.trim()===v)box.innerHTML='<div class="empty">Recherche indisponible</div>'}
   },300);
 });
 function addDest(r){
+  if(citySearchResult(r,$('#q').value.trim())){toast("Choisis un arrêt de gare, pas la ville seule.");return}
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
   S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
     area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
@@ -1649,7 +1708,7 @@ function openJourneyPage(it,tracked){
   if(!it) return; if(jkey(it)!==jpKey) jpOpenLegs=new Set(); jpIt=it; jpKey=jkey(it); jpTracked=!!tracked;
   let pg=$('#jrPage');
   if(!pg){ pg=document.createElement('div'); pg.id='jrPage';
-    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeJourneyPage()" aria-label="Retour">‹</button><b class="jp-title"></b></div><div class="jp-body"></div>';
+    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeJourneyPage()" aria-label="Retour">‹</button><b class="jp-title"></b><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button></div><div class="jp-body"></div>';
     document.body.appendChild(pg); jpSwipe(pg) }
   renderJourneyPage(); clickShieldUntil=Date.now()+400;
   pg.scrollTop=0; pg.classList.remove('out'); pg.style.transform=''; pg.classList.add('on');
@@ -2320,6 +2379,7 @@ function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) re
   const sb=on?B+wc.offsetHeight+8:B; el.style.bottom=`calc(var(--safe-b) + ${sb}px)`;
   const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${sb+(hasSteps?el.offsetHeight+8:0)}px)`;
   placeAttrib();
+  positionMapToast();
 }
 // (i) OpenFreeMap : en haut à droite, juste sous la barre du titre
 function placeAttrib(){ const c=document.querySelector('#map .maplibregl-ctrl-bottom-right'), bar=document.querySelector('#mapView .map-bar'); if(!c||!bar) return;
@@ -2372,7 +2432,7 @@ function mapFit(){
     if(go){ mv.style.transform=`translateX(${innerWidth}px)`; mv.style.opacity='0'; setTimeout(()=>{ closeMap(); mv.style.transition='none'; mv.style.transform=''; mv.style.opacity='' },230) }
     else { mv.style.transform=''; mv.style.opacity='' } },{capture:true});
 })();
-function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){GEO.clearWatch(meWatch);meWatch=null} }
+function closeMap(){ $('#mapView').classList.remove('open'); positionMapToast(); mapTimers.forEach(clearInterval); mapTimers=[]; stopNav(); if(meWatch!=null){GEO.clearWatch(meWatch);meWatch=null} }
 
 /* Position du véhicule : suivi Transitous (map/trips) sinon estimation sur l'horaire */
 /* Course complète du véhicule (tous ses arrêts + tracé), via Transitous /trip */
@@ -2558,8 +2618,7 @@ async function updateVehicle(){
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
   startVehAnim();
   const before=now<+new Date(ft.startTime);
-  if(mapWalk==null){
-    const d=decisiveStop(ft);
+  if(mapWalk==null){const d=decisiveStop(ft);
     $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
   }
 }
