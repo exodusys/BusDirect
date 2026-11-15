@@ -2188,9 +2188,11 @@ function focusStep(i){
   mlMap.fitBounds(b,{padding:{top:130,bottom:230,left:60,right:Math.min(190,innerWidth*.4)},maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
-  const on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
-  const base=on?40+wc.offsetHeight+8:40;   // 40 px : laisse voir le (i) OpenFreeMap en bas el.style.bottom=`calc(var(--safe-b) + ${base}px)`;
-  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${base+(el.innerHTML?46+8:0)}px)`;   // icônes de droite au-dessus du bandeau
+  // ordre de bas en haut : bandeau des étapes (tout en bas) → « Marche jusqu'à » → icônes de droite
+  const B=40, hasSteps=!!el.innerHTML, on=wc&&wc.classList.contains('on')&&wc.offsetHeight;
+  el.style.bottom=`calc(var(--safe-b) + ${B}px)`;
+  const wb=B+(hasSteps?46+8:0); if(wc) wc.style.bottom=`calc(var(--safe-b) + ${wb}px)`;
+  const ctl=document.querySelector('#mapView .map-ctrl'); if(ctl) ctl.style.bottom=`calc(var(--safe-b) + ${on?wb+wc.offsetHeight+8:wb}px)`;
 }
 setInterval(()=>{ if($('#mapView')?.classList.contains('open')) placeMapSteps() },500);
 function setRouteDim(on){
