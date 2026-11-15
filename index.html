@@ -463,7 +463,6 @@ body.classic .legs > .leg{border-radius:6px}
 .map-ctrl .map-btn{filter:grayscale(1);color:#9aa0a6;background:rgba(127,127,127,.16)}
 .map-ctrl .map-btn.on,#mapView .map-ctrl .map-btn.on{background:#6b7075;color:#fff;filter:grayscale(1) brightness(1.15)}
 
-/* Détail et arrêts : fond global et bandeau d'actions ancré sous le titre. */
 #jrPage,#stopPage{background:transparent!important;background-image:none!important}
 body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
 body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
@@ -471,8 +470,7 @@ body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
 body.classic #jrPage > .jp-action-bar{top:calc(var(--jp-title-height,52px) + 8px);border-radius:0}
 body.noglass #jrPage > .jp-action-bar{background:rgba(var(--glass-rgb),.96);backdrop-filter:none;-webkit-backdrop-filter:none}
 body:has(#mapView.open) .jp-action-bar{display:none!important}
-/* Bandeau de la carte. */
-.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px;scroll-behavior:auto;user-select:none;-webkit-user-select:none;cursor:grab;direction:ltr}
+.map-steps{box-sizing:border-box;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;height:54px;padding:5px;background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat));-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat));border:1px solid var(--border);box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.35);border-radius:28px;scroll-behavior:auto;user-select:none;-webkit-user-select:none;cursor:grab;direction:ltr;pointer-events:auto}
 .map-steps:active{cursor:grabbing}
 .map-steps *{touch-action:pan-x}
 body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop-filter:none;-webkit-backdrop-filter:none}
@@ -482,15 +480,14 @@ body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop
 .map-steps .ms-item:first-child{margin-left:0;padding-left:0}
 .map-steps .ms-item.walk-item{flex:0 0 64px!important;width:64px;min-width:64px;max-width:64px;margin-left:-16px;padding:0}
 .map-steps .ms-item.walk-item:first-child{margin-left:0}
-.map-steps .ms-item > .ms,.map-steps .ms-item > .ms.w{flex:0 0 auto!important;width:max-content;min-width:0;max-width:none;margin:0;padding:0 12px;border:0;background:transparent;border-radius:999px;overflow:visible;box-sizing:border-box;white-space:nowrap}
+.map-steps .ms-item > .ms,.map-steps .ms-item > .ms.w{flex:0 0 auto!important;width:max-content;min-width:0;max-width:none;margin:0;padding:0 12px;border:0;background:transparent;border-radius:999px;overflow:visible;box-sizing:border-box;white-space:nowrap;pointer-events:auto;cursor:pointer}
 .map-steps .ms-item:not(.walk-item){flex:0 0 auto!important;width:max-content;min-width:0;max-width:none}
 .map-steps .ms-item > .ms.w{flex:1 1 auto!important;width:100%;padding:0}
 .map-steps .ms b{display:block;overflow:visible;text-overflow:clip;white-space:nowrap}
 .map-steps .ms.w svg{width:23px;height:23px;flex-shrink:0}
-.map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer}
+.map-steps .ms-notice{flex:none;align-self:center;width:34px;height:32px;margin:0 7px 0 0;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.25);font-size:20px;cursor:pointer;pointer-events:auto}
 .map-steps .ms.on{box-shadow:none}
 .map-steps .ms-item:has(> .ms.on)::after{content:'';position:absolute;inset:0;border:2.5px solid #fff;border-radius:inherit;pointer-events:none;box-sizing:border-box;z-index:2}
-/* Fondus et animations. */
 .map-steps{--fade-start:0px;--fade-end:0px;-webkit-mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 var(--fade-start),#000 calc(100% - var(--fade-end)),transparent 100%)}
 .map-steps:has(~ .map-step-hint.left.visible){--fade-start:64px}
 .map-steps:has(~ .map-step-hint.right.visible){--fade-end:64px}
@@ -504,7 +501,6 @@ body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop
 @media(prefers-reduced-motion:reduce){.map-step-hint span{animation:none}}
 #mapNoticeDialog{color:var(--text);width:min(480px,calc(100% - 48px));max-height:75dvh;overflow:auto;border-radius:24px;padding:18px;box-sizing:border-box}
 #mapNoticeDialog::backdrop{background:rgba(0,0,0,.55)}
-/* Extension supérieure et inférieure, zones de sécurité comprises. */
 html.map-edge,html.map-edge body{background-color:var(--map-edge-color,#3a3d47)!important;min-height:100%;overscroll-behavior:none}
 html.map-edge body::before{visibility:hidden}
 html.map-edge #mapView{position:fixed;inset:0;width:100%;height:100%;max-height:none;margin:0;padding:0;border:0;overflow:visible;background:transparent}
@@ -1662,7 +1658,7 @@ function renderJourneyPage(){
   pg.querySelector('.jp-title').textContent=`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim();
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
-  // Actions indépendantes, ancrées sous le titre du détail.
+  // Actions ancrées sous le titre du détail.
   pg.querySelectorAll(':scope > .jp-action-bar').forEach(x=>x.remove());
   const actionBar=card.querySelector('.jp-action-bar');
   if(actionBar){pg.insertBefore(actionBar,body);const bar=pg.querySelector('.jp-bar');const measure=()=>pg.style.setProperty('--jp-title-height',bar.offsetHeight+'px');measure();if(!pg._titleObserver){pg._titleObserver=new ResizeObserver(measure);pg._titleObserver.observe(bar)}}
@@ -2262,14 +2258,15 @@ function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x));if(l?.
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
 function setupStepScroll(el){
  if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
- el.addEventListener('touchstart',e=>{e.stopPropagation();touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,moved:false}:null},{passive:true});
- el.addEventListener('touchmove',e=>{e.stopPropagation();if(touch&&Math.hypot(e.touches[0].clientX-touch.x,e.touches[0].clientY-touch.y)>7){touch.moved=true;el._noClickUntil=performance.now()+600}},{passive:true});
- el.addEventListener('touchend',e=>{e.stopPropagation();if(touch?.moved)el._noClickUntil=performance.now()+450;touch=null},{passive:true});
- el.addEventListener('touchcancel',e=>{e.stopPropagation();touch=null;el._noClickUntil=performance.now()+450},{passive:true});
- el.addEventListener('click',e=>{e.stopPropagation();if(performance.now()<(el._noClickUntil||0)){e.preventDefault();e.stopImmediatePropagation()}},true);
- el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;mouse={x:e.clientX,left:el.scrollLeft,moved:false,id:e.pointerId};});
- el.addEventListener('pointermove',e=>{if(!mouse||e.pointerId!==mouse.id)return;const dx=e.clientX-mouse.x;if(!mouse.moved&&Math.abs(dx)>7){mouse.moved=true;el.setPointerCapture(e.pointerId)}if(mouse.moved){e.preventDefault();el.scrollLeft=mouse.left-dx;el._noClickUntil=performance.now()+450}});
- const end=()=>{if(mouse?.moved)el._noClickUntil=performance.now()+450;mouse=null};window.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);el.addEventListener('lostpointercapture',end);
+ el.addEventListener('touchstart',e=>{e.stopPropagation();el._noClickUntil=0;touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,left:el.scrollLeft,moved:false}:null},{passive:true});
+ el.addEventListener('touchmove',e=>{e.stopPropagation();if(touch){const dx=Math.abs(e.touches[0].clientX-touch.x),dy=Math.abs(e.touches[0].clientY-touch.y);if(dx>10||dy>14||Math.abs(el.scrollLeft-touch.left)>3){touch.moved=true;el._noClickUntil=performance.now()+450}}},{passive:true});
+ el.addEventListener('touchend',e=>{e.stopPropagation();if(touch?.moved)el._noClickUntil=performance.now()+350;touch=null},{passive:true});
+ el.addEventListener('touchcancel',e=>{e.stopPropagation();touch=null;el._noClickUntil=performance.now()+350},{passive:true});
+ // Ne pas arrêter un clic normal en capture : il doit atteindre el.onclick.
+ el.addEventListener('click',e=>{if(e.detail!==0&&performance.now()<(el._noClickUntil||0)){e.preventDefault();e.stopImmediatePropagation()}},true);
+ el.addEventListener('pointerdown',e=>{if(e.pointerType!=='mouse'||e.button!==0)return;el._noClickUntil=0;mouse={x:e.clientX,left:el.scrollLeft,moved:false,id:e.pointerId};});
+ el.addEventListener('pointermove',e=>{if(!mouse||e.pointerId!==mouse.id)return;const dx=e.clientX-mouse.x;if(!mouse.moved&&Math.abs(dx)>8){mouse.moved=true;el.setPointerCapture(e.pointerId)}if(mouse.moved){e.preventDefault();el.scrollLeft=mouse.left-dx;el._noClickUntil=performance.now()+350}});
+ const end=()=>{if(mouse?.moved)el._noClickUntil=performance.now()+350;mouse=null};window.addEventListener('pointerup',end);el.addEventListener('pointercancel',end);el.addEventListener('lostpointercapture',end);
  el.addEventListener('dragstart',e=>e.preventDefault());
  el.addEventListener('wheel',e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:e.deltaY;if(el.scrollWidth>el.clientWidth&&dx){const before=el.scrollLeft;el.scrollLeft+=dx;if(before!==el.scrollLeft)e.preventDefault()}e.stopPropagation()},{passive:false});
 }
@@ -2282,9 +2279,9 @@ function renderMapSteps(){
   if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
   const savedScroll=el.scrollLeft;
   el.classList.add('glass');
-  el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
+  el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button type="button" class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button type="button" class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
   el.classList.toggle('full-width',segs.length>3);el.scrollLeft=savedScroll;
-  el.onclick=e=>{if(performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
+  el.onclick=e=>{e.stopPropagation();if(e.detail!==0&&performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
   setupStepScroll(el);setupStepHints(el);
   markMapStep(); placeMapSteps();
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
@@ -2735,25 +2732,15 @@ renderDests(); renderTiles(); renderSMS(); locate();
 
 <script>
 (() => {
- const view=document.getElementById('mapView'),root=document.documentElement;
- if(!view)return;
+ const view=document.getElementById('mapView'),root=document.documentElement;if(!view)return;
  let active=false,themeNode=null,themeParent=null,themeNext=null;
  const sync=()=>{
-  const open=view.classList.contains('open');
-  root.style.setProperty('--map-edge-color',document.getElementById('map')?.classList.contains('dk')?'#3a3d47':'#f2efe9');
-  if(open===active)return;active=open;
+  const open=view.classList.contains('open');root.style.setProperty('--map-edge-color',document.getElementById('map')?.classList.contains('dk')?'#3a3d47':'#f2efe9');if(open===active)return;active=open;
   if(open){themeNode=document.querySelector('meta[name="theme-color"]');if(themeNode){themeParent=themeNode.parentNode;themeNext=themeNode.nextSibling;themeNode.remove()}root.classList.add('map-edge')}
   else{root.classList.remove('map-edge');if(themeNode&&themeParent&&!document.querySelector('meta[name="theme-color"]'))themeParent.insertBefore(themeNode,themeNext?.parentNode===themeParent?themeNext:null);themeNode=null}
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-   if(typeof mlMap==='undefined'||!mlMap)return;mlMap.resize();
-   if(typeof placeMapSteps==='function')placeMapSteps();if(!open)return;
-   if(typeof mapStepSel!=='undefined'&&mapStepSel!=null)focusStep(mapStepSel,true);
-   else if(typeof mapWalk!=='undefined'&&mapWalk!=null)focusWalk();
-   else if(typeof mapFit==='function')mapFit();
-  }));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{if(typeof mlMap==='undefined'||!mlMap)return;mlMap.resize();if(typeof placeMapSteps==='function')placeMapSteps();if(!open)return;if(typeof mapStepSel!=='undefined'&&mapStepSel!=null)focusStep(mapStepSel,true);else if(typeof mapWalk!=='undefined'&&mapWalk!=null)focusWalk();else if(typeof mapFit==='function')mapFit()}));
  };
- new MutationObserver(sync).observe(view,{attributes:true,attributeFilter:['class']});
- const map=document.getElementById('map');if(map)new MutationObserver(sync).observe(map,{attributes:true,attributeFilter:['class']});sync();
+ new MutationObserver(sync).observe(view,{attributes:true,attributeFilter:['class']});const map=document.getElementById('map');if(map)new MutationObserver(sync).observe(map,{attributes:true,attributeFilter:['class']});sync();
 })();
 </script>
 
