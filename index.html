@@ -146,8 +146,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
 .load-more{height:0!important;overflow:hidden;opacity:0;transition:height .18s ease,opacity .18s ease}
-#more.load-more{height:64px!important;opacity:1} /* indicateur du bas : toujours visible au fond de la page */
-#more.load-more i{animation:lm 1.8s ease-in-out infinite;opacity:.35} /* barres qui pulsent doucement en attente */
+#more.load-more{height:64px!important;opacity:1}
+#more.load-more i{animation:lm 1.8s ease-in-out infinite;opacity:.35}
 .load-more.insisting,.load-more.busy{height:64px!important;opacity:1}
 .load-more span{flex-basis:100%;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);opacity:calc(.5 + var(--ins)*.5)}
 .load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.18;transition:opacity .12s}
@@ -166,7 +166,7 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
 .jr.pop{animation:popIn .6s cubic-bezier(.2,.8,.3,1) both}
-@keyframes popIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes popIn{from{transform:translateY(16px)}to{transform:none}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -200,11 +200,11 @@ body.list-inline .list-title .lt-dest{font-size:16px}
 :root{--hdr:84px}
 body.classic{--hdr:72px}
 body.list-page #listTop{position:fixed;top:calc(var(--safe-t) + 10px);   /* même distance que la barre BusDirect */left:0;right:0;max-width:720px;margin:0 auto;z-index:18;padding:8px 14px 4px}
-body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-h,52px));left:14px;right:14px;max-width:692px;box-sizing:border-box;margin:0 auto;z-index:18}
+body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-h,56px));left:14px;right:14px;max-width:692px;box-sizing:border-box;margin:0 auto;z-index:18}
 body.list-page #listTop{left:14px;right:14px;max-width:692px;box-sizing:border-box;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
 body.list-page.classic #listTop{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 8px) 14px 8px}
 body.list-page.classic #timeBar{top:calc(8px + var(--lt-h,52px))}
-body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 76px)}
+body.list-page #v-list{padding-top:calc(var(--lt-h,56px) + 70px)} /* 10px entre la barre date et le 1er parcours */
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
@@ -898,6 +898,7 @@ function openList(){
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   document.querySelector('main')?.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
+  requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||56; document.documentElement.style.setProperty('--lt-h',h+'px') }); // vraie hauteur, la page liste est visible
   setTimeout(()=>vl.classList.remove('pg-in'),420);   // après l'animation : plus aucune transformation, les bandeaux restent bien fixes
 }
 function goHome(){
@@ -1401,7 +1402,7 @@ async function loadJourneys(){
     // affichage instantané depuis le cache (si récent), puis mise à jour
     const ck='bd_jc_'+pairKey+(planTime?'@'+(+planTime):'');
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
-      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); animNew(); } } }catch{} }
+      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
     const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
       prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
@@ -1413,7 +1414,7 @@ async function loadJourneys(){
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
-    renderJourneyList(); if(first) animNew();
+    renderJourneyList();
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
@@ -1467,8 +1468,7 @@ function renderJourneyList(){
         const sep=document.createElement('div'); sep.className='day-sep'; sep.dataset.for=el.dataset.k;
         sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) } }});
   box.querySelectorAll('.day-sep').forEach(sp=>{ const nx=sp.nextElementSibling; if(!want.has(sp.dataset.for)||!nx||nx.dataset.k!==sp.dataset.for) sp.remove() });
-  /* Ne pas marquer les cartes comme animées ici : c'est animNew() qui le fait,
-     sinon les nouvelles cartes n'ont jamais leur animation d'entrée. */
+  /* Ne pas marquer les cartes comme animées ici : c'est animNew() qui le fait. */
   // bandeau « Maintenant » au-dessus du premier parcours à venir, seulement si des parcours passés sont affichés
   { let ns=box.querySelector(':scope > .now-sep'); const ref=planTime?+planTime:Date.now();
     const target=(selDest?.type!=='TRIP'&&pastFloor!=null)?[...box.querySelectorAll(':scope > .jr:not(.leave)')].find(el=>{const it=list[+el.dataset.i];return it&&jStart(it)>=ref-60000&&el.previousElementSibling&&[...box.querySelectorAll(':scope > .jr')].indexOf(el)>0}):null;
@@ -1567,7 +1567,7 @@ function pinTimeBar(){
 }
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
-  cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.style.animationDelay=(i*0.07)+'s';c.classList.add('pop')}); // seules les nouvelles cartes s'animent, en cascade
+  cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.classList.add('pop')}); // seules les nouvelles cartes s'animent
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
