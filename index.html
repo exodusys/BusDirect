@@ -542,10 +542,15 @@ body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map
 body:not(.classic) header,body:not(.classic) #listTop,body:not(.classic) .jp-bar,body:not(.classic) .map-bar,body:not(.classic) .map-ctrl,body:not(.classic) .time-bar{border-radius:28px}
 .pick2 .pv,.pick2 .logo-pv{color:var(--accent)}
 .maplibregl-popup{z-index:1!important}
+.maplibregl-popup-content{z-index:1!important}
 .map-ctrl,.map-steps,.map-bar{z-index:5!important}
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
 .logo{color:var(--accent)}
+/* Load-more : texte au-dessus, animation en dessous ; fin de liste remontée pour mieux voir */
+.load-more{flex-direction:column;gap:6px}
+.load-more span{flex-basis:auto}
+body.list-page main{padding-bottom:calc(var(--safe-b) + 44px)}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -584,7 +589,7 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
       <button class="btn ghost sm" id="nowBtn" onclick="goNow()">Maintenant</button>
     </div>
-    <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de faire défiler</span></div>
+    <div id="moreTop" class="load-more top" style="display:none"><span>Continue de faire défiler</span><i></i><i></i><i></i><i></i></div>
     <div id="journeys"></div>
   </section>
 
@@ -1397,7 +1402,7 @@ function renderJourneyList(){
   });
   existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
   // Bas de liste : repère persistant (jamais recréé → pas de saut ni de clignotement)
-  let sen=$('#more'); if(!sen){ sen=document.createElement('div'); sen.id='more'; sen.className='load-more'; sen.innerHTML='<i></i><i></i><i></i><i></i><span>Continue de faire défiler</span>' }
+  let sen=$('#more'); if(!sen){ sen=document.createElement('div'); sen.id='more'; sen.className='load-more'; sen.innerHTML='<span>Continue de faire défiler</span><i></i><i></i><i></i><i></i>' }
   if(box.lastElementChild!==sen) box.appendChild(sen);
   // séparateurs de jour : ajoutés/retirés seulement si nécessaire
   const want=new Set(); let lastDay=new Date().toDateString();
