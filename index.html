@@ -146,6 +146,8 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 #nowBtn.on{background:var(--accent);color:#fff}
 .load-more{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:5px;height:64px;--ins:0}
 .load-more{height:0!important;overflow:hidden;opacity:0;transition:height .18s ease,opacity .18s ease}
+#more.load-more{height:64px!important;opacity:1} /* indicateur du bas : toujours visible au fond de la page */
+#more.load-more i{animation:lm 1.8s ease-in-out infinite;opacity:.35} /* barres qui pulsent doucement en attente */
 .load-more.insisting,.load-more.busy{height:64px!important;opacity:1}
 .load-more span{flex-basis:100%;text-align:center;font-size:11.5px;font-weight:600;color:var(--muted);opacity:calc(.5 + var(--ins)*.5)}
 .load-more i{display:block;width:7px;height:16px;border-radius:2px;background:var(--accent);transform:skewX(-18deg);opacity:.18;transition:opacity .12s}
@@ -164,7 +166,7 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .pull-more.ready .pm-ic{background:var(--accent);color:#fff}
 .pull-more.busy .pm-ic{font-size:0;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);background:none;animation:r .8s linear infinite}
 .jr.pop{animation:popIn .6s cubic-bezier(.2,.8,.3,1) both}
-@keyframes popIn{from{transform:translateY(16px)}to{transform:none}}
+@keyframes popIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
 .more-sen{height:40px}
 .more-sen.busy{background:none;display:flex;justify-content:center}
 .more-sen.busy::after{content:'';width:20px;height:20px;border:3px solid rgba(127,127,127,.3);border-top-color:var(--accent);border-radius:50%;animation:r .8s linear infinite;margin-top:8px}
@@ -640,7 +642,7 @@ html.map-edge #appWallpaper{visibility:hidden}
     <div id="timeBar" class="time-bar glass" style="display:none">
       <span>🕒</span>
       <input type="datetime-local" id="planTime" onchange="setPlanTime(this.value)">
-      <button class="btn ghost sm on" id="nowBtn" onclick="goNow()">Maintenant</button>
+      <button class="btn ghost sm" id="nowBtn" onclick="goNow()">Maintenant</button>
     </div>
     <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de faire défiler</span></div>
     <div id="journeys"></div>
@@ -720,7 +722,7 @@ html.map-edge #appWallpaper{visibility:hidden}
     <div class="card glass">
       <div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"><span class="sdot bad"></span>Refusée — autorise la localisation dans Réglages</div></div>
         <label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div>
-      <div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"><span class="sdot bad"></span>Refusé — réactive pour redemander l'accès</div></div>
+      <div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"><span class="sdot warn"></span>Touche l'écran pour réactiver</div></div>
         <label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div>
     </div>
     <h3>Données</h3>
@@ -735,7 +737,7 @@ html.map-edge #appWallpaper{visibility:hidden}
 <nav class="glass" id="tabs">
   <button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>Horaires</button>
   <button data-v="suivis" id="tabSuivis" style="display: none;"><span class="tab-badge" id="suivisBadge" style="display: none;">0</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"></path></svg>Suivis</button>
-  <button data-v="parcours" class=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>Parcours</button>
+  <button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"></path></svg>Parcours</button>
   <button data-v="tickets" id="tabTickets" style="display: none;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"></path><path d="M14 6v12" stroke-dasharray="2 2"></path></svg>Tickets</button>
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>Paramètres</button>
 </nav>
@@ -1399,7 +1401,7 @@ async function loadJourneys(){
     // affichage instantané depuis le cache (si récent), puis mise à jour
     const ck='bd_jc_'+pairKey+(planTime?'@'+(+planTime):'');
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
-      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
+      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); animNew(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
     const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
       prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
@@ -1411,7 +1413,7 @@ async function loadJourneys(){
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
-    renderJourneyList();
+    renderJourneyList(); if(first) animNew();
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
@@ -1465,7 +1467,8 @@ function renderJourneyList(){
         const sep=document.createElement('div'); sep.className='day-sep'; sep.dataset.for=el.dataset.k;
         sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) } }});
   box.querySelectorAll('.day-sep').forEach(sp=>{ const nx=sp.nextElementSibling; if(!want.has(sp.dataset.for)||!nx||nx.dataset.k!==sp.dataset.for) sp.remove() });
-  box.querySelectorAll(':scope > .jr').forEach(el=>{ if(!appending) el.dataset.shown=el.dataset.shown||1 });
+  /* Ne pas marquer les cartes comme animées ici : c'est animNew() qui le fait,
+     sinon les nouvelles cartes n'ont jamais leur animation d'entrée. */
   // bandeau « Maintenant » au-dessus du premier parcours à venir, seulement si des parcours passés sont affichés
   { let ns=box.querySelector(':scope > .now-sep'); const ref=planTime?+planTime:Date.now();
     const target=(selDest?.type!=='TRIP'&&pastFloor!=null)?[...box.querySelectorAll(':scope > .jr:not(.leave)')].find(el=>{const it=list[+el.dataset.i];return it&&jStart(it)>=ref-60000&&el.previousElementSibling&&[...box.querySelectorAll(':scope > .jr')].indexOf(el)>0}):null;
@@ -1564,7 +1567,7 @@ function pinTimeBar(){
 }
 function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
   const cards=[...document.querySelectorAll('#journeys > .jr')].slice(-5);
-  cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.classList.add('pop')}); // seules les nouvelles cartes s'animent
+  cards.filter(c=>!c.dataset.shown).forEach((c,i)=>{c.dataset.shown=1;c.style.animationDelay=(i*0.07)+'s';c.classList.add('pop')}); // seules les nouvelles cartes s'animent, en cascade
 }
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
