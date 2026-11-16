@@ -403,7 +403,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
-#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;transition:transform .26s ease;overscroll-behavior:contain}
+#jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:scroll;transition:transform .26s ease;overscroll-behavior:contain}
 #jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
 #jrPage.out,.sub-page.out{animation:jpOut .26s ease forwards}
 @keyframes jpIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
@@ -413,7 +413,7 @@ body.classic .now-sep{border-radius:5px}
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
-#stopPage{z-index:31;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:fixed;overscroll-behavior:contain;touch-action:pan-y}
+#stopPage{z-index:31;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:scroll;overscroll-behavior:contain;touch-action:pan-y}
 #stopPage .jp-body{touch-action:pan-y;user-select:none;-webkit-user-select:none}
 #stopPage .stl{padding:14px;background:rgba(var(--glass-rgb),var(--glass-a))}
 
@@ -463,7 +463,7 @@ body.classic .legs > .leg{border-radius:6px}
 .map-ctrl .map-btn{filter:grayscale(1);color:#9aa0a6;background:rgba(127,127,127,.16)}
 .map-ctrl .map-btn.on,#mapView .map-ctrl .map-btn.on{background:#6b7075;color:#fff;filter:grayscale(1) brightness(1.15)}
 
-#jrPage,#stopPage{background:transparent!important;background-image:none!important}
+/* jrPage/stopPage: fond edge-to-edge géré plus bas (comme capture bleue) */
 body:has(#jrPage.on) > main,body:has(#jrPage.on) > header,body:has(#jrPage.on) > nav{visibility:hidden;pointer-events:none}
 body:has(#stopPage.on) #jrPage > *{visibility:hidden;pointer-events:none}
 #jrPage > .jp-action-bar{position:sticky!important;left:auto;right:auto;bottom:auto;top:calc(var(--safe-t,0px) + 18px + var(--jp-title-height,52px));transform:none!important;width:calc(100% - 28px);max-width:664px;box-sizing:border-box;margin:0 auto 12px!important;padding:8px 12px;border-radius:28px;z-index:3;gap:10px;background:rgba(var(--glass-rgb),var(--glass-a));box-shadow:var(--shadow)}
@@ -522,14 +522,21 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 @media(prefers-reduced-motion:reduce){.edge-returning{transition:none!important}}
 
 
-/* Un seul calque, fixe et indépendant de la hauteur des listes. */
-html{background-color:var(--page-bg,var(--bg))!important}
+/* Fond d'écran plein écran — même principe que la page détail (capture bleue). */
+html{background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important}
 body{position:relative;isolation:isolate;min-height:100%;height:auto!important;background:transparent!important}
 body::before{content:none!important;display:none!important}
-/* Fond strictement limité à la zone visible de la page : jamais sous les barres Safari/iOS. */
-#appWallpaper{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);height:auto;z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
-@supports(height:100dvh){#appWallpaper{top:env(safe-area-inset-top,0px);bottom:auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}}
-#jrPage,#stopPage,.sub-page,main,section.view{background-color:transparent!important;background-image:none!important}
+#appWallpaper{
+  position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;
+  z-index:0;pointer-events:none;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)));
+  background-image:var(--wall,none);
+  background-position:center;background-size:cover;background-repeat:no-repeat;
+  transform:translateZ(0);transition:background-color .25s ease;
+}
+header,main,nav,#tabs,#listTop{position:relative}
+header{z-index:20}nav,#tabs{z-index:30}main{z-index:1}
+main,section.view{background-color:transparent!important;background-image:none!important}
 html.map-edge #appWallpaper{visibility:hidden}
 @media(prefers-reduced-motion:reduce){#appWallpaper{transition:none}}
 
@@ -549,11 +556,34 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
 #mapView .maplibregl-popup{z-index:1!important}
 
 
-html,body{background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+/* Edge-to-edge iOS : html/body couleur chrome + calque image + pages détail.
+   Identique au comportement de la page bleue (fond sous barre d'adresse Safari). */
+html,body{
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
+  background-image:none!important;
+}
 body{height:100%!important;min-height:100%}
-#appWallpaper{inset:0!important;height:auto!important;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important}
-main,#jrPage,#stopPage,.sub-page,section.view{background:transparent!important;background-image:none!important}
+#appWallpaper{
+  position:fixed!important;top:0!important;left:0!important;right:0!important;bottom:0!important;
+  width:100%!important;height:100%!important;min-height:100dvh!important;
+  z-index:0!important;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
+  background-image:var(--wall,none)!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+}
+main,section.view{background:transparent!important;background-image:none!important}
+#jrPage,#stopPage,.sub-page{
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
+  background-image:var(--wall,none)!important;
+  background-size:cover!important;
+  background-position:center!important;
+  background-repeat:no-repeat!important;
+  background-attachment:scroll!important;
+}
 html.map-edge,html.map-edge body{background-color:var(--map-edge-color,var(--bg))!important}
+html.map-edge #appWallpaper{visibility:hidden}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -1988,20 +2018,36 @@ function makeWallpaperPalette(colors,dark){
 
 function syncIOSWallpaperTint(){
  const root=document.documentElement;if(root.classList.contains('map-edge'))return;
- const tint=getComputedStyle(root).getPropertyValue('--ios-chrome-color').trim()||getComputedStyle(root).getPropertyValue('--bg').trim();
- let meta=document.querySelector('meta[name="theme-color"]');
- if(!meta){meta=document.createElement('meta');meta.name='theme-color';meta.id='themeColor';document.head.appendChild(meta)}
- meta.content=tint;
- document.documentElement.style.setProperty('background-color',tint,'important');
+ const tint=(getComputedStyle(root).getPropertyValue('--ios-chrome-color').trim()
+  ||getComputedStyle(root).getPropertyValue('--page-bg').trim()
+  ||getComputedStyle(root).getPropertyValue('--bg').trim()
+  ||'#070b14');
+ // Safari iOS : recréer la meta pour forcer la teinte de la barre d'adresse (comme page bleue)
+ document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
+ const meta=document.createElement('meta');meta.name='theme-color';meta.id='themeColor';meta.content=tint;
+ document.head.appendChild(meta);
+ let cs=document.querySelector('meta[name="color-scheme"]');
+ if(!cs){cs=document.createElement('meta');cs.name='color-scheme';document.head.appendChild(cs)}
+ cs.content=root.dataset.theme==='light'?'light':'dark';
+ root.style.setProperty('background-color',tint,'important');
  document.body.style.setProperty('background-color',tint,'important');
+ const wall=document.getElementById('appWallpaper');
+ if(wall) wall.style.backgroundColor=tint;
 }
 
 function paintWallpaperPalette(colors,dark){
  const root=document.documentElement,palette=makeWallpaperPalette(colors,dark);
+ const fallback=dark?'#070b14':'#eef2f7';
  if(palette){root.style.setProperty('--page-bg',wallpaperHex(palette.page));root.style.setProperty('--glass-rgb',palette.glass.join(','));root.style.setProperty('--border',`rgba(${palette.border.join(',')},${dark?0.23:0.62})`)}
- else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||(dark?'#070b14':'#eef2f7'));root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
+ else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||fallback);root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
  document.body.classList.toggle('has-wallpaper',!!palette);
- const tint=colors?.length?wallpaperHex(colors.reduce((a,c)=>a.map((v,i)=>v+c[i]/colors.length),[0,0,0])):getComputedStyle(root).getPropertyValue('--bg').trim();
+ let tint;
+ if(colors?.length){
+  const avg=colors.reduce((a,c)=>a.map((v,i)=>v+c[i]),[0,0,0]).map(v=>Math.round(v/colors.length));
+  tint=wallpaperHex(dark?avg.map(v=>Math.round(v*0.55+7*0.45)):avg);
+ }else{
+  tint=getComputedStyle(root).getPropertyValue('--page-bg').trim()||getComputedStyle(root).getPropertyValue('--bg').trim()||fallback;
+ }
  root.style.setProperty('--ios-chrome-color',tint);
  syncIOSWallpaperTint();
 }
