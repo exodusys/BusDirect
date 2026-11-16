@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" id="themeColor" content="#0b0b0d">
+<meta name="theme-color" id="themeColor" content="#17181c">
+<meta name="color-scheme" content="dark">
 <title>BusDirect</title>
 <style>
 :root{
@@ -22,14 +23,14 @@
   --border:rgba(255,255,255,.12); --shadow:0 8px 30px rgba(0,0,0,.45);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%}
-html,body{overscroll-behavior-y:none} /* pas de « tirer pour rafraîchir » du navigateur */
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+html,body{overscroll-behavior-y:none} /* le document ne défile plus sous les barres Safari */
+body{overflow:hidden}
+main{position:fixed;left:0;right:0;top:0;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y}
 html,body{background-color:var(--page-bg,var(--bg))!important} /* couleur reprise par Safari sous ses barres */
 /* Fond d'écran sur un calque fixe de la taille de l'écran : il ne bouge ni ne s'étire quand la liste change (iOS ignore background-attachment:fixed) */
-body::before{content:"";position:fixed;left:0;right:0;top:-160px;bottom:-160px;z-index:-1;pointer-events:none;
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:var(--wall) center/cover no-repeat,var(--bg);transform:translateZ(0)}
-/* le calque dépasse en haut et en bas : il passe sous la barre d'adresse et la barre d'outils de Safari, sans bande non couverte */
-@supports (height:100lvh){ body::before{top:calc(-160px);bottom:auto;height:calc(100lvh + 320px)} }
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
   color:var(--text);background:var(--bg);
@@ -181,7 +182,6 @@ body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-
 body.list-page #listTop{left:14px;right:14px;max-width:692px;box-sizing:border-box;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
 body.list-page.classic #listTop{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 8px) 14px 8px}
 body.list-page.classic #timeBar{top:calc(8px + var(--lt-h,52px))}
-body:not(.list-page) #listTop{background:none;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 76px)}
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
@@ -526,8 +526,9 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 html{background-color:var(--page-bg,var(--bg))!important}
 body{position:relative;isolation:isolate;min-height:100%;height:auto!important;background:transparent!important}
 body::before{content:none!important;display:none!important}
-#appWallpaper{position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:auto;height:calc(100vh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px));z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
-@supports(height:100lvh){#appWallpaper{height:calc(100lvh + 320px + env(safe-area-inset-top,0px) + env(safe-area-inset-bottom,0px))}}
+/* Fond strictement limité à la zone visible de la page : jamais sous les barres Safari/iOS. */
+#appWallpaper{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);height:auto;z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
+@supports(height:100dvh){#appWallpaper{top:env(safe-area-inset-top,0px);bottom:auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}}
 #jrPage,#stopPage,.sub-page,main,section.view{background-color:transparent!important;background-image:none!important}
 html.map-edge #appWallpaper{visibility:hidden}
 @media(prefers-reduced-motion:reduce){#appWallpaper{transition:none}}
@@ -535,9 +536,9 @@ html.map-edge #appWallpaper{visibility:hidden}
 
 .range-value{flex:none;width:46px;text-align:right;font:700 13px -apple-system,system-ui,sans-serif;color:var(--muted);font-variant-numeric:tabular-nums}
 .set{display:flex;align-items:center;gap:10px}.set>span{flex:0 0 108px;min-width:108px;text-align:left}.set input[type=range]{flex:1 1 auto;min-width:0;width:auto}
-header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
-body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
-body:not(.classic) header,body:not(.classic) #listTop,body:not(.classic) .jp-bar,body:not(.classic) .map-bar,body:not(.classic) .map-ctrl,body:not(.classic) .time-bar{border-radius:28px}
+header,#listTop,.jp-bar,.map-bar,.map-ctrl,.time-bar,.search{background:rgba(var(--glass-rgb),var(--glass-a))!important;backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;-webkit-backdrop-filter:blur(var(--blur)) saturate(var(--sat))!important;border:1px solid var(--border);box-shadow:var(--shadow)}
+body.noglass header,body.noglass #listTop,body.noglass .jp-bar,body.noglass .map-bar,body.noglass .map-ctrl,body.noglass .time-bar,body.noglass .search{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(var(--glass-rgb),.96)!important}
+body:not(.classic) header,body:not(.classic) #listTop,body:not(.classic) .jp-bar,body:not(.classic) .map-bar,body:not(.classic) .map-ctrl,body:not(.classic) .time-bar,body:not(.classic) .search{border-radius:28px}
 .pick2 .pv,.pick2 .logo-pv,.logo{color:var(--accent)}
 .target-btn{background:rgba(var(--glass-rgb),var(--glass-a));border:1px solid var(--border);box-shadow:var(--shadow)}
 body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;background:rgba(var(--glass-rgb),.96)}
@@ -836,7 +837,7 @@ function openList(){
   if(!listSep()){ $('#listTop').style.display=''; return }
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-list'));
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
-  window.scrollTo({top:0});
+  document.querySelector('main')?.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
   setTimeout(()=>vl.classList.remove('pg-in'),420);   // après l'animation : plus aucune transformation, les bandeaux restent bien fixes
 }
@@ -850,7 +851,7 @@ function goHome(){
  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='v-horaires'));
  document.querySelectorAll('#tabs button').forEach(el=>el.classList.toggle('active',el.dataset.v==='horaires'));
  const map=document.getElementById('mapView');if(map){map.style.transform='';map.style.transition='';map.style.opacity=''}
- window.scrollTo({top:0,left:0,behavior:'instant'});
+ document.querySelector('main')?.scrollTo({top:0,left:0,behavior:'instant'});
 }
 function closeList(noAnim){
   const vl=$('#v-list');
@@ -859,7 +860,7 @@ function closeList(noAnim){
     document.body.classList.remove('list-page');
     deselectTile(); if(!listSep()){ $('#listTop').style.display='none'; return }
     document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
-    window.scrollTo({top:0});
+    document.querySelector('main')?.scrollTo({top:0});
     const vh=$('#v-horaires'); vh.classList.remove('pg-back'); void vh.offsetWidth; vh.classList.add('pg-back');      // les dalles reviennent en douceur
   };
   if(noAnim===true||!vl.classList.contains('active')) return finish();
@@ -875,7 +876,7 @@ $('#tabs').addEventListener('click',e=>{
   document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+b.dataset.v));
   if(b.dataset.v==='suivis') renderTracked();
   if(b.dataset.v==='tickets') renderSMS();
-  window.scrollTo({top:0,behavior:'smooth'});
+  document.querySelector('main')?.scrollTo({top:0,behavior:'smooth'});
 });
 
 /* ========= Geolocation ========= */
@@ -1235,12 +1236,12 @@ function syncTimeBar(){
   inp.classList.toggle('custom',!!planTime); $('#nowBtn').classList.toggle('on',!planTime);
 }
 function goNow(){   // retour à l'affichage de départ : le prochain départ en direct en haut, puis les 4 suivants
-  if(planTime){ window.scrollTo({top:0}); setPlanTime(''); setTimeout(()=>window.scrollTo({top:0}),600); return }   // autre date choisie → nouvelle recherche à partir de maintenant
+  if(planTime){ document.querySelector('main')?.scrollTo({top:0}); setPlanTime(''); setTimeout(()=>document.querySelector('main')?.scrollTo({top:0}),600); return }   // autre date choisie → nouvelle recherche à partir de maintenant
   pastFloor=null; pastReserve=[];pastCur=null;nextCur=null;listCur=null; shown=5;                                          // on retire les parcours passés et ceux ajoutés en faisant défiler
   insistSet(0); insistTopSet(0); $('#moreTop')?.classList.remove('busy','pulling','insisting');
   renderJourneyList(); syncTimeBar(); setListTitle();
-  window.scrollTo({top:0,behavior:'smooth'});
-  const toTop=()=>{ if(window.scrollY!==0) window.scrollTo({top:0}) };  // la liste revient exactement tout en haut
+  document.querySelector('main')?.scrollTo({top:0,behavior:'smooth'});
+  const toTop=()=>{ if((document.querySelector('main')?.scrollTop||0)!==0) document.querySelector('main')?.scrollTo({top:0}) };  // la liste revient exactement tout en haut
   setTimeout(toTop,450); setTimeout(toTop,1200);
   if(!loading) loadJourneys().then(()=>setTimeout(toTop,50));         // actualisation en direct, sans vider la liste
   setTimeout(followTimeBar,500);
@@ -1374,7 +1375,7 @@ const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?
 function renderJourneyList(){
   const box=$('#journeys');
   // ancre visuelle : la première dalle visible garde exactement sa place à l'écran
-  let anc=null, ancTop=0; if(!appending&&window.scrollY>2){   // en haut de liste : pas d'ancre, le premier départ en direct reste visible
+  let anc=null, ancTop=0; if(!appending&&(document.querySelector('main')?.scrollTop||0)>2){   // en haut de liste : pas d'ancre, le premier départ en direct reste visible
     const hh=(document.querySelector('header')?.getBoundingClientRect().bottom)||0;
     for(const c of box.querySelectorAll(':scope > .jr')){ const r=c.getBoundingClientRect(); if(r.bottom>hh+4){anc=c.dataset.k;ancTop=r.top;break} } }
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
@@ -1416,14 +1417,14 @@ function renderJourneyList(){
       ns.textContent=planTime?'Heure choisie':'Maintenant';
       const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
       if(before.previousElementSibling!==ns) before.before(ns) } }
-  if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) window.scrollBy(0,dy) } }
+  if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
 let curList=[], moreObs=null, moreBusy=false, appending=false, pastFloor=null, pastBusy=false, pastReserve=[], pastCur=null, nextCur=null, listCur=null;
 /* Il faut insister en bas de liste pour charger la suite : les barres se remplissent avec l'effort */
 let insist=0, insStart=null, insT=null;
-const atEnd=()=>window.innerHeight+window.scrollY>=document.documentElement.scrollHeight-4;
+const atEnd=()=>(document.querySelector('main')?.scrollTop||0)+(document.querySelector('main')?.clientHeight||0)>=(document.querySelector('main')?.scrollHeight||0)-4;
 function insistSet(v){ insist=Math.max(0,Math.min(1,v)); const sen=$('#more'); if(!sen) return;
   sen.style.setProperty('--ins',insist); sen.classList.toggle('insisting',insist>0&&!moreBusy) }
 function insistDone(){ if(insist>=1&&!moreBusy){ if(navigator.vibrate) navigator.vibrate(10); loadMoreJourneys() } insistSet(0) }
@@ -1435,7 +1436,7 @@ addEventListener('wheel',e=>{ if(!listOpen()||!$('#more')||!atEnd()||e.deltaY<=0
   insistSet(insist+e.deltaY/900); clearTimeout(insT); insT=setTimeout(insistDone,180) },{passive:true});
 /* Même geste en haut de la liste : tirer vers le bas en insistant pour voir les parcours déjà passés */
 let insTop=0, insTopStart=null, insTopT=null;
-const atTop=()=>window.scrollY<=2;
+const atTop=()=>(document.querySelector('main')?.scrollTop||0)<=2;
 function insistTopSet(v){ insTop=Math.max(0,Math.min(1,v)); const sen=$('#moreTop'); if(!sen) return;
   sen.style.setProperty('--ins',insTop); sen.classList.toggle('insisting',insTop>0&&!pastBusy); sen.classList.toggle('pulling',insTop>0) }
 function insistTopDone(){ if(insTop>=1&&!pastBusy){ if(navigator.vibrate) navigator.vibrate(10); loadPastJourneys() } insistTopSet(0) }
@@ -1478,7 +1479,7 @@ async function loadPastJourneys(){
       pastFloor=+new Date(firstTransit(add[0]).startTime)-60000;
       lastJourneys=add.concat(lastJourneys); shown+=add.length;
       appending=true; renderJourneyList(); appending=false;
-      if(anchor) window.scrollBy(0,anchor.getBoundingClientRect().top-top0);   // la liste ne saute pas : les anciens parcours apparaissent au-dessus
+      if(anchor) document.querySelector('main')?.scrollBy(0,anchor.getBoundingClientRect().top-top0);   // la liste ne saute pas : les anciens parcours apparaissent au-dessus
       document.querySelectorAll('#journeys > .jr').forEach((c,i)=>{ if(i<add.length&&!c.dataset.shown){c.dataset.shown=1;c.classList.add('pop')} });
     } else toast('Pas de parcours plus tôt');
   }catch{} finally{ pastBusy=false; sen.classList.remove('busy','pulling') }
@@ -1493,7 +1494,7 @@ function followTimeBar(){
   const inp=$('#planTime'), v=toLocalInput(new Date(f.startTime)); if(inp.value!==v) inp.value=v;
   const tt=+new Date(f.startTime); inp.classList.toggle('past',tt<Date.now()-30000); inp.classList.toggle('future',tt>=Date.now()-30000); inp.classList.remove('custom');
 }
-addEventListener('scroll',()=>requestAnimationFrame(()=>{pinTimeBar();followTimeBar()}),{passive:true});
+document.querySelector('main')?.addEventListener('scroll',()=>requestAnimationFrame(()=>{pinTimeBar();followTimeBar()}),{passive:true});
 // Liste sous les dalles : la date et l'heure restent épinglées sous la barre BusDirect pendant le défilement
 function pinTimeBar(){
   const tb=$('#timeBar'), ph=$('#timeBarPh'); if(!tb||!ph) return;
@@ -1982,7 +1983,7 @@ function paintWallpaperPalette(colors,dark){
  if(palette){root.style.setProperty('--page-bg',wallpaperHex(palette.page));root.style.setProperty('--glass-rgb',palette.glass.join(','));root.style.setProperty('--border',`rgba(${palette.border.join(',')},${dark?0.23:0.62})`)}
  else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||(dark?'#070b14':'#eef2f7'));root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
  document.body.classList.toggle('has-wallpaper',!!palette);
- if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content',root.style.getPropertyValue('--page-bg'));
+ if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content','#17181c');
 }
 function sampleWallpaperImage(url){
  const rect=document.getElementById('appWallpaper')?.getBoundingClientRect(),aspect=Math.max(.15,Math.round(((rect?.width||innerWidth)/(rect?.height||innerHeight+320))*100)/100),key=url+'@'+aspect;
@@ -2882,10 +2883,10 @@ renderDests(); renderTiles(); renderSMS(); locate();
   if(reduced.matches||document.querySelector('#mapView.open,dialog[open]')||(typeof tileArmed!=='undefined'&&tileArmed))return null;
   for(const id of ['stopPage','jrPage']){const page=document.getElementById(id);if(page?.classList.contains('on')&&!page.classList.contains('out')){const content=page.querySelector('.jp-body');return content?{content,scroll:page,edgeBack:true}:null}}
   const view=document.querySelector('main > .view.active');if(!view)return null;
-  if(view.id==='v-list'){const content=document.getElementById('journeys');return content?.querySelector('.jr')?{content,scroll:document.scrollingElement||document.documentElement,edgeBack:true}:null}
-  return {content:view,scroll:document.scrollingElement||document.documentElement,edgeBack:false};
+  if(view.id==='v-list'){const content=document.getElementById('journeys');return content?.querySelector('.jr')?{content,scroll:document.querySelector('main'),edgeBack:true}:null}
+  return {content:view,scroll:document.querySelector('main'),edgeBack:false};
  };
- const metrics=scope=>{const el=scope.scroll,isWindow=el===document.scrollingElement||el===document.documentElement,y=isWindow?window.scrollY:el.scrollTop,height=isWindow?window.innerHeight:el.clientHeight;return {y,top:y<=2,bottom:y+height>=el.scrollHeight-4}};
+ const metrics=scope=>{const el=scope.scroll,isWindow=el===document.scrollingElement||el===document.documentElement,y=isWindow?(document.querySelector('main')?.scrollTop||0):el.scrollTop,height=isWindow?window.innerHeight:el.clientHeight;return {y,top:y<=2,bottom:y+height>=el.scrollHeight-4}};
  const hasInnerScroller=(target,scope)=>{for(let el=target;el&&el!==scope.content;el=el.parentElement){if(el===scope.scroll)break;if(el.scrollHeight>el.clientHeight+3&&/auto|scroll/.test(getComputedStyle(el).overflowY))return true}return false};
  const clear=()=>{clearTimeout(resetTimer);clearTimeout(wheelTimer);if(active){active.content.classList.remove('edge-pulling','edge-returning');active.content.style.removeProperty('transform')}active=null;raw=0;gesture=null};
  const pull=value=>{if(!active)return;clearTimeout(resetTimer);active.content.classList.remove('edge-returning');active.content.classList.add('edge-pulling');const y=Math.sign(value)*MAX_PULL*(1-Math.exp(-Math.abs(value)/RESISTANCE));active.content.style.transform=`translate3d(0,${y.toFixed(2)}px,0)`};
@@ -2912,8 +2913,7 @@ renderDests(); renderTiles(); renderSMS(); locate();
  },{capture:true,passive:true});
  document.addEventListener('scroll',e=>{
   const scope=context();if(!scope)return;
-  const root=scope.scroll===document.scrollingElement||scope.scroll===document.documentElement;
-  if(root?e.target!==document&&e.target!==scope.scroll:e.target!==scope.scroll)return;
+  if(e.target!==scope.scroll)return;
   const now=performance.now(),m=metrics(scope),previous=scrollSnapshots.get(scope.scroll);scrollSnapshots.set(scope.scroll,{...m,at:now});
   if(lastScrollContent!==scope.content){lastScrollContent=scope.content;return}
   if(!previous||gesture||active||now-lastUserInput>1100||now-previous.at>400)return;
