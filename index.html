@@ -549,12 +549,11 @@ body.noglass .target-btn{backdrop-filter:none;-webkit-backdrop-filter:none;backg
 #mapView .maplibregl-popup{z-index:1!important}
 
 
-/* Unified wallpaper and browser canvas: safe areas pad controls, not the image. */
-html{background-color:var(--page-bg,var(--bg))!important;background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
-body{height:100%!important;min-height:100%;background-color:var(--page-bg,var(--bg))!important;background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
-#appWallpaper{top:0!important;bottom:0!important;left:0!important;right:0!important;height:auto!important;visibility:visible;background-color:var(--page-bg,var(--bg))!important}
+html,body{background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+body{height:100%!important;min-height:100%}
+#appWallpaper{inset:0!important;height:auto!important;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important}
 main,#jrPage,#stopPage,.sub-page,section.view{background:transparent!important;background-image:none!important}
-html.map-edge,html.map-edge body{background-color:var(--map-edge-color,var(--page-bg,var(--bg)))!important}
+html.map-edge,html.map-edge body{background-color:var(--map-edge-color,var(--bg))!important}
 
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
@@ -1986,12 +1985,25 @@ function makeWallpaperPalette(colors,dark){
  const border=wallpaperBlend(avg,[255,255,255],dark?0.40:0.62);
  return {page,glass,border};
 }
+
+function syncIOSWallpaperTint(){
+ const root=document.documentElement;if(root.classList.contains('map-edge'))return;
+ const tint=getComputedStyle(root).getPropertyValue('--ios-chrome-color').trim()||getComputedStyle(root).getPropertyValue('--bg').trim();
+ let meta=document.querySelector('meta[name="theme-color"]');
+ if(!meta){meta=document.createElement('meta');meta.name='theme-color';meta.id='themeColor';document.head.appendChild(meta)}
+ meta.content=tint;
+ document.documentElement.style.setProperty('background-color',tint,'important');
+ document.body.style.setProperty('background-color',tint,'important');
+}
+
 function paintWallpaperPalette(colors,dark){
  const root=document.documentElement,palette=makeWallpaperPalette(colors,dark);
  if(palette){root.style.setProperty('--page-bg',wallpaperHex(palette.page));root.style.setProperty('--glass-rgb',palette.glass.join(','));root.style.setProperty('--border',`rgba(${palette.border.join(',')},${dark?0.23:0.62})`)}
  else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||(dark?'#070b14':'#eef2f7'));root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
  document.body.classList.toggle('has-wallpaper',!!palette);
- if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content',palette?wallpaperHex(palette.page):getComputedStyle(root).getPropertyValue('--page-bg').trim());
+ const tint=colors?.length?wallpaperHex(colors.reduce((a,c)=>a.map((v,i)=>v+c[i]/colors.length),[0,0,0])):getComputedStyle(root).getPropertyValue('--bg').trim();
+ root.style.setProperty('--ios-chrome-color',tint);
+ syncIOSWallpaperTint();
 }
 function sampleWallpaperImage(url){
  const rect=document.getElementById('appWallpaper')?.getBoundingClientRect(),aspect=Math.max(.15,Math.round(((rect?.width||innerWidth)/(rect?.height||innerHeight+320))*100)/100),key=url+'@'+aspect;
@@ -2865,7 +2877,7 @@ renderDests(); renderTiles(); renderSMS(); locate();
  const sync=()=>{
   const open=view.classList.contains('open');root.style.setProperty('--map-edge-color',document.getElementById('map')?.classList.contains('dk')?'#3a3d47':'#f2efe9');if(open===active)return;active=open;
   if(open){themeNode=document.querySelector('meta[name="theme-color"]');if(themeNode){themeParent=themeNode.parentNode;themeNext=themeNode.nextSibling;themeNode.remove()}root.classList.add('map-edge')}
-  else{root.classList.remove('map-edge');if(themeNode&&themeParent&&!document.querySelector('meta[name="theme-color"]'))themeParent.insertBefore(themeNode,themeNext?.parentNode===themeParent?themeNext:null);themeNode=null}
+  else{root.classList.remove('map-edge');if(themeNode&&themeParent&&!document.querySelector('meta[name="theme-color"]'))themeParent.insertBefore(themeNode,themeNext?.parentNode===themeParent?themeNext:null);themeNode=null;syncIOSWallpaperTint()}
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
    if(typeof mlMap==='undefined'||!mlMap)return;mlMap.resize();
    if(typeof placeMapSteps==='function')placeMapSteps();if(!open)return;
@@ -2933,5 +2945,10 @@ renderDests(); renderTiles(); renderSMS(); locate();
 })();
 </script>
 
+<script>
+addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
+new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
+</script>
 </body>
 </html>
