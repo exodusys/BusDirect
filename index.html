@@ -204,7 +204,7 @@ body.list-page #timeBar{position:fixed;top:calc(var(--safe-t) + 18px + var(--lt-
 body.list-page #listTop{left:14px;right:14px;max-width:692px;box-sizing:border-box;border-radius:28px;padding:8px 12px}   /* même style que les barres flottantes */
 body.list-page.classic #listTop{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 8px) 14px 8px}
 body.list-page.classic #timeBar{top:calc(8px + var(--lt-h,52px))}
-body.list-page #v-list{padding-top:calc(var(--lt-h,56px) + 68px)} /* 8px entre la barre date et le 1er parcours = espace entre deux dalles */
+body.list-page #v-list{padding-top:calc(var(--lt-h,56px) + 18px + var(--tb-h,42px) + 8px)} /* 8px entre la barre date et le 1er parcours = espace entre deux dalles */
 /* liste séparée en plein écran : sans la barre BusDirect ni la barre d'onglets */
 body.list-page header,body.list-page nav{display:none}
 body.list-page main{padding-top:var(--safe-t);padding-bottom:calc(var(--safe-b) + 24px)}
@@ -889,6 +889,10 @@ function setListPage(on){ S.settings.listPage=on; save(); applyListMode(); toast
 // Évite le « clic fantôme » : après l'appui sur une dalle, le clic arrivait sur le champ date de la nouvelle page
 let clickShieldUntil=0;
 ['click','focusin','mousedown'].forEach(ev=>document.addEventListener(ev,e=>{ if(Date.now()<clickShieldUntil){ e.preventDefault(); e.stopPropagation(); if(ev==='focusin') e.target.blur?.() } },true));
+function syncListHeights(){ // hauteurs RÉELLES mesurées à l'écran : bandeau liste + barre date
+  const h=$('#listTop')?.offsetHeight; if(h) document.documentElement.style.setProperty('--lt-h',h+'px');
+  const tb=$('#timeBar'); if(tb&&tb.style.display!=='none'){ const th=tb.offsetHeight; if(th) document.documentElement.style.setProperty('--tb-h',th+'px') }
+}
 function openList(){
   if(listSep()) document.body.classList.add('list-page');
   clickShieldUntil=Date.now()+500; $('#planTime')?.blur();
@@ -898,7 +902,7 @@ function openList(){
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x.dataset.v==='horaires'));
   document.querySelector('main')?.scrollTo({top:0});
   const vl=$('#v-list'); vl.classList.remove('pg-out','pg-back'); void vl.offsetWidth; vl.classList.add('pg-in');   // la liste glisse depuis la droite
-  requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||56; document.documentElement.style.setProperty('--lt-h',h+'px') }); // vraie hauteur, la page liste est visible
+  requestAnimationFrame(syncListHeights); // vraies hauteurs, la page liste est visible
   setTimeout(()=>vl.classList.remove('pg-in'),420);   // après l'animation : plus aucune transformation, les bandeaux restent bien fixes
 }
 function goHome(){
@@ -1378,7 +1382,7 @@ async function locateMyTrip(){
     const leg=itin.legs.find(l=>l.mode!=='WALK')||itin.legs[0];
     selFrom=null; selDest={uid:'_trip',type:'TRIP',tripId:t.tripId,name:leg.headsign||leg.to?.name||'Terminus',fromLabel:`À bord du ${leg.routeShortName||t.routeShortName||''}`.trim()};
     shown=5; pastFloor=null; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor='_trip'; lastJourneys=[itin]; renderTiles(); openList(); $('#journeys').innerHTML='';
-    $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
+    $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle(); requestAnimationFrame(syncListHeights);
     renderJourneyList(); const c=document.querySelector('#journeys > .jr'); if(c) c.classList.add('open');
     toast(`Tu es dans le ${leg.routeShortName||''} → ${leg.headsign||''}`);
   } finally { btn.classList.remove('busy') }
