@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" id="themeColor" content="#0b0b0d">
+<meta name="theme-color" id="themeColor" content="#17181c">
+<meta name="color-scheme" content="dark">
 <title>BusDirect</title>
 <style>
 :root{
@@ -1982,7 +1983,7 @@ function paintWallpaperPalette(colors,dark){
  if(palette){root.style.setProperty('--page-bg',wallpaperHex(palette.page));root.style.setProperty('--glass-rgb',palette.glass.join(','));root.style.setProperty('--border',`rgba(${palette.border.join(',')},${dark?0.23:0.62})`)}
  else{root.style.setProperty('--page-bg',getComputedStyle(root).getPropertyValue('--bg').trim()||(dark?'#070b14':'#eef2f7'));root.style.removeProperty('--glass-rgb');root.style.removeProperty('--border')}
  document.body.classList.toggle('has-wallpaper',!!palette);
- if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content',root.style.getPropertyValue('--page-bg'));
+ if(!root.classList.contains('map-edge'))document.getElementById('themeColor')?.setAttribute('content','#17181c');
 }
 function sampleWallpaperImage(url){
  const rect=document.getElementById('appWallpaper')?.getBoundingClientRect(),aspect=Math.max(.15,Math.round(((rect?.width||innerWidth)/(rect?.height||innerHeight+320))*100)/100),key=url+'@'+aspect;
