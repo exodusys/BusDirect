@@ -527,8 +527,8 @@ html{background-color:var(--page-bg,var(--bg))!important}
 body{position:relative;isolation:isolate;min-height:100%;height:auto!important;background:transparent!important}
 body::before{content:none!important;display:none!important}
 /* Fond strictement limité à la zone visible de la page : jamais sous les barres Safari/iOS. */
-#appWallpaper{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px);height:auto;z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
-@supports(height:100dvh){#appWallpaper{top:env(safe-area-inset-top,0px);bottom:auto;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}}
+#appWallpaper{position:fixed;left:0;right:0;top:0;bottom:0;height:100dvh;z-index:-1;pointer-events:none;background-color:var(--page-bg,var(--bg));background-image:var(--wall,none);background-position:center;background-size:cover;background-repeat:no-repeat;transform:translateZ(0);transition:background-color .25s ease}
+@supports(height:100dvh){#appWallpaper{top:0;bottom:0;height:100dvh}}
 #jrPage,#stopPage,.sub-page,main,section.view{background-color:transparent!important;background-image:none!important}
 html.map-edge #appWallpaper{visibility:hidden}
 @media(prefers-reduced-motion:reduce){#appWallpaper{transition:none}}
