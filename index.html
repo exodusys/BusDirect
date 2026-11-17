@@ -2599,7 +2599,7 @@ function setRouteDim(on){
   [['route-line','line-opacity'],['route-casing','line-opacity'],['route-walk','line-opacity']].forEach(([id,p])=>{
     if(!mlMap.getLayer(id)) return;
     if(id==='route-walk') mlMap.setPaintProperty(id,p,on?['case',['==',['get','idx'],mapWalk],1,0.25]:1);
-    else mlMap.setPaintProperty(id,p,on?0.25:1);
+    else mlMap.setPaintProperty(id,p,1);   // lignes de véhicules toujours en couleur, même quand une marche est sélectionnée
   });
   if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',on?['case',['==',['get','idx'],mapWalk],7,4]:5);
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
