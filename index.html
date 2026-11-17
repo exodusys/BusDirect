@@ -659,6 +659,11 @@ body.list-page>main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!
 body::before,#appWallpaper{
   top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
 }
+/* Animations d'allongement de la liste : barres seules, sans texte, un peu plus grandes */
+.load-more span{display:none!important}
+.load-more{gap:7px}
+.load-more i{width:10px;height:24px;border-radius:3px}
+@keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
