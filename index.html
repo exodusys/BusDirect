@@ -616,6 +616,11 @@ html body>main{
   background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;
   background-origin:border-box!important;background-clip:border-box!important;background-attachment:scroll!important;
 }
+
+/* Pas de débordement au-delà de l'écran (déclenchait le flou de bord de Safari) : comme la page détail d'origine */
+html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
+html body>main{height:100vh!important;height:100dvh!important}
+#appWallpaper{top:0!important;bottom:0!important;height:100%!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
