@@ -599,12 +599,19 @@ main{padding-top:calc(var(--safe-t) + 72px)}
 body.classic main{padding-top:calc(var(--safe-t) + 66px)}
 body.list-page main{padding-top:var(--safe-t)}
 #v-horaires>.row:first-child h2{margin-top:0}
+
+/* Safari iOS 26 ignore theme-color : il teinte ses barres d'après les éléments fixes collés au bord haut/bas */
+.edge-tint{position:fixed;left:0;right:0;height:max(6px,env(safe-area-inset-top,0px));z-index:1;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
+#edgeTop{top:0}
+#edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))}
+html.map-edge .edge-tint{display:none}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
 </head>
 <body>
 <div id="appWallpaper" aria-hidden="true"></div>
+<div class="edge-tint" id="edgeTop" aria-hidden="true"></div><div class="edge-tint" id="edgeBottom" aria-hidden="true"></div>
 
 <header class="glass">
   <div class="logo" id="logo">🚌</div>
@@ -2047,6 +2054,7 @@ function syncIOSWallpaperTint(){
  document.body.style.setProperty('background-color',tint,'important');
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
+ document.querySelectorAll('.edge-tint').forEach(e=>e.style.setProperty('background-color',tint,'important'));
  document.querySelectorAll('#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
 
