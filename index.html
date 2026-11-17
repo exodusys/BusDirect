@@ -625,35 +625,6 @@ html body>main{
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
 .edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
-
-/* App sur l'écran d'accueil : pas de débordement (sinon iOS floute le bandeau). Dans Safari, le débordement reste pour la teinte en direct. */
-@media (display-mode: standalone){
-html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
-html body>main{height:100vh!important;height:100dvh!important}
-#appWallpaper{top:0!important;bottom:0!important;height:100%!important}
-}
-
-
-/* App écran d'accueil : cache opaque (même fond d'écran) entre la barre d'état et les bandeaux, pour que rien ne défile flou dessous */
-#statusCover{display:none}
-@media (display-mode: standalone){
-#statusCover{display:block;position:fixed;inset:0;z-index:35;pointer-events:none;
-  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)));background-image:var(--wall,none);background-size:cover;background-position:center;background-repeat:no-repeat;
-  clip-path:inset(0 0 calc(100% - var(--safe-t) - 10px) 0);-webkit-clip-path:inset(0 0 calc(100% - var(--safe-t) - 10px) 0)}
-html.map-edge #statusCover{display:none}
-body.classic #statusCover{display:none}
-}
-
-/* App écran d'accueil : la barre d'état garde le fond d'écran, mais rien ne défile dessous (zone env(safe-area-inset-top) exclue) */
-@media (display-mode: standalone){
-html body>main,#jrPage,#stopPage,.sub-page{top:env(safe-area-inset-top,0px)!important}
-html body>main{height:calc(100dvh - env(safe-area-inset-top,0px))!important;padding-top:72px!important;background-color:transparent!important;background-image:none!important}
-body.classic main{padding-top:66px!important}
-body.list-page main{padding-top:0!important}
-#jrPage,#stopPage,.sub-page{background-position:center calc(50% - env(safe-area-inset-top,0px)/2)!important}
-#jrPage .jp-bar,.sub-page .jp-bar{top:10px!important;margin-top:10px!important}
-#statusCover{display:none!important}
-}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
