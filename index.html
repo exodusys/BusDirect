@@ -2054,7 +2054,13 @@ function syncIOSWallpaperTint(){
  document.body.style.setProperty('background-color',tint,'important');
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
- document.querySelectorAll('.edge-tint').forEach(e=>e.style.setProperty('background-color',tint,'important'));
+ // Safari ne relit pas la teinte d'un élément existant : on recrée les bandes à la frame suivante
+ document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.insertBefore(d,document.body.children[1]||null)});
+  const m=document.querySelector('meta[name="theme-color"]');if(m){m.content=tint}
+  window.scrollTo(0,1);window.scrollTo(0,0);
+ }));
  document.querySelectorAll('#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
 
