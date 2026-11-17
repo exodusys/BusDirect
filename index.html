@@ -1196,6 +1196,8 @@ function withFinalWalk(list,orig,stop,fw){
     return {...it,legs:[...it.legs,leg],endTime:leg.endTime,duration:(it.duration||0)+fw.dur,_fw:true};
   });
 }
+// Une requête Transitous sans réponse ne bloque plus la recherche : abandon après 15 s
+(()=>{ const f0=window.fetch.bind(window); window.fetch=(u,o={})=>{ try{ if(typeof u==='string'&&u.startsWith(API)&&!o.signal&&window.AbortController){ const c=new AbortController(); const t=setTimeout(()=>c.abort(),15000); return f0(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t)) } }catch(e){} return f0(u,o) } })();
 async function nextDepartures(dest,from,onMore){
   const origDest=dest;
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
@@ -1352,14 +1354,14 @@ function goNow(){   // retour à l'affichage de départ : le prochain départ en
   document.querySelector('main')?.scrollTo({top:0,behavior:'smooth'});
   const toTop=()=>{ if((document.querySelector('main')?.scrollTop||0)!==0) document.querySelector('main')?.scrollTo({top:0}) };  // la liste revient exactement tout en haut
   setTimeout(toTop,450); setTimeout(toTop,1200);
-  if(!loading) loadJourneys().then(()=>setTimeout(toTop,50));         // actualisation en direct, sans vider la liste
+  loadJourneys(true).then(()=>setTimeout(toTop,50));         // relance toujours, même si une recherche était bloquée
   setTimeout(followTimeBar,500);
 }
 function setPlanTime(v){
   pastFloor=null;
   planTime=v?new Date(v):null;
   if(planTime&&Math.abs(planTime-Date.now())<60000) planTime=null;
-  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
+  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys(true);
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 /* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
@@ -1437,8 +1439,10 @@ async function refreshMyTrip(){ // actualisation en direct de la course suivie
   lastJourneys=[itin]; renderJourneyList();
 }
 let loadedFor=null, loading=false;
-async function loadJourneys(){
-  if(!selDest||loading) return;
+let jGen=0;
+async function loadJourneys(force){
+  if(!selDest||(loading&&!force)) return;   // force : « Maintenant » / nouvelle date relancent même si une recherche est en cours
+  const gen=++jGen;
   if(selDest.type==='TRIP') return refreshMyTrip();
   $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
@@ -1453,10 +1457,11 @@ async function loadJourneys(){
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
       if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
-    const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
+    const data=await nextDepartures(selDest,selFrom,more=>{ if(gen!==jGen||selDest!==reqDest||selFrom!==reqFrom) return;
       prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
     try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
-    if(selDest!==reqDest||selFrom!==reqFrom) return;   // dalle désélectionnée / changée pendant le chargement
+    if(gen!==jGen) return;   // une recherche plus récente a pris le relais
+    if(selDest!==reqDest||selFrom!==reqFrom){ if(first&&!lastJourneys.length) box.innerHTML=''; return }   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
@@ -1464,8 +1469,8 @@ async function loadJourneys(){
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
-  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
-  finally{loading=false; $('#jrHead').classList.remove('busy')}
+  }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
+  finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
 let shown=5;
 const jStart=it=>+new Date(firstTransit(it).startTime);
@@ -3073,9 +3078,9 @@ renderDests(); renderTiles(); renderSMS(); locate();
 // Espace barre de date → première dalle = espace entre deux dalles (mesuré, pas codé en dur)
 function fitListGap(){ try{
   const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
-  const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0];
+  const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0]||document.querySelector('#journeys > .card, #journeys > .spin');   // aussi « Aucun départ à proximité »
   if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
-  const gap=cards[1]?cards[1].getBoundingClientRect().top-card.getBoundingClientRect().bottom:parseFloat(getComputedStyle(card).marginBottom)||8;
+  const gap=cards[0]&&cards[1]?cards[1].getBoundingClientRect().top-card.getBoundingClientRect().bottom:8;   // même écart qu'entre deux dalles (.jr margin-bottom)
   const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
   const cardTop=card.getBoundingClientRect().top+main.scrollTop;          // position de la 1re dalle sans défilement
   const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
@@ -3083,6 +3088,7 @@ function fitListGap(){ try{
 }catch(e){} }
 { const _r=renderJourneyList; renderJourneyList=function(){ const r=_r.apply(this,arguments); requestAnimationFrame(fitListGap); return r } }
 addEventListener('resize',()=>requestAnimationFrame(fitListGap));
+try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#journeys'),{childList:true}) }catch(e){}
 </script>
 
 <script>
