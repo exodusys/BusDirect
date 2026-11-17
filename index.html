@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" id="themeColor" content="#17181c">
-<meta name="color-scheme" content="dark">
+<script>
+/* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
+(function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
+var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
+document.write('<meta name="theme-color" content="'+t+'"><meta name="color-scheme" content="'+(sc||'dark')+'"><style>html,body,main{background-color:'+t+'!important}</style>');}catch(e){}})();
+</script>
 <title>BusDirect</title>
 <style>
 :root{
@@ -616,13 +620,27 @@ html body>main{
   background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;
   background-origin:border-box!important;background-clip:border-box!important;background-attachment:scroll!important;
 }
+
+
+/* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
+.edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
+#edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
+
+/* App sur l'écran d'accueil : pas de débordement (sinon iOS floute le bandeau). Dans Safari, le débordement reste pour la teinte en direct. */
+@media (display-mode: standalone){
+html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
+html body>main{height:100vh!important;height:100dvh!important}
+#appWallpaper{top:0!important;bottom:0!important;height:100%!important}
+}
+
+/* Aucun flou derrière les bandeaux du haut : la liste reste nette dessous */
+header,#listTop,.jp-bar,.jp-bar *,.map-bar,.time-bar,.search,#jrPage .jp-bar,.sub-page .jp-bar,#stopPage .jp-bar,.jp-head,.jp-top,.jp-action-bar,.jp-action-bar *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
 </head>
 <body>
 <div id="appWallpaper" aria-hidden="true"></div>
-<div class="edge-tint" id="edgeTop" aria-hidden="true"></div><div class="edge-tint" id="edgeBottom" aria-hidden="true"></div>
 
 <header class="glass">
   <div class="logo" id="logo">🚌</div>
@@ -2063,14 +2081,14 @@ function syncIOSWallpaperTint(){
  cs.content=root.dataset.theme==='light'?'light':'dark';
  root.style.setProperty('background-color',tint,'important');
  document.body.style.setProperty('background-color',tint,'important');
+ try{localStorage.setItem('bd-tint',tint);localStorage.setItem('bd-scheme',cs.content)}catch(e){}
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
- // Safari ne relit pas la teinte d'un élément existant : on recrée les bandes à la frame suivante
+ // Bandes haut/bas recréées à chaque changement : Safari relit leur couleur sans recharger
  document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-  ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.insertBefore(d,document.body.children[1]||null)});
-  const m=document.querySelector('meta[name="theme-color"]');if(m){m.content=tint}
-  window.scrollTo(0,1);window.scrollTo(0,0);
+  ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
@@ -2159,7 +2177,7 @@ function renderPickers(){
     +`<div class="pick2 add" data-k="+wall"><div class="pv wall-pv">＋</div><span>Ajouter</span></div>`;
 }
 $('#logoPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('logo',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
-$('#wallPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
+$('#wallPicker').onclick=e=>{window.__userWallChange=true;const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
 function delCustom(type,id){
   const s=S.settings, key=type==='logo'?'customLogos':'customWalls';
   s[key]=s[key].filter(x=>x.id!==id);
@@ -2180,7 +2198,7 @@ $('#fileIn').onchange=e=>{
   rd.readAsDataURL(f);
 };
 $('#styleSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.look=v;save();applySettings()}};
-$('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.theme=v;save();applySettings()}};
+$('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){window.__userWallChange=true;S.settings.theme=v;save();applySettings()}};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettings);
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
 $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySettings()};
