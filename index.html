@@ -513,8 +513,8 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 
 
 /* Accueil discret : icône fine de 18 px, zone tactile conservée. */
-.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
-.home-btn svg{display:block;width:18px;height:18px;opacity:.75;pointer-events:none}
+.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:9px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
+.home-btn svg{display:block;width:22px;height:22px;opacity:.75;pointer-events:none}
 .home-btn:active{background:rgba(127,127,127,.08);color:var(--text)}
 .home-btn:active svg,.home-btn:focus-visible svg{opacity:1}
 .home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -1723,7 +1723,7 @@ function lineColor(l){
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtDay(d){const t=new Date(d);return t.toLocaleDateString('fr-CH',{weekday:'short',day:'numeric',month:'short'})}
-function fmtMapCountdown(at){return fmtCd(Number(at))}
+function fmtMapCountdown(at){const t=fmtCd(Number(at));return t==='à quai'?t:'dans '+t}
 setInterval(()=>document.querySelectorAll('#mapSub .map-countdown').forEach(el=>{const text=fmtMapCountdown(el.dataset.at);if(el.textContent!==text)el.textContent=text}),1000);
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
@@ -2806,7 +2806,7 @@ async function updateVehicle(){
   if(!p){const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(now>=a&&now<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip}; p=vehPosAt(now) }}
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
-  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Départ':'Arrivée'} ${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
+  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Arrive à ton arrêt à':'Arrivée prévue à'} ${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
   if(!vehMk){const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
   const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.zIndex='5'; el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
@@ -2814,7 +2814,7 @@ async function updateVehicle(){
   const before=now<+new Date(ft.startTime);
   if(mapWalk==null){
     const d=decisiveStop(ft);
-    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
+    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
   }
 }
 
