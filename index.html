@@ -633,14 +633,23 @@ html body>main{height:100vh!important;height:100dvh!important}
 #appWallpaper{top:0!important;bottom:0!important;height:100%!important}
 }
 
-/* Aucun flou derrière les bandeaux du haut : la liste reste nette dessous */
-header,#listTop,.jp-bar,.jp-bar *,.map-bar,.time-bar,.search,#jrPage .jp-bar,.sub-page .jp-bar,#stopPage .jp-bar,.jp-head,.jp-top,.jp-action-bar,.jp-action-bar *{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+
+/* App écran d'accueil : cache opaque (même fond d'écran) entre la barre d'état et les bandeaux, pour que rien ne défile flou dessous */
+#statusCover{display:none}
+@media (display-mode: standalone){
+#statusCover{display:block;position:fixed;inset:0;z-index:35;pointer-events:none;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)));background-image:var(--wall,none);background-size:cover;background-position:center;background-repeat:no-repeat;
+  clip-path:inset(0 0 calc(100% - var(--safe-t) - 10px) 0);-webkit-clip-path:inset(0 0 calc(100% - var(--safe-t) - 10px) 0)}
+html.map-edge #statusCover{display:none}
+body.classic #statusCover{display:none}
+}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
 </head>
 <body>
 <div id="appWallpaper" aria-hidden="true"></div>
+<div id="statusCover" aria-hidden="true"></div>
 
 <header class="glass">
   <div class="logo" id="logo">🚌</div>
