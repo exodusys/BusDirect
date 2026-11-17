@@ -646,20 +646,16 @@ body:not(.classic) nav{bottom:calc(var(--safe-b) + 30px)}
   body:not(.classic) nav{bottom:30px}
 }
 
-/* Plus de bande vide en bas : main ancré top:0/bottom:0, hauteur écran + zone sûre */
+/* Page étendue jusqu'au bas de l'écran : main et fond débordent sous la barre du bas */
+html,body{height:100%!important;min-height:100lvh!important}
 html body>main{
-  top:0!important;bottom:0!important;
-  height:calc(100vh + env(safe-area-inset-bottom,0px))!important;
-  height:calc(100dvh + env(safe-area-inset-bottom,0px))!important;
+  top:0!important;bottom:-160px!important;height:auto!important;
   border-top:0!important;border-bottom:0!important;
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)!important;
+  padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) + 100px)!important;
 }
-body.list-page>main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!important}
-/* Fond étendu de la même façon, sans coupure */
+body.list-page>main{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) + 24px)!important}
 body::before,#appWallpaper{
-  top:0!important;bottom:0!important;
-  height:calc(100vh + env(safe-area-inset-bottom,0px))!important;
-  height:calc(100dvh + env(safe-area-inset-bottom,0px))!important;
+  top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
 }
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
