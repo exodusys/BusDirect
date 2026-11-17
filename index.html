@@ -625,6 +625,12 @@ html body>main{
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
 .edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
+
+/* Barre d'onglets : positionnée depuis le haut sur la hauteur visible (svh, barres Safari affichées).
+   Safari iOS 26 étend la zone « fixed » sous sa barre d'adresse : avec bottom, la barre glissait tout en bas. */
+:root{--nav-h:64px}
+nav#tabs{bottom:auto!important;top:calc(100vh - var(--nav-h) - var(--safe-b) - 10px)!important;top:calc(100svh - var(--nav-h) - var(--safe-b) - 10px)!important}
+body.classic nav#tabs{top:calc(100vh - var(--nav-h))!important;top:calc(100svh - var(--nav-h))!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -794,7 +800,7 @@ html body>main{
         <li><b>Liste des parcours</b> : elle s'ouvre sur sa propre page, en plein écran. Pour revenir aux dalles, touche ‹ ou glisse depuis le bord gauche de l'écran vers la droite.</li>
         <li>Quitter une liste arrête son actualisation et remet l'heure sur « Maintenant ».</li>
         <li><b>Plus de trajets</b> : en bas de la liste, continue de faire défiler jusqu'à ce que les quatre barres s'allument.</li>
-        <li>La liste s'actualise toute seule chaque minute et quand tu te déplaces de plus de 150 m.</li>
+        <li>La liste s'actualise toute seule chaque minute. Pour un parcours « Depuis ma position », elle se met aussi à jour dès que de nouveaux arrêts apparaissent à moins de 600 m de toi pendant que tu te déplaces.</li>
       </ul>
       <h4>🗺️ Carte</h4>
       <ul>
@@ -1220,7 +1226,7 @@ function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.
 let selFrom=null; // null = ma position
 // Désélection : la liste disparaît et son actualisation s'arrête
 function deselectTile(){
-  selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[];
+  selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[]; try{resetNearStops()}catch{}
   planTime=null; pastFloor=null; try{syncTimeBar()}catch{}
   try{ $('#timeBar').classList.remove('pinned'); $('#timeBarPh').style.height='0' }catch{}   // la date choisie ne reste pas active pour les dalles suivantes
   renderTiles(); if(!listSep()) $('#listTop').style.display='none'; $('#jrHead').style.display='none'; $('#timeBar').style.display='none'; $('#journeys').innerHTML='';
@@ -1234,7 +1240,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
+  shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;resetNearStops();selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -1246,8 +1252,36 @@ async function pickPair(from,to){
 let lastPlanPos=null;
 GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
-  if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
+  checkNearStops();   // « Depuis ma position » : nouveaux arrêts à proximité → liste mise à jour
 },()=>{},{enableHighAccuracy:true,maximumAge:15000});
+/* Arrêts à proximité : quand tu te déplaces et que de nouveaux arrêts entrent dans ton rayon,
+   les prochains départs sont recalculés. Uniquement pour un parcours « Depuis ma position ». */
+const NEAR_R=0.6;   // rayon en km (~8 min à pied)
+let nearSet=null, nearPos=null, nearT=0, nearBusy=false;
+async function stopsAround(p){
+  const d=NEAR_R/111, dl=d/Math.cos(p.lat*Math.PI/180);
+  for(const v of ['v1','v5','v2']){
+    try{ const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-dl}&max=${p.lat-d},${p.lon+dl}`); if(!r.ok) continue;
+      return new Set((await r.json()).filter(s=>s&&s.lat!=null&&dist(p,s)<=NEAR_R).map(s=>s.stopId||s.id||s.name)) }catch{}
+  }
+  return null;
+}
+function resetNearStops(){ nearSet=null; nearPos=null; nearT=0 }
+async function checkNearStops(){
+  if(!selDest||selFrom||selDest.type==='TRIP'||!pos||!listOpen()||nearBusy) return;   // seulement « Depuis ma position »
+  if(nearPos&&dist(nearPos,pos)<0.04&&Date.now()-nearT<60000) return;                // nouvelle vérification après 40 m ou 1 min
+  nearBusy=true; const p={...pos}, dest=selDest;
+  try{
+    const set=await stopsAround(p);
+    if(selDest!==dest||selFrom) return;
+    if(!set){ if(lastPlanPos&&dist(lastPlanPos,p)>0.15) loadJourneys(); return }     // service indisponible : recalcul après 150 m
+    if(!nearSet){ nearSet=set; nearPos=p; nearT=Date.now(); return }                  // premier relevé = référence
+    const added=[...set].some(id=>!nearSet.has(id));
+    if(added&&loading) return;                     // liste en cours de chargement : on réessaie au prochain déplacement
+    nearSet=set; nearPos=p; nearT=Date.now();
+    if(added){ loadJourneys(); toast('Nouveaux arrêts à proximité : départs mis à jour') }
+  }finally{ nearBusy=false }
+}
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
@@ -1432,6 +1466,7 @@ async function loadJourneys(){
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
+    if(!selFrom&&!nearSet) checkNearStops();   // relevé de référence des arrêts autour de toi
   }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
   finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
@@ -1442,7 +1477,8 @@ function mergeRefresh(old,data){
   if(!old.length||!data.length) return data;
   const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
   const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
-  const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor)   // passés gardés seulement si tu les as affichés, after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
+  const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor);   // passés gardés seulement si tu les as affichés
+  const after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
   const out=before.concat(data,after);
   shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);   // mêmes dalles visibles qu'avant
   return out;
@@ -2962,6 +2998,9 @@ applySettings();
   document.addEventListener('touchend',arm,true); document.addEventListener('click',arm,true);
 })();
 renderDests(); renderTiles(); renderSMS(); locate();
+/* hauteur réelle de la barre d'onglets (sert à la placer depuis le haut) */
+(()=>{const n=$('#tabs');if(!n)return;const m=()=>{if(n.offsetHeight)document.documentElement.style.setProperty('--nav-h',n.offsetHeight+'px')};
+  m();new ResizeObserver(m).observe(n);addEventListener('resize',m)})();
 </script>
 
 <script>
