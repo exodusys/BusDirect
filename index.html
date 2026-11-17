@@ -1220,11 +1220,12 @@ async function nextDepartures(dest,from,onMore){
 /* ========= Parcours (search & save) ========= */
 function goAddFirst(){ document.querySelector('#tabs button[data-v="parcours"]').click(); const q=$('#q'); if(q) q.focus({preventScroll:true}) }   // focus immédiat : iOS ouvre le clavier
 // Détails sur la 1re ligne des résultats : type de lieu et adresse (rue + numéro)
-const CAT_FR={restaurant:'Restaurant',cafe:'Café',bar:'Bar',fast_food:'Restauration rapide',school:'École',university:'Université',hospital:'Hôpital',clinic:'Clinique',pharmacy:'Pharmacie',supermarket:'Supermarché',shop:'Magasin',hotel:'Hôtel',museum:'Musée',park:'Parc',church:'Église',bank:'Banque',post_office:'Poste',library:'Bibliothèque',cinema:'Cinéma',theatre:'Théâtre',stadium:'Stade',parking:'Parking',fuel:'Station-service',townhall:'Mairie',police:'Police',station:'Gare',bakery:'Boulangerie',doctors:'Médecin',dentist:'Dentiste',kindergarten:'Crèche',sports_centre:'Centre sportif',swimming_pool:'Piscine',mall:'Centre commercial',office:'Bureau',attraction:'Attraction'};
+const CAT_FR={convenience:'Épicerie',department_store:'Grand magasin',clothes:'Vêtements',hairdresser:'Coiffeur',kiosk:'Kiosque',butcher:'Boucherie',florist:'Fleuriste',optician:'Opticien',chemist:'Droguerie',electronics:'Électronique',furniture:'Meubles',hardware:'Quincaillerie',doityourself:'Bricolage',books:'Librairie',shoes:'Chaussures',jewelry:'Bijouterie',gym:'Salle de sport',fitness_centre:'Salle de sport',playground:'Place de jeux',place_of_worship:'Lieu de culte',community_centre:'Centre communautaire',nightclub:'Boîte de nuit',pub:'Pub',ice_cream:'Glacier',car_wash:'Lavage auto',car_repair:'Garage',veterinary:'Vétérinaire',atm:'Distributeur',marketplace:'Marché',zoo:'Zoo',viewpoint:'Point de vue',monument:'Monument',castle:'Château',college:'Haute école',post_box:'Boîte aux lettres',toilets:'Toilettes',bus_station:'Gare routière',airport:'Aéroport',ferry_terminal:'Débarcadère',restaurant:'Restaurant',cafe:'Café',bar:'Bar',fast_food:'Restauration rapide',school:'École',university:'Université',hospital:'Hôpital',clinic:'Clinique',pharmacy:'Pharmacie',supermarket:'Supermarché',shop:'Magasin',hotel:'Hôtel',museum:'Musée',park:'Parc',church:'Église',bank:'Banque',post_office:'Poste',library:'Bibliothèque',cinema:'Cinéma',theatre:'Théâtre',stadium:'Stade',parking:'Parking',fuel:'Station-service',townhall:'Mairie',police:'Police',station:'Gare',bakery:'Boulangerie',doctors:'Médecin',dentist:'Dentiste',kindergarten:'Crèche',sports_centre:'Centre sportif',swimming_pool:'Piscine',mall:'Centre commercial',office:'Bureau',attraction:'Attraction'};
 function resDetail(r){
-  const cat=r.category?(CAT_FR[r.category]||String(r.category).replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())):'';
+  const ck=String(r.category||'').replace(/[\d\s]+$/,'').trim().toLowerCase().replace(/\s+/g,'_');   // « Supermarket 14 » → supermarket
+  const cat=ck?(CAT_FR[ck]||ck.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())):'';
   const street=r.street?(r.street+(r.houseNumber?' '+r.houseNumber:'')):'';
-  const addr=street&&!r.name.toLowerCase().includes(r.street.toLowerCase())?street:(r.type==='ADDRESS'&&r.houseNumber&&!r.name.includes(r.houseNumber)?r.houseNumber:'');
+  const addr=r.type==='PLACE'?'':street&&!r.name.toLowerCase().includes(r.street.toLowerCase())?street:(r.type==='ADDRESS'&&r.houseNumber&&!r.name.includes(r.houseNumber)?r.houseNumber:'');
   return [r.type==='STOP'?'Arrêt':r.type==='ADDRESS'?'':cat,addr].filter(Boolean).join(' · ');
 }
 let qTimer;
@@ -1234,10 +1235,11 @@ $('#q').addEventListener('input',e=>{
   qTimer=setTimeout(async()=>{
     const box=$('#results'); box.style.display='block'; box.innerHTML='<div class="spin"></div>';
     try{
-      const res=(await geocode(v)).slice(0,10);
+      let res=await geocode(v); if(pos) res=res.map(r=>({...r,_km:kmDist([r.lon,r.lat],[pos.lon,pos.lat])})).sort((a,b)=>a._km-b._km);   // du plus proche au plus loin
+      res=res.slice(0,10);
       if(!res.length){box.innerHTML='<div class="empty">Aucun résultat</div>';return}
       box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${TYPE_ICON[r.type]||'📍'}</div>
-        <div style="flex:1"><div class="n">${esc(r.name)}${resDetail(r)?` <span class="nd">· ${esc(resDetail(r))}</span>`:''}</div><div class="a">${esc([r.zip,...(r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2)].filter(Boolean).join(' ')||r.type)}</div></div><span>＋</span></div>`).join('');
+        <div style="flex:1"><div class="n">${esc(r.name)}${resDetail(r)?` <span class="nd">· ${esc(resDetail(r))}</span>`:''}</div><div class="a">${esc([String(r.zip||'').split(';')[0],...(r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2)].filter(Boolean).join(' ')||r.type)}${r._km!=null?` · ${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(1)+' km'}`:''}</div></div><span>＋</span></div>`).join('');
       box.querySelectorAll('.res').forEach(el=>el.onclick=()=>addDest(res[+el.dataset.i]));
     }catch{box.innerHTML='<div class="empty">Recherche indisponible</div>'}
   },300);
