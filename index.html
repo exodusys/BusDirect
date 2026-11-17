@@ -657,8 +657,6 @@ body.list-page>main{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) 
 body::before,#appWallpaper{
   top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
 }
-/* Espace entre la barre de date et la première dalle (même écart qu'entre les dalles) */
-body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 85px)!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -3071,6 +3069,20 @@ renderDests(); renderTiles(); renderSMS(); locate();
  },{capture:true,passive:true});
  new MutationObserver(()=>{if(active&&context()?.content!==active.content)clear()}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});window.addEventListener('resize',clear,{passive:true});
 })();
+
+// Espace barre de date → première dalle = espace entre deux dalles (mesuré, pas codé en dur)
+function fitListGap(){ try{
+  const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
+  const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0];
+  if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
+  const gap=cards[1]?cards[1].getBoundingClientRect().top-card.getBoundingClientRect().bottom:parseFloat(getComputedStyle(card).marginBottom)||8;
+  const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
+  const cardTop=card.getBoundingClientRect().top+main.scrollTop;          // position de la 1re dalle sans défilement
+  const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
+  if(Math.abs(pad-cur)>0.5) vl.style.setProperty('padding-top',pad+'px','important');
+}catch(e){} }
+{ const _r=renderJourneyList; renderJourneyList=function(){ const r=_r.apply(this,arguments); requestAnimationFrame(fitListGap); return r } }
+addEventListener('resize',()=>requestAnimationFrame(fitListGap));
 </script>
 
 <script>
