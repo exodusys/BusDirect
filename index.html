@@ -1247,7 +1247,7 @@ $('#q').addEventListener('input',e=>{
 function addDest(r){
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
   S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
-    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
+    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||'',detail:resDetail(r),zip:String(r.zip||'').split(';')[0]});
   save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
 }
@@ -1255,7 +1255,7 @@ function renderDests(){
   const el=$('#destList');
   if(!S.dests.length){el.innerHTML='<div class="empty"><b>⭐</b>Recherche un arrêt, une adresse ou un lieu.</div>';return}
   el.innerHTML=S.dests.map((d,i)=>`<div class="res" style="padding:10px 4px"><div class="ic">${TYPE_ICON[d.type]||'📍'}</div>
-    <div style="flex:1"><div class="n">${esc(d.name)}</div><div class="a">${esc(d.area)}</div></div>
+    <div style="flex:1"><div class="n">${esc(d.name)}${d.detail?` <span class="nd">· ${esc(d.detail)}</span>`:''}</div><div class="a">${esc([d.zip,d.area].filter(Boolean).join(' '))}${pos&&d.lat!=null?(k=>` · ${k<1?Math.round(k*1000)+' m':k.toFixed(1)+' km'}`)(kmDist([d.lon,d.lat],[pos.lon,pos.lat])):''}</div></div>
     <button class="del" onclick="moveDest(${i},-1)">↑</button><button class="del" onclick="delDest('${d.uid}')">✕</button></div>`).join('');
 }
 function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===uid||selFrom?.uid===uid){selDest=null;selFrom=null}save();renderDests();renderTiles()}
