@@ -376,6 +376,7 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .maplibregl-popup-anchor-bottom .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip{border-top-color:rgba(var(--glass-rgb),.96)!important}
 .maplibregl-popup-anchor-left .maplibregl-popup-tip{border-right-color:rgba(var(--glass-rgb),.96)!important}
 .maplibregl-popup-anchor-right .maplibregl-popup-tip{border-left-color:rgba(var(--glass-rgb),.96)!important}
+html.leg-only .appr-stop{display:none!important}
 .appr-stop{display:flex;align-items:center;gap:6px;pointer-events:none}
 .appr-stop i{width:10px;height:10px;border-radius:50%;background:#fff;border:3px solid var(--c);flex:none;box-sizing:content-box}
 .appr-stop span{background:rgba(255,255,255,.92);color:#111827;border:1.5px dashed var(--c);border-radius:8px;padding:2px 6px;font:600 10.5px/1.25 -apple-system,system-ui,sans-serif;white-space:nowrap}
@@ -2558,9 +2559,10 @@ function focusStep(i,refit){
   if(i===-1){ if(!mlMap) return; mapStepSel=-1; markMapStep(); if(!navOn) toggleNav(); return }   // marche jusqu'à l'arrêt : lance la marche
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
   if(mapStepSel===i&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
+  setLegOnly(l.mode==='WALK'?null:i);   // ligne seule : de l'arrêt de départ à l'arrêt d'arrivée
   mapStepSel=i; markMapStep(); setMapOverview(false);
   if(l.mode==='WALK'){ mapWalk=i; focusWalk(); return }
-  if(mapWalk!=null){ mapWalk=null; setRouteDim(false) }
+  if(mapWalk!=null){ mapWalk=null; setRouteDim(false); setLegOnly(i) }
   navOn=false; followVeh=false; $('#btnFollow')?.classList.remove('on');
   $('#mapTitle').textContent=`${l.routeShortName||''} → ${l.headsign||l.to?.name||''}`;
   $('#mapSub').textContent=`${hm(l.startTime)} ${l.from?.name||''} → ${hm(l.endTime)} ${l.to?.name||''}`;
@@ -2593,6 +2595,16 @@ function mapPad(m=20,lblRight=0){
   const sc=Math.min(1,(H-80)/(top+bottom),(W-60)/(left+right));   // écran très petit : on réduit proportionnellement
   return {top:top*sc,bottom:bottom*sc,left:left*sc,right:right*sc};
 }
+// Appui sur une ligne du bandeau : seul son tronçon départ → arrivée reste visible, le reste de la ligne est masqué
+let legOnly=null;
+function setLegOnly(i){
+  legOnly=i; document.documentElement.classList.toggle('leg-only',i!=null);
+  if(!mlMap) return;
+  const op=i==null?1:['case',['==',['get','idx'],i],1,0];
+  ['route-line','route-casing','route-walk'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setPaintProperty(id,'line-opacity',op) });
+  if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',5);
+  if(i!=null&&mlMap.getSource('approach')) mlMap.getSource('approach').setData({type:'FeatureCollection',features:[]});
+}
 function setRouteDim(on){
   updateStairVisibility();
   if(!mlMap) return;
@@ -2605,7 +2617,7 @@ function setRouteDim(on){
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
 }
 function mapFit(){
-  mapStepSel=null; try{markMapStep()}catch{} setMapOverview(true);
+  setLegOnly(null); mapStepSel=null; try{markMapStep()}catch{} setMapOverview(true);
   if(mapWalk!=null){mapWalk=null;setRouteDim(false);const ft=firstTransit(mapIt);
     $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
     $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`}
@@ -2702,6 +2714,7 @@ function drawApproachStops(trip,p,ft,show){
   for(const [k,m] of apprMks) if(!keep.has(k)){ m.remove(); apprMks.delete(k) }
 }
 function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon arrêt de montée
+  if(legOnly!=null) trip=null;   // ligne seule : rien avant l'arrêt de départ
   const src=mlMap.getSource('approach'); let data={type:'FeatureCollection',features:[]};
   if(trip&&p&&ft&&Date.now()<+new Date(ft.startTime)+30000){
     const iv=nearestIdx(trip.coords,p), ib=nearestIdx(trip.coords,[ft.from.lon,ft.from.lat]);
