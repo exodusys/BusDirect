@@ -605,7 +605,7 @@ body.list-page main{padding-top:var(--safe-t)}
 #v-horaires>.row:first-child h2{margin-top:0}
 
 /* Safari iOS 26 ignore theme-color : il teinte ses barres d'après les éléments fixes collés au bord haut/bas */
-.edge-tint{display:none!important;position:fixed;left:0;right:0;height:max(6px,env(safe-area-inset-top,0px));z-index:1;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
+.edge-tint{position:fixed;left:0;right:0;height:max(6px,env(safe-area-inset-top,0px));z-index:1;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
 #edgeTop{top:0}
 #edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))}
 html.map-edge .edge-tint{display:none}
@@ -625,6 +625,10 @@ html body>main{
 html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
 html body>main{height:100vh!important;height:100dvh!important}
 #appWallpaper{top:0!important;bottom:0!important;height:100%!important}
+
+/* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
+.edge-tint{z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
+#edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2072,10 +2076,14 @@ function syncIOSWallpaperTint(){
  root.style.setProperty('background-color',tint,'important');
  document.body.style.setProperty('background-color',tint,'important');
  try{localStorage.setItem('bd-tint',tint);localStorage.setItem('bd-scheme',cs.content)}catch(e){}
- if(window.__userWallChange&&tint.toLowerCase()!==(window.__bootTint||'').toLowerCase()){window.__userWallChange=false;clearTimeout(window.__tintReload);window.__tintReload=setTimeout(()=>{try{sessionStorage.setItem('bd-reopen','settings')}catch(e){}sessionStorage.setItem('bd-scroll',String(document.querySelector('main')?.scrollTop||0));location.reload()},250)}
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
+ // Bandes haut/bas recréées à chaque changement : Safari relit leur couleur sans recharger
  document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
+ }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
 
@@ -3039,11 +3047,6 @@ renderDests(); renderTiles(); renderSMS(); locate();
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
-</script>
-<script>
-/* Après le rechargement automatique (changement de fond), on revient sur Paramètres au même endroit */
-try{if(sessionStorage.getItem('bd-reopen')==='settings'){sessionStorage.removeItem('bd-reopen');const y=+sessionStorage.getItem('bd-scroll')||0;
-document.querySelector('#tabs button[data-v="parametres"]')?.click();requestAnimationFrame(()=>{const m=document.querySelector('main');if(m)m.scrollTop=y})}}catch(e){}
 </script>
 </body>
 </html>
