@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" id="themeColor" content="#17181c">
-<meta name="color-scheme" content="dark">
+<script>
+/* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
+(function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
+var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
+document.write('<meta name="theme-color" content="'+t+'"><meta name="color-scheme" content="'+(sc||'dark')+'"><style>html,body,main{background-color:'+t+'!important}</style>');}catch(e){}})();
+</script>
 <title>BusDirect</title>
 <style>
 :root{
@@ -2067,6 +2071,8 @@ function syncIOSWallpaperTint(){
  cs.content=root.dataset.theme==='light'?'light':'dark';
  root.style.setProperty('background-color',tint,'important');
  document.body.style.setProperty('background-color',tint,'important');
+ try{localStorage.setItem('bd-tint',tint);localStorage.setItem('bd-scheme',cs.content)}catch(e){}
+ if(window.__userWallChange&&tint.toLowerCase()!==(window.__bootTint||'').toLowerCase()){window.__userWallChange=false;clearTimeout(window.__tintReload);window.__tintReload=setTimeout(()=>{try{sessionStorage.setItem('bd-reopen','settings')}catch(e){}sessionStorage.setItem('bd-scroll',String(document.querySelector('main')?.scrollTop||0));location.reload()},250)}
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
  document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
@@ -2157,7 +2163,7 @@ function renderPickers(){
     +`<div class="pick2 add" data-k="+wall"><div class="pv wall-pv">＋</div><span>Ajouter</span></div>`;
 }
 $('#logoPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('logo',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+logo'){uploadTarget='logo';$('#fileIn').click();return}S.settings.logo=k;save();applySettings()};
-$('#wallPicker').onclick=e=>{const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
+$('#wallPicker').onclick=e=>{window.__userWallChange=true;const del=e.target.closest('.pick-x')?.dataset.del;if(del){delCustom('wall',del);return}const k=e.target.closest('.pick2')?.dataset.k;if(!k)return;if(k==='+wall'){uploadTarget='wall';$('#fileIn').click();return}S.settings.wall=k;save();applySettings()};
 function delCustom(type,id){
   const s=S.settings, key=type==='logo'?'customLogos':'customWalls';
   s[key]=s[key].filter(x=>x.id!==id);
@@ -2178,7 +2184,7 @@ $('#fileIn').onchange=e=>{
   rd.readAsDataURL(f);
 };
 $('#styleSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.look=v;save();applySettings()}};
-$('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){S.settings.theme=v;save();applySettings()}};
+$('#themeSeg').onclick=e=>{const v=e.target.dataset.v;if(v){window.__userWallChange=true;S.settings.theme=v;save();applySettings()}};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettings);
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
 $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySettings()};
@@ -3033,6 +3039,11 @@ renderDests(); renderTiles(); renderSMS(); locate();
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
+</script>
+<script>
+/* Après le rechargement automatique (changement de fond), on revient sur Paramètres au même endroit */
+try{if(sessionStorage.getItem('bd-reopen')==='settings'){sessionStorage.removeItem('bd-reopen');const y=+sessionStorage.getItem('bd-scroll')||0;
+document.querySelector('#tabs button[data-v="parametres"]')?.click();requestAnimationFrame(()=>{const m=document.querySelector('main');if(m)m.scrollTop=y})}}catch(e){}
 </script>
 </body>
 </html>
