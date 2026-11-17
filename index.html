@@ -14,7 +14,7 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
 <title>BusDirect</title>
 <style>
 :root{
-  --accent:#5ec26a; --accent2:#8fd897;
+  --accent:#e30613; --accent2:#e30613aa;
   --bg:#eef2f7; --text:#0d1424; --muted:#5b6578;
   --glass-rgb:255,255,255; --glass-a:.55; --blur:22px; --sat:180%;
   --border:rgba(255,255,255,.6); --shadow:0 8px 30px rgba(15,23,42,.12);
@@ -52,7 +52,7 @@ body.noglass .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background
 header{position:fixed;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-index:20;padding:8px 14px;max-width:700px;margin:0 auto;
   display:flex;align-items:center;gap:10px;border-radius:28px} /* barre flottante, comme la barre d'onglets du bas */
 .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;overflow:hidden;
-  color:#5ec26a;font-size:20px}
+  color:var(--accent);font-size:20px}
 .logo img{width:100%;height:100%;object-fit:cover}
 .appname{font-weight:800;font-size:20px;letter-spacing:-.3px}
 .appname span{color:var(--accent)}
@@ -306,9 +306,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .picker2.walls{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
 .pick2{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px 10px;border-radius:16px;background:rgba(127,127,127,.12);border:2px solid transparent;cursor:pointer;text-align:center}
 .pick2 span{font-size:11.5px;font-weight:700;line-height:1.15}
-.pick2.on{border-color:#5ec26a;background:rgba(94,194,106,.15)}
+.pick2.on{border-color:var(--accent);background:rgba(227,6,19,.15)}
 .pick2 .pv{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background-size:cover;background-position:center;font-size:22px;color:var(--muted)}
-.pick2 .logo-pv{color:#5ec26a}
+.pick2 .logo-pv{color:var(--accent)}
 .pick2 .wall-pv{width:100%;height:auto;aspect-ratio:3/4;border-radius:12px;background:#0b0b0d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .pick2.add .pv{background:rgba(127,127,127,.18)}
 .pick2 .pick-x{top:-6px;right:-6px}
@@ -657,6 +657,8 @@ body.list-page>main{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) 
 body::before,#appWallpaper{
   top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
 }
+/* Espace entre la barre de date et la première dalle (même écart qu'entre les dalles) */
+body.list-page #v-list{padding-top:calc(var(--lt-h,52px) + 86px)!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -879,9 +881,9 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
-if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
+if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='#e30613'; S.settings.accentRed=true; } // accent par défaut : rouge
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
@@ -2039,7 +2041,7 @@ const LOGOS={
 // Icône de l'écran d'accueil = logo choisi (Safari lit l'icône au moment de « Sur l'écran d'accueil »)
 let appIconKey='';
 function updateAppIcon(customUrl,key){
-  const accent=(S.settings&&S.settings.accent)||'#5ec26a'; const k=(customUrl||key)+'|'+accent; if(k===appIconKey) return; appIconKey=k;
+  const accent=(S.settings&&S.settings.accent)||'#e30613'; const k=(customUrl||key)+'|'+accent; if(k===appIconKey) return; appIconKey=k;
   const src=customUrl||('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="180" height="180" color="${accent}">${(LOGOS[key]||LOGOS.original).s}</svg>`));
   const im=new Image(); im.crossOrigin='anonymous';
   im.onload=()=>{ try{
@@ -2736,7 +2738,7 @@ function drawNextStop(){
   const tr=vehState?.trip; if(!tr||!tr.stops||!vehMk){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
   const t=Date.now()-(delayShown??delayTarget);
   const ns=tr.stops.find(x=>x.a>t+5000); if(!ns){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
-  const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#5ec26a';
+  const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#e30613';
   const html=`<div class="ns-b" style="--c:${col}"><small>Prochain arrêt</small><b>${esc(ns.name)}</b><em>${hm(ns.arr)}</em></div>`;
   if(!nextStopMk){ const el=document.createElement('div'); el.className='ns-wrap'; nextStopMk=new maplibregl.Marker({element:el,anchor:'bottom',offset:[0,-10],subpixelPositioning:true}).setLngLat([ns.lon,ns.lat]).addTo(mlMap) }
   const el=nextStopMk.getElement(); if(el._h!==html){ el.innerHTML=html; el._h=html } nextStopMk.setLngLat([ns.lon,ns.lat]);
