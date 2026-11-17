@@ -3080,7 +3080,7 @@ function fitListGap(){ try{
   const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
   const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0]||document.querySelector('#journeys > .card, #journeys > .spin');   // aussi « Aucun départ à proximité »
   if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
-  const gap=cards[0]&&cards[1]?cards[1].getBoundingClientRect().top-card.getBoundingClientRect().bottom:8;   // même écart qu'entre deux dalles (.jr margin-bottom)
+  const gap=parseFloat(getComputedStyle(cards[0]||card).marginBottom)||8;   // écart entre dalles (ne mesure plus à travers « Maintenant » ou un séparateur de jour)
   const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
   const cardTop=card.getBoundingClientRect().top+main.scrollTop;          // position de la 1re dalle sans défilement
   const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
