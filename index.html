@@ -634,6 +634,11 @@ body.list-page #timeBar{top:calc(var(--safe-t) + 23px + var(--lt-h,52px))}
 main{padding-top:calc(var(--safe-t) + 77px)}
 body.classic main{padding-top:calc(var(--safe-t) + 66px)}
 body.list-page main{padding-top:var(--safe-t)}
+
+/* Dans Safari (hors app écran d'accueil), la fenêtre s'arrête déjà au-dessus de la barre d'accueil : pas de zone sûre en plus */
+@media not all and (display-mode:standalone){
+  body:not(.classic) nav{bottom:15px}
+}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
