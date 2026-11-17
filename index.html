@@ -639,6 +639,12 @@ body.list-page main{padding-top:var(--safe-t)}
 @media not all and (display-mode:standalone){
   body:not(.classic) nav{bottom:15px}
 }
+
+/* Bandeau du bas remonté de 15px */
+body:not(.classic) nav{bottom:calc(var(--safe-b) + 30px)}
+@media not all and (display-mode:standalone){
+  body:not(.classic) nav{bottom:30px}
+}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
