@@ -621,13 +621,9 @@ html body>main{
   background-origin:border-box!important;background-clip:border-box!important;background-attachment:scroll!important;
 }
 
-/* Pas de débordement au-delà de l'écran (déclenchait le flou de bord de Safari) : comme la page détail d'origine */
-html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
-html body>main{height:100vh!important;height:100dvh!important}
-#appWallpaper{top:0!important;bottom:0!important;height:100%!important}
 
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
-.edge-tint{z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
+.edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
