@@ -3095,9 +3095,14 @@ function fitListGap(){ try{
   const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
   const cardTop=card.getBoundingClientRect().top+main.scrollTop;          // position de la 1re dalle sans défilement
   const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
-  if(Math.abs(pad-cur)>0.5) vl.style.setProperty('padding-top',pad+'px','important');
+  if(Math.abs(pad-cur)>0.5){
+    const st=main.scrollTop;
+    vl.style.setProperty('padding-top',pad+'px','important');
+    if(st>2) main.scrollTop=st+(pad-cur);   // liste défilée : les dalles ne sautent pas sous la barre de date
+  }
 }catch(e){} }
-{ const _r=renderJourneyList; renderJourneyList=function(){ const r=_r.apply(this,arguments); requestAnimationFrame(fitListGap); return r } }
+{ const _r=renderJourneyList; renderJourneyList=function(){ const r=_r.apply(this,arguments); requestAnimationFrame(fitListGap); setTimeout(fitListGap,300); setTimeout(fitListGap,1000); return r } }
+try{ const ro=new ResizeObserver(()=>requestAnimationFrame(fitListGap)); ['#timeBar','#listTop'].forEach(id=>{const n=$(id); if(n) ro.observe(n)}); new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#timeBar'),{attributes:true,attributeFilter:['style','class']}) }catch(e){}
 addEventListener('resize',()=>requestAnimationFrame(fitListGap));
 try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#journeys'),{childList:true}) }catch(e){}
 </script>
