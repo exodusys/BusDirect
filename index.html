@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
+try{if(navigator.standalone||matchMedia('(display-mode: standalone)').matches)document.documentElement.classList.add('standalone')}catch(e){}
+</script>
+<script>
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
 (function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
 var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
@@ -631,6 +634,9 @@ html body>main{
 :root{--nav-h:64px}
 nav#tabs{bottom:auto!important;top:calc(100vh - var(--nav-h) - var(--safe-b) - 10px)!important;top:calc(100svh - var(--nav-h) - var(--safe-b) - 10px)!important}
 body.classic nav#tabs{top:calc(100vh - var(--nav-h))!important;top:calc(100svh - var(--nav-h))!important}
+/* Mode app (écran d'accueil) : pas de barre Safari, la barre reste ancrée en bas comme avant */
+html.standalone nav#tabs{top:auto!important;bottom:calc(var(--safe-b) + 10px)!important}
+html.standalone body.classic nav#tabs{top:auto!important;bottom:0!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
