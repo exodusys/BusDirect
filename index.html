@@ -6,7 +6,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
-try{if(navigator.standalone||matchMedia('(display-mode: standalone)').matches)document.documentElement.classList.add('standalone')}catch(e){}
+/* Mode app (écran d'accueil) : plusieurs indices, car iOS 26 ne les donne pas toujours tous */
+(function(){function chk(){try{var m=function(q){return matchMedia('(display-mode: '+q+')').matches};
+  var app=navigator.standalone===true||m('standalone')||m('fullscreen')||m('minimal-ui')||Math.abs(innerHeight-screen.height)<2;
+  document.documentElement.classList.toggle('standalone',app)}catch(e){}}
+  chk();addEventListener('resize',chk);addEventListener('pageshow',chk);addEventListener('orientationchange',function(){setTimeout(chk,300)})})();
 </script>
 <script>
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
