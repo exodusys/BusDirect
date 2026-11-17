@@ -605,6 +605,17 @@ body.list-page main{padding-top:var(--safe-t)}
 #edgeTop{top:0}
 #edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))}
 html.map-edge .edge-tint{display:none}
+
+/* Toutes les pages = même rendu que la page détail : le conteneur qui défile porte lui-même le fond, débordant haut et bas */
+html body>main{
+  top:calc(-1*var(--edge-x))!important;bottom:calc(-1*var(--edge-x))!important;height:auto!important;
+  border-top:var(--edge-x) solid transparent!important;border-bottom:var(--edge-x) solid transparent!important;
+  box-sizing:border-box;max-width:none!important;margin:0!important;
+  padding-left:max(14px,calc((100% - 692px)/2))!important;padding-right:max(14px,calc((100% - 692px)/2))!important;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
+  background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;
+  background-origin:border-box!important;background-clip:border-box!important;background-attachment:scroll!important;
+}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2061,7 +2072,7 @@ function syncIOSWallpaperTint(){
   const m=document.querySelector('meta[name="theme-color"]');if(m){m.content=tint}
   window.scrollTo(0,1);window.scrollTo(0,0);
  }));
- document.querySelectorAll('#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
+ document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
 
 function paintWallpaperPalette(colors,dark){
