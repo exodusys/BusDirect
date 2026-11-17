@@ -650,11 +650,12 @@ body:not(.classic) nav{bottom:calc(var(--safe-b) + 30px)}
 /* Page étendue jusqu'au bas de l'écran : main et fond débordent sous la barre du bas */
 html,body{height:100%!important;min-height:100lvh!important}
 html body>main{
-  top:0!important;bottom:-160px!important;height:auto!important;
+  top:0!important;bottom:0!important;height:auto!important;
   border-top:0!important;border-bottom:0!important;
-  padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) + 100px)!important;
+  background:transparent!important;background-image:none!important;   /* le fond vient du calque fixe #appWallpaper, étendu sous la barre du bas */
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)!important;   /* main finit au bord de l'écran : les animations de fin de liste restent visibles */
 }
-body.list-page>main{padding-bottom:calc(160px + env(safe-area-inset-bottom,0px) + 24px)!important}
+body.list-page>main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!important}
 body::before,#appWallpaper{
   top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
 }
@@ -3093,7 +3094,8 @@ function fitListGap(){ try{
   if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
   const gap=parseFloat(getComputedStyle(cards[0]||card).marginBottom)||8;   // écart entre dalles (ne mesure plus à travers « Maintenant » ou un séparateur de jour)
   const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
-  const cardTop=card.getBoundingClientRect().top+main.scrollTop;          // position de la 1re dalle sans défilement
+  const mt=$('#moreTop'), mtH=mt&&mt.style.display!=='none'?mt.offsetHeight:0;   // l'animation du haut ne compte pas dans l'écart
+  const cardTop=card.getBoundingClientRect().top+main.scrollTop-mtH;          // position de la 1re dalle sans défilement
   const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
   if(Math.abs(pad-cur)>0.5){
     const st=main.scrollTop;
