@@ -625,6 +625,13 @@ html body>main{
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
 .edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
+
+/* Pas de débordement (évite le flou Safari sur le bandeau) */
+html body>main,#jrPage,#stopPage,.sub-page{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important}
+html body>main{height:100vh!important;height:100dvh!important}
+#appWallpaper{top:0!important;bottom:0!important;height:100%!important}
+html.tint-nudge,html.tint-nudge body{overflow:auto!important;height:auto!important}
+html.tint-nudge body{min-height:calc(100% + 2px)!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2079,6 +2086,10 @@ function syncIOSWallpaperTint(){
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
+  // Safari ne réévalue la teinte de ses barres qu'au défilement du document : petit défilement invisible
+  const r=document.documentElement;r.classList.add('tint-nudge');
+  window.scrollTo(0,2);
+  setTimeout(()=>{window.scrollTo(0,0);setTimeout(()=>r.classList.remove('tint-nudge'),120)},60);
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
