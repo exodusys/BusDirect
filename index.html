@@ -113,6 +113,9 @@ h3{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted
 .cd-date{display:block;font-size:15px;font-weight:800;white-space:nowrap;text-transform:capitalize}
 .dep-lbl{color:var(--muted);opacity:.7;font-weight:600}
 .cd-t.soon{color:#ff8a00}
+.cd-t.urgent{color:#ff3b30}
+.walk-dep .cd-t.soon,.map-bar .cd-t.soon{color:#ff8a00}
+.walk-dep .cd-t.urgent,.map-bar .cd-t.urgent{color:#ff3b30}
 .cd .late,.cd .ontime{font-size:12px;font-weight:700}
 .alert{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border-radius:12px;background:rgba(255,159,10,.16);color:var(--text);font-size:13px}
 .alert.bad{background:rgba(255,59,48,.18)}
@@ -1822,7 +1825,7 @@ function fmtMapCountdown(at){const t=fmtCd(Number(at));return t==='à quai'?t:'d
 setInterval(()=>document.querySelectorAll('#mapSub .map-countdown').forEach(el=>{const text=fmtMapCountdown(el.dataset.at);if(el.textContent!==text)el.textContent=text}),1000);
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
-setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;e.classList.toggle('soon',+e.dataset.at-Date.now()<120000)}),1000);
+setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.dataset.at);if(e.textContent!==t)e.textContent=t;const left=+e.dataset.at-Date.now();e.classList.toggle('urgent',left<60000);e.classList.toggle('soon',left>=60000&&left<300000)}),1000);   // partout : orange dès 5 min, rouge dès 1 min
 // Perturbations (alertes GTFS-RT fournies par Transitous sur chaque tronçon)
 const EFFECT={DETOUR:'Déviation',NO_SERVICE:'Supprimé',REDUCED_SERVICE:'Service réduit',SIGNIFICANT_DELAYS:'Retards importants',
   MODIFIED_SERVICE:'Service modifié',STOP_MOVED:'Arrêt déplacé',ADDITIONAL_SERVICE:'Service supplémentaire',ACCESSIBILITY_ISSUE:'Accessibilité',OTHER_EFFECT:'Info trafic',UNKNOWN_EFFECT:'Info trafic'};
@@ -1921,6 +1924,7 @@ function renderJourneyPage(){
   { const lt=$('#jrTitle'); pg.querySelector('.jp-title').innerHTML=lt&&selDest?lt.innerHTML:esc(`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim()) }  // même texte que le bandeau des prochains départs
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
+  if(jpIt._walkOnly){ const cd=card.querySelector('.jr-top .cd'); if(cd) cd.innerHTML='' }   // marche seule : pas de compte à rebours ni « à quai »
   // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
   // de l'écran, même lorsque la liste détaillée défile.
   pg.querySelectorAll(':scope > .jp-action-bar').forEach(x=>x.remove());
