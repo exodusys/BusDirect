@@ -1267,6 +1267,7 @@ function walkTileHTML(w){
     .replace('<div class="jr glass"','<div class="jr glass walk-tile" id="walkTile"')
     .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="font-size:30px;line-height:1;flex:none">🚶</span>')
     .replace(/<div class="jr-stop">[\s\S]*?<\/div>/,`<div class="jr-stop">À pied, plus rapide que les transports${dst?' · '+dst:''}</div>`)
+    .replace(/<div class="cd">[\s\S]*?<\/div>\s*<\/div>\s*<div class="jr-times">/,'<div class="cd"></div>\n    </div>\n    <div class="jr-times">')   // pas de compte à rebours ni « à quai » pour la marche
     .replace(/(<span class="tsub">)[\s\S]*?(<\/span>)/,'$1À pied$2');
 }
 
@@ -1560,13 +1561,14 @@ function renderJourneyList(){
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.filter(it=>!slowerThanWalk(it)).slice(0,shown);   // parcours plus lents que la marche : masqués
-  { let wt=$('#walkTile'); const want=walkIt&&selDest?.type!=='TRIP'&&lastJourneys.some(slowerThanWalk);
+  let walkNode=null; $('#walkTile')?.remove();   // dalle marche : replacée après le calcul des séparateurs
+  { let wt=null; const want=walkIt&&selDest?.type!=='TRIP'&&lastJourneys.some(slowerThanWalk);
     if(want){ const tpl0=document.createElement('template'); tpl0.innerHTML=walkTileHTML(walkTimed(walkIt)).trim(); const nw=tpl0.content.firstElementChild;
-      if(wt) wt.replaceWith(nw); else box.prepend(nw); wt=nw; wt.onclick=e=>{e.stopPropagation();openJourneyPage(walkTimed(walkIt))} }
-    else wt?.remove() }
+      wt=nw; walkNode=nw; wt.onclick=e=>{e.stopPropagation();openJourneyPage(walkTimed(walkIt))} }
+  }
   box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
-  const tpl=document.createElement('template'); let prev=$('#walkTile');
+  const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
     const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
@@ -1612,6 +1614,13 @@ function renderJourneyList(){
     else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep';ws.textContent='Arrêts atteignables à pied'}
       let before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
       if(before.previousElementSibling!==ws) before.before(ws) } }
+  // dalle « À pied » : départ maintenant → juste sous « Maintenant » si les trajets passés sont affichés, sinon en haut
+  if(walkNode){ const ns=box.querySelector(':scope > .now-sep');
+    if(ns) ns.after(walkNode);
+    else{ const now=planTime?+planTime:Date.now(), jrs=[...box.querySelectorAll(':scope > .jr:not(.leave)')];
+      const first=jrs.find(el=>{const it=list[+el.dataset.i];return it&&jStart(it)>=now-60000});
+      if(first){ const b=first.previousElementSibling?.classList.contains('walk-sep')?first.previousElementSibling:first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first; (jrs.indexOf(first)===0?box.firstChild:b).before(walkNode) }
+      else box.insertBefore(walkNode,sen.parentNode===box?sen:null) } }
   if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
@@ -1885,7 +1894,7 @@ function journeyHTML(it,i,tracked){
   </div>`;
 }
 function bindJourneys(box,list,tracked){
-  box.querySelectorAll('.jr').forEach(el=>el.onclick=e=>{
+  box.querySelectorAll('.jr:not(.walk-tile)').forEach(el=>el.onclick=e=>{
     const act=e.target.dataset.act, it=(list||curList)[+el.dataset.i];
     if(act==='map'){e.stopPropagation();openMap(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
