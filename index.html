@@ -678,6 +678,8 @@ body:not(.classic) #jrPage > .jp-action-bar{position:fixed!important;top:calc(va
 body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 35px + var(--jp-title-height,52px) + var(--jp-act-height,64px))}
 /* Page détail du parcours : même réglage que la page des prochains parcours (fond fixe #appWallpaper, page sans débordement) — supprime le flou sous la barre iOS */
 html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
+/* Page détail : bande fixe sous la barre d'état, comme sur la page des prochains parcours — iOS l'utilise comme bord net au lieu de flouter la liste */
+#jrPage::before{content:'';position:fixed;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);z-index:5;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
