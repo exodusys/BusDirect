@@ -678,8 +678,6 @@ body:not(.classic) #jrPage > .jp-action-bar{position:fixed!important;top:calc(va
 body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 35px + var(--jp-title-height,52px) + var(--jp-act-height,64px))}
 /* Page détail du parcours : même réglage que la page des prochains parcours (fond fixe #appWallpaper, page sans débordement) — supprime le flou sous la barre iOS */
 html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
-/* Page détail : bande fixe sous la barre d'état, comme sur la page des prochains parcours — iOS l'utilise comme bord net au lieu de flouter la liste */
-#jrPage::before{content:'';position:fixed;left:0;right:0;top:0;height:env(safe-area-inset-top,0px);z-index:5;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1866,7 +1864,7 @@ function openJourneyPage(it,tracked){
     pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeJourneyPage()" aria-label="Retour">‹</button><b class="jp-title"></b><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button></div><div class="jp-body"></div>';
     document.body.appendChild(pg); jpSwipe(pg) }
   renderJourneyPage(); clickShieldUntil=Date.now()+400;
-  pg.scrollTop=0; pg.classList.remove('out'); pg.style.transform=''; pg.classList.add('on');
+  pg.scrollTop=0; pg.classList.remove('out'); pg.style.transform=''; pg.classList.add('on'); requestAnimationFrame(()=>{try{syncIOSWallpaperTint()}catch(e){}});  /* bandes de teinte recréées au-dessus de la page détail, comme pour la page des prochains parcours */
   document.documentElement.classList.add('jp-lock');
   clearInterval(jpTimer); jpTimer=setInterval(()=>{ const f=curList.find(x=>jkey(x)===jpKey); if(f) jpIt=f; renderJourneyPage() },10000);
 }
