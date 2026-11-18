@@ -1931,6 +1931,8 @@ function renderJourneyPage(){
   { const lt=$('#jrTitle'); pg.querySelector('.jp-title').innerHTML=lt&&selDest?lt.innerHTML:esc(`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim()) }  // même texte que le bandeau des prochains départs
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
+  { const det=[...card.querySelectorAll('.legs > .al-d')]; card.querySelector(':scope > .alert')?.remove();   // infos trafic : en bas de la page détail
+    if(det.length){ const sec=document.createElement('div'); sec.className='jp-alerts'; sec.innerHTML='<h3 style="margin:18px 4px 8px">Infos trafic</h3>'; const c=document.createElement('div'); c.className='card glass'; c.style.padding='4px 12px'; det.forEach(d=>c.appendChild(d)); sec.appendChild(c); body.appendChild(sec) } }
   if(jpIt._walkOnly){ const cd=card.querySelector('.jr-top .cd'); if(cd) cd.innerHTML='' }   // marche seule : pas de compte à rebours ni « à quai »
   // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
   // de l'écran, même lorsque la liste détaillée défile.
