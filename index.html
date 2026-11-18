@@ -690,6 +690,7 @@ body.classic .map-bar .t small.map-al{border-radius:4px}
 #alertDialog{max-width:520px;width:calc(100% - 28px);max-height:80vh;overflow:auto;border:0;border-radius:20px;padding:16px;color:var(--text)}
 #alertDialog::backdrop{background:rgba(0,0,0,.45)}
 body.classic .leg-al,body.classic #alertDialog{border-radius:5px}
+.jr .chain .chain-al{float:none;margin:0 2px 0 auto;flex:none}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1870,7 +1871,6 @@ function alertsOf(it){
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
     out.push({leg:l,title,head:alertTxt(a.headerText),desc:alertTxt(a.descriptionText),url:a.url||'',detour,works,cancel});
   }));
-  if(it.legs.some(isReplBus)) return out.filter(a=>!a.cancel&&a.title!=='Interruption');   // bus de remplacement présent : pas d'interruption affichée
   return out;
 }
 function showAlertDialog(g){
@@ -1923,15 +1923,15 @@ function journeyHTML(it,i,tracked){
       <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
       <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
-    <div class="chain">${chain}</div>
-    ${alertBanner(al)}
+    <div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'}</button>`})():''}</div>
     <div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div>
   </div>`;
 }
 function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr:not(.walk-tile)').forEach(el=>el.onclick=e=>{
-    const act=e.target.dataset.act, it=(list||curList)[+el.dataset.i];
+    const act=e.target.closest('[data-act]')?.dataset.act, it=(list||curList)[+el.dataset.i];
+    if(act==='alerts'){e.stopPropagation();if(it)showAlertDialog(alertsOf(it));return}   // icône infos trafic de la dalle
     if(act==='map'){e.stopPropagation();openMap(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
@@ -1958,10 +1958,10 @@ function renderJourneyPage(){
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
   { card.querySelectorAll('.legs > .al-d').forEach(d=>d.remove()); card.querySelector(':scope > .alert')?.remove();   // pas d'infos en bas : une icône sur l'étape concernée
-    const al=alertsOf(jpIt), rows=[...card.querySelectorAll('.legs > .leg')];
-    const norm=x=>(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[ ,]/)[0];
-    jpIt.legs.forEach((l,li)=>{ let g=al.filter(a=>a.leg===l);
-      if(isReplBus(l)) g=g.filter(a=>a.repl);   // bus de remplacement : uniquement son info const row=rows[li]; if(!g.length||!row) return;
+    card.querySelector('.chain .chain-al')?.remove();
+    let al=alertsOf(jpIt); if(jpIt.legs.some(isReplBus)) al=al.filter(a=>!a.cancel&&a.title!=='Interruption');   // bus de remplacement : pas d'interruption, seulement le bus
+    const rows=[...card.querySelectorAll('.legs > .leg')];
+    jpIt.legs.forEach((l,li)=>{ const g=al.filter(a=>a.leg===l); const row=rows[li]; if(!g.length||!row) return;
       const a=g.find(x=>x.cancel)||g.find(x=>x.repl)||g.find(x=>x.detour)||g.find(x=>x.works)||g[0];
       const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
       b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
@@ -2674,7 +2674,7 @@ function focusWalk(){
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
-function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(isReplBus(l))a.unshift({headerText:'Bus de remplacement',descriptionText:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}.`});if((l?.cancelled||l?.canceled)&&!mapIt?.legs?.some(isReplBus))a.unshift({headerText:'Course supprimée'});return isReplBus(l)?a.filter(x=>x.headerText==='Bus de remplacement'):a}
+function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(isReplBus(l))a.unshift({headerText:'Bus de remplacement',descriptionText:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}.`});if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(alertTxt(a.headerText)||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(alertTxt(a.descriptionText||''))}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
 function setupStepScroll(el){
  if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
