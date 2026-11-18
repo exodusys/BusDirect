@@ -1562,9 +1562,12 @@ function renderJourneyList(){
     for(const c of box.querySelectorAll(':scope > .jr')){ const r=c.getBoundingClientRect(); if(r.bottom>hh+4){anc=c.dataset.k;ancTop=r.top;break} } }
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
-  const list=lastJourneys.filter(it=>!slowerThanWalk(it)).slice(0,shown);   // parcours plus lents que la marche : masqués
+  // dalle « À pied » seulement si l'arrivée à pied précède l'arrivée du prochain parcours en véhicule
+  const walkNow=planTime?+planTime:Date.now(), nextVeh=lastJourneys.filter(it=>jStart(it)>=walkNow-60000).sort((a,b)=>jStart(a)-jStart(b))[0];
+  const walkWins=!!(walkIt&&selDest?.type!=='TRIP'&&nextVeh&&walkNow+walkIt.duration*1000<+new Date(nextVeh.endTime));
+  const list=lastJourneys.filter(it=>!(walkWins&&slowerThanWalk(it))).slice(0,shown);   // parcours plus lents que la marche : masqués quand la marche est affichée
   let walkNode=null; $('#walkTile')?.remove();   // dalle marche : replacée après le calcul des séparateurs
-  { let wt=null; const want=walkIt&&selDest?.type!=='TRIP'&&lastJourneys.some(slowerThanWalk);
+  { let wt=null; const want=walkWins;
     if(want){ const tpl0=document.createElement('template'); tpl0.innerHTML=walkTileHTML(walkTimed(walkIt)).trim(); const nw=tpl0.content.firstElementChild;
       wt=nw; walkNode=nw; wt.onclick=e=>{e.stopPropagation();openJourneyPage(walkTimed(walkIt))} }
   }
