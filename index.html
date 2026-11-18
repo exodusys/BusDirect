@@ -669,7 +669,8 @@ body::before,#appWallpaper{
 #edgeTop,#edgeBottom{display:block!important;pointer-events:none}
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
 /* Bande du bas DERRIÈRE la page (z-index 0, main au-dessus) : Safari peut y lire la teinte, mais elle ne cache plus la liste */
-#edgeBottom{bottom:0;height:max(12px,env(safe-area-inset-bottom,0px))!important;z-index:0!important}
+#edgeBottom{bottom:0;height:max(12px,env(safe-area-inset-bottom,0px))!important;z-index:-1!important}   /* sous le fond d'écran : le fond descend jusqu'au bord de l'écran */
+#appWallpaper{bottom:-160px!important}
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
