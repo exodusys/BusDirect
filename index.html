@@ -667,7 +667,7 @@ body::before,#appWallpaper{
 /* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
 #edgeTop,#edgeBottom{display:block!important;pointer-events:none}
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
-#edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))!important}   /* Safari lit aussi le bord bas pour teinter sa barre d'outils */
+#edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
