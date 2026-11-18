@@ -407,6 +407,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 12px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;letter-spacing:.2px}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
+.walk-sep{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 12px;border-radius:12px;background:#0a84ff;color:#fff;font-weight:800;font-size:13px;letter-spacing:.2px}
+.walk-sep::before{content:'🚶';font-size:12px}
+body.classic .walk-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
 #jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:scroll;transition:transform .26s ease;overscroll-behavior:contain}
 #jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
@@ -1514,7 +1517,7 @@ function renderJourneyList(){
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.slice(0,shown);
-  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
+  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
@@ -1550,6 +1553,13 @@ function renderJourneyList(){
       ns.textContent=planTime?'Heure choisie':'Maintenant';
       const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
       if(before.previousElementSibling!==ns) before.before(ns) } }
+  // bandeau « Arrêts atteignables à pied » au-dessus des parcours précédant « Maintenant »
+  { let ws=box.querySelector(':scope > .walk-sep'); const ns=box.querySelector(':scope > .now-sep');
+    const first=ns?box.querySelector(':scope > .jr:not(.leave)'):null;
+    if(!first||first.compareDocumentPosition(ns)&Node.DOCUMENT_POSITION_PRECEDING){ ws?.remove() }
+    else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep';ws.textContent='Arrêts atteignables à pied'}
+      const before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
+      if(before.previousElementSibling!==ws) before.before(ws) } }
   if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
