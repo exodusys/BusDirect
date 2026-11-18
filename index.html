@@ -1263,7 +1263,7 @@ function walkTileHTML(w){
   const dst=km?(km<1?Math.round(km*1000)+' m':km.toFixed(1).replace('.',',')+' km'):'';
   return journeyHTML(w,-1,false)
     .replace('<div class="jr glass"','<div class="jr glass walk-tile" id="walkTile"')
-    .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="font-size:30px;line-height:1;flex:none">👣</span>')
+    .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="flex:none;display:grid;place-items:center;width:44px;height:44px;color:var(--accent)"><svg viewBox="0 0 24 24" width="34" height="34" fill="currentColor" aria-hidden="true"><ellipse cx="7.5" cy="8" rx="3" ry="4.6" transform="rotate(-10 7.5 8)"/><ellipse cx="7" cy="15.2" rx="2.1" ry="1.7" transform="rotate(-10 7 15.2)"/><ellipse cx="16.5" cy="11" rx="3" ry="4.6" transform="rotate(10 16.5 11)"/><ellipse cx="17" cy="18.2" rx="2.1" ry="1.7" transform="rotate(10 17 18.2)"/></svg></span>')
     .replace(/<div class="jr-stop">[\s\S]*?<\/div>/,`<div class="jr-stop">À pied, plus rapide que les transports${dst?' · '+dst:''}</div>`)
     .replace(/<div class="cd">[\s\S]*?<\/div>\s*<\/div>\s*<div class="jr-times">/,'<div class="cd"></div>\n    </div>\n    <div class="jr-times">')   // pas de compte à rebours ni « à quai » pour la marche
     .replace(/(<span class="tsub">)[\s\S]*?(<\/span>)/,'$1À pied$2');
