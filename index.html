@@ -5,10 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Couleur des barres (Android Chrome/Edge/Samsung, Safari, Windows, PWA) : remplacée au démarrage par la couleur du fond d'écran -->
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef2f7">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070b14">
+<meta name="msapplication-navbutton-color" content="#070b14">
+<meta name="background-color" content="#070b14">
 <script>
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
 (function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
 var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
+document.querySelectorAll('meta[name="theme-color"],meta[name="msapplication-navbutton-color"],meta[name="background-color"]').forEach(function(m){m.content=t});
 document.write('<meta name="theme-color" content="'+t+'"><meta name="color-scheme" content="'+(sc||'dark')+'"><style>html,body,main{background-color:'+t+'!important}</style>');}catch(e){}})();
 </script>
 <title>BusDirect</title>
@@ -2157,6 +2163,8 @@ function syncIOSWallpaperTint(){
  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
  const meta=document.createElement('meta');meta.name='theme-color';meta.id='themeColor';meta.content=tint;
  document.head.appendChild(meta);
+ ['light','dark'].forEach(sc=>{const m=document.createElement('meta');m.name='theme-color';m.media='(prefers-color-scheme: '+sc+')';m.content=tint;document.head.appendChild(m)});
+ ['msapplication-navbutton-color','background-color'].forEach(n=>{let m=document.querySelector('meta[name="'+n+'"]');if(!m){m=document.createElement('meta');m.name=n;document.head.appendChild(m)}m.content=tint});
  let cs=document.querySelector('meta[name="color-scheme"]');
  if(!cs){cs=document.createElement('meta');cs.name='color-scheme';document.head.appendChild(cs)}
  cs.content=root.dataset.theme==='light'?'light':'dark';
@@ -2169,7 +2177,7 @@ function syncIOSWallpaperTint(){
  document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
-  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.content=tint);
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
