@@ -1838,8 +1838,22 @@ function activeNow(a,t0,t1){   // en vigueur pendant le trajet (t0–t1), sinon 
   const per=a.impactPeriod||a.activePeriod||a.communicationPeriod; if(!per||!per.length) return true;
   const s0=t0??Date.now(), s1=t1??s0; return per.some(p=>(!p.from||+new Date(p.from)<=s1)&&(!p.to||+new Date(p.to)>=s0));
 }
+/* Texte des avis : certaines compagnies envoient du HTML (<p>, <br>, &#233;…) → texte simple avec retours à la ligne */
+function alertTxt(t){
+  if(!t) return '';
+  let x=String(t);
+  for(let i=0;i<2&&/&(#\d+|#x[0-9a-f]+|[a-z]+);/i.test(x);i++){ const ta=document.createElement('textarea'); ta.innerHTML=x; x=ta.value }   // entités (parfois encodées deux fois)
+  x=x.replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li|h\d)>/gi,'\n').replace(/<li[^>]*>/gi,'• ').replace(/<[^>]+>/g,'');
+  if(/&(#\d+|#x[0-9a-f]+|[a-z]+);/i.test(x)){ const ta=document.createElement('textarea'); ta.innerHTML=x; x=ta.value }
+  return x.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+const isReplBus=l=>l&&l.mode!=='WALK'&&/^(EV|SEV|EXB|BEV)\b|ersatz|remplacement|substitution|sostitutiv/i.test([l.routeShortName,l.routeLongName,l.displayName,l.headsign&&'',l.tripShortName].filter(Boolean).join(' '));
 function alertsOf(it){
   const out=[],seen=new Set();
+  it.legs.forEach(l=>{   // infos automatiques : bus de remplacement / course supprimée
+    if(isReplBus(l)) out.push({leg:l,title:'Bus de remplacement',head:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}`,desc:'Le train est remplacé par un bus sur ce tronçon. Prévois plus de temps et vérifie l\'emplacement de l\'arrêt du bus.',url:'',repl:true});
+    if(l.cancelled||l.canceled) out.push({leg:l,title:'Interruption',head:`Course supprimée : ${l.routeShortName||''} ${l.from?.name||''} → ${l.to?.name||''}`.trim(),desc:'',url:'',cancel:true});
+  });
   it.legs.forEach(l=>(l.alerts||[]).forEach(a=>{
     const txt=(a.headerText||'')+' '+(a.descriptionText||'');
     const detour=a.effect==='DETOUR'||/d[ée]vi(é|e|ation)|umleitung|detour|diversion/i.test(txt);
@@ -1848,14 +1862,14 @@ function alertsOf(it){
     if(!activeNow(a,+new Date(l.startTime),+new Date(l.endTime))||!(a.headerText||a.descriptionText)) return;   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
     const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
-    out.push({leg:l,title,head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour,works,cancel});
+    out.push({leg:l,title,head:alertTxt(a.headerText),desc:alertTxt(a.descriptionText),url:a.url||'',detour,works,cancel});
   }));
   return out;
 }
 function alertBanner(al){
   if(!al.length) return '';
-  const a=al.find(x=>x.cancel)||al.find(x=>x.detour)||al[0];
-  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':a.works?'🚧':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
+  const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al[0];
+  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
 }
 function alertDetails(al){
   return al.map(a=>`<div class="al-d"><div class="row" style="gap:6px">${a.leg.routeShortName?badge(a.leg,'mini'):''}<b>${esc(a.title)}</b></div>
@@ -2508,8 +2522,8 @@ async function openMap(it,walkLeg){
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
   { const al=alertsOf(it).filter(a=>a.leg.mode!=='WALK'), el=$('#mapAl');   // travaux / perturbations de la ligne dans le bandeau de la carte
-    if(el){ if(al.length){ const a=al.find(x=>x.cancel)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];
-      el.innerHTML=`${a.cancel?'⛔':a.detour?'↪︎':a.works?'🚧':'⚠︎'} <b>${esc(a.title)}</b>${a.leg.routeShortName?' '+esc(a.leg.routeShortName):''} · ${esc(a.head||a.desc)}${al.length>1?` (+${al.length-1})`:''}`;
+    if(el){ if(al.length){ const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];
+      el.innerHTML=`${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'} <b>${esc(a.title)}</b>${a.leg.routeShortName?' '+esc(a.leg.routeShortName):''} · ${esc(a.head||a.desc)}${al.length>1?` (+${al.length-1})`:''}`;
       el.title=al.map(x=>x.title+' : '+(x.head||x.desc)).join('\n'); el.style.display='' } else { el.style.display='none'; el.innerHTML='' } } }
   $('#mapView').classList.add('open');
   const ft=firstTransit(it);
@@ -2640,8 +2654,8 @@ function focusWalk(){
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
-function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
-function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
+function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(isReplBus(l))a.unshift({headerText:'Bus de remplacement',descriptionText:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}.`});if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
+function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(alertTxt(a.headerText)||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(alertTxt(a.descriptionText||''))}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
 function setupStepScroll(el){
  if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
  el.addEventListener('touchstart',e=>{e.stopPropagation();el._noClickUntil=0;touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,left:el.scrollLeft,moved:false}:null},{passive:true});
