@@ -838,7 +838,7 @@ body::before,#appWallpaper{
         <li><b>Liste des parcours</b> : elle s'ouvre sur sa propre page, en plein écran. Pour revenir aux dalles, touche ‹ ou glisse depuis le bord gauche de l'écran vers la droite.</li>
         <li>Quitter une liste arrête son actualisation et remet l'heure sur « Maintenant ».</li>
         <li><b>Plus de trajets</b> : en bas de la liste, continue de faire défiler jusqu'à ce que les quatre barres s'allument.</li>
-        <li>La liste s'actualise toute seule chaque minute et dès que tu te déplaces de plus de 50 m ; les temps de marche et les arrêts atteignables suivent ta position en continu.</li>
+        <li>La liste s'actualise toute seule chaque minute et quand tu te déplaces de plus de 150 m.</li>
       </ul>
       <h4>🗺️ Carte</h4>
       <ul>
@@ -1300,24 +1300,10 @@ async function pickPair(from,to){
 }
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null;
-let lastGpsReload=0, lastGpsRender=null;
 GEO.watchPosition(p=>{
   pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
-  if(!selDest||selFrom||selDest.type==='TRIP'||!listOpen()) return;
-  const acc=p.coords.accuracy||50, moved=lastPlanPos?dist(lastPlanPos,pos):Infinity;
-  // déplacement réel (> 50 m et au-delà de l'imprécision GPS) → nouvelle recherche depuis ma position, au plus toutes les 20 s
-  if(moved>Math.max(0.05,acc/1000)&&Date.now()-lastGpsReload>20000){ lastGpsReload=Date.now(); loadJourneys(true,true); return }
-  // petits déplacements : temps de marche et arrêts atteignables recalculés sur place, sans requête
-  if(lastJourneys.length&&(!lastGpsRender||dist(lastGpsRender,pos)>0.015)){ lastGpsRender={...pos}; renderJourneyList() }
-},()=>{},{enableHighAccuracy:true,maximumAge:5000});
-// Temps de marche jusqu'au 1er arrêt, ajusté à ma position actuelle (proportionnel à la distance restante)
-function liveWalkSec(it){
-  const ft=firstTransit(it), i=it.legs.indexOf(ft); if(!ft||i<=0) return 0;
-  const planned=it.legs.slice(0,i).reduce((t,l)=>t+((+new Date(l.endTime)-+new Date(l.startTime))/1000||l.duration||0),0);
-  if(selFrom||!pos||!lastPlanPos||ft.from?.lat==null) return planned;
-  const st={lat:ft.from.lat,lon:ft.from.lon}, dNow=dist(pos,st), dPlan=dist(lastPlanPos,st);
-  return dPlan>0.03?Math.max(30,planned*dNow/dPlan):Math.max(30,dNow*1.3/4.8*3600);
-}
+  if(selDest&&!selFrom&&(!lastPlanPos||dist(lastPlanPos,pos)>0.15)) loadJourneys(); // >150 m parcourus → recalcul
+},()=>{},{enableHighAccuracy:true,maximumAge:15000});
 function renderTiles(){
   $('#tilesEmpty').style.display=S.dests.length?'none':'block';
   $('#tiles').innerHTML=S.dests.map(d=>`<div class="tile glass ${selDest?.uid===d.uid?'sel':''} ${selFrom?.uid===d.uid?'from':''}" data-u="${d.uid}">
@@ -1476,7 +1462,7 @@ async function refreshMyTrip(){ // actualisation en direct de la course suivie
 }
 let loadedFor=null, loading=false;
 let jGen=0;
-async function loadJourneys(force,moved){
+async function loadJourneys(force){
   if(!selDest||(loading&&!force)) return;   // force : « Maintenant » / nouvelle date relancent même si une recherche est en cours
   const gen=++jGen;
   if(selDest.type==='TRIP') return refreshMyTrip();
@@ -1491,17 +1477,17 @@ async function loadJourneys(force,moved){
     // affichage instantané depuis le cache (si récent), puis mise à jour
     const ck='bd_jc_'+pairKey+(planTime?'@'+(+planTime):'');
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
-      if(c&&Date.now()-c.t<10*60000&&(selFrom||!c.p||!pos||dist(c.p,pos)<0.1)){ /* cache ignoré si calculé ailleurs */ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
+      if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
     const data=await nextDepartures(selDest,selFrom,more=>{ if(gen!==jGen||selDest!==reqDest||selFrom!==reqFrom) return;
-      prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more,moved); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more,p:usedPos}))}catch{} });
-    try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data,p:usedPos}))}catch{}
+      prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
+    try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
     if(gen!==jGen) return;   // une recherche plus récente a pris le relais
     if(selDest!==reqDest||selFrom!==reqFrom){ if(first&&!lastJourneys.length) box.innerHTML=''; return }   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
-    lastJourneys=first?data:mergeRefresh(lastJourneys,data,moved); loadedFor=pairKey; lastGpsRender=usedPos;
+    lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
@@ -1511,9 +1497,8 @@ async function loadJourneys(force,moved){
 let shown=5;
 const jStart=it=>+new Date(firstTransit(it).startTime);
 // Actualisation : garde les parcours passés déjà affichés (et ceux chargés plus bas), remplace seulement les données à jour
-function mergeRefresh(old,data,moved){
+function mergeRefresh(old,data){
   if(!old.length||!data.length) return data;
-  if(moved){ pastFloor=null; pastReserve=[]; pastCur=null; nextCur=null; listCur=data._cur||null; shown=Math.max(5,Math.min(shown,data.length)); return data }   // nouvelle position : les trajets depuis l'ancien endroit sont remplacés
   const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
   const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
   const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor)   // passés gardés seulement si tu les as affichés, after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
@@ -1572,7 +1557,7 @@ function renderJourneyList(){
   // bandeau « Arrêts atteignables à pied » : après « Maintenant », au-dessus du premier parcours dont on peut encore rejoindre l'arrêt de départ à pied
   { let ws=box.querySelector(':scope > .walk-sep'); const ns=box.querySelector(':scope > .now-sep'); const now=planTime?+planTime:Date.now();
     const jrs=[...box.querySelectorAll(':scope > .jr:not(.leave)')];
-    const reach=it=>{const ft=firstTransit(it);if(!ft)return false;return +new Date(ft.startTime)-liveWalkSec(it)*1000>=now};
+    const reach=it=>{const ft=firstTransit(it);if(!ft)return false;const walk=it.legs.slice(0,it.legs.indexOf(ft)).reduce((t,l)=>t+((+new Date(l.endTime)-+new Date(l.startTime))||0),0);return +new Date(ft.startTime)-walk>=now};
     const first=jrs.find(el=>{const it=list[+el.dataset.i];return it&&reach(it)});
     const show=first&&(ns||jrs.indexOf(first)>0);
     if(!show){ ws?.remove() }
@@ -1824,7 +1809,7 @@ function journeyHTML(it,i,tracked){
   const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
-  const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(tracked?w0.duration:liveWalkSec(it))):0;
+  const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
   const pastPick=(!!planTime&&+planTime<Date.now())||isPast;
