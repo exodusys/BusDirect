@@ -665,8 +665,10 @@ body::before,#appWallpaper{
 .load-more i{width:10px;height:24px;border-radius:3px}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
 /* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
-#edgeTop{display:block!important;top:0;height:max(1px,env(safe-area-inset-top,0px))!important;pointer-events:none}
-html.map-edge #edgeTop{display:none!important}
+#edgeTop,#edgeBottom{display:block!important;pointer-events:none}
+#edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
+#edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))!important}   /* Safari lit aussi le bord bas pour teinter sa barre d'outils */
+html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
