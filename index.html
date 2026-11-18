@@ -28,6 +28,7 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden}
+html,body,*{-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important} /* taille du texte stable à la rotation, sur toutes les pages */
 html,body{overscroll-behavior-y:none} /* le document ne défile plus sous les barres Safari */
 body{overflow:hidden}
 main{position:fixed;left:0;right:0;top:0;height:100vh;height:100dvh;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y}
@@ -418,6 +419,7 @@ body.classic .walk-sep{border-radius:5px}
 @keyframes jpOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
 #jrPage .jp-bar,.sub-page .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
 #jrPage .jp-title,.sub-page .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#jrPage .jp-title{font-size:14px} /* bandeau du haut du détail du parcours : texte plus petit */
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
