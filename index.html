@@ -684,6 +684,12 @@ body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 30px + 
 html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
 .map-bar .t small.map-al{display:block;margin-top:3px;padding:3px 8px;border-radius:8px;background:rgba(255,149,0,.18);color:#ffb340;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.classic .map-bar .t small.map-al{border-radius:4px}
+.leg-al{float:right;margin:-2px 0 2px 8px;min-width:34px;height:30px;padding:0 7px;border:0;border-radius:10px;background:rgba(255,159,10,.2);color:var(--text);font-size:16px;line-height:30px;cursor:pointer;position:relative}
+.leg-al.bad{background:rgba(255,59,48,.22)}
+.leg-al[data-n]::after{content:attr(data-n);position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;background:#ff9500;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center}
+#alertDialog{max-width:520px;width:calc(100% - 28px);max-height:80vh;overflow:auto;border:0;border-radius:20px;padding:16px;color:var(--text)}
+#alertDialog::backdrop{background:rgba(0,0,0,.45)}
+body.classic .leg-al,body.classic #alertDialog{border-radius:5px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1866,6 +1872,11 @@ function alertsOf(it){
   }));
   return out;
 }
+function showAlertDialog(g){
+  let d=document.getElementById('alertDialog'); if(!d){ d=document.createElement('dialog'); d.id='alertDialog'; d.className='glass'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
+  d.innerHTML='<div class="row between" style="margin-bottom:6px"><h2 style="margin:0;font-size:20px">Infos trafic</h2><button class="btn ghost sm" type="button">Fermer</button></div>'+alertDetails(g);
+  d.querySelector('button').onclick=()=>d.close(); d.showModal?d.showModal():d.setAttribute('open','');
+}
 function alertBanner(al){
   if(!al.length) return '';
   const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al[0];
@@ -1945,8 +1956,14 @@ function renderJourneyPage(){
   { const lt=$('#jrTitle'); pg.querySelector('.jp-title').innerHTML=lt&&selDest?lt.innerHTML:esc(`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim()) }  // même texte que le bandeau des prochains départs
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
-  { const det=[...card.querySelectorAll('.legs > .al-d')]; card.querySelector(':scope > .alert')?.remove();   // infos trafic : en bas de la page détail
-    if(det.length){ const sec=document.createElement('div'); sec.className='jp-alerts'; sec.innerHTML='<h3 style="margin:18px 4px 8px">Infos trafic</h3>'; const c=document.createElement('div'); c.className='card glass'; c.style.padding='4px 12px'; det.forEach(d=>c.appendChild(d)); sec.appendChild(c); body.appendChild(sec) } }
+  { card.querySelectorAll('.legs > .al-d').forEach(d=>d.remove()); card.querySelector(':scope > .alert')?.remove();   // pas d'infos en bas : une icône sur l'étape concernée
+    const al=alertsOf(jpIt), rows=[...card.querySelectorAll('.legs > .leg')];
+    jpIt.legs.forEach((l,li)=>{ const g=al.filter(a=>a.leg===l); const row=rows[li]; if(!g.length||!row) return;
+      const a=g.find(x=>x.cancel)||g.find(x=>x.repl)||g.find(x=>x.detour)||g.find(x=>x.works)||g[0];
+      const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
+      b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
+      b.onclick=e=>{ e.stopPropagation(); showAlertDialog(g) };
+      const tgt=row.querySelector(':scope > div:last-child'); (tgt||row).prepend(b) }) }
   if(jpIt._walkOnly){ const cd=card.querySelector('.jr-top .cd'); if(cd) cd.innerHTML='' }   // marche seule : pas de compte à rebours ni « à quai »
   // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
   // de l'écran, même lorsque la liste détaillée défile.
