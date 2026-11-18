@@ -5,16 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<!-- Couleur des barres (Android Chrome/Edge/Samsung, Safari, Windows, PWA) : remplacée au démarrage par la couleur du fond d'écran -->
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#eef2f7">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#070b14">
-<meta name="msapplication-navbutton-color" content="#070b14">
-<meta name="background-color" content="#070b14">
 <script>
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
 (function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
 var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
-document.querySelectorAll('meta[name="theme-color"],meta[name="msapplication-navbutton-color"],meta[name="background-color"]').forEach(function(m){m.content=t});
 document.write('<meta name="theme-color" content="'+t+'"><meta name="color-scheme" content="'+(sc||'dark')+'"><style>html,body,main{background-color:'+t+'!important}</style>');}catch(e){}})();
 </script>
 <title>BusDirect</title>
@@ -670,43 +664,6 @@ body::before,#appWallpaper{
 .load-more{gap:7px}
 .load-more i{width:10px;height:24px;border-radius:3px}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
-
-/* Haut de page unifié : même rendu sous la barre d'état iOS que la page détail (#jrPage).
-   Le fond d'écran déborde de 160px en haut ET en bas, cadré "cover" sur la même hauteur,
-   donc l'image sous l'heure/le réseau est identique sur toutes les pages. */
-body::before,#appWallpaper{
-  top:calc(-1*var(--edge-x))!important;bottom:calc(-1*var(--edge-x))!important;
-  height:auto!important;min-height:0!important;
-  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
-  background-image:var(--wall,none)!important;background-size:cover!important;
-  background-position:center!important;background-repeat:no-repeat!important;
-}
-#jrPage,#stopPage,.sub-page{
-  top:calc(-1*var(--edge-x))!important;bottom:calc(-1*var(--edge-x))!important;
-  border-top:var(--edge-x) solid transparent!important;border-bottom:var(--edge-x) solid transparent!important;
-  background-origin:border-box!important;background-clip:border-box!important;
-}
-/* Bandeau flottant à la même distance de l'heure que sur la page détail */
-body:not(.classic) header,body.list-page #listTop{top:calc(var(--safe-t) + 10px)!important}
-body.list-page #timeBar{top:calc(var(--safe-t) + 18px + var(--lt-h,52px))!important}
-main{padding-top:calc(var(--safe-t) + 72px)}
-body.list-page main{padding-top:var(--safe-t)}
-/* Barre du haut identique sur toutes les pages (accueil, listes, carte, détail, arrêts) */
-body:not(.classic) header,body.list-page:not(.classic) #listTop,body:not(.classic) #mapView .map-bar{
-  top:calc(var(--safe-t) + 10px)!important;left:14px!important;right:14px!important;
-  max-width:692px!important;margin:0 auto!important;box-sizing:border-box!important;
-  min-height:58px;padding:8px 12px!important;border-radius:28px!important;
-  display:flex;align-items:center;gap:10px}
-/* Bords haut et bas de l'écran = couleur du fond d'écran choisi dans Paramètres,
-   sur toutes les pages, dans Safari comme en app sur l'écran d'accueil.
-   (Safari iOS 26 teinte ses barres d'après les éléments fixes collés aux bords ; en app,
-   la barre d'état black-translucent laisse voir la bande du haut.) */
-html body .edge-tint{display:block!important;position:fixed!important;left:0!important;right:0!important;
-  z-index:2147483000!important;pointer-events:none!important;
-  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important}
-html body #edgeTop{top:0!important;bottom:auto!important;height:max(1px,env(safe-area-inset-top,0px))!important}
-html body #edgeBottom{bottom:0!important;top:auto!important;height:max(1px,env(safe-area-inset-bottom,0px))!important}
-html.map-edge body .edge-tint{display:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2163,8 +2120,6 @@ function syncIOSWallpaperTint(){
  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.remove());
  const meta=document.createElement('meta');meta.name='theme-color';meta.id='themeColor';meta.content=tint;
  document.head.appendChild(meta);
- ['light','dark'].forEach(sc=>{const m=document.createElement('meta');m.name='theme-color';m.media='(prefers-color-scheme: '+sc+')';m.content=tint;document.head.appendChild(m)});
- ['msapplication-navbutton-color','background-color'].forEach(n=>{let m=document.querySelector('meta[name="'+n+'"]');if(!m){m=document.createElement('meta');m.name=n;document.head.appendChild(m)}m.content=tint});
  let cs=document.querySelector('meta[name="color-scheme"]');
  if(!cs){cs=document.createElement('meta');cs.name='color-scheme';document.head.appendChild(cs)}
  cs.content=root.dataset.theme==='light'?'light':'dark';
@@ -2177,7 +2132,7 @@ function syncIOSWallpaperTint(){
  document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.content=tint);
+  const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
@@ -3162,7 +3117,6 @@ try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#jou
 <script>
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
-addEventListener('pageshow',()=>syncIOSWallpaperTint());addEventListener('orientationchange',()=>setTimeout(syncIOSWallpaperTint,300));
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
 </script>
 </body>
