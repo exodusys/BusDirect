@@ -610,6 +610,8 @@ body.list-page main{padding-top:var(--safe-t)}
 #edgeTop{top:0}
 #edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))}
 html.map-edge .edge-tint{display:none}
+/* Rafraîchissement teinte iOS : masquer brièvement la page comme à l'ouverture du détail du parcours */
+body.edge-refresh>main,body.edge-refresh>header,body.edge-refresh>nav{visibility:hidden!important}
 
 /* Toutes les pages = même rendu que la page détail : le conteneur qui défile porte lui-même le fond, débordant haut et bas */
 html body>main{
@@ -2140,9 +2142,9 @@ function syncIOSWallpaperTint(){
  if(window.__edgeFlashTint===tint)return;window.__edgeFlashTint=tint;
  clearTimeout(window.__edgeFlashT);document.getElementById('edgeFlash')?.remove();
  const f=document.createElement('div');f.id='edgeFlash';f.setAttribute('aria-hidden','true');
- f.style.cssText='position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));z-index:28;pointer-events:none;background:'+tint+' var(--wall,none) center/cover no-repeat';
- document.body.appendChild(f);void f.offsetHeight;
- window.__edgeFlashT=setTimeout(()=>requestAnimationFrame(()=>f.remove()),120);
+ f.style.cssText='position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));z-index:9998;pointer-events:none;background:'+tint+' var(--wall,none) center/cover no-repeat';
+ document.body.appendChild(f);document.body.classList.add('edge-refresh');void f.offsetHeight;
+ window.__edgeFlashT=setTimeout(()=>requestAnimationFrame(()=>{document.body.classList.remove('edge-refresh');requestAnimationFrame(()=>f.remove())}),150);
 }
 
 function paintWallpaperPalette(colors,dark){
