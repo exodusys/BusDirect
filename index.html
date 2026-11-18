@@ -1834,9 +1834,9 @@ setInterval(()=>document.querySelectorAll('.cd-t').forEach(e=>{const t=fmtCd(+e.
 const EFFECT={DETOUR:'Déviation',NO_SERVICE:'Supprimé',REDUCED_SERVICE:'Service réduit',SIGNIFICANT_DELAYS:'Retards importants',
   MODIFIED_SERVICE:'Service modifié',STOP_MOVED:'Arrêt déplacé',ADDITIONAL_SERVICE:'Service supplémentaire',ACCESSIBILITY_ISSUE:'Accessibilité',OTHER_EFFECT:'Info trafic',UNKNOWN_EFFECT:'Info trafic'};
 // Uniquement les déviations en cours (période d'impact contenant maintenant)
-function activeNow(a){
+function activeNow(a,t0,t1){   // en vigueur pendant le trajet (t0–t1), sinon maintenant
   const per=a.impactPeriod||a.activePeriod||a.communicationPeriod; if(!per||!per.length) return true;
-  const now=Date.now(); return per.some(p=>(!p.from||+new Date(p.from)<=now)&&(!p.to||+new Date(p.to)>=now));
+  const s0=t0??Date.now(), s1=t1??s0; return per.some(p=>(!p.from||+new Date(p.from)<=s1)&&(!p.to||+new Date(p.to)>=s0));
 }
 function alertsOf(it){
   const out=[],seen=new Set();
@@ -1845,7 +1845,7 @@ function alertsOf(it){
     const detour=a.effect==='DETOUR'||/d[ée]vi(é|e|ation)|umleitung|detour|diversion/i.test(txt);
     const works=/CONSTRUCTION|MAINTENANCE/.test(a.cause||'')||/travaux|chantier|bauarbeit|baustelle|works|lavori/i.test(txt);
     const cancel=a.effect==='NO_SERVICE'||/supprim|annul|interrompu|interruption|ausfall|unterbr/i.test(txt);
-    if(!activeNow(a)||!(a.headerText||a.descriptionText)) return;   // déviations, travaux et autres perturbations sur le parcours
+    if(!activeNow(a,+new Date(l.startTime),+new Date(l.endTime))||!(a.headerText||a.descriptionText)) return;   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
     const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
     out.push({leg:l,title,head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour,works,cancel});
@@ -1897,8 +1897,8 @@ function journeyHTML(it,i,tracked){
       <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
       <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
-    ${alertBanner(al)}
     <div class="chain">${chain}</div>
+    ${alertBanner(al)}
     <div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div>
   </div>`;
@@ -2638,7 +2638,7 @@ function focusWalk(){
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
-function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
+function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(a.headerText||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(a.descriptionText||'')}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
 function setupStepScroll(el){
  if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
