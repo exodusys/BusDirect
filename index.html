@@ -1870,6 +1870,7 @@ function alertsOf(it){
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
     out.push({leg:l,title,head:alertTxt(a.headerText),desc:alertTxt(a.descriptionText),url:a.url||'',detour,works,cancel});
   }));
+  if(it.legs.some(isReplBus)) return out.filter(a=>!a.cancel&&a.title!=='Interruption');   // bus de remplacement présent : pas d'interruption affichée
   return out;
 }
 function showAlertDialog(g){
@@ -1960,10 +1961,7 @@ function renderJourneyPage(){
     const al=alertsOf(jpIt), rows=[...card.querySelectorAll('.legs > .leg')];
     const norm=x=>(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[ ,]/)[0];
     jpIt.legs.forEach((l,li)=>{ let g=al.filter(a=>a.leg===l);
-      if(isReplBus(l)){   // bus de remplacement : on y joint l'info de l'interruption du train
-        const f=norm(l.from?.name), t=norm(l.to?.name);
-        const extra=al.filter(a=>a.leg!==l&&!a.repl&&(a.cancel||a.works||a.detour||(f&&(a.head+' '+a.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(f))||(t&&(a.head+' '+a.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(t))));
-        g=[...g.map(a=>a.repl?{...a,title:'Interruption · bus de remplacement'}:a),...extra.filter((a,i,arr)=>arr.findIndex(b=>b.head===a.head&&b.desc===a.desc)===i)] } const row=rows[li]; if(!g.length||!row) return;
+      if(isReplBus(l)) g=g.filter(a=>a.repl);   // bus de remplacement : uniquement son info const row=rows[li]; if(!g.length||!row) return;
       const a=g.find(x=>x.cancel)||g.find(x=>x.repl)||g.find(x=>x.detour)||g.find(x=>x.works)||g[0];
       const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
       b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
@@ -2676,7 +2674,7 @@ function focusWalk(){
 }
 /* Bandeau fin des étapes du parcours (au-dessus de la dalle « Marche jusqu'à ») */
 let mapStepSel=null;
-function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(isReplBus(l))a.unshift({headerText:'Bus de remplacement',descriptionText:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}.`});if(l?.cancelled||l?.canceled)a.unshift({headerText:'Course supprimée'});return a}
+function mapLegNotices(l){const a=(l?.alerts||[]).filter(x=>activeNow(x,l.startTime?+new Date(l.startTime):undefined,l.endTime?+new Date(l.endTime):undefined));if(isReplBus(l))a.unshift({headerText:'Bus de remplacement',descriptionText:`Trafic ferroviaire interrompu entre ${l.from?.name||'?'} et ${l.to?.name||'?'}.`});if((l?.cancelled||l?.canceled)&&!mapIt?.legs?.some(isReplBus))a.unshift({headerText:'Course supprimée'});return isReplBus(l)?a.filter(x=>x.headerText==='Bus de remplacement'):a}
 function showMapLegNotices(i){const l=mapIt?.legs[i];if(!l)return;let d=document.getElementById('mapNoticeDialog');if(!d){d=document.createElement('dialog');d.id='mapNoticeDialog';d.className='glass';document.body.appendChild(d)}d.innerHTML='<div class="row between"><h2 id="mapNoticeTitle">Travaux et perturbations</h2><button class="btn ghost sm">Fermer</button></div>'+mapLegNotices(l).map(a=>`<section class="al-d"><b>${esc(alertTxt(a.headerText)||'Perturbation')}</b><p style="white-space:pre-wrap">${esc(alertTxt(a.descriptionText||''))}</p></section>`).join('');d.setAttribute('aria-labelledby','mapNoticeTitle');d.querySelector('button').onclick=()=>d.close();if(!d.open)d.showModal()}
 function setupStepScroll(el){
  if(el._scrollBound)return;el._scrollBound=true;let touch=null,mouse=null;
