@@ -1958,7 +1958,12 @@ function renderJourneyPage(){
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
   { card.querySelectorAll('.legs > .al-d').forEach(d=>d.remove()); card.querySelector(':scope > .alert')?.remove();   // pas d'infos en bas : une icône sur l'étape concernée
     const al=alertsOf(jpIt), rows=[...card.querySelectorAll('.legs > .leg')];
-    jpIt.legs.forEach((l,li)=>{ const g=al.filter(a=>a.leg===l); const row=rows[li]; if(!g.length||!row) return;
+    const norm=x=>(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split(/[ ,]/)[0];
+    jpIt.legs.forEach((l,li)=>{ let g=al.filter(a=>a.leg===l);
+      if(isReplBus(l)){   // bus de remplacement : on y joint l'info de l'interruption du train
+        const f=norm(l.from?.name), t=norm(l.to?.name);
+        const extra=al.filter(a=>a.leg!==l&&!a.repl&&(a.cancel||a.works||a.detour||(f&&(a.head+' '+a.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(f))||(t&&(a.head+' '+a.desc).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').includes(t))));
+        g=[...g.map(a=>a.repl?{...a,title:'Interruption · bus de remplacement'}:a),...extra.filter((a,i,arr)=>arr.findIndex(b=>b.head===a.head&&b.desc===a.desc)===i)] } const row=rows[li]; if(!g.length||!row) return;
       const a=g.find(x=>x.cancel)||g.find(x=>x.repl)||g.find(x=>x.detour)||g.find(x=>x.works)||g[0];
       const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
       b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
