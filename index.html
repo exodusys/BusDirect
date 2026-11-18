@@ -673,6 +673,12 @@ html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
 #v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
+/* Safari : la page descend sous la barre d'outils jusqu'au bord de l'écran (la fin de liste reste au-dessus de la barre) */
+@media not all and (display-mode:standalone){
+  html body>main{bottom:-120px!important;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 100px)!important}
+  body.list-page>main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 24px)!important}
+  html,body{min-height:calc(100% + 120px)!important}
+}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
