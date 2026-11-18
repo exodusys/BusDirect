@@ -1878,6 +1878,7 @@ function showAlertDialog(g){
   d.innerHTML='<div class="row between" style="margin-bottom:6px"><h2 style="margin:0;font-size:20px">Infos trafic</h2><button class="btn ghost sm" type="button">Fermer</button></div>'+alertDetails(g);
   d.querySelector('button').onclick=()=>d.close(); d.showModal?d.showModal():d.setAttribute('open','');
 }
+const alertsNoInterr=it=>{const al=alertsOf(it);return it.legs.some(isReplBus)?al.filter(a=>!a.cancel&&a.title!=='Interruption'):al};   // bus de remplacement : pas d'interruption
 function alertBanner(al){
   if(!al.length) return '';
   const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al[0];
@@ -1907,7 +1908,7 @@ function journeyHTML(it,i,tracked){
   const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
   const pastPick=(!!planTime&&+planTime<Date.now())||isPast;
   const dmy=d=>{const t=new Date(d);return String(t.getDate()).padStart(2,'0')+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+t.getFullYear()};
-  const al=alertsOf(it);
+  const al=alertsNoInterr(it);
   const big=inMin<=0?'<span class="ontime">0</span>':inMin<60?inMin:hm(depAt);
   return `<div class="jr glass" data-i="${i}">
     <div class="jr-top">
@@ -1931,7 +1932,7 @@ function journeyHTML(it,i,tracked){
 function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr:not(.walk-tile)').forEach(el=>el.onclick=e=>{
     const act=e.target.closest('[data-act]')?.dataset.act, it=(list||curList)[+el.dataset.i];
-    if(act==='alerts'){e.stopPropagation();if(it)showAlertDialog(alertsOf(it));return}   // icône infos trafic de la dalle
+    if(act==='alerts'){e.stopPropagation();if(it)showAlertDialog(alertsNoInterr(it));return}   // icône infos trafic de la dalle
     if(act==='map'){e.stopPropagation();openMap(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
