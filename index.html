@@ -2132,8 +2132,11 @@ function syncIOSWallpaperTint(){
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
  // Bandes haut/bas recréées à chaque changement : Safari relit leur couleur sans recharger
- document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
+ document.querySelectorAll('.edge-tint,#edgeTop,#edgeBottom').forEach(e=>e.remove());
+ const tok=syncIOSWallpaperTint.tok=(syncIOSWallpaperTint.tok||0)+1;   // seul le dernier changement de fond crée les bandes
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(tok!==syncIOSWallpaperTint.tok) return;
+  document.querySelectorAll('.edge-tint,#edgeTop,#edgeBottom').forEach(e=>e.remove());
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
