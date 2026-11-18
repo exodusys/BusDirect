@@ -13,6 +13,8 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
 body:not(.classic) #jrPage .jp-bar{position:fixed;top:calc(var(--safe-t,0px) + 15px);left:14px;right:14px;max-width:692px;margin:0 auto;box-sizing:border-box;z-index:4}
 body:not(.classic) #jrPage > .jp-action-bar{position:fixed!important;top:calc(var(--safe-t,0px) + 23px + var(--jp-title-height,52px));left:14px;right:14px;width:auto;max-width:692px;margin:0 auto!important;z-index:3}
 body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 35px + var(--jp-title-height,52px) + var(--jp-act-height,64px))}
+/* Page détail du parcours : même réglage que la page des prochains parcours (fond fixe #appWallpaper, page sans débordement) — supprime le flou sous la barre iOS */
+html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
 </style>');}catch(e){}})();
 </script>
 <title>BusDirect</title>
