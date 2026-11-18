@@ -624,7 +624,7 @@ html body>main{
 
 
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
-.edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
+.edge-tint{display:block!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
 
 /* Bandeaux supérieur et inférieur à 15px du bord */
@@ -2133,8 +2133,20 @@ function syncIOSWallpaperTint(){
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
+  // Safari iOS 26 ne relit la teinte des bords qu'au défilement : micro-défilement aller-retour pour forcer la mise à jour
+  const nudge=el=>{try{const y=el.scrollTop;if(el.scrollHeight>el.clientHeight+1){el.scrollTop=y>0?y-1:y+1;requestAnimationFrame(()=>{el.scrollTop=y})}}catch(e){}};
+  const se=document.scrollingElement||document.documentElement;nudge(se);
+  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>{if(p.offsetParent!==null||getComputedStyle(p).display!=='none')nudge(p)});
+  if(!(se.scrollHeight>se.clientHeight+1)){const y=scrollY;scrollTo(0,y+1);requestAnimationFrame(()=>scrollTo(0,y))}
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
+ // Safari iOS 26 ne relit la teinte des bords que lorsqu'un nouvel élément fixe plein écran apparaît (comme à l'ouverture du détail du parcours) :
+ // on fait apparaître un calque plein écran identique au fond pendant 2 images, puis on le retire.
+ clearTimeout(window.__edgeFlashT);document.getElementById('edgeFlash')?.remove();
+ const f=document.createElement('div');f.id='edgeFlash';f.setAttribute('aria-hidden','true');
+ f.style.cssText='position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));z-index:28;pointer-events:none;background:'+tint+' var(--wall,none) center/cover no-repeat';
+ document.body.appendChild(f);void f.offsetHeight;
+ window.__edgeFlashT=setTimeout(()=>requestAnimationFrame(()=>f.remove()),120);
 }
 
 function paintWallpaperPalette(colors,dark){
