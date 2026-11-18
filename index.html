@@ -627,7 +627,7 @@ html body>main{
 
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
 .edge-tint{display:block!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
-#edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
+#edgeBottom{display:none!important;height:env(safe-area-inset-bottom,0px)!important}
 
 /* Bandeaux supérieur et inférieur à 15px du bord */
 body:not(.classic) header{top:calc(var(--safe-t) + 15px)}
