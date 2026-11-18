@@ -1255,10 +1255,19 @@ async function walkOnlyFor(d,dest,from){
 }
 const itDur=it=>(new Date(it.endTime)-new Date(it.startTime))/1000;
 const slowerThanWalk=it=>!!(walkIt&&selDest?.type!=='TRIP'&&itDur(it)>=walkIt.duration);
+function walkTimed(w){   // marche à pied seule, recalée pour un départ maintenant (ou à l'heure choisie)
+  const t0=planTime?+planTime:Date.now(), off=t0-new Date(w.startTime);
+  const sh=d=>d?new Date(+new Date(d)+off).toISOString():d;
+  return {...w,_walkOnly:true,transfers:0,startTime:sh(w.startTime),endTime:sh(w.endTime),legs:w.legs.map(l=>({...l,startTime:sh(l.startTime),endTime:sh(l.endTime),scheduledStartTime:undefined,realTime:false}))};
+}
 function walkTileHTML(w){
-  const km=w.legs.reduce((a,l)=>a+(l.distance||0),0)/1000, t0=planTime?+planTime:Date.now();
-  return `<div class="jr glass walk-tile" id="walkTile"><div class="jr-top"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:28px">🚶</span><div><b style="font-size:17px">À pied</b><div class="muted" style="font-size:13px">Plus rapide que les transports${km?' · '+(km<1?Math.round(km*1000)+' m':km.toFixed(1).replace('.',',')+' km'):''}</div></div></div></div>
-  <div class="jr-times" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px"><b style="font-size:22px">${fmtDur(w.duration)}</b><span class="muted">arrivée <b>${hm(t0+w.duration*1000)}</b></span></div></div>`;
+  const km=w.legs.reduce((a,l)=>a+(l.distance||0),0)/1000;
+  const dst=km?(km<1?Math.round(km*1000)+' m':km.toFixed(1).replace('.',',')+' km'):'';
+  return journeyHTML(w,-1,false)
+    .replace('<div class="jr glass"','<div class="jr glass walk-tile" id="walkTile"')
+    .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="font-size:30px;line-height:1;flex:none">🚶</span>')
+    .replace(/<div class="jr-stop">[\s\S]*?<\/div>/,`<div class="jr-stop">À pied, plus rapide que les transports${dst?' · '+dst:''}</div>`)
+    .replace(/(<span class="tsub">)[\s\S]*?(<\/span>)/,'$1À pied$2');
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -1552,8 +1561,8 @@ function renderJourneyList(){
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.filter(it=>!slowerThanWalk(it)).slice(0,shown);   // parcours plus lents que la marche : masqués
   { let wt=$('#walkTile'); const want=walkIt&&selDest?.type!=='TRIP'&&lastJourneys.some(slowerThanWalk);
-    if(want){ const tpl0=document.createElement('template'); tpl0.innerHTML=walkTileHTML(walkIt).trim(); const nw=tpl0.content.firstElementChild;
-      if(wt) wt.replaceWith(nw); else box.prepend(nw); wt=nw; wt.onclick=e=>{e.stopPropagation();openMap(walkIt,0)} }
+    if(want){ const tpl0=document.createElement('template'); tpl0.innerHTML=walkTileHTML(walkTimed(walkIt)).trim(); const nw=tpl0.content.firstElementChild;
+      if(wt) wt.replaceWith(nw); else box.prepend(nw); wt=nw; wt.onclick=e=>{e.stopPropagation();openJourneyPage(walkTimed(walkIt))} }
     else wt?.remove() }
   box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
@@ -1907,6 +1916,7 @@ function renderJourneyPage(){
   // de l'écran, même lorsque la liste détaillée défile.
   pg.querySelectorAll(':scope > .jp-action-bar').forEach(x=>x.remove());
   const actionBar=card.querySelector('.jp-action-bar');
+  if(jpIt._walkOnly) actionBar?.querySelectorAll('[data-act="track"],[data-act="untrack"]').forEach(b=>b.remove());   // marche seule : pas de suivi
   if(actionBar){pg.insertBefore(actionBar,body);const bar=pg.querySelector('.jp-bar');const measure=()=>{pg.style.setProperty('--jp-title-height',bar.offsetHeight+'px');const ab=pg.querySelector(':scope > .jp-action-bar');if(ab)pg.style.setProperty('--jp-act-height',ab.offsetHeight+'px')};measure();if(!pg._titleObserver){pg._titleObserver=new ResizeObserver(measure);pg._titleObserver.observe(bar)}pg._titleObserver.observe(actionBar)}
   jpAttachStops(card);
   card.onclick=e=>{ const act=e.target.dataset.act;
