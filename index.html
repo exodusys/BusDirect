@@ -1236,7 +1236,29 @@ async function nextDepartures(dest,from,onMore){
   const curs={prev:d.previousPageCursor||null,next:d.nextPageCursor||null};   // curseurs Transitous de cette recherche
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
     for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
-  const out=await fin(cleanList(all)); out._cur=curs; return out;
+  const out=await fin(cleanList(all)); out._cur=curs;
+  walkIt=await walkOnlyFor(d,origDest,from).catch(()=>null);   // marche à pied seule jusqu'à la destination
+  return out;
+}
+/* Parcours entièrement à pied : sert à masquer les transports plus lents que la marche */
+let walkIt=null;
+async function walkOnlyFor(d,dest,from){
+  const isW=x=>x&&x.legs&&x.legs.length&&x.legs.every(l=>l.mode==='WALK');
+  if(dest.type!=='STOP'||!(S.settings.nearestOnly!==false)){ const w=(d.direct||[]).find(isW); if(w) return w }
+  const P=from?null:(listPos||pos); if(!from&&!P) return null;
+  const fp=from?placeOf(from):P.lat+','+P.lon, tp=dest.type==='STOP'&&dest.id?dest.id:`${dest.lat},${dest.lon}`;
+  for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+    try{ const r=await fetch(`${API}/${v}/plan?fromPlace=${encodeURIComponent(fp)}&toPlace=${encodeURIComponent(tp)}&directModes=WALK&maxDirectTime=7200&numItineraries=1&detailedTransfers=true&time=${encodeURIComponent((planTime||new Date()).toISOString())}`);
+      if(!r.ok) continue; const j=await r.json(); return (j.direct||[]).find(isW)||(j.itineraries||[]).find(isW)||null }catch(e){}
+  }
+  return null;
+}
+const itDur=it=>(new Date(it.endTime)-new Date(it.startTime))/1000;
+const slowerThanWalk=it=>!!(walkIt&&selDest?.type!=='TRIP'&&itDur(it)>=walkIt.duration);
+function walkTileHTML(w){
+  const km=w.legs.reduce((a,l)=>a+(l.distance||0),0)/1000, t0=planTime?+planTime:Date.now();
+  return `<div class="jr glass walk-tile" id="walkTile"><div class="jr-top"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:28px">🚶</span><div><b style="font-size:17px">À pied</b><div class="muted" style="font-size:13px">Plus rapide que les transports${km?' · '+(km<1?Math.round(km*1000)+' m':km.toFixed(1).replace('.',',')+' km'):''}</div></div></div></div>
+  <div class="jr-times" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px"><b style="font-size:22px">${fmtDur(w.duration)}</b><span class="muted">arrivée <b>${hm(t0+w.duration*1000)}</b></span></div></div>`;
 }
 
 /* ========= Parcours (search & save) ========= */
@@ -1301,7 +1323,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  listPos=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
+  listPos=null; walkIt=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -1528,10 +1550,14 @@ function renderJourneyList(){
     for(const c of box.querySelectorAll(':scope > .jr')){ const r=c.getBoundingClientRect(); if(r.bottom>hh+4){anc=c.dataset.k;ancTop=r.top;break} } }
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
-  const list=lastJourneys.slice(0,shown);
+  const list=lastJourneys.filter(it=>!slowerThanWalk(it)).slice(0,shown);   // parcours plus lents que la marche : masqués
+  { let wt=$('#walkTile'); const want=walkIt&&selDest?.type!=='TRIP'&&lastJourneys.some(slowerThanWalk);
+    if(want){ const tpl0=document.createElement('template'); tpl0.innerHTML=walkTileHTML(walkIt).trim(); const nw=tpl0.content.firstElementChild;
+      if(wt) wt.replaceWith(nw); else box.prepend(nw); wt=nw; wt.onclick=e=>{e.stopPropagation();openMap(walkIt,0)} }
+    else wt?.remove() }
   box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
-  const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
-  const tpl=document.createElement('template'); let prev=null;
+  const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
+  const tpl=document.createElement('template'); let prev=$('#walkTile');
   list.forEach((it,i)=>{
     const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
@@ -1548,6 +1574,7 @@ function renderJourneyList(){
   // Bas de liste : repère persistant (jamais recréé → pas de saut ni de clignotement)
   let sen=$('#more'); if(!sen){ sen=document.createElement('div'); sen.id='more'; sen.className='load-more'; sen.innerHTML='<i></i><i></i><i></i><i></i><span>Continue de faire défiler</span>' }
   if(box.lastElementChild!==sen) box.appendChild(sen);
+  sen.style.display=(walkIt&&!list.length)?'none':'';   // seulement la marche : pas de chargement sans fin
   // séparateurs de jour : ajoutés/retirés seulement si nécessaire
   const want=new Set(); let lastDay=new Date().toDateString();
   box.querySelectorAll(':scope > .jr').forEach(el=>{const it=list[+el.dataset.i]; if(!it) return; const d=new Date(firstTransit(it).startTime);
