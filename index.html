@@ -669,6 +669,9 @@ body::before,#appWallpaper{
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
 #edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
+/* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
+#v-horaires>.row.between:first-child{display:block;position:relative}
+#v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
