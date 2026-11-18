@@ -1581,7 +1581,7 @@ function renderJourneyList(){
       existing.delete(k); el.dataset.i=i;
       { const a=el.querySelector('.alert'), b=fresh.querySelector('.alert'); if(a&&!b)a.remove(); else if(!a&&b)el.querySelector('.chain').before(b.cloneNode(true)); else if(a&&b&&a.innerHTML!==b.innerHTML){a.className=b.className;a.innerHTML=b.innerHTML} }
       ['.jr-top','.jr-times','.chain','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
-        if(a&&b&&a.innerHTML!==b.innerHTML){const sig=x=>[...x.querySelectorAll('b,.late')].map(n=>n.textContent).join('|');const chg=sel==='.jr-times'&&sig(a)!==sig(b);a.innerHTML=b.innerHTML; if(chg){a.classList.remove('flash');void a.offsetWidth;a.classList.add('flash')}}});
+        if(a&&b&&a.innerHTML!==b.innerHTML){const sig=x=>[...x.querySelectorAll('b,.late')].map(n=>n.textContent).join('|');const chg=sel==='.jr-times'&&sig(a)!==sig(b);a.innerHTML=b.innerHTML; /* plus d'effet de surbrillance quand l'horaire change */}});
     }else{el=fresh}
     const ref=prev?prev.nextSibling:box.firstChild; if(el!==ref) box.insertBefore(el,ref);
     prev=el;
