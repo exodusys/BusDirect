@@ -419,7 +419,8 @@ body.classic .walk-sep{border-radius:5px}
 @keyframes jpOut{from{transform:translateX(0)}to{transform:translateX(100%)}}
 #jrPage .jp-bar,.sub-page .jp-bar{position:sticky;top:calc(var(--safe-t,0px) + 10px);margin:calc(var(--safe-t,0px) + 10px) 14px 12px;display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:28px;z-index:2}
 #jrPage .jp-title,.sub-page .jp-title{font-size:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#jrPage .jp-title{font-size:14px} /* bandeau du haut du détail du parcours : texte plus petit */
+#jrPage .jp-title{font-size:14px}
+#jrPage .jp-title .lt-line{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} /* bandeau du haut du détail du parcours : texte plus petit */
 #jrPage .jp-body,.sub-page .jp-body{max-width:692px;margin:0 auto;padding:0 14px calc(var(--safe-b,0px) + 104px)}
 body.classic #jrPage .jp-bar,body.classic .sub-page .jp-bar{margin:0;top:0;border-radius:0;padding-top:calc(var(--safe-t,0px) + 10px)}
 html.jp-lock,html.jp-lock body{overflow:hidden}
@@ -1863,7 +1864,7 @@ function openJourneyPage(it,tracked){
 }
 function renderJourneyPage(){
   const pg=$('#jrPage'); if(!pg||!jpIt) return; const ft=firstTransit(jpIt);
-  pg.querySelector('.jp-title').textContent=`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim();
+  { const lt=$('#jrTitle'); pg.querySelector('.jp-title').innerHTML=lt&&selDest?lt.innerHTML:esc(`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim()) }  // même texte que le bandeau des prochains départs
   const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
   // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
