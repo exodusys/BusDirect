@@ -917,7 +917,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:63,blurV2:true,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='#e30613'; S.settings.accentRed=true; } // accent par défaut : rouge
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
@@ -2333,7 +2333,8 @@ function applySettings(){
   root.dataset.theme=dark?'dark':'light';
   root.style.setProperty('--accent',s.accent);
   root.style.setProperty('--accent2',s.accent+'aa');
-  root.style.setProperty('--blur',s.blur+'px');
+  if(!s.blurV2){ s.blur=Math.round(100*Math.pow(Math.min(40,Math.max(0,+s.blur||0))/40,1/1.5)); s.blurV2=true; try{save()}catch(e){} }   // ancien réglage (px) converti sur la nouvelle échelle
+  root.style.setProperty('--blur',(40*Math.pow((+s.blur||0)/100,1.5)).toFixed(2)+'px');   // 0 % → 0 px … 100 % → 40 px (flou maximal utile), plus fin vers le bas
   root.style.setProperty('--glass-a',s.alpha/100);
   root.style.setProperty('--sat',(100+s.sat)+'%');
   document.body.classList.toggle('noglass',!s.glass);
