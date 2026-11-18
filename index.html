@@ -686,6 +686,12 @@ body:not(.classic) header,body.list-page #listTop{top:calc(var(--safe-t) + 10px)
 body.list-page #timeBar{top:calc(var(--safe-t) + 18px + var(--lt-h,52px))!important}
 main{padding-top:calc(var(--safe-t) + 72px)}
 body.list-page main{padding-top:var(--safe-t)}
+/* Barre du haut identique sur toutes les pages (accueil, listes, carte, détail, arrêts) */
+body:not(.classic) header,body.list-page:not(.classic) #listTop,body:not(.classic) #mapView .map-bar{
+  top:calc(var(--safe-t) + 10px)!important;left:14px!important;right:14px!important;
+  max-width:692px!important;margin:0 auto!important;box-sizing:border-box!important;
+  min-height:58px;padding:8px 12px!important;border-radius:28px!important;
+  display:flex;align-items:center;gap:10px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
