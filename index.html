@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
+try{if(navigator.standalone||matchMedia('(display-mode:standalone)').matches)document.documentElement.classList.add('pwa')}catch(e){}
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
 (function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
 var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
@@ -667,17 +668,16 @@ body::before,#appWallpaper{
 /* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
 #edgeTop,#edgeBottom{display:block!important;pointer-events:none}
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
-#edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
-@media not all and (display-mode:standalone){ #edgeBottom{height:max(12px,env(safe-area-inset-bottom,0px))!important} }   /* dans Safari, la bande doit être assez haute pour que la barre d'outils reprenne la teinte */
+/* Bande du bas DERRIÈRE la page (z-index 0, main au-dessus) : Safari peut y lire la teinte, mais elle ne cache plus la liste */
+#edgeBottom{bottom:0;height:max(12px,env(safe-area-inset-bottom,0px))!important;z-index:0!important}
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
 #v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
 /* Safari : la page descend sous la barre d'outils jusqu'au bord de l'écran (la fin de liste reste au-dessus de la barre) */
-@media not all and (display-mode:standalone){
-  html body>main{bottom:-120px!important;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 100px)!important}
-  body.list-page>main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 24px)!important}
-  html,body{min-height:calc(100% + 120px)!important}
+@media all{
+  html:not(.pwa) body>main{bottom:-120px!important;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 100px)!important}
+  html:not(.pwa) body.list-page>main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 24px)!important}
 }
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
