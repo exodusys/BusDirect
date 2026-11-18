@@ -1263,7 +1263,7 @@ function walkTileHTML(w){
   const dst=km?(km<1?Math.round(km*1000)+' m':km.toFixed(1).replace('.',',')+' km'):'';
   return journeyHTML(w,-1,false)
     .replace('<div class="jr glass"','<div class="jr glass walk-tile" id="walkTile"')
-    .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="font-size:30px;line-height:1;flex:none">🚶</span>')
+    .replace('<div class="jr-top">','<div class="jr-top"><span class="walk-ico" style="font-size:30px;line-height:1;flex:none">👣</span>')
     .replace(/<div class="jr-stop">[\s\S]*?<\/div>/,`<div class="jr-stop">À pied, plus rapide que les transports${dst?' · '+dst:''}</div>`)
     .replace(/<div class="cd">[\s\S]*?<\/div>\s*<\/div>\s*<div class="jr-times">/,'<div class="cd"></div>\n    </div>\n    <div class="jr-times">')   // pas de compte à rebours ni « à quai » pour la marche
     .replace(/(<span class="tsub">)[\s\S]*?(<\/span>)/,'$1À pied$2');
