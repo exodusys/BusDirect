@@ -2132,10 +2132,9 @@ function updateAddr(){
   addrBusy=true; addrT=Date.now(); const q={...pos};
   fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&lat=${q.lat}&lon=${q.lon}&accept-language=fr`)
     .then(r=>r.json()).then(j=>{ const a=j&&j.address||{};
-      const short=x=>x.replace(/^(rue|chemin|avenue|place)\s+(de\s+la\s+|de\s+l['’]\s*|des\s+|du\s+|de\s+|d['’]\s*)/i,'').replace(/^./,c=>c.toUpperCase());   // sans « rue de », « chemin de », « avenue de », « place de »
-      const l1=[short(a.road||a.pedestrian||a.footway||a.square||a.place||a.neighbourhood||a.suburb||''), a.house_number||''].filter(Boolean).join(' ');
+      const l1=[a.road||a.pedestrian||a.footway||a.square||a.place||a.neighbourhood||a.suburb||'', a.house_number||''].filter(Boolean).join(' ');
       const l2=[a.postcode||'', a.city||a.town||a.village||a.municipality||a.hamlet||''].filter(Boolean).join(' ');
-      if(l1||l2){ el.innerHTML=`<span>${esc(l1||l2)}</span>${l1&&l2?`<span>${esc(l2)}</span>`:''}`; addrPos=q }
+      if(l2){ el.innerHTML=`<span>${esc(l2)}</span>`; addrPos=q }   // seulement le code postal et le lieu
       else if(!addrPos) el.textContent=nearestRegion().name })
     .catch(()=>{ if(!addrPos) el.textContent=nearestRegion().name })
     .finally(()=>{ addrBusy=false });
