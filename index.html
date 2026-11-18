@@ -1552,13 +1552,17 @@ function renderJourneyList(){
     else{ if(!ns){ns=document.createElement('div');ns.className='now-sep';ns.textContent=planTime?'Heure choisie':'Maintenant'}
       ns.textContent=planTime?'Heure choisie':'Maintenant';
       const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
-      if(before.previousElementSibling!==ns) before.before(ns) } }
-  // bandeau « Arrêts atteignables à pied » au-dessus des parcours précédant « Maintenant »
-  { let ws=box.querySelector(':scope > .walk-sep'); const ns=box.querySelector(':scope > .now-sep');
-    const first=ns?box.querySelector(':scope > .jr:not(.leave)'):null;
-    if(!first||first.compareDocumentPosition(ns)&Node.DOCUMENT_POSITION_PRECEDING){ ws?.remove() }
+      const pv=before.previousElementSibling, pv2=pv?.classList.contains('walk-sep')?pv.previousElementSibling:pv;
+      if(pv2!==ns) (pv?.classList.contains('walk-sep')?pv:before).before(ns) } }
+  // bandeau « Arrêts atteignables à pied » : après « Maintenant », au-dessus du premier parcours dont on peut encore rejoindre l'arrêt de départ à pied
+  { let ws=box.querySelector(':scope > .walk-sep'); const ns=box.querySelector(':scope > .now-sep'); const now=planTime?+planTime:Date.now();
+    const jrs=[...box.querySelectorAll(':scope > .jr:not(.leave)')];
+    const reach=it=>{const ft=firstTransit(it);if(!ft)return false;const walk=it.legs.slice(0,it.legs.indexOf(ft)).reduce((t,l)=>t+((+new Date(l.endTime)-+new Date(l.startTime))||0),0);return +new Date(ft.startTime)-walk>=now};
+    const first=jrs.find(el=>{const it=list[+el.dataset.i];return it&&reach(it)});
+    const show=first&&(ns||jrs.indexOf(first)>0);
+    if(!show){ ws?.remove() }
     else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep';ws.textContent='Arrêts atteignables à pied'}
-      const before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
+      let before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
       if(before.previousElementSibling!==ws) before.before(ws) } }
   if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
