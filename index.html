@@ -664,6 +664,9 @@ body::before,#appWallpaper{
 .load-more{gap:7px}
 .load-more i{width:10px;height:24px;border-radius:3px}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
+/* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
+#edgeTop{display:block!important;top:0;height:max(1px,env(safe-area-inset-top,0px))!important;pointer-events:none}
+html.map-edge #edgeTop{display:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2134,7 +2137,10 @@ function syncIOSWallpaperTint(){
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
- document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
+ document.querySelectorAll('#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
+ document.querySelector('main')?.style.removeProperty('background-color');   // main reste transparent : le fond d'écran passe derrière
+ // la feuille de style du 1er rendu fixait l'ancienne teinte en !important : on la met à jour
+ document.querySelectorAll('head style').forEach(st=>{ if(/^html,body,main\{background-color:/.test(st.textContent)) st.textContent='html,body{background-color:'+tint+'!important}' });
 }
 
 function paintWallpaperPalette(colors,dark){
