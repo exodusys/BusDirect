@@ -680,7 +680,6 @@ body::before,#appWallpaper{
   border-top:var(--edge-x) solid transparent!important;border-bottom:var(--edge-x) solid transparent!important;
   background-origin:border-box!important;background-clip:border-box!important;
 }
-.edge-tint{display:none!important}
 /* Bandeau flottant à la même distance de l'heure que sur la page détail */
 body:not(.classic) header,body.list-page #listTop{top:calc(var(--safe-t) + 10px)!important}
 body.list-page #timeBar{top:calc(var(--safe-t) + 18px + var(--lt-h,52px))!important}
@@ -692,6 +691,16 @@ body:not(.classic) header,body.list-page:not(.classic) #listTop,body:not(.classi
   max-width:692px!important;margin:0 auto!important;box-sizing:border-box!important;
   min-height:58px;padding:8px 12px!important;border-radius:28px!important;
   display:flex;align-items:center;gap:10px}
+/* Bords haut et bas de l'écran = couleur du fond d'écran choisi dans Paramètres,
+   sur toutes les pages, dans Safari comme en app sur l'écran d'accueil.
+   (Safari iOS 26 teinte ses barres d'après les éléments fixes collés aux bords ; en app,
+   la barre d'état black-translucent laisse voir la bande du haut.) */
+html body .edge-tint{display:block!important;position:fixed!important;left:0!important;right:0!important;
+  z-index:2147483000!important;pointer-events:none!important;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important}
+html body #edgeTop{top:0!important;bottom:auto!important;height:max(1px,env(safe-area-inset-top,0px))!important}
+html body #edgeBottom{bottom:0!important;top:auto!important;height:max(1px,env(safe-area-inset-bottom,0px))!important}
+html.map-edge body .edge-tint{display:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -3145,6 +3154,7 @@ try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#jou
 <script>
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
+addEventListener('pageshow',()=>syncIOSWallpaperTint());addEventListener('orientationchange',()=>setTimeout(syncIOSWallpaperTint,300));
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
 </script>
 </body>
