@@ -684,7 +684,6 @@ body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 30px + 
 html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
 .map-bar .t small.map-al{display:block;margin-top:3px;padding:3px 8px;border-radius:8px;background:rgba(255,149,0,.18);color:#ffb340;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 body.classic .map-bar .t small.map-al{border-radius:4px}
-#journeys > .jr > .alert{display:none}   /* infos réunies en bas de la liste */
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -724,7 +723,6 @@ body.classic .map-bar .t small.map-al{border-radius:4px}
     </div>
     <div id="moreTop" class="load-more top" style="display:none"><i></i><i></i><i></i><i></i><span>Continue de faire défiler</span></div>
     <div id="journeys"></div>
-    <div id="jrAlerts"></div>
   </section>
 
   <!-- SUIVIS -->
@@ -1335,7 +1333,7 @@ function freshPos(){
   });
 }
 async function pickPair(from,to){
-  listPos=null; walkIt=null; { const ja=$('#jrAlerts'); if(ja) ja.innerHTML='' } shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
+  listPos=null; walkIt=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
   const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
@@ -1631,7 +1629,6 @@ function renderJourneyList(){
       if(first){ const b=first.previousElementSibling?.classList.contains('walk-sep')?first.previousElementSibling:first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first; (jrs.indexOf(first)===0?box.firstChild:b).before(walkNode) }
       else box.insertBefore(walkNode,sen.parentNode===box?sen:null) } }
   if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
-  renderListAlerts(list);
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
 }
@@ -1854,17 +1851,6 @@ function alertsOf(it){
     out.push({leg:l,title,head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour,works,cancel});
   }));
   return out;
-}
-/* Infos travaux / perturbations réunies en bas de la liste : seulement celles en cours maintenant sur ce trajet */
-function renderListAlerts(list){
-  const el=$('#jrAlerts'); if(!el) return;
-  const now=Date.now(), seen=new Set(), al=[];
-  (list||[]).forEach(it=>alertsOf(it).forEach(a=>{ if(a.leg.mode==='WALK') return;
-    const raw=(a.leg.alerts||[]).find(x=>(x.headerText||'')===a.head&&(x.descriptionText||'')===a.desc);
-    if(raw&&!activeNow(raw,now,now)) return;   // en vigueur maintenant
-    const k=a.title+'|'+(a.head||a.desc)+'|'+(a.leg.routeShortName||''); if(seen.has(k)) return; seen.add(k); al.push(a) }));
-  const html=al.length?`<h3 style="margin:18px 4px 8px">Infos trafic sur ce trajet</h3><div class="card glass" style="padding:4px 12px">${al.map(a=>a.title&&`<div class="al-d" style="display:flex;gap:10px;align-items:flex-start"><span style="font-size:18px;line-height:1.3">${a.cancel?'⛔':a.detour?'↪︎':a.works?'🚧':'⚠︎'}</span><div style="flex:1;min-width:0">${alertDetails([a]).replace(/^<div class="al-d">/,'<div>')}</div></div>`).join('')}</div>`:'';
-  if(el.innerHTML!==html) el.innerHTML=html;
 }
 function alertBanner(al){
   if(!al.length) return '';
