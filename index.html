@@ -672,6 +672,12 @@ html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
 #v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
+
+/* Fond d'écran jusqu'aux bords haut et bas : l'image est aussi posée sur html, que Safari affiche sous la barre d'état et la barre d'adresse/accueil */
+html:not(.map-edge){min-height:100%;
+  background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
+html:not(.map-edge) body{background:transparent!important}
+:root{--edge-x:240px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
