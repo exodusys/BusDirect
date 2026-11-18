@@ -668,6 +668,7 @@ body::before,#appWallpaper{
 #edgeTop,#edgeBottom{display:block!important;pointer-events:none}
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
 #edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
+@media not all and (display-mode:standalone){ #edgeBottom{height:max(12px,env(safe-area-inset-bottom,0px))!important} }   /* dans Safari, la bande doit être assez haute pour que la barre d'outils reprenne la teinte */
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
