@@ -664,6 +664,28 @@ body::before,#appWallpaper{
 .load-more{gap:7px}
 .load-more i{width:10px;height:24px;border-radius:3px}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
+
+/* Haut de page unifié : même rendu sous la barre d'état iOS que la page détail (#jrPage).
+   Le fond d'écran déborde de 160px en haut ET en bas, cadré "cover" sur la même hauteur,
+   donc l'image sous l'heure/le réseau est identique sur toutes les pages. */
+body::before,#appWallpaper{
+  top:calc(-1*var(--edge-x))!important;bottom:calc(-1*var(--edge-x))!important;
+  height:auto!important;min-height:0!important;
+  background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))!important;
+  background-image:var(--wall,none)!important;background-size:cover!important;
+  background-position:center!important;background-repeat:no-repeat!important;
+}
+#jrPage,#stopPage,.sub-page{
+  top:calc(-1*var(--edge-x))!important;bottom:calc(-1*var(--edge-x))!important;
+  border-top:var(--edge-x) solid transparent!important;border-bottom:var(--edge-x) solid transparent!important;
+  background-origin:border-box!important;background-clip:border-box!important;
+}
+.edge-tint{display:none!important}
+/* Bandeau flottant à la même distance de l'heure que sur la page détail */
+body:not(.classic) header,body.list-page #listTop{top:calc(var(--safe-t) + 10px)!important}
+body.list-page #timeBar{top:calc(var(--safe-t) + 18px + var(--lt-h,52px))!important}
+main{padding-top:calc(var(--safe-t) + 72px)}
+body.list-page main{padding-top:var(--safe-t)}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
