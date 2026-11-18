@@ -682,6 +682,8 @@ body:not(.classic) #jrPage > .jp-action-bar{position:fixed!important;top:calc(va
 body:not(.classic) #jrPage .jp-body{padding-top:calc(var(--safe-t,0px) + 30px + var(--jp-title-height,52px) + var(--jp-act-height,64px))}
 /* Page détail du parcours : même réglage que la page des prochains parcours (fond fixe #appWallpaper, page sans débordement) — supprime le flou sous la barre iOS */
 html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;border-bottom:0!important;background:transparent!important;background-image:none!important}
+.map-bar .t small.map-al{display:block;margin-top:3px;padding:3px 8px;border-radius:8px;background:rgba(255,149,0,.18);color:#ffb340;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+body.classic .map-bar .t small.map-al{border-radius:4px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -816,7 +818,7 @@ html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;bord
   <div id="map"></div>
   <div class="map-bar glass">
     <button class="map-btn" onclick="closeMap()">✕</button>
-    <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
+    <div class="t"><span id="mapTitle"></span><small id="mapSub"></small><small id="mapAl" class="map-al" style="display:none"></small></div>
     <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
   </div>
   <div class="map-ctrl glass">
@@ -1841,16 +1843,19 @@ function alertsOf(it){
   it.legs.forEach(l=>(l.alerts||[]).forEach(a=>{
     const txt=(a.headerText||'')+' '+(a.descriptionText||'');
     const detour=a.effect==='DETOUR'||/d[ée]vi(é|e|ation)|umleitung|detour|diversion/i.test(txt);
-    if(!detour||!activeNow(a)) return;
+    const works=/CONSTRUCTION|MAINTENANCE/.test(a.cause||'')||/travaux|chantier|bauarbeit|baustelle|works|lavori/i.test(txt);
+    const cancel=a.effect==='NO_SERVICE'||/supprim|annul|interrompu|interruption|ausfall|unterbr/i.test(txt);
+    if(!activeNow(a)||!(a.headerText||a.descriptionText)) return;   // déviations, travaux et autres perturbations sur le parcours
     const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
-    out.push({leg:l,title:'Déviation',head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour:true});
+    const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
+    out.push({leg:l,title,head:a.headerText||'',desc:a.descriptionText||'',url:a.url||'',detour,works,cancel});
   }));
   return out;
 }
 function alertBanner(al){
   if(!al.length) return '';
   const a=al.find(x=>x.cancel)||al.find(x=>x.detour)||al[0];
-  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
+  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':a.works?'🚧':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
 }
 function alertDetails(al){
   return al.map(a=>`<div class="al-d"><div class="row" style="gap:6px">${a.leg.routeShortName?badge(a.leg,'mini'):''}<b>${esc(a.title)}</b></div>
@@ -2500,6 +2505,10 @@ async function openMap(it,walkLeg){
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
   mapIt=it; boardStop=firstTransit(it)?.from;
+  { const al=alertsOf(it).filter(a=>a.leg.mode!=='WALK'), el=$('#mapAl');   // travaux / perturbations de la ligne dans le bandeau de la carte
+    if(el){ if(al.length){ const a=al.find(x=>x.cancel)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];
+      el.innerHTML=`${a.cancel?'⛔':a.detour?'↪︎':a.works?'🚧':'⚠︎'} <b>${esc(a.title)}</b>${a.leg.routeShortName?' '+esc(a.leg.routeShortName):''} · ${esc(a.head||a.desc)}${al.length>1?` (+${al.length-1})`:''}`;
+      el.title=al.map(x=>x.title+' : '+(x.head||x.desc)).join('\n'); el.style.display='' } else { el.style.display='none'; el.innerHTML='' } } }
   $('#mapView').classList.add('open');
   const ft=firstTransit(it);
   $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
