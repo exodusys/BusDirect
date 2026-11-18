@@ -603,7 +603,7 @@ body:not(.classic) header{left:14px;right:14px;max-width:692px;box-sizing:border
 main{padding-top:calc(var(--safe-t) + 72px)}
 body.classic main{padding-top:calc(var(--safe-t) + 66px)}
 body.list-page main{padding-top:var(--safe-t)}
-/* (marge du titre Horaires identique à Parcours) */
+#v-horaires>.row:first-child h2{margin-top:0}
 
 /* Safari iOS 26 ignore theme-color : il teinte ses barres d'après les éléments fixes collés au bord haut/bas */
 .edge-tint{position:fixed;left:0;right:0;height:max(6px,env(safe-area-inset-top,0px));z-index:1;pointer-events:none;background-color:var(--ios-chrome-color,var(--page-bg,var(--bg)))}
@@ -664,20 +664,6 @@ body::before,#appWallpaper{
 .load-more{gap:7px}
 .load-more i{width:10px;height:24px;border-radius:3px}
 @keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
-/* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
-#edgeTop,#edgeBottom{display:block!important;pointer-events:none}
-#edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
-#edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
-html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
-/* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
-#v-horaires>.row.between:first-child{display:block;position:relative}
-#v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
-
-/* Fond d'écran jusqu'aux bords haut et bas : l'image est aussi posée sur html, que Safari affiche sous la barre d'état et la barre d'adresse/accueil */
-html:not(.map-edge){min-height:100%;
-  background-image:var(--wall,none)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important}
-html:not(.map-edge) body{background:transparent!important}
-:root{--edge-x:240px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1644,7 +1630,7 @@ document.querySelector('main')?.addEventListener('scroll',()=>requestAnimationFr
 function pinTimeBar(){
   const tb=$('#timeBar'), ph=$('#timeBarPh'); if(!tb||!ph) return;
   const inline=!listSep()&&selDest&&tb.style.display!=='none';
-  if(true){ tb.classList.remove('pinned'); ph.style.height='0'; tb.style.top=''; return }   // épinglage désactivé : il saccadait pendant le défilement
+  if(!inline){ tb.classList.remove('pinned'); ph.style.height='0'; return }
   const hdr=$('header').getBoundingClientRect().bottom+8;
   const ref=(tb.classList.contains('pinned')?ph:tb).getBoundingClientRect().top;
   const pin=ref<hdr;
@@ -2143,18 +2129,12 @@ function syncIOSWallpaperTint(){
  const wall=document.getElementById('appWallpaper');
  if(wall){wall.style.backgroundColor=tint;void wall.offsetHeight}
  // Bandes haut/bas recréées à chaque changement : Safari relit leur couleur sans recharger
- document.querySelectorAll('.edge-tint,#edgeTop,#edgeBottom').forEach(e=>e.remove());
- const tok=syncIOSWallpaperTint.tok=(syncIOSWallpaperTint.tok||0)+1;   // seul le dernier changement de fond crée les bandes
+ document.querySelectorAll('.edge-tint').forEach(e=>e.remove());
  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-  if(tok!==syncIOSWallpaperTint.tok) return;
-  document.querySelectorAll('.edge-tint,#edgeTop,#edgeBottom').forEach(e=>e.remove());
   ['edgeTop','edgeBottom'].forEach(id=>{const d=document.createElement('div');d.className='edge-tint';d.id=id;d.setAttribute('aria-hidden','true');d.style.setProperty('background-color',tint,'important');document.body.appendChild(d)});
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
- document.querySelectorAll('#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
- document.querySelector('main')?.style.removeProperty('background-color');   // main reste transparent : le fond d'écran passe derrière
- // la feuille de style du 1er rendu fixait l'ancienne teinte en !important : on la met à jour
- document.querySelectorAll('head style').forEach(st=>{ if(/^html,body,main\{background-color:/.test(st.textContent)) st.textContent='html,body{background-color:'+tint+'!important}' });
+ document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
 }
 
 function paintWallpaperPalette(colors,dark){
