@@ -3115,7 +3115,9 @@ renderDests(); renderTiles(); renderSMS(); locate();
 })();
 
 // Espace barre de date → première dalle = espace entre deux dalles (mesuré, pas codé en dur)
+let lastScrollAt=0; document.querySelector('main')?.addEventListener('scroll',()=>{lastScrollAt=performance.now()},{passive:true});
 function fitListGap(){ try{
+  if(performance.now()-lastScrollAt<700){ clearTimeout(fitListGap._t); fitListGap._t=setTimeout(fitListGap,750); return }   // jamais pendant un défilement : l'inertie reste fluide
   const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
   const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0]||document.querySelector('#journeys > .card, #journeys > .spin');   // aussi « Aucun départ à proximité »
   if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
