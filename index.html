@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <script>
+try{if(navigator.standalone||matchMedia('(display-mode:standalone)').matches)document.documentElement.classList.add('pwa')}catch(e){}
 /* Teinte des barres Safari dès le premier rendu (Safari ne la met pas à jour ensuite) */
 (function(){try{var t=localStorage.getItem('bd-tint'),sc=localStorage.getItem('bd-scheme');window.__bootTint=t||'';if(!t)return;
 var r=document.documentElement;r.style.setProperty('background-color',t,'important');r.style.setProperty('--ios-chrome-color',t);
@@ -667,11 +668,21 @@ body::before,#appWallpaper{
 /* Bord supérieur : bande fixe de la teinte du fond, collée en haut — Safari relit sa couleur dès qu'elle change */
 #edgeTop,#edgeBottom{display:block!important;pointer-events:none}
 #edgeTop{top:0;height:max(6px,env(safe-area-inset-top,0px))!important}
-#edgeBottom{bottom:0;height:2px!important}   /* fine ligne pour la teinte de Safari : la liste reste visible jusqu'au bas de l'écran */
+/* Bande du bas DERRIÈRE la page (z-index 0, main au-dessus) : Safari peut y lire la teinte, mais elle ne cache plus la liste */
+#edgeBottom{bottom:0;height:max(12px,env(safe-area-inset-bottom,0px))!important;z-index:-1!important}   /* sous le fond d'écran : le fond descend jusqu'au bord de l'écran */
+#appWallpaper{bottom:-160px!important}
 html.map-edge #edgeTop,html.map-edge #edgeBottom{display:none!important}
 /* Titre « Horaires » à la même hauteur que « Parcours » : la ligne se comporte comme un simple titre, le bouton cible est posé à droite */
 #v-horaires>.row.between:first-child{display:block;position:relative}
 #v-horaires>.row.between:first-child>.target-btn{position:absolute;right:0;top:50%;transform:translateY(-50%);margin-right:4px}
+/* Safari : la page descend sous la barre d'outils jusqu'au bord de l'écran (la fin de liste reste au-dessus de la barre) */
+@media all{
+  html:not(.pwa) body>main{bottom:-120px!important;padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 100px)!important}
+  html:not(.pwa) body.list-page>main{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px) + 24px)!important}
+}
+/* Haut de liste : l'animation suit le doigt en continu (plus de saut de 64px d'un coup) */
+#moreTop.pulling:not(.busy){height:calc(var(--ins) * 64px)!important;opacity:min(1,calc(var(--ins) * 2));transition:none}
+#moreTop{will-change:height}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -3107,7 +3118,9 @@ renderDests(); renderTiles(); renderSMS(); locate();
 })();
 
 // Espace barre de date → première dalle = espace entre deux dalles (mesuré, pas codé en dur)
+let lastScrollAt=0; document.querySelector('main')?.addEventListener('scroll',()=>{lastScrollAt=performance.now()},{passive:true});
 function fitListGap(){ try{
+  if(performance.now()-lastScrollAt<700||(typeof insTopStart!=='undefined'&&insTopStart!=null)||$('#moreTop')?.classList.contains('pulling')){ clearTimeout(fitListGap._t); fitListGap._t=setTimeout(fitListGap,750); return }   // jamais pendant un défilement : l'inertie reste fluide
   const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
   const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0]||document.querySelector('#journeys > .card, #journeys > .spin');   // aussi « Aucun départ à proximité »
   if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
