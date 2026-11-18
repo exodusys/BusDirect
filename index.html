@@ -1882,7 +1882,7 @@ const alertsNoInterr=it=>{const al=alertsOf(it);return it.legs.some(isReplBus)?a
 function alertBanner(al){
   if(!al.length) return '';
   const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al[0];
-  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
+  return `<div class="alert ${a.cancel?'bad':''}"><span class="al-ic">${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠︎':a.works?'🚧':'⚠︎'}</span><span class="al-t"><b>${esc(a.title)}</b> ${a.leg.routeShortName?badge(a.leg,'mini'):''} ${esc(a.head)}</span>${al.length>1?`<span class="al-n">+${al.length-1}</span>`:''}</div>`;
 }
 function alertDetails(al){
   return al.map(a=>`<div class="al-d"><div class="row" style="gap:6px">${a.leg.routeShortName?badge(a.leg,'mini'):''}<b>${esc(a.title)}</b></div>
@@ -1924,7 +1924,7 @@ function journeyHTML(it,i,tracked){
       <div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div>
       <div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div>
     </div>
-    <div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'}</button>`})():''}</div>
+    <div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠︎':a.works?'🚧':'⚠︎'}</button>`})():''}</div>
     <div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div>
   </div>`;
@@ -1965,7 +1965,7 @@ function renderJourneyPage(){
     jpIt.legs.forEach((l,li)=>{ const g=al.filter(a=>a.leg===l); const row=rows[li]; if(!g.length||!row) return;
       const a=g.find(x=>x.cancel)||g.find(x=>x.repl)||g.find(x=>x.detour)||g.find(x=>x.works)||g[0];
       const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
-      b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
+      b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠︎':a.works?'🚧':'⚠︎'; if(g.length>1) b.dataset.n=g.length;
       b.onclick=e=>{ e.stopPropagation(); showAlertDialog(g) };
       const tgt=row.querySelector(':scope > div:last-child'); (tgt||row).prepend(b) }) }
   if(jpIt._walkOnly){ const cd=card.querySelector('.jr-top .cd'); if(cd) cd.innerHTML='' }   // marche seule : pas de compte à rebours ni « à quai »
@@ -2544,7 +2544,7 @@ async function openMap(it,walkLeg){
   mapIt=it; boardStop=firstTransit(it)?.from;
   { const al=alertsOf(it).filter(a=>a.leg.mode!=='WALK'), el=$('#mapAl');   // travaux / perturbations de la ligne dans le bandeau de la carte
     if(el){ if(al.length){ const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];
-      el.innerHTML=`${a.cancel?'⛔':a.detour?'↪︎':a.repl?'🚌':a.works?'🚧':'⚠︎'} <b>${esc(a.title)}</b>${a.leg.routeShortName?' '+esc(a.leg.routeShortName):''} · ${esc(a.head||a.desc)}${al.length>1?` (+${al.length-1})`:''}`;
+      el.innerHTML=`${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠︎':a.works?'🚧':'⚠︎'} <b>${esc(a.title)}</b>${a.leg.routeShortName?' '+esc(a.leg.routeShortName):''} · ${esc(a.head||a.desc)}${al.length>1?` (+${al.length-1})`:''}`;
       el.title=al.map(x=>x.title+' : '+(x.head||x.desc)).join('\n'); el.style.display='' } else { el.style.display='none'; el.innerHTML='' } } }
   $('#mapView').classList.add('open');
   const ft=firstTransit(it);
