@@ -2595,6 +2595,12 @@ async function loadMapLib(){
   throw new Error('maplibre');
 }
 const kmDist=(a,b)=>dist({lat:a[1],lon:a[0]},{lat:b[1],lon:b[0]});
+function snapOnLine(p,coords){ // point le plus proche sur le tracé : {d (km), i (segment), pt}
+  let best={d:Infinity,i:0,pt:coords[0]};
+  for(let i=1;i<coords.length;i++){const A=coords[i-1],B=coords[i],dx=B[0]-A[0],dy=B[1]-A[1],L=dx*dx+dy*dy;
+    const t=L?Math.max(0,Math.min(1,((p[0]-A[0])*dx+(p[1]-A[1])*dy)/L)):0, q=[A[0]+t*dx,A[1]+t*dy], d=kmDist(p,q); if(d<best.d) best={d,i,pt:q}}
+  return best;
+}
 function nearestOnLine(p,coords){ // distance (km) du point au tracé
   let best=Infinity;
   for(let i=1;i<coords.length;i++){const A=coords[i-1],B=coords[i],dx=B[0]-A[0],dy=B[1]-A[1],L=dx*dx+dy*dy;
@@ -3107,7 +3113,12 @@ async function onMyPos(force){
   { const fl=show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]; ['route-walk','route-walk-casing','route-walk-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setFilter(id,fl) }) }
   { const v=show&&mapWalk!=null&&mapWalk===wIdx?'none':'visible'; ['walkto','walkto-casing','walkto-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setLayoutProperty(id,'visibility',v) }) }
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
-  if(!walkGeo||Date.now()-lastWalkFetch>60000||kmDist(me,walkGeo[0])>0.05){ lastWalkFetch=Date.now(); walkGeo=await walkRoute(me,boardStop) }
+  // tracé à pied adapté à ta position : la partie déjà parcourue disparaît ; nouvel itinéraire si tu t'écartes de plus de 30 m
+  { const sn=walkGeo&&walkGeo.length>1?snapOnLine(me,walkGeo):null;
+    if(!walkGeo||!sn||sn.d>0.03||(Date.now()-lastWalkFetch>120000&&!navOn)){ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
+    else walkGeo=[me,...walkGeo.slice(sn.i)];   // départ du tracé collé à ta position
+  }
+  if(!walkGeo||!walkGeo.length) return;
   mlMap.getSource('walkto')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:walkGeo}});
   let len=0; for(let i=1;i<walkGeo.length;i++) len+=kmDist(walkGeo[i-1],walkGeo[i]);
   const depAtMs=tg.at, wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((depAtMs-Date.now())/60000);
@@ -3119,7 +3130,7 @@ async function onMyPos(force){
   if(navOn){ if(hd==null) bearTarget=bearing(me,walkGeo[Math.min(1,walkGeo.length-1)]); if(force) mlMap.easeTo({center:meShown||me,bearing:bearTarget??0,pitch:is3D?55:0,zoom:Math.max(mlMap.getZoom(),17.5),duration:600}); if(toStop<0.02){toast('Tu es arrivé à l\'arrêt');stopNav()} }
 }
 // Marche à faire maintenant : vers le prochain transport à prendre (même après un changement), sinon vers la destination
-let walkTargetKey='';
+let walkTargetKey='', walkFetching=false;
 function walkTarget(it){
   if(!it) return null; const now=Date.now(), legs=it.legs;
   if(legs.some(l=>l.mode!=='WALK'&&now>=+new Date(l.startTime)+60000&&now<+new Date(l.endTime)-60000)) return null;   // à bord : pas de marche à lancer
