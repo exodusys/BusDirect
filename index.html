@@ -3218,10 +3218,15 @@ function walkTarget(it){
 async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
   try{
     for(const v of PLAN_VERSIONS){
-      const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${stop.lat},${stop.lon}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
+      // vers l'arrêt lui-même (son identifiant) : le calcul utilise ses vrais accès piétons, au lieu de la route la plus proche de ses coordonnées
+      const to=stop.stopId?encodeURIComponent(stop.stopId):`${stop.lat},${stop.lon}`;
+      const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${to}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
       if(!r.ok) continue; const d=await r.json();
       const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
-      if(w){ drawStairs('walk',w.legs); return w.legs.flatMap(legCoords); }
+      if(w){ const g=w.legs.flatMap(legCoords); let L=0; for(let i=1;i<g.length;i++) L+=kmDist(g[i-1],g[i]);
+        const crow=kmDist(me,[stop.lon,stop.lat]);
+        if(crow<0.15&&L>Math.max(0.25,crow*4)) break;   // détour absurde pour un arrêt tout proche (arrêt mal raccordé aux trottoirs) : ligne directe
+        drawStairs('walk',w.legs); return g; }
       break;
     }
   }catch{}
