@@ -1173,8 +1173,12 @@ async function plan(dest, time, cursor, from){
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
-  for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
-    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();} }catch(e){}
+  // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
+  const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
+  const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
+  for(const q of [qs,light]) for(const v of tries){
+    try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();}
+      if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
   }
   throw new Error('plan');
 }
