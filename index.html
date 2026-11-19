@@ -1557,7 +1557,7 @@ async function loadJourneys(force){
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
-    renderJourneyList();
+    renderJourneyList(); applyLiveFix(lastJourneys.slice(0,8)).then(ch=>{ if(ch&&gen===jGen) renderJourneyList() });   // heure et retard corrigés par la position réelle, comme sur la carte
   }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
@@ -2105,13 +2105,43 @@ function jpMoveVehicles(){
     veh.style.display=''; jpStartVehAnim();
   });
 }
+/* Correction temps réel commune (comme sur la carte) : écart entre la position réelle du véhicule (map/trips) et les heures en direct,
+   qui s'efface d'ici l'arrêt suivant */
+async function measureLiveFix(trip,tripId){
+  if(!trip||!trip.cum||!tripId) return null; const now=Date.now(), coords=trip.coords||[]; if(!coords.length) return null;
+  const lons=coords.map(c=>c[0]),lats=coords.map(c=>c[1]),pad=.02;
+  const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
+  for(const v of ['v1','v2','v5']){ try{
+    const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(!r.ok) continue; const segs=await r.json();
+    const seg=segs.find(x=>(x.trips||[]).some(t=>t.tripId===tripId)&&now>=+new Date(x.departure)-30000&&now<=+new Date(x.arrival)+30000); if(!seg) return null;
+    const nm=String(seg.from?.name||''), sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
+    let off=(+new Date(seg.departure))-sx.d; if(Math.abs(off)>3*3600e3||Math.abs(off)<15000) off=0;
+    const nx=trip.stops[trip.stops.indexOf(sx)+1]; return {off,at:now,until:nx?Math.max(now+30000,nx.a+off):now+180000};
+  }catch{} } return null;
+}
+/* Heure de départ et retard des parcours (prochains parcours, détail, suivis) : heures en direct + correction de la position réelle du véhicule */
+const liveFixCache={};
+async function applyLiveFix(list){
+  let changed=false;
+  await Promise.all((list||[]).map(async it=>{ const ft=firstTransit(it); if(!ft?.tripId||ft._fix) return;
+    const t0=+new Date(ft.startTime); if(!(t0>Date.now()-60000&&t0<Date.now()+45*60000)) return;   // départs proches seulement
+    try{ const trip=await loadTrip(ft); if(!trip||!trip.cum) return;
+      let c=liveFixCache[ft.tripId]; if(!c||Date.now()-c.t>10000){ c={t:Date.now(),f:await measureLiveFix(trip,ft.tripId)}; liveFixCache[ft.tripId]=c }
+      const off=Math.round(fixOffset(c.f,t0)/1000)*1000; ft._fix=true; if(Math.abs(off)<15000) return;
+      ft.startTime=new Date(t0+off).toISOString(); if(it.legs[0]===ft) it.startTime=ft.startTime; changed=true;
+    }catch{} }));
+  return changed;
+}
+const fixOffset=(f,t)=>!f||!f.off?0:f.off*Math.max(0,Math.min(1,(f.until-t)/((f.until-f.at)||1)));
 /* Point du véhicule : même suivi que sur la carte (kilomètres le long de la course, vitesse ajustée à l'horaire en direct, sans saut ni recul) */
 let jpVehRaf=null, jpVehLast=0;
 function jpStartVehAnim(){ if(jpVehRaf) return;
   const tick=()=>{ jpVehRaf=null; const pg=$('#stopPage'); if(!pg||!pg.classList.contains('on')) return;
     const now=Date.now(), dt=Math.min(0.25,(now-(jpVehLast||now))/1000); jpVehLast=now; let any=false;
     pg.querySelectorAll('.stl').forEach(box=>{ const v=box._v, veh=box.querySelector('.stl-veh'); if(!v||!veh||veh.style.display==='none') return;
-      const {trip,s0,e}=v, st=trip.stops, kT=kmOnTrip(trip,now); if(kT==null) return; any=true;
+      const {trip,s0,e,l}=v, st=trip.stops;
+      if(!box._fixAt||now-box._fixAt>10000){ box._fixAt=now; measureLiveFix(trip,l?.tripId).then(f=>{ if(f) box._fix=f }) }   // position en temps réel : toutes les 10 s
+      const kT=kmOnTrip(trip,now-fixOffset(box._fix,now)); if(kT==null) return; any=true;
       if(box._km==null) box._km=kT; const diff=kT-box._km;
       if(diff>0) box._km+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5)); else if(diff<-0.4) box._km+=diff*Math.min(1,dt*0.15);
       const km=box._km; let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
@@ -2176,6 +2206,7 @@ async function refreshTracked(){
     }catch{}
   }
   save(); renderTracked();   // plus d'info-bulle « Suivis actualisés »
+  if(await applyLiveFix(S.tracked.map(t=>t.it))) renderTracked();   // même correction temps réel que la carte
 }
 setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
 setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys() },20000);   // heures réelles des prochains parcours : toutes les 20 s
@@ -2975,7 +3006,11 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
-let vehLastT=0, vehKm=null, vehKmTrip=null;
+let vehLastT=0, vehKm=null, vehKmTrip=null, liveFix={at:0,until:0};
+/* Base : heures en direct arrêt par arrêt. La position en temps réel ne corrige que l'écart du moment,
+   correction qui s'efface d'ici l'arrêt suivant (les heures en direct des arrêts suivants restent valables) */
+function liveOffset(t){ const o=delayShown??delayTarget; if(!o) return 0; if(!liveFix.until) return o;
+  return o*Math.max(0,Math.min(1,(liveFix.until-t)/((liveFix.until-liveFix.at)||1))) }
 let delayTarget=0, delayShown=null, followVeh=false, lastFollowGesture=0, followResume=false, nextStopMk=null, lastNextStop=0;
 // Suivre le véhicule : la carte reste centrée sur lui pendant qu'il roule
 // Tronçon en transport correspondant à l'heure actuelle : celui en cours, sinon le prochain (après une correspondance)
@@ -2995,7 +3030,7 @@ async function toggleFollowVeh(){
 // Bulle « prochain arrêt » du véhicule
 function drawNextStop(){
   const tr=vehState?.trip; if(!tr||!tr.stops||!vehMk){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
-  const t=Date.now()-(delayShown??delayTarget);
+  const t=Date.now()-liveOffset(Date.now());
   const ns=tr.stops.find(x=>x.a>t+5000); if(!ns){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
   const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#e30613';
   const html=`<div class="ns-b" style="--c:${col}"><small>Prochain arrêt</small><b>${esc(ns.name)}</b><em>${hm(ns.arr)}</em></div>`;
@@ -3007,7 +3042,7 @@ function decisiveStop(ft){ const now=Date.now();
   return now<+new Date(ft.startTime)?{name:ft.from?.name,at:+new Date(ft.startTime),lbl:'Montée'}:{name:ft.to?.name,at:+new Date(ft.endTime),lbl:'Descente'} }
 function vehPosAt(t){
   if(!vehState) return null;
-  if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-(delayShown??delayTarget)) }
+  if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-liveOffset(t)) }
   if(vehState.kind==='seg') return alongLine(vehState.line,(t-vehState.dep)/((vehState.arr-vehState.dep)||1));
   return estimateOnTrip(vehState.trip,t);
 }
@@ -3020,7 +3055,7 @@ function startVehAnim(){
     if(delayShown==null) delayShown=delayTarget; delayShown+=(delayTarget-delayShown)*Math.min(1,dt*0.35);   // retard corrigé en douceur (≈3 s), sans saut
     let target=null;
     if(vehState.trip&&vehState.trip.cum){   // suivi le long du tracé en kilomètres : vitesse ajustée, jamais de saut ni de marche arrière
-      const kT=kmOnTrip(vehState.trip,nowT-(delayShown??delayTarget));
+      const kT=kmOnTrip(vehState.trip,nowT-liveOffset(nowT));
       if(kT!=null){ if(vehKm==null||vehKmTrip!==vehState.trip) { vehKm=kT; vehKmTrip=vehState.trip }
         const diff=kT-vehKm;
         if(diff>0) vehKm+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5));          // en retard sur la position calculée : accélère pour rattraper
@@ -3050,7 +3085,7 @@ async function updateVehicle(){
   if(!mapIt||!mlMap) return;
   const ft=activeLeg(mapIt); if(!ft) return;
   const lk=(ft.tripId||'')+'|'+ft.startTime;
-  if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; vehKm=null; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
+  if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; vehKm=null; liveFix={at:0,until:0}; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
     const ttl=$('#mapTitle'); if(ttl&&mapWalk==null) ttl.textContent=`${ft.routeShortName||''} → ${ft.headsign||ft.to?.name||''}` }
   let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
   const coords=trip?.coords||legCoords(ft);
@@ -3066,7 +3101,8 @@ async function updateVehicle(){
         const line=sc||[[seg.from.lon,seg.from.lat],[seg.to.lon,seg.to.lat]];
         if(trip&&trip.cum){ // temps réel → on en déduit le retard sur la course entière
           const nm=String(seg.from?.name||''); const sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
-          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3||Math.abs(delayTarget)<15000) delayTarget=0;
+          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3||Math.abs(delayTarget)<15000) delayTarget=0;   // écart entre la position réelle et les heures en direct
+          { const ix=trip.stops.indexOf(sx), nx=trip.stops[ix+1]; liveFix={at:now,until:nx?Math.max(now+30000,nx.a+delayTarget):now+180000} }
           vehState={kind:'trip',trip};
         } else vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip};
         p=vehPosAt(now); live=!!seg.realTime}
