@@ -703,6 +703,7 @@ header .appname{position:relative;padding-bottom:6px}
 header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:0;height:3px;background:var(--accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat}   /* soulignement accent qui finit en tirets de plus en plus petits */
 #v-suivis>.row:first-child h2{margin-bottom:4px}
 #tracked>h3:first-child{margin-top:0}   /* liste des suivis remontée sous le titre */
+.cd .sched{font-size:12px;font-weight:700;color:var(--muted)}   /* pas de temps réel pour cette course */
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -1977,7 +1978,7 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
+      <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="ontime">${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div>
     </div>
     <div class="jr-times">
       <div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
