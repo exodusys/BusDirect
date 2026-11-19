@@ -2997,6 +2997,17 @@ function drawApproachStops(trip,p,ft,show){
   }
   for(const [k,m] of apprMks) if(!keep.has(k)){ m.remove(); apprMks.delete(k) }
 }
+/* Trait tireté collé au bus : la partie déjà parcourue s'efface à chaque image, au passage du bus */
+let apprIb=null, apprIbKey='';
+function updateApproachLive(){
+  const src=mlMap?.getSource('approach'); if(!src||!vehState?.trip?.cum||vehKm==null||!mapIt) return;
+  const ft=activeLeg(mapIt), trip=vehState.trip; if(!ft||Date.now()>=+new Date(ft.startTime)+30000){ src.setData({type:'FeatureCollection',features:[]}); return }
+  const key=ft.tripId+'|'+ft.from.name; if(key!==apprIbKey){ apprIbKey=key; apprIb=nearestIdx(trip.coords,[ft.from.lon,ft.from.lat]) }
+  const kb=trip.cum[apprIb]; if(vehKm>=kb){ src.setData({type:'FeatureCollection',features:[]}); return }
+  const cum=trip.cum; let lo=0,hi=cum.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(cum[m]<=vehKm) lo=m; else hi=m}
+  const line=[pointAtKm(trip,vehKm),...trip.coords.slice(lo+1,apprIb+1),[ft.from.lon,ft.from.lat]];
+  src.setData({type:'Feature',properties:{color:lineColor(ft)[0]},geometry:{type:'LineString',coordinates:line}});
+}
 function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon arrêt de montée
   const src=mlMap.getSource('approach'); let data={type:'FeatureCollection',features:[]};
   if(trip&&p&&ft&&Date.now()<+new Date(ft.startTime)+30000){
@@ -3087,6 +3098,7 @@ function startVehAnim(){
       }
       vehMk.setLngLat(vehShown);
       if(Date.now()-lastApproach>2000){ lastApproach=Date.now(); const ft=activeLeg(mapIt); drawApproach(vehState.trip,vehShown,ft) }
+      updateApproachLive();   // le tireté suit le bus image par image
     }
     vehRaf=requestAnimationFrame(tick);
   };
@@ -3223,10 +3235,7 @@ async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon 
       const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${to}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
       if(!r.ok) continue; const d=await r.json();
       const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
-      if(w){ const g=w.legs.flatMap(legCoords); let L=0; for(let i=1;i<g.length;i++) L+=kmDist(g[i-1],g[i]);
-        const crow=kmDist(me,[stop.lon,stop.lat]);
-        if(crow<0.15&&L>Math.max(0.25,crow*4)) break;   // détour absurde pour un arrêt tout proche (arrêt mal raccordé aux trottoirs) : ligne directe
-        drawStairs('walk',w.legs); return g; }
+      if(w){ drawStairs('walk',w.legs); return w.legs.flatMap(legCoords); }
       break;
     }
   }catch{}
