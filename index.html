@@ -1558,7 +1558,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
-    renderJourneyList();
+    renderJourneyList(); applyLiveFix(lastJourneys.slice(0,3)).then(ch=>{ if(ch&&gen===jGen) renderJourneyList() });   // heure et retard corrigés par la position réelle, comme sur la carte
   }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
@@ -2122,6 +2122,19 @@ async function measureLiveFix(trip,tripId,center){
     const nx=trip.stops[trip.stops.indexOf(sx)+1]; return {off,at:now,until:nx?Math.max(now+30000,nx.a+off):now+180000};
   }catch{} } return null;
 }
+/* Heure de départ et retard des parcours (prochains parcours, détail, suivis) : heures en direct + correction de la position réelle du véhicule */
+const liveFixCache={};
+async function applyLiveFix(list){
+  let changed=false;
+  await Promise.all((list||[]).map(async it=>{ const ft=firstTransit(it); if(!ft?.tripId||ft._fix) return;
+    const t0=+new Date(ft.startTime); if(!(t0>Date.now()-60000&&t0<Date.now()+15*60000)) return;   // départs dans les 15 min seulement
+    try{ const trip=await loadTrip(ft); if(!trip||!trip.cum) return;
+      let c=liveFixCache[ft.tripId]; if(!c||Date.now()-c.t>20000){ c={t:Date.now(),f:await measureLiveFix(trip,ft.tripId,[ft.from.lon,ft.from.lat])}; liveFixCache[ft.tripId]=c }   // zone autour de ton arrêt, 20 s de cache
+      const off=Math.round(fixOffset(c.f,t0)/1000)*1000; ft._fix=true; if(Math.abs(off)<15000) return;
+      ft.startTime=new Date(t0+off).toISOString(); if(it.legs[0]===ft) it.startTime=ft.startTime; changed=true;
+    }catch{} }));
+  return changed;
+}
 const fixOffset=(f,t)=>!f||!f.off?0:f.off*Math.max(0,Math.min(1,(f.until-t)/((f.until-f.at)||1)));
 /* Point du véhicule : même suivi que sur la carte (kilomètres le long de la course, vitesse ajustée à l'horaire en direct, sans saut ni recul) */
 let jpVehRaf=null, jpVehLast=0;
@@ -2203,6 +2216,7 @@ async function refreshTracked(auto){
   }
   if(!did) return;
   save(); renderTracked();   // plus d'info-bulle « Suivis actualisés »
+  if(await applyLiveFix(S.tracked.map(t=>t.it))) renderTracked();   // même correction temps réel que la carte
   } finally { refreshTracked._busy=false }
 }
 setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
