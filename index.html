@@ -445,7 +445,8 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .stl-r.me span{font-weight:800}
 .stl-r.me i::before{width:14px;height:14px}
 .stl-r.done{opacity:.45}
-.stl-veh{position:absolute;left:-4px;top:4px;width:26px;height:26px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:transform 1s linear;z-index:1}
+.stl-veh{position:absolute;left:2px;top:10px;width:14px;height:14px;border-radius:50%;background:var(--c);border:2px solid #fff;box-sizing:border-box;z-index:1;will-change:transform;animation:stlPulse 2s ease-in-out infinite}
+@keyframes stlPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent);opacity:1}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--c) 0%,transparent);opacity:.7}}   /* point de la couleur de la ligne qui clignote doucement */
 .leg.walk-row{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
 .leg.walk-row:active{background:rgba(127,127,127,.15)}
 .gare{font-weight:700;color:var(--text)}
@@ -702,6 +703,7 @@ header .appname{position:relative;padding-bottom:6px}
 header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:0;height:3px;background:var(--accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat}   /* soulignement accent qui finit en tirets de plus en plus petits */
 #v-suivis>.row:first-child h2{margin-bottom:4px}
 #tracked>h3:first-child{margin-top:0}   /* liste des suivis remontée sous le titre */
+.cd .sched{font-size:12px;font-weight:700;color:var(--muted)}   /* pas de temps réel pour cette course */
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -745,7 +747,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
 
   <!-- SUIVIS -->
   <section class="view" id="v-suivis">
-    <div class="row between"><h2>Suivis</h2><button class="btn ghost sm" onclick="refreshTracked()">↻</button></div>
+    <div class="row between"><h2>Suivis</h2></div>
     <div id="tracked"></div>
   </section>
 
@@ -840,7 +842,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
     <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
   </div>
   <div class="map-ctrl glass">
-    <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule">🚌</button>
+    <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button>
     <button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button>
     <button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button>
     <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
@@ -1171,8 +1173,12 @@ async function plan(dest, time, cursor, from){
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
-  for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
-    try{ const r=await fetch(`${API}/${v}/plan?${qs}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();} }catch(e){}
+  // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
+  const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
+  const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
+  for(const q of [qs,light]) for(const v of tries){
+    try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();}
+      if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
   }
   throw new Error('plan');
 }
@@ -1255,7 +1261,7 @@ async function nextDepartures(dest,from,onMore){
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
     for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
   const out=await fin(cleanList(all)); out._cur=curs;
-  walkIt=await walkOnlyFor(d,origDest,from).catch(()=>null);   // marche à pied seule jusqu'à la destination
+  { const pk=(selFrom?.uid||'me')+'>'+selDest?.uid; walkOnlyFor(d,origDest,from).then(w=>{ if(pk!==(selFrom?.uid||'me')+'>'+selDest?.uid) return; const had=!!walkIt; walkIt=w; if((w||had)&&listOpen()) renderJourneyList() }).catch(()=>{}) }   // marche à pied seule : calculée en arrière-plan, la liste s'affiche sans l'attendre
   return out;
 }
 /* Parcours entièrement à pied : sert à masquer les transports plus lents que la marche */
@@ -1347,17 +1353,18 @@ function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
     GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}updateAddr();renderSMS();res(pos)},
-      ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+      ()=>res(pos),{enableHighAccuracy:true,timeout:5000,maximumAge:15000});
   });
 }
 async function pickPair(from,to){
   listPos=null; walkIt=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
-  const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
-  if(!from&&!recent) await freshPos();                 // position récente : pas d'attente GPS
-  else if(!from) freshPos().then(()=>{ if(lastPlanPos&&pos&&dist(lastPlanPos,pos)>0.1){ listPos=null; loadJourneys() } });
-  if(selDest===to&&selFrom===from) loadJourneys();
+  // départ immédiat avec la dernière position connue ; la position fraîche n'est attendue que si aucune n'existe
+  const usable=pos&&(!SENS.geo.t||Date.now()-SENS.geo.t<10*60000);
+  if(!from&&!usable) await freshPos();
+  else if(!from) freshPos().then(()=>{ if(selDest===to&&lastPlanPos&&pos&&dist(lastPlanPos,pos)>0.1){ listPos=null; loadJourneys(true) } });
+  if(selDest===to&&selFrom===from) loadJourneys(true);   // jamais bloqué par une mise à jour en cours d'une autre liste
 }
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null, listPos=null;   // listPos : position figée à l'ouverture de la liste
@@ -1527,7 +1534,7 @@ async function refreshMyTrip(){ // actualisation en direct de la course suivie
 }
 let loadedFor=null, loading=false;
 let jGen=0;
-async function loadJourneys(force){
+async function loadJourneys(force){ lastListLoad=Date.now();
   if(!selDest||(loading&&!force)) return;   // force : « Maintenant » / nouvelle date relancent même si une recherche est en cours
   const gen=++jGen;
   if(selDest.type==='TRIP') return refreshMyTrip();
@@ -1975,7 +1982,7 @@ function journeyHTML(it,i,tracked){
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
         <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
       </div>
-      <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':''}</div>
+      <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="ontime">${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div>
     </div>
     <div class="jr-times">
       <div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div>
@@ -2084,7 +2091,7 @@ function openStopsPage(li){
     box._v={trip,l,s0,e,b};
     box.innerHTML=`<div class="stl-in" style="--c:${c};height:${list.length*STL_H}px"><i class="stl-rail"></i>`+list.map((st,k)=>{const gi=s0+k, me=gi===b||gi===e;
       return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}</span><small>${hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
-      +`<div class="stl-veh" style="--c:${c}">🚌</div></div>`;
+      +`<div class="stl-veh" style="--c:${c}"></div></div>`;
     jpMoveVehicles();
     // le véhicule visible à l'écran
     const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
@@ -2100,13 +2107,42 @@ function jpMoveVehicles(){
   document.querySelectorAll('#stopPage .stl').forEach(box=>{ const v=box._v; if(!v) return; const {trip,l,s0,e}=v, now=Date.now();
     refreshTripTimes(l,trip).then(()=>{ box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx} r.classList.toggle('done',st&&st.d<now-15000)}) });
     const veh=box.querySelector('.stl-veh'); if(!veh) return;
-    const km=kmOnTrip(trip,now); const st=trip.stops;
-    if(km==null||now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; return }
-    let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
-    else for(let i=s0;i<e;i++){ if(km<=st[i+1].km){ y=(i-s0+Math.max(0,Math.min(1,(km-st[i].km)/((st[i+1].km-st[i].km)||1))))*STL_H; break } }
-    veh.style.display=''; veh.style.transform=`translateY(${y}px)`;
+    const st=trip.stops; if(now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; box._km=null; return }
+    veh.style.display=''; jpStartVehAnim();
   });
 }
+/* Correction temps réel commune (comme sur la carte) : écart entre la position réelle du véhicule (map/trips) et les heures en direct,
+   qui s'efface d'ici l'arrêt suivant */
+async function measureLiveFix(trip,tripId,center){
+  if(!trip||!trip.cum||!tripId) return null; const now=Date.now();
+  // petite zone autour du point utile (arrêt de montée ou véhicule) : réponse légère, au lieu de tout le tracé de la ligne
+  if(!center){ const k=kmOnTrip(trip,now); center=k!=null?pointAtKm(trip,k):null } if(!center) return null;
+  const coords=[center], lons=[center[0]], lats=[center[1]], pad=.025;
+  const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
+  for(const v of ['v1','v2','v5']){ try{
+    const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(!r.ok) continue; const segs=await r.json();
+    const seg=segs.find(x=>(x.trips||[]).some(t=>t.tripId===tripId)&&now>=+new Date(x.departure)-30000&&now<=+new Date(x.arrival)+30000); if(!seg) return null;
+    const nm=String(seg.from?.name||''), sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
+    let off=(+new Date(seg.departure))-sx.d; if(Math.abs(off)>3*3600e3||Math.abs(off)<15000) off=0;
+    const nx=trip.stops[trip.stops.indexOf(sx)+1]; return {off,at:now,until:nx?Math.max(now+30000,nx.a+off):now+180000};
+  }catch{} } return null;
+}
+const fixOffset=(f,t)=>!f||!f.off?0:f.off*Math.max(0,Math.min(1,(f.until-t)/((f.until-f.at)||1)));
+/* Point du véhicule : même suivi que sur la carte (kilomètres le long de la course, vitesse ajustée à l'horaire en direct, sans saut ni recul) */
+let jpVehRaf=null, jpVehLast=0;
+function jpStartVehAnim(){ if(jpVehRaf) return;
+  const tick=()=>{ jpVehRaf=null; const pg=$('#stopPage'); if(!pg||!pg.classList.contains('on')) return;
+    const now=Date.now(), dt=Math.min(0.25,(now-(jpVehLast||now))/1000); jpVehLast=now; let any=false;
+    pg.querySelectorAll('.stl').forEach(box=>{ const v=box._v, veh=box.querySelector('.stl-veh'); if(!v||!veh||veh.style.display==='none') return;
+      const {trip,s0,e,l}=v, st=trip.stops;
+      const kT=kmOnTrip(trip,now);   // heures en direct (sinon prévues) if(kT==null) return; any=true;
+      if(box._km==null) box._km=kT; const diff=kT-box._km;
+      if(diff>0) box._km+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5)); else if(diff<-0.4) box._km+=diff*Math.min(1,dt*0.15);
+      const km=box._km; let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
+      else for(let i=s0;i<e;i++){ if(km<=st[i+1].km){ y=(i-s0+Math.max(0,Math.min(1,(km-st[i].km)/((st[i+1].km-st[i].km)||1))))*STL_H; break } }
+      veh.style.transform=`translateY(${y.toFixed(2)}px)` });
+    if(any) jpVehRaf=requestAnimationFrame(tick) };
+  jpVehRaf=requestAnimationFrame(tick) }
 function closeJourneyPage(){
   const pg=$('#jrPage'); if(!pg) return; clearInterval(jpTimer); clearInterval(jpVehTimer); jpOpenLegs=new Set();
   pg.classList.add('out'); document.documentElement.classList.remove('jp-lock');
@@ -2152,10 +2188,16 @@ function renderTracked(){
   bindJourneys(box,S.tracked.map(t=>t.it),true);
   updateSuivisTab();
 }
-async function refreshTracked(){
+async function refreshTracked(auto){
   // Re-plan around the original departure to get fresh real-time data for the same trip
-  if(!pos){locate();toast('Position requise');return}
+  if(!pos){ if(!auto){locate();toast('Position requise')} return }
+  if(refreshTracked._busy) return; refreshTracked._busy=true; let did=false;
+  try{
   for(const t of S.tracked){
+    // rythme : 20 s si départ dans moins de 15 min, 2 min au-delà, plus rien après l'arrivée
+    const now=Date.now(), dep=+new Date(firstTransit(t.it)?.startTime||t.it.startTime), end=+new Date(t.it.endTime);
+    if(auto){ if(now>end) continue; const every=dep-now<15*60000?20000:120000; if(now-(t._ref||0)<every) continue }
+    t._ref=now; did=true;
     try{
       const ft=firstTransit(t.it);
       const d=await plan(t.dest,new Date(new Date(t.it.startTime).getTime()-60000),null,t.from);
@@ -2163,12 +2205,18 @@ async function refreshTracked(){
       if(match) t.it=match;
     }catch{}
   }
+  if(!did) return;
   save(); renderTracked();   // plus d'info-bulle « Suivis actualisés »
+  } finally { refreshTracked._busy=false }
 }
 setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
-setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys() },20000);   // heures réelles des prochains parcours : toutes les 20 s
+// Rafraîchissement adaptatif des prochains parcours : 20 s si un départ a lieu dans moins de 10 min, sinon 60 s
+var lastListLoad=0;
+setInterval(()=>{ if(!listOpen()||!selDest||document.hidden) return;
+  const now=Date.now(), soon=lastJourneys.some(it=>{const t=jStart(it);return t>now-60000&&t<now+10*60000});
+  if(now-lastListLoad>=(soon?20000:60000)){ lastListLoad=now; loadJourneys() } },5000);
 setInterval(()=>{
-  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(); },20000);   // suivis : toutes les 20 s
+  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(true); },5000);   // suivis : rythme adaptatif (voir refreshTracked)
 
 /* ========= Tickets SMS ========= */
 const REGIONS=[
@@ -2647,7 +2695,7 @@ async function openMap(it,walkLeg){
   mlMap.resize();drawItinerary(it); renderMapSteps();
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
-  updateVehicle(); mapTimers.push(setInterval(updateVehicle,5000));   // position en temps réel redemandée toutes les 5 s
+  updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000)); syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
   startMeWatch();
 }
 /* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
@@ -2878,7 +2926,7 @@ function closeMap(){ $('#mapView').classList.remove('open'); mapTimers.forEach(c
 const tripCache={};
 // Horaires en direct de la course : on recharge les heures de passage (temps réel) sans recalculer le tracé
 async function refreshTripTimes(ft,trip){
-  if(!trip||!ft?.tripId||Date.now()-(trip._t||0)<10000) return trip;   // heures en direct : au plus toutes les 10 s
+  if(!trip||!ft?.tripId||Date.now()-(trip._t||0)<20000) return trip;
   trip._t=Date.now();
   for(const v of ['v5','v4','v3','v2','v1']){
     try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`,{cache:'no-store'}); if(!r.ok) continue;
@@ -2911,10 +2959,13 @@ function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return 
   let lo=0,hi=cum.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(cum[m]<km) lo=m; else hi=m}
   const f=(km-cum[lo])/((cum[hi]-cum[lo])||1); return [c[lo][0]+(c[hi][0]-c[lo][0])*f, c[lo][1]+(c[hi][1]-c[lo][1])*f] }
 // Position continue sur toute la course : arrêt pendant la halte, puis départ en douceur (accélération/freinage)
+// profil de vitesse réaliste : accélère en quittant l'arrêt, roule à vitesse constante, freine en arrivant
+function easeStop(p,r=0.2){ p=Math.max(0,Math.min(1,p)); const v=1/(1-r);   // r : part du trajet en accélération / freinage
+  if(p<r) return v*p*p/(2*r); if(p>1-r){ const q=1-p; return 1-v*q*q/(2*r) } return v*(p-r/2) }
 function kmOnTrip(trip,t){ const st=trip.stops; if(!st||!st.length||!trip.cum) return null;
   if(t<=st[0].d) return st[0].km;
   for(let i=1;i<st.length;i++){ const A=st[i-1],B=st[i];
-    if(t<=B.a){ const p=Math.max(0,Math.min(1,(t-A.d)/((B.a-A.d)||1))); const e=p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2; return A.km+(B.km-A.km)*e }
+    if(t<=B.a){ const p=Math.max(0,Math.min(1,(t-A.d)/((B.a-A.d)||1))); const e=easeStop(p); return A.km+(B.km-A.km)*e }
     if(t<=B.d) return B.km; }
   return st.at(-1).km }
 function estimateOnTrip(trip,now){ // position estimée selon l'horaire de la course
@@ -2960,6 +3011,11 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
+let vehLastT=0, vehKm=null, vehKmTrip=null, liveFix={at:0,until:0};
+/* Base : heures en direct arrêt par arrêt. La position en temps réel ne corrige que l'écart du moment,
+   correction qui s'efface d'ici l'arrêt suivant (les heures en direct des arrêts suivants restent valables) */
+function liveOffset(t){ return 0; const o=delayShown??delayTarget; if(!o) return 0; if(!liveFix.until) return o;
+  return o*Math.max(0,Math.min(1,(liveFix.until-t)/((liveFix.until-liveFix.at)||1))) }
 let delayTarget=0, delayShown=null, followVeh=false, lastFollowGesture=0, followResume=false, nextStopMk=null, lastNextStop=0;
 // Suivre le véhicule : la carte reste centrée sur lui pendant qu'il roule
 // Tronçon en transport correspondant à l'heure actuelle : celui en cours, sinon le prochain (après une correspondance)
@@ -2969,17 +3025,23 @@ function activeLeg(it){
   return tl.find(l=>now<=+new Date(l.endTime))||tl.at(-1);
 }
 let vehLegKey='';
+function syncFollowBtn(){   // bouton du bus visible seulement si un véhicule est affiché sur la carte
+  const b=$('#btnFollow'); if(!b) return; const ok=!!(vehMk&&vehShown);
+  b.style.display=ok?'':'none'; if(!ok&&followVeh){ followVeh=false; b.classList.remove('on') } }
 async function toggleFollowVeh(){
-  if(!followVeh){ await updateVehicle(); }                 // repère l'heure actuelle et le bon véhicule avant de suivre
-  if(!vehMk||!vehShown){ toast('Position du véhicule pas encore disponible'); return }
-  followVeh=!followVeh; $('#btnFollow').classList.toggle('on',followVeh);
-  if(followVeh){ if(navOn) stopNav(); lastFollowGesture=0; mlMap.easeTo({center:vehShown,zoom:14.3,duration:700}); toast('Suivi du véhicule activé') }
-  else if(pos){ mlMap.easeTo({center:[pos.lon,pos.lat],zoom:Math.max(mlMap.getZoom(),16),duration:700}) }   // retour à ma position
+  const btn=$('#btnFollow');
+  if(followVeh){ followVeh=false; btn.classList.remove('on'); if(pos) mlMap.easeTo({center:[pos.lon,pos.lat],zoom:Math.max(mlMap.getZoom(),16),duration:500}); return }   // retour à ma position
+  followVeh=true; btn.classList.add('on'); if(navOn) stopNav(); lastFollowGesture=0;   // réaction immédiate
+  if(vehMk&&vehShown){ mlMap.easeTo({center:vehShown,zoom:14.3,duration:500}); updateVehicle() }   // position connue : on y va tout de suite, mise à jour en arrière-plan
+  else { await updateVehicle();
+    if(!followVeh) return;
+    if(!vehMk||!vehShown){ followVeh=false; btn.classList.remove('on'); toast('Position du véhicule pas encore disponible'); return }
+    mlMap.easeTo({center:vehShown,zoom:14.3,duration:500}) }
 }
 // Bulle « prochain arrêt » du véhicule
 function drawNextStop(){
   const tr=vehState?.trip; if(!tr||!tr.stops||!vehMk){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
-  const t=Date.now()-(delayShown??delayTarget);
+  const t=Date.now()-liveOffset(Date.now());
   const ns=tr.stops.find(x=>x.a>t+5000); if(!ns){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
   const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#e30613';
   const html=`<div class="ns-b" style="--c:${col}"><small>Prochain arrêt</small><b>${esc(ns.name)}</b><em>${hm(ns.arr)}</em></div>`;
@@ -2991,9 +3053,7 @@ function decisiveStop(ft){ const now=Date.now();
   return now<+new Date(ft.startTime)?{name:ft.from?.name,at:+new Date(ft.startTime),lbl:'Montée'}:{name:ft.to?.name,at:+new Date(ft.endTime),lbl:'Descente'} }
 function vehPosAt(t){
   if(!vehState) return null;
-  // temps réel en priorité : le tronçon renvoyé par Transitous (positions et heures en direct) tant qu'il est valable
-  if(vehState.live&&vehState.line&&t>=vehState.dep-30000&&t<=vehState.arr+15000) return alongLine(vehState.line,Math.max(0,Math.min(1,(t-vehState.dep)/((vehState.arr-vehState.dep)||1))));
-  if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-(delayShown??delayTarget)) }
+  if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-liveOffset(t)) }
   if(vehState.kind==='seg') return alongLine(vehState.line,(t-vehState.dep)/((vehState.arr-vehState.dep)||1));
   return estimateOnTrip(vehState.trip,t);
 }
@@ -3002,12 +3062,22 @@ function startVehAnim(){
   const tick=()=>{
     vehRaf=null;
     if(!vehMk||!vehState||!$('#mapView').classList.contains('open')) return;
-    if(delayShown==null) delayShown=delayTarget; delayShown+=(delayTarget-delayShown)*0.03;   // le retard évolue progressivement : pas de saut
-    const target=vehPosAt(Date.now());
+    const nowT=Date.now(), dt=Math.min(0.25,(nowT-(vehLastT||nowT))/1000); vehLastT=nowT;
+    if(delayShown==null) delayShown=delayTarget; delayShown+=(delayTarget-delayShown)*Math.min(1,dt*0.35);   // retard corrigé en douceur (≈3 s), sans saut
+    let target=null;
+    if(vehState.trip&&vehState.trip.cum){   // suivi le long du tracé en kilomètres : vitesse ajustée, jamais de saut ni de marche arrière
+      const kT=kmOnTrip(vehState.trip,nowT-liveOffset(nowT));
+      if(kT!=null){ if(vehKm==null||vehKmTrip!==vehState.trip) { vehKm=kT; vehKmTrip=vehState.trip }
+        const diff=kT-vehKm;
+        if(diff>0) vehKm+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5));          // en retard sur la position calculée : accélère pour rattraper
+        else if(diff<-0.4) vehKm+=diff*Math.min(1,dt*0.15);                // très en avance (correction d'horaire) : recule très doucement
+        /* légèrement en avance : le bus ralentit (attend) jusqu'à ce que la position calculée le rejoigne */
+        target=pointAtKm(vehState.trip,vehKm) } }
+    if(!target) target=vehPosAt(nowT);
     if(target){
       if(!vehShown) vehShown=target.slice();
       const d=kmDist(vehShown,target);
-      const k=0.18;                       // suit la position calculée, toujours en glissant (plus de saut)
+      const k=vehState.trip&&vehState.trip.cum?1:Math.min(1,0.18+d*0.2);   // sur le tracé : position déjà lissée ; sinon glissement doux sans saut
       vehShown=[vehShown[0]+(target[0]-vehShown[0])*k, vehShown[1]+(target[1]-vehShown[1])*k];
       if(followVeh&&!mlMap.isEasing?.()){
         const idle=Date.now()-lastFollowGesture>3000;          // déplacement/zoom libres ; recentrage après 3 s sans geste
@@ -3026,26 +3096,31 @@ async function updateVehicle(){
   if(!mapIt||!mlMap) return;
   const ft=activeLeg(mapIt); if(!ft) return;
   const lk=(ft.tripId||'')+'|'+ft.startTime;
-  if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
+  if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; vehKm=null; liveFix={at:0,until:0}; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
     const ttl=$('#mapTitle'); if(ttl&&mapWalk==null) ttl.textContent=`${ft.routeShortName||''} → ${ft.headsign||ft.to?.name||''}` }
+  // affichage immédiat : position estimée tout de suite (course déjà en cache, sinon l'étape elle-même), affinée ensuite
+  if(!vehMk){ const n0=Date.now(), tc=tripCache[ft.tripId]; let q=null;
+    if(tc&&tc.cum){ vehState={kind:'trip',trip:tc}; q=vehPosAt(n0) }
+    if(!q){ const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(n0>=a&&n0<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip:tc||null}; q=vehPosAt(n0) } }
+    if(q){ const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; const [bg,fg]=lineColor(ft); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
+      vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(q).addTo(mlMap); vehShown=q.slice(); startVehAnim(); syncFollowBtn() } }
+  // course complète, heures en direct et position réelle demandées en parallèle
+  const cv=vehShown||[ft.from.lon,ft.from.lat], legBox=[[cv[0]-.02,cv[1]-.02],[cv[0]+.02,cv[1]+.02]], n1=Date.now();   // petite zone autour du véhicule (ou de ton arrêt) : réponse légère
+  const segsP=Promise.resolve(null);   // horaire en direct uniquement (sinon horaire prévu) : pas de position en temps réel
   let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
-  const coords=trip?.coords||legCoords(ft);
   let p=null, live=false;
   try{
-    const lons=coords.map(c=>c[0]),lats=coords.map(c=>c[1]),pad=.02;
-    const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+120000).toISOString()}`;
-    for(const v of ['v1','v2','v5']){
-      const r=await fetch(`${API}/${v}/map/trips?${qs}`,{cache:'no-store'}); if(!r.ok) continue;
-      const segs=await r.json();
-      const mine=segs.filter(s=>(s.trips||[]).some(t=>t.tripId&&t.tripId===ft.tripId));
-      const seg=mine.find(s=>now>=+new Date(s.departure)-30000&&now<=+new Date(s.arrival)+30000)||mine.sort((a,b)=>Math.abs(+new Date(a.departure)-now)-Math.abs(+new Date(b.departure)-now))[0];   // tronçon en cours, sinon le plus proche dans le temps
+    for(const v of ['v1']){
+      const segs=await segsP; if(!segs) break;
+      const seg=segs.find(s=>(s.trips||[]).some(t=>t.tripId&&t.tripId===ft.tripId)&&now>=+new Date(s.departure)-30000&&now<=+new Date(s.arrival)+30000);
       if(seg){const sc=seg.polyline?(()=>{for(const pr of [6,5,7]){const c=decodePoly(seg.polyline,pr);if(Math.abs(c[0][1]-seg.from.lat)<.05)return c}})():null;
         const line=sc||[[seg.from.lon,seg.from.lat],[seg.to.lon,seg.to.lat]];
         if(trip&&trip.cum){ // temps réel → on en déduit le retard sur la course entière
           const nm=String(seg.from?.name||''); const sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
-          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3||Math.abs(delayTarget)<15000) delayTarget=0;
-          vehState={kind:'trip',trip,live:true,line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival)};   // tronçon en direct + course complète pour la suite
-        } else vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip,live:true};
+          delayTarget=(+new Date(seg.departure))-sx.d; if(Math.abs(delayTarget)>3*3600e3||Math.abs(delayTarget)<15000) delayTarget=0;   // écart entre la position réelle et les heures en direct
+          { const ix=trip.stops.indexOf(sx), nx=trip.stops[ix+1]; liveFix={at:now,until:nx?Math.max(now+30000,nx.a+delayTarget):now+180000} }
+          vehState={kind:'trip',trip};
+        } else vehState={kind:'seg',line,dep:+new Date(seg.departure),arr:+new Date(seg.arrival),trip};
         p=vehPosAt(now); live=!!seg.realTime}
       break;
     }
