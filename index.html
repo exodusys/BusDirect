@@ -1993,7 +1993,7 @@ function renderJourneyPage(){
     const act=e.target.closest('[data-act]')?.dataset.act;
     if(act==='map'){openMap(jpIt);return}
     if(act==='track'){trackIt(jpIt);return}
-    if(act==='untrack'){S.tracked.splice(S.tracked.findIndex(x=>jkey(x)===jpKey),1);save();jpTracked=false;renderJourneyPage();updateSuivisTab();renderTracked();toast('Suivi retiré')}
+    if(act==='untrack'){const ix=S.tracked.findIndex(x=>jkey(x.it||x)===jpKey);if(ix>=0)S.tracked.splice(ix,1);save();jpTracked=false;renderJourneyPage();updateSuivisTab();renderTracked();toast('Suivi retiré')}
   };
 }
 /* Liste de tous les arrêts d'une ligne, avec le véhicule qui avance en direct */
@@ -2102,7 +2102,7 @@ async function refreshTracked(){
       if(match) t.it=match;
     }catch{}
   }
-  save(); renderTracked(); toast('Suivis actualisés');
+  save(); renderTracked();   // plus d'info-bulle « Suivis actualisés »
 }
 setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
 setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys();
@@ -2629,6 +2629,13 @@ function drawItinerary(it){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
     mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
   }
+  // Flèches du sens de la marche, le long des tracés à pied
+  if(!mlMap.hasImage('walk-arrow')){ const c=document.createElement('canvas'), R=2; c.width=c.height=20*R; const g=c.getContext('2d'); g.scale(R,R);
+    g.beginPath(); g.moveTo(5,4); g.lineTo(14,10); g.lineTo(5,16); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=5; g.strokeStyle='#fff'; g.stroke(); g.lineWidth=2.6; g.strokeStyle='#0a84ff'; g.stroke();
+    mlMap.addImage('walk-arrow',g.getImageData(0,0,c.width,c.height),{pixelRatio:R}) }
+  const arrowLayout={'symbol-placement':'line','symbol-spacing':60,'icon-image':'walk-arrow','icon-size':0.9,'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map','icon-keep-upright':false};
+  if(!mlMap.getLayer('route-walk-arrows')) mlMap.addLayer({id:'route-walk-arrows',type:'symbol',source:'route',filter:['==','walk',1],layout:arrowLayout});
+  if(!mlMap.getLayer('walkto-arrows')) mlMap.addLayer({id:'walkto-arrows',type:'symbol',source:'walkto',layout:arrowLayout});
   // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED/.test(l.mode);
