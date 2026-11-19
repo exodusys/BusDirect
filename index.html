@@ -841,7 +841,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
     <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
   </div>
   <div class="map-ctrl glass">
-    <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule">🚌</button>
+    <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button>
     <button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button>
     <button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button>
     <button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button>
@@ -2702,7 +2702,7 @@ async function openMap(it,walkLeg){
   mlMap.resize();drawItinerary(it); renderMapSteps();
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
-  updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000));
+  updateVehicle(); mapTimers.push(setInterval(updateVehicle,10000)); syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
   startMeWatch();
 }
 /* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
@@ -3032,6 +3032,9 @@ function activeLeg(it){
   return tl.find(l=>now<=+new Date(l.endTime))||tl.at(-1);
 }
 let vehLegKey='';
+function syncFollowBtn(){   // bouton du bus visible seulement si un véhicule est affiché sur la carte
+  const b=$('#btnFollow'); if(!b) return; const ok=!!(vehMk&&vehShown);
+  b.style.display=ok?'':'none'; if(!ok&&followVeh){ followVeh=false; b.classList.remove('on') } }
 async function toggleFollowVeh(){
   const btn=$('#btnFollow');
   if(followVeh){ followVeh=false; btn.classList.remove('on'); if(pos) mlMap.easeTo({center:[pos.lon,pos.lat],zoom:Math.max(mlMap.getZoom(),16),duration:500}); return }   // retour à ma position
@@ -3102,15 +3105,22 @@ async function updateVehicle(){
   const lk=(ft.tripId||'')+'|'+ft.startTime;
   if(lk!==vehLegKey){ vehLegKey=lk; delayTarget=0; delayShown=null; vehShown=null; vehKm=null; liveFix={at:0,until:0}; apprMks.forEach(m=>m.remove()); apprMks.clear();   // changement de véhicule après une correspondance
     const ttl=$('#mapTitle'); if(ttl&&mapWalk==null) ttl.textContent=`${ft.routeShortName||''} → ${ft.headsign||ft.to?.name||''}` }
+  // affichage immédiat : position estimée tout de suite (course déjà en cache, sinon l'étape elle-même), affinée ensuite
+  if(!vehMk){ const n0=Date.now(), tc=tripCache[ft.tripId]; let q=null;
+    if(tc&&tc.cum){ vehState={kind:'trip',trip:tc}; q=vehPosAt(n0) }
+    if(!q){ const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(n0>=a&&n0<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip:tc||null}; q=vehPosAt(n0) } }
+    if(q){ const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; const [bg,fg]=lineColor(ft); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
+      vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(q).addTo(mlMap); vehShown=q.slice(); startVehAnim(); syncFollowBtn() } }
+  // course complète, heures en direct et position réelle demandées en parallèle
+  const legBox=tripCache[ft.tripId]?.coords||legCoords(ft), n1=Date.now();   // tracé complet de la course dès qu'il est en cache
+  const segsP=(async()=>{ const lons=legBox.map(c=>c[0]),lats=legBox.map(c=>c[1]),pad=.03;
+    const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(n1).toISOString()}&endTime=${new Date(n1+60000).toISOString()}`;
+    for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(r.ok) return await r.json() }catch{} } return null })();
   let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
-  const coords=trip?.coords||legCoords(ft);
   let p=null, live=false;
   try{
-    const lons=coords.map(c=>c[0]),lats=coords.map(c=>c[1]),pad=.02;
-    const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
-    for(const v of ['v1','v2','v5']){
-      const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(!r.ok) continue;
-      const segs=await r.json();
+    for(const v of ['v1']){
+      const segs=await segsP; if(!segs) break;
       const seg=segs.find(s=>(s.trips||[]).some(t=>t.tripId&&t.tripId===ft.tripId)&&now>=+new Date(s.departure)-30000&&now<=+new Date(s.arrival)+30000);
       if(seg){const sc=seg.polyline?(()=>{for(const pr of [6,5,7]){const c=decodePoly(seg.polyline,pr);if(Math.abs(c[0][1]-seg.from.lat)<.05)return c}})():null;
         const line=sc||[[seg.from.lon,seg.from.lat],[seg.to.lon,seg.to.lat]];
