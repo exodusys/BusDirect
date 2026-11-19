@@ -1879,6 +1879,38 @@ function alertOnMyPart(a,l){
     return mine.some(s=>s.includes(n)||n.includes(s)||w.some(x=>s.split(' ').includes(x))) };
   return pairs.some(([x,y])=>hit(x)||hit(y));
 }
+/* Dates, jours et heures écrits dans le texte de l'avis (« du 07 décembre au 01 janvier », « 14 au 18/12 », « en semaine dès 23h35 »…) */
+const MOIS={janvier:1,janv:1,fevrier:2,fevr:2,mars:3,avril:4,avr:4,mai:5,juin:6,juillet:7,juil:7,aout:8,septembre:9,sept:9,octobre:10,oct:10,novembre:11,nov:11,decembre:12,dec:12};
+function alertTextOk(a,l){
+  const raw=alertTxt((a.headerText||'')+'\n'+(a.descriptionText||'')), txt=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const t0=new Date(l.startTime), t1=new Date(l.endTime||l.startTime); if(isNaN(t0)) return true;
+  const Y=t0.getFullYear(), day=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
+  const ranges=[]; const add=(d1,m1,d2,m2,y)=>{ if(!(m1>=1&&m1<=12&&m2>=1&&m2<=12&&d1>=1&&d1<=31&&d2>=1&&d2<=31)) return;
+    for(const yy of [Y-1,Y]){ const a0=new Date(y||yy,m1-1,d1).getTime(); let b0=new Date(y||yy,m2-1,d2).getTime(); if(b0<a0) b0=new Date((y||yy)+1,m2-1,d2).getTime(); ranges.push([a0,b0+864e5-1]); if(y) break } };
+  const M='(janvier|janv|fevrier|fevr|mars|avril|avr|mai|juin|juillet|juil|aout|septembre|sept|octobre|oct|novembre|nov|decembre|dec)\\.?';
+  const J='(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\\s*';
+  let m, re;
+  re=new RegExp('du\\s+'+J+'(\\d{1,2})(?:er)?\\s*'+M+'?\\s*(\\d{4})?\\s+au\\s+'+J+'(\\d{1,2})(?:er)?\\s*'+M+'\\s*(\\d{4})?','g');
+  while((m=re.exec(txt))) add(+m[1],MOIS[m[2]||m[5]],+m[4],MOIS[m[5]],+(m[6]||m[3])||0);
+  re=/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s*(?:-|–|au)\s*(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/g;
+  while((m=re.exec(txt))) add(+m[1],+m[2],+m[4],+m[5],m[6]?(+m[6]<100?2000+ +m[6]:+m[6]):0);
+  re=/(?:du\s+)?(\d{1,2})\s*(?:-|–|au)\s*(\d{1,2})\/(\d{1,2})(?!\d)/g;
+  while((m=re.exec(txt))) add(+m[1],+m[3],+m[2],+m[3],0);
+  re=new RegExp('(?:le\\s+)?'+J+'(\\d{1,2})(?:er)?\\s+'+M+'(?!\\s*(?:au|-))','g');
+  const singles=[]; while((m=re.exec(txt))) singles.push([+m[1],MOIS[m[2]]]);
+  const dayOk=d=>{ const x=day(d); return ranges.some(([a0,b0])=>x>=a0&&x<=b0) };
+  // la nuit (avant 5 h) compte pour la veille : « en semaine dès 23h35 » couvre aussi 0 h–5 h
+  const svc=new Date(t0.getTime()-(t0.getHours()<5?864e5:0));
+  if(ranges.length&&!dayOk(svc)&&!dayOk(t1)) return false;
+  if(!ranges.length&&singles.length&&/\b(le|les|dates?)\b/.test(txt)&&!singles.some(([d,mo])=>svc.getDate()===d&&svc.getMonth()+1===mo)&&!/sauf/.test(txt)) return false;
+  const wd=svc.getDay();
+  if(/\ben semaine\b/.test(txt)&&!/week-?end/.test(txt)&&(wd===0||wd===6)) return false;
+  if(/\b(les |le )?week-?ends?\b/.test(txt)&&!/en semaine/.test(txt)&&wd>=1&&wd<=5) return false;
+  const h=txt.match(/(?:a partir de|des|apres)\s+(\d{1,2})\s*h\s*(\d{2})?/);
+  if(h){ const from=(+h[1])*60+(+(h[2]||0)), mins=d=>d.getHours()*60+d.getMinutes(), a0=mins(t0), b0=mins(t1);
+    const inNight=x=>x>=from||x<5*60; if(!inNight(a0)&&!inNight(b0)) return false }
+  return true;
+}
 function alertsOf(it){
   const out=[],seen=new Set();
   it.legs.forEach(l=>{   // infos automatiques : bus de remplacement / course supprimée
@@ -1891,7 +1923,8 @@ function alertsOf(it){
     const works=/CONSTRUCTION|MAINTENANCE/.test(a.cause||'')||/travaux|chantier|bauarbeit|baustelle|works|lavori/i.test(txt);
     const cancel=a.effect==='NO_SERVICE'||/supprim|annul|interrompu|interruption|ausfall|unterbr/i.test(txt);
     if(!activeNow(a,+new Date(l.startTime),+new Date(l.endTime))||!(a.headerText||a.descriptionText)) return;
-    if(!alertOnMyPart(a,l)) return;   // seulement si l'avis touche le tronçon emprunté   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
+    if(!alertOnMyPart(a,l)) return;   // seulement si l'avis touche le tronçon emprunté
+    if(!alertTextOk(a,l)) return;     // et s'il est valable à la date, au jour et à l'heure du trajet (d'après son texte)   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
     const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
     out.push({leg:l,title,head:alertTxt(a.headerText),desc:alertTxt(a.descriptionText),url:a.url||'',detour,works,cancel});
