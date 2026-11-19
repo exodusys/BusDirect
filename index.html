@@ -2107,9 +2107,11 @@ function jpMoveVehicles(){
 }
 /* Correction temps réel commune (comme sur la carte) : écart entre la position réelle du véhicule (map/trips) et les heures en direct,
    qui s'efface d'ici l'arrêt suivant */
-async function measureLiveFix(trip,tripId){
-  if(!trip||!trip.cum||!tripId) return null; const now=Date.now(), coords=trip.coords||[]; if(!coords.length) return null;
-  const lons=coords.map(c=>c[0]),lats=coords.map(c=>c[1]),pad=.02;
+async function measureLiveFix(trip,tripId,center){
+  if(!trip||!trip.cum||!tripId) return null; const now=Date.now();
+  // petite zone autour du point utile (arrêt de montée ou véhicule) : réponse légère, au lieu de tout le tracé de la ligne
+  if(!center){ const k=kmOnTrip(trip,now); center=k!=null?pointAtKm(trip,k):null } if(!center) return null;
+  const coords=[center], lons=[center[0]], lats=[center[1]], pad=.025;
   const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
   for(const v of ['v1','v2','v5']){ try{
     const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(!r.ok) continue; const segs=await r.json();
@@ -2126,7 +2128,7 @@ async function applyLiveFix(list){
   await Promise.all((list||[]).map(async it=>{ const ft=firstTransit(it); if(!ft?.tripId||ft._fix) return;
     const t0=+new Date(ft.startTime); if(!(t0>Date.now()-60000&&t0<Date.now()+15*60000)) return;   // départs dans les 15 min seulement
     try{ const trip=await loadTrip(ft); if(!trip||!trip.cum) return;
-      let c=liveFixCache[ft.tripId]; if(!c||Date.now()-c.t>10000){ c={t:Date.now(),f:await measureLiveFix(trip,ft.tripId)}; liveFixCache[ft.tripId]=c }
+      let c=liveFixCache[ft.tripId]; if(!c||Date.now()-c.t>20000){ c={t:Date.now(),f:await measureLiveFix(trip,ft.tripId,[ft.from.lon,ft.from.lat])}; liveFixCache[ft.tripId]=c }   // zone autour de ton arrêt, 20 s de cache
       const off=Math.round(fixOffset(c.f,t0)/1000)*1000; ft._fix=true; if(Math.abs(off)<15000) return;
       ft.startTime=new Date(t0+off).toISOString(); if(it.legs[0]===ft) it.startTime=ft.startTime; changed=true;
     }catch{} }));
@@ -3112,8 +3114,8 @@ async function updateVehicle(){
     if(q){ const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; const [bg,fg]=lineColor(ft); el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
       vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(q).addTo(mlMap); vehShown=q.slice(); startVehAnim(); syncFollowBtn() } }
   // course complète, heures en direct et position réelle demandées en parallèle
-  const legBox=tripCache[ft.tripId]?.coords||legCoords(ft), n1=Date.now();   // tracé complet de la course dès qu'il est en cache
-  const segsP=(async()=>{ const lons=legBox.map(c=>c[0]),lats=legBox.map(c=>c[1]),pad=.03;
+  const cv=vehShown||[ft.from.lon,ft.from.lat], legBox=[[cv[0]-.02,cv[1]-.02],[cv[0]+.02,cv[1]+.02]], n1=Date.now();   // petite zone autour du véhicule (ou de ton arrêt) : réponse légère
+  const segsP=(async()=>{ const lons=legBox.map(c=>c[0]),lats=legBox.map(c=>c[1]),pad=.01;
     const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(n1).toISOString()}&endTime=${new Date(n1+60000).toISOString()}`;
     for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(r.ok) return await r.json() }catch{} } return null })();
   let trip=await loadTrip(ft); trip=await refreshTripTimes(ft,trip); const now=Date.now();
