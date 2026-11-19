@@ -2623,17 +2623,18 @@ function drawItinerary(it){
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
+    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':['interpolate',['linear'],['zoom'],12,3,16,5,19,8],'line-dasharray':[0,2]},layout:{'line-cap':'round','line-join':'round'}});   // marche : points ronds réguliers
   }
   if(!mlMap.getSource('walkto')){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':5,'line-dasharray':[0.6,1.6]},layout:{'line-cap':'round'}});
+    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':['interpolate',['linear'],['zoom'],12,3,16,5,19,8],'line-dasharray':[0,2]},layout:{'line-cap':'round','line-join':'round'}});
   }
   // Flèches du sens de la marche, le long des tracés à pied
-  if(!mlMap.hasImage('walk-arrow')){ const c=document.createElement('canvas'), R=2; c.width=c.height=20*R; const g=c.getContext('2d'); g.scale(R,R);
-    g.beginPath(); g.moveTo(5,4); g.lineTo(14,10); g.lineTo(5,16); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=5; g.strokeStyle='#fff'; g.stroke(); g.lineWidth=2.6; g.strokeStyle='#0a84ff'; g.stroke();
+  if(!mlMap.hasImage('walk-arrow')){ const c=document.createElement('canvas'), R=3; c.width=c.height=24*R; const g=c.getContext('2d'); g.scale(R,R);
+    g.beginPath(); g.arc(12,12,9.5,0,Math.PI*2); g.fillStyle='#0a84ff'; g.fill(); g.lineWidth=2; g.strokeStyle='#fff'; g.stroke();   // pastille bleue cerclée de blanc
+    g.beginPath(); g.moveTo(9.6,7.6); g.lineTo(14.6,12); g.lineTo(9.6,16.4); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=2.4; g.strokeStyle='#fff'; g.stroke();   // chevron blanc
     mlMap.addImage('walk-arrow',g.getImageData(0,0,c.width,c.height),{pixelRatio:R}) }
-  const arrowLayout={'symbol-placement':'line','symbol-spacing':60,'icon-image':'walk-arrow','icon-size':0.9,'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map','icon-keep-upright':false};
+  const arrowLayout={'symbol-placement':'line','symbol-spacing':['interpolate',['linear'],['zoom'],13,70,18,120],'icon-image':'walk-arrow','icon-size':['interpolate',['linear'],['zoom'],12,0.55,16,0.8,19,1],'icon-padding':0,'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map','icon-keep-upright':false};
   if(!mlMap.getLayer('route-walk-arrows')) mlMap.addLayer({id:'route-walk-arrows',type:'symbol',source:'route',filter:['==','walk',1],layout:arrowLayout});
   if(!mlMap.getLayer('walkto-arrows')) mlMap.addLayer({id:'walkto-arrows',type:'symbol',source:'walkto',layout:arrowLayout});
   // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
