@@ -746,7 +746,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
 
   <!-- SUIVIS -->
   <section class="view" id="v-suivis">
-    <div class="row between"><h2>Suivis</h2><button class="btn ghost sm" onclick="refreshTracked()">↻</button></div>
+    <div class="row between"><h2>Suivis</h2></div>
     <div id="tracked"></div>
   </section>
 
@@ -1528,7 +1528,7 @@ async function refreshMyTrip(){ // actualisation en direct de la course suivie
 }
 let loadedFor=null, loading=false;
 let jGen=0;
-async function loadJourneys(force){
+async function loadJourneys(force){ lastListLoad=Date.now();
   if(!selDest||(loading&&!force)) return;   // force : « Maintenant » / nouvelle date relancent même si une recherche est en cours
   const gen=++jGen;
   if(selDest.type==='TRIP') return refreshMyTrip();
@@ -1557,7 +1557,7 @@ async function loadJourneys(force){
     lastJourneys=first?data:mergeRefresh(lastJourneys,data); loadedFor=pairKey;
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
-    renderJourneyList(); applyLiveFix(lastJourneys.slice(0,8)).then(ch=>{ if(ch&&gen===jGen) renderJourneyList() });   // heure et retard corrigés par la position réelle, comme sur la carte
+    renderJourneyList(); applyLiveFix(lastJourneys.slice(0,3)).then(ch=>{ if(ch&&gen===jGen) renderJourneyList() });   // heure et retard corrigés par la position réelle, comme sur la carte
   }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
@@ -2124,7 +2124,7 @@ const liveFixCache={};
 async function applyLiveFix(list){
   let changed=false;
   await Promise.all((list||[]).map(async it=>{ const ft=firstTransit(it); if(!ft?.tripId||ft._fix) return;
-    const t0=+new Date(ft.startTime); if(!(t0>Date.now()-60000&&t0<Date.now()+45*60000)) return;   // départs proches seulement
+    const t0=+new Date(ft.startTime); if(!(t0>Date.now()-60000&&t0<Date.now()+15*60000)) return;   // départs dans les 15 min seulement
     try{ const trip=await loadTrip(ft); if(!trip||!trip.cum) return;
       let c=liveFixCache[ft.tripId]; if(!c||Date.now()-c.t>10000){ c={t:Date.now(),f:await measureLiveFix(trip,ft.tripId)}; liveFixCache[ft.tripId]=c }
       const off=Math.round(fixOffset(c.f,t0)/1000)*1000; ft._fix=true; if(Math.abs(off)<15000) return;
@@ -2194,10 +2194,16 @@ function renderTracked(){
   bindJourneys(box,S.tracked.map(t=>t.it),true);
   updateSuivisTab();
 }
-async function refreshTracked(){
+async function refreshTracked(auto){
   // Re-plan around the original departure to get fresh real-time data for the same trip
-  if(!pos){locate();toast('Position requise');return}
+  if(!pos){ if(!auto){locate();toast('Position requise')} return }
+  if(refreshTracked._busy) return; refreshTracked._busy=true; let did=false;
+  try{
   for(const t of S.tracked){
+    // rythme : 20 s si départ dans moins de 15 min, 2 min au-delà, plus rien après l'arrivée
+    const now=Date.now(), dep=+new Date(firstTransit(t.it)?.startTime||t.it.startTime), end=+new Date(t.it.endTime);
+    if(auto){ if(now>end) continue; const every=dep-now<15*60000?20000:120000; if(now-(t._ref||0)<every) continue }
+    t._ref=now; did=true;
     try{
       const ft=firstTransit(t.it);
       const d=await plan(t.dest,new Date(new Date(t.it.startTime).getTime()-60000),null,t.from);
@@ -2205,13 +2211,19 @@ async function refreshTracked(){
       if(match) t.it=match;
     }catch{}
   }
+  if(!did) return;
   save(); renderTracked();   // plus d'info-bulle « Suivis actualisés »
   if(await applyLiveFix(S.tracked.map(t=>t.it))) renderTracked();   // même correction temps réel que la carte
+  } finally { refreshTracked._busy=false }
 }
 setInterval(()=>{ if(lastJourneys.length&&listOpen()) renderJourneyList() },15000);
-setInterval(()=>{ if(listOpen()&&selDest&&!document.hidden) loadJourneys() },20000);   // heures réelles des prochains parcours : toutes les 20 s
+// Rafraîchissement adaptatif des prochains parcours : 20 s si un départ a lieu dans moins de 10 min, sinon 60 s
+var lastListLoad=0;
+setInterval(()=>{ if(!listOpen()||!selDest||document.hidden) return;
+  const now=Date.now(), soon=lastJourneys.some(it=>{const t=jStart(it);return t>now-60000&&t<now+10*60000});
+  if(now-lastListLoad>=(soon?20000:60000)){ lastListLoad=now; loadJourneys() } },5000);
 setInterval(()=>{
-  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(); },20000);   // suivis : toutes les 20 s
+  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(true); },5000);   // suivis : rythme adaptatif (voir refreshTracked)
 
 /* ========= Tickets SMS ========= */
 const REGIONS=[
