@@ -1866,6 +1866,19 @@ function alertTxt(t){
   return x.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 const isReplBus=l=>l&&l.mode!=='WALK'&&/^(EV|SEV|EXB|BEV)\b|ersatz|remplacement|substitution|sostitutiv/i.test([l.routeShortName,l.routeLongName,l.displayName,l.headsign&&'',l.tripShortName].filter(Boolean).join(' '));
+/* L'avis concerne-t-il le tronçon emprunté ? (« entre X et Y », « X <-> Y ») — sinon il touche une autre partie de la ligne */
+const nrmS=x=>String(x||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+function alertOnMyPart(a,l){
+  const txt=alertTxt((a.headerText||'')+'\n'+(a.descriptionText||''));
+  const pairs=[]; let m;
+  const r1=/entre\s+(?:les?\s+|la\s+|l'\s*)?([^\n.,;:()]+?)\s+et\s+(?:les?\s+|la\s+|l'\s*)?([^\n.,;:()]+)/gi, r2=/([^\n:;()]+?)\s*(?:<->|<>|↔|⇄)\s*([^\n.;()]+)/g;
+  while((m=r1.exec(txt))) pairs.push([m[1],m[2]]); while((m=r2.exec(txt))) pairs.push([m[1],m[2]]);
+  if(!pairs.length) return true;   // pas de tronçon précisé : on garde
+  const mine=[l.from,...(l.intermediateStops||[]),l.to].map(x=>nrmS(x?.name)).filter(Boolean);
+  const hit=n=>{ n=nrmS(n).replace(/\b(gare|station|arret|rer [a-z]|ligne \w+)\b/g,'').trim(); if(n.length<3) return false; const w=n.split(' ').filter(x=>x.length>3);
+    return mine.some(s=>s.includes(n)||n.includes(s)||w.some(x=>s.split(' ').includes(x))) };
+  return pairs.some(([x,y])=>hit(x)||hit(y));
+}
 function alertsOf(it){
   const out=[],seen=new Set();
   it.legs.forEach(l=>{   // infos automatiques : bus de remplacement / course supprimée
@@ -1877,7 +1890,8 @@ function alertsOf(it){
     const detour=a.effect==='DETOUR'||/d[ée]vi(é|e|ation)|umleitung|detour|diversion/i.test(txt);
     const works=/CONSTRUCTION|MAINTENANCE/.test(a.cause||'')||/travaux|chantier|bauarbeit|baustelle|works|lavori/i.test(txt);
     const cancel=a.effect==='NO_SERVICE'||/supprim|annul|interrompu|interruption|ausfall|unterbr/i.test(txt);
-    if(!activeNow(a,+new Date(l.startTime),+new Date(l.endTime))||!(a.headerText||a.descriptionText)) return;   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
+    if(!activeNow(a,+new Date(l.startTime),+new Date(l.endTime))||!(a.headerText||a.descriptionText)) return;
+    if(!alertOnMyPart(a,l)) return;   // seulement si l'avis touche le tronçon emprunté   // seulement si en vigueur à la date et l'heure du trajet   // déviations, travaux et autres perturbations sur le parcours
     const k=(a.headerText||a.descriptionText)+'|'+(l.routeShortName||''); if(seen.has(k)) return; seen.add(k);
     const title=cancel?'Interruption':detour?'Déviation':works?'Travaux':'Perturbation';
     out.push({leg:l,title,head:alertTxt(a.headerText),desc:alertTxt(a.descriptionText),url:a.url||'',detour,works,cancel});
