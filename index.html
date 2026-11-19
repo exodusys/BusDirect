@@ -2182,9 +2182,14 @@ function renderTracked(){
   updateSuivisTab(); save();
   const box=$('#tracked');
   if(!S.tracked.length){box.innerHTML='<div class="card glass empty"><b>🔖</b>Ouvre un trajet dans Horaires et touche « Suivre ».</div>';return}
-  box.innerHTML=S.tracked.map((t,i)=>{ let h; try{ h=journeyHTML(t.it,i,true) }catch(e){ console.error('Suivi',i,e);   // un suivi illisible ne doit pas cacher les autres
+  // regroupement par destination (ordre des groupes : première apparition ; dans un groupe : par heure de départ)
+  const dn=t=>t.dest?.name||t.it?.legs?.at(-1)?.to?.name||'Destination', fn=t=>t.from?.name||firstTransit(t.it)?.from?.name||'Ma position', gk=t=>nrmS(fn(t))+'>'+nrmS(dn(t));   // groupe : même départ et même destination
+  const order=[]; S.tracked.forEach(t=>{ if(!order.includes(gk(t))) order.push(gk(t)) });
+  const idx=S.tracked.map((t,i)=>i).sort((a,b)=>order.indexOf(gk(S.tracked[a]))-order.indexOf(gk(S.tracked[b]))||(+new Date(S.tracked[a].it?.startTime)-+new Date(S.tracked[b].it?.startTime)));
+  let lastG=null;
+  box.innerHTML=idx.map(i=>[S.tracked[i],i]).map(([t,i])=>{ let h; try{ h=journeyHTML(t.it,i,true) }catch(e){ console.error('Suivi',i,e);   // un suivi illisible ne doit pas cacher les autres
       h=`<div class="jr glass" data-i="${i}"><div class="jr-top"><div class="jr-mid"><div class="jr-dir">${esc(t.it?.legs?.find(l=>l.mode!=='WALK')?.routeShortName||'Parcours')} · ${t.it?.startTime?hm(t.it.startTime):''}</div><div class="jr-stop muted">Affichage impossible (${esc(e.message||e)})</div></div></div><div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="untrack">Retirer du suivi</button></div></div>` }
-    return `<h3>→ ${esc(t.dest?.name||t.it?.legs?.at(-1)?.to?.name||'Destination')}</h3>`+h }).join('');
+    const g=gk(t), head=g!==lastG?`<h3>${esc(fn(t))} → ${esc(dn(t))}</h3>`:''; lastG=g; return head+h }).join('');   // un seul titre par destination
   bindJourneys(box,S.tracked.map(t=>t.it),true);
   updateSuivisTab();
 }
