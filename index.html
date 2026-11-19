@@ -702,11 +702,6 @@ header .appname{position:relative;padding-bottom:6px}
 header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:0;height:3px;background:var(--accent);-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'%3E%3Crect x='0' width='62' height='3' rx='1.5'/%3E%3Crect x='65' width='8' height='3' rx='1.5'/%3E%3Crect x='76' width='6' height='3' rx='1.5'/%3E%3Crect x='85' width='4' height='3' rx='1.5'/%3E%3Crect x='92' width='2.6' height='3' rx='1.3'/%3E%3Crect x='97' width='1.6' height='3' rx='.8'/%3E%3C/svg%3E") 0 0/100% 100% no-repeat}   /* soulignement accent qui finit en tirets de plus en plus petits */
 #v-suivis>.row:first-child h2{margin-bottom:4px}
 #tracked>h3:first-child{margin-top:0}   /* liste des suivis remontée sous le titre */
-#nearView{position:fixed;inset:0;z-index:31;display:none;background:var(--bg)}
-#nearView.open{display:block}
-#nearMap{position:absolute;inset:0}
-#nearView .map-bar .t small{display:block;color:var(--muted);font-weight:500}
-.near-veh{cursor:pointer;transition:none!important}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -724,7 +719,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
 <main>
   <!-- HORAIRES -->
   <section class="view active" id="v-horaires">
-    <div class="row between"><h2>Horaires</h2><div class="row" style="gap:6px"><button class="target-btn" id="nearBtn" onclick="openNearMap()" aria-label="Lignes et véhicules à proximité" title="Lignes et véhicules à proximité"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6.5v13.5L9 17.5l6 2.5 6-2.5V4L15 6.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg></button><button class="target-btn" id="whereBtn" onclick="locateMyTrip()" aria-label="Dans quel parcours suis-je ?"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div></div>
+    <div class="row between"><h2>Horaires</h2><button class="target-btn" id="whereBtn" onclick="locateMyTrip()" aria-label="Dans quel parcours suis-je ?"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button></div>
     <div class="tiles" id="tiles"></div>
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Aucune destination enregistrée.<br>Ajoute ta première destination pour voir ici les prochains départs.
       <button class="btn" style="margin-top:14px" onclick="goAddFirst()">＋ Ajouter une destination</button></div>
@@ -837,14 +832,6 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
   <button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button>
 </nav>
 
-<div id="nearView">
-  <div id="nearMap"></div>
-  <div class="map-bar glass">
-    <button class="map-btn" onclick="closeNearMap()" aria-label="Fermer">✕</button>
-    <div class="t"><span>Mes parcours</span><small id="nearSub">Chargement…</small></div>
-    <button class="map-btn" onclick="nearRecenter()" aria-label="Recentrer">◎</button>
-  </div>
-</div>
 <div id="mapView">
   <div id="map"></div>
   <div class="map-bar glass">
@@ -3362,119 +3349,6 @@ try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#jou
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
-
-/* ========= Carte « Autour de moi » : lignes à proximité + véhicules en mouvement ========= */
-let nearRoutes=null, nearRoutesAt=0, nearDark=null, nearMl=null, nearMks=new Map(), nearSegs=[], nearTimers=[], nearMe=null, nearRaf=null, nearCenter=null;
-async function openNearMap(){
-  const btn=$('#nearBtn'); btn.classList.add('busy');
-  try{ await freshPos() }catch{} btn.classList.remove('busy');
-  if(!pos){ toast('Active la localisation pour voir les lignes à proximité'); locate(); return }
-  $('#nearView').classList.add('open'); $('#nearSub').textContent='Chargement…';
-  try{ await loadMapLib() }catch{ toast('Impossible de charger la carte'); closeNearMap(); return }
-  mapDark=document.documentElement.dataset.theme==='dark';   // même thème que dans les Paramètres
-  const themeChanged=nearMl&&nearDark!==mapDark; nearDark=mapDark;
-  let style; if(!nearMl||themeChanged){ try{ style=await buildStyle() }catch{ style=mapStyleUrl() } }
-  nearCenter={lat:pos.lat,lon:pos.lon};
-  if(themeChanged){ nearMl.setStyle(style,{diff:false}); await new Promise(r=>nearMl.once('style.load',r)) }
-  if(!nearMl){
-    nearMl=new maplibregl.Map({container:'nearMap',style,center:[pos.lon,pos.lat],zoom:15,attributionControl:{compact:true}});
-    await new Promise(r=>nearMl.once('load',r));
-    nearMl.on('moveend',()=>{ const c=nearMl.getCenter(); if(!nearCenter||dist(nearCenter,{lat:c.lat,lon:c.lng})>0.6){ nearCenter={lat:c.lat,lon:c.lng}; nearLoad() } });
-  } else { nearMl.resize(); nearMl.jumpTo({center:[pos.lon,pos.lat],zoom:15}) }
-  if(!nearMl.getSource('nearLines')){
-    nearMl.addSource('nearLines',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    nearMl.addLayer({id:'nearLinesCase',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':nearDark?'#1c1c1e':'#fff','line-width':6.5,'line-opacity':.8,'line-offset':['coalesce',['get','o'],0]}});
-    nearMl.addLayer({id:'nearLines',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','c'],'line-width':4.5,'line-offset':['coalesce',['get','o'],0]}});
-  }
-  if(!nearMe){ const el=document.createElement('div'); el.className='me-m'; el.innerHTML='<div class="dot"></div>'; nearMe=new maplibregl.Marker({element:el}).setLngLat([pos.lon,pos.lat]).addTo(nearMl) } else nearMe.setLngLat([pos.lon,pos.lat]);
-  await nearLoad();
-  nearTimers.forEach(clearInterval); nearTimers=[setInterval(nearLoad,30000), setInterval(()=>{ if(pos&&nearMe) nearMe.setLngLat([pos.lon,pos.lat]) },3000)];
-  const tick=()=>{ nearAnimate(); nearRaf=requestAnimationFrame(tick) }; cancelAnimationFrame(nearRaf); nearRaf=requestAnimationFrame(tick);
-}
-function closeNearMap(){
-  $('#nearView').classList.remove('open'); nearTimers.forEach(clearInterval); nearTimers=[]; cancelAnimationFrame(nearRaf); nearRaf=null;
-}
-function nearRecenter(){ if(nearMl&&pos) nearMl.easeTo({center:[pos.lon,pos.lat],zoom:15}) }
-function nearLeg(sg){ const t=sg.trips[0]||{}; return {...sg,...t,mode:sg.mode||t.mode,routeShortName:t.routeShortName||sg.routeShortName||'',routeColor:sg.routeColor||t.routeColor,routeTextColor:sg.routeTextColor||t.routeTextColor,from:sg.from,to:sg.to} }
-function nearColor(sg){ try{ return lineColor(nearLeg(sg)) }catch{ return MODE_COLOR[sg.mode]||['#636e80','#fff'] } }   // mêmes couleurs que le reste de l'app (OSM, opérateur, mode)
-// Lignes sur la même route : pour chaque point d'un tracé, on cherche les autres lignes qui passent à moins de ~18 m,
-// puis chaque ligne prend une place fixe dans la bande (ordre stable, même sens de référence) → rubans parallèles propres
-function nearSideBySide(legs){
-  const K=0.69, TOL=0.00017, STEP=10/111000, W=4.5;
-  const nearSeg=(p,line,bb)=>{ if(bb&&(p[0]<bb[0]-TOL*1.5||p[0]>bb[2]+TOL*1.5||p[1]<bb[1]-TOL||p[1]>bb[3]+TOL)) return null;
-    let best=Infinity, dir=null; for(let i=1;i<line.length;i++){ const a=line[i-1], b=line[i], ax=(b[0]-a[0])*K, ay=b[1]-a[1], L=ax*ax+ay*ay||1e-18;
-      const t=Math.max(0,Math.min(1,(((p[0]-a[0])*K)*ax+(p[1]-a[1])*ay)/L)), dx=(p[0]-a[0])*K-ax*t, dy=(p[1]-a[1])-ay*t, d=dx*dx+dy*dy;
-      if(d<best){best=d;dir=[ax,ay]} } return {d:Math.sqrt(best),dir} };
-  // une entrée par ligne (tous les tronçons d'une même ligne fusionnés)
-  const R=new Map();
-  legs.forEach(l=>{ let line; try{ line=legCoords(l) }catch{} if(!line||line.length<2) line=[[l.from.lon,l.from.lat],[l.to.lon,l.to.lat]];
-    let c; try{ c=lineColor(l)[0] }catch{ c=MODE_COLOR[l.mode]?.[0]||'#636e80' }
-    const rid=(l.routeShortName||'')+'|'+c; if(!R.has(rid)) R.set(rid,{rid,c,lines:[]}); R.get(rid).lines.push(line) });
-  const routes=[...R.values()].sort((x,y)=>x.rid.localeCompare(y.rid,'fr',{numeric:true}));
-  const all=[]; routes.forEach((r,ri)=>r.lines.forEach(line=>{ const xs=line.map(p=>p[0]), ys=line.map(p=>p[1]); all.push({ri,line,bb:[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)]}) }));
-  const feats=[];
-  routes.forEach((r,ri)=>r.lines.forEach(line=>{
-    const pts=[line[0]];
-    for(let i=1;i<line.length;i++){ const a=line[i-1],b=line[i],n=Math.max(1,Math.ceil(Math.hypot((b[0]-a[0])*K,b[1]-a[1])/STEP)); for(let k=1;k<=n;k++) pts.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]) }
-    // lignes présentes autour de chaque point
-    const groups=pts.map((p,i)=>{ const q=pts[Math.min(i+1,pts.length-1)], o=pts[Math.max(i-1,0)], own=[(q[0]-o[0])*K,q[1]-o[1]];
-      const m=new Map(); m.set(ri,1);
-      all.forEach(e=>{ if(e.ri===ri||m.has(e.ri)) return; const h=nearSeg(p,e.line,e.bb); if(h&&h.d<=TOL&&Math.abs(own[0]*h.dir[1]-own[1]*h.dir[0])/((Math.hypot(...own)*Math.hypot(...h.dir))||1)<0.5) m.set(e.ri,h.dir[0]*own[0]+h.dir[1]*own[1]>=0?1:-1) });   // même route et à peu près parallèle
-      return m });
-    // lissage : un groupe doit tenir au moins ~5 points, sinon on garde le précédent (pas de clignotement)
-    const keyOf=m=>[...m.keys()].sort((x,y)=>x-y).join(','); const keys=groups.map(keyOf);
-    for(let i=1;i<keys.length;i++){ if(keys[i]!==keys[i-1]){ let j=i; while(j<keys.length&&keys[j]===keys[i]) j++; if(j-i<5&&j<keys.length){ for(let k=i;k<j;k++){keys[k]=keys[i-1];groups[k]=groups[i-1]} } } }
-    // décalage : place dans la bande, mesurée dans le sens de la ligne de plus petit rang du groupe
-    const offs=groups.map((m,i)=>{ const ids=[...m.keys()].sort((x,y)=>x-y), n=ids.length; if(n<2) return 0;
-      const sgn=m.get(ids[0]) ?? 1; const refSame = ids[0]===ri ? 1 : sgn; return (ids.indexOf(ri)-(n-1)/2)*W*refSame });
-    let cur=null; const flush=()=>{ if(cur&&cur.co.length>1) feats.push({type:'Feature',properties:{c:r.c,o:cur.o},geometry:{type:'LineString',coordinates:cur.co}}) };
-    pts.forEach((p,i)=>{ const o=offs[i]; if(!cur||cur.o!==o){ const prev=cur?.co.at(-1); flush(); cur={o,co:prev?[prev]:[]} } cur.co.push(p) }); flush();
-  }));
-  return feats;
-}
-function nearPaint(){ // recolore lignes + véhicules (les couleurs OSM arrivent en différé)
-  if(!nearMl) return; const seen=new Set(), feats=[];
-  nearSideBySide(nearRoutes?.legs||[]).forEach(f=>feats.push(f));
-  nearMl.getSource('nearLines')?.setData({type:'FeatureCollection',features:feats});
-  nearMks.forEach(mk=>{ const sg=mk._sg; if(!sg) return; const [bg,fg]=nearColor(sg), el=mk.getElement(); el.style.background=bg; el.style.color=fg });
-}
-async function nearMyRoutes(){ // parcours de ma position vers chaque destination enregistrée
-  if(nearRoutes&&Date.now()-nearRoutesAt<120000) return nearRoutes;
-  const dests=(S.dests||[]).filter(d=>d&&(d.id||d.lat!=null));
-  const legs=[], names=new Set(), trips=new Set(), seen=new Set();
-  await Promise.all(dests.map(async d=>{ try{ const r=await plan(d,null,null,{lat:pos.lat,lon:pos.lon});
-    (r.itineraries||[]).slice(0,5).forEach(it=>it.legs.forEach(l=>{ if(['WALK','BIKE','CAR'].includes(l.mode)) return;
-      if(l.routeShortName) names.add(l.routeShortName+'|'+l.mode); if(l.tripId) trips.add(l.tripId);
-      const k=(l.routeShortName||'')+'|'+l.from?.name+'|'+l.to?.name; if(seen.has(k)) return; seen.add(k); legs.push(l) })) }catch{} }));
-  nearRoutes={legs,names,trips,n:dests.length}; nearRoutesAt=Date.now(); return nearRoutes;
-}
-async function nearLoad(){
-  if(!nearMl||!nearCenter) return;
-  const now=Date.now(), dd=0.012, c=nearCenter;
-  const qs=`zoom=15&min=${c.lat+dd},${c.lon-dd*1.4}&max=${c.lat-dd},${c.lon+dd*1.4}&startTime=${new Date(now-120000).toISOString()}&endTime=${new Date(now+600000).toISOString()}`;
-  let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`,{cache:'no-store'}); if(r.ok){ segs=await r.json(); break } }catch{} }
-  if(!segs){ $('#nearSub').textContent='Données indisponibles'; return }
-  const R=await nearMyRoutes();
-  if(!R.n){ nearSegs=[]; nearPaint(); $('#nearSub').textContent='Aucune destination enregistrée'; return }
-  nearSegs=segs.filter(sg=>{ if(!(sg.trips||[]).length) return false; const L=nearLeg(sg);
-    return R.trips.has(L.tripId) || R.names.has(L.routeShortName+'|'+L.mode) || [...R.names].some(n=>n.split('|')[0]===L.routeShortName&&L.routeShortName) });
-  const routes=new Set((R.legs||[]).map(l=>l.routeShortName).filter(Boolean));
-  nearPaint(); setTimeout(nearPaint,2500); setTimeout(nearPaint,6000);   // couleurs OSM chargées en arrière-plan
-  nearSub(routes);
-}
-function nearSub(routes){ const n=nearMks.size; $('#nearSub').textContent=`${routes.size} ligne${routes.size>1?'s':''} · ${n} véhicule${n>1?'s':''} en circulation`; }
-function nearAnimate(){
-  if(!nearMl||!nearSegs.length) return;
-  const now=Date.now(), active=new Map();
-  nearSegs.forEach(sg=>{ if(now<+new Date(sg.departure)||now>+new Date(sg.arrival)) return; const t=sg.trips[0]; if(!active.has(t.tripId)) active.set(t.tripId,{sg,t}) });
-  active.forEach(({sg,t},id)=>{ const p=segPosNow(sg,now); let mk=nearMks.get(id);
-    if(!mk){ const el=document.createElement('div'); el.className='veh-m near-veh'; const [bg,fg]=nearColor(sg); el.style.background=bg; el.style.color=fg; el.textContent=t.routeShortName||sg.routeShortName||'•';
-      const pop=new maplibregl.Popup({offset:16}).setHTML(`<b>${esc(t.routeShortName||'')}</b>${t.headsign?` → ${esc(t.headsign)}`:''}<br><span style="color:var(--muted)">${sg.realTime?'Temps réel':'Position estimée'}</span>`);
-      mk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).setPopup(pop).addTo(nearMl); nearMks.set(id,mk) }
-    else mk.setLngLat(p); mk._sg=sg });
-  let changed=false; nearMks.forEach((mk,id)=>{ if(!active.has(id)){ mk.remove(); nearMks.delete(id); changed=true } });
-  if(changed||!nearAnimate._n||nearAnimate._n!==nearMks.size){ nearAnimate._n=nearMks.size; nearSub(new Set((nearRoutes?.legs||[]).map(l=>l.routeShortName).filter(Boolean))) }
-}
 </script>
 </body>
 </html>
