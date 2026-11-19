@@ -3113,9 +3113,9 @@ async function onMyPos(force){
   { const fl=show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]; ['route-walk','route-walk-casing','route-walk-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setFilter(id,fl) }) }
   { const v=show&&mapWalk!=null&&mapWalk===wIdx?'none':'visible'; ['walkto','walkto-casing','walkto-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setLayoutProperty(id,'visibility',v) }) }
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
-  // tracé à pied adapté à ta position : la partie déjà parcourue disparaît ; nouvel itinéraire si tu t'écartes de plus de 30 m
+  // tracé à pied adapté à ta position : la partie déjà parcourue disparaît ; nouvel itinéraire dès 10 m d'écart (trottoir d'en face compris)
   { const sn=walkGeo&&walkGeo.length>1?snapOnLine(me,walkGeo):null;
-    if(!walkGeo||!sn||sn.d>0.03||(Date.now()-lastWalkFetch>120000&&!navOn)){ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
+    if(!walkGeo||!sn||sn.d>0.01||(Date.now()-lastWalkFetch>120000&&!navOn)){ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
     else walkGeo=[me,...walkGeo.slice(sn.i)];   // départ du tracé collé à ta position
   }
   if(!walkGeo||!walkGeo.length) return;
