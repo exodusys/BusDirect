@@ -1256,7 +1256,7 @@ async function nextDepartures(dest,from,onMore){
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
     for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
   const out=await fin(cleanList(all)); out._cur=curs;
-  walkIt=await walkOnlyFor(d,origDest,from).catch(()=>null);   // marche à pied seule jusqu'à la destination
+  { const pk=(selFrom?.uid||'me')+'>'+selDest?.uid; walkOnlyFor(d,origDest,from).then(w=>{ if(pk!==(selFrom?.uid||'me')+'>'+selDest?.uid) return; const had=!!walkIt; walkIt=w; if((w||had)&&listOpen()) renderJourneyList() }).catch(()=>{}) }   // marche à pied seule : calculée en arrière-plan, la liste s'affiche sans l'attendre
   return out;
 }
 /* Parcours entièrement à pied : sert à masquer les transports plus lents que la marche */
