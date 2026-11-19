@@ -841,7 +841,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
   <div id="nearMap"></div>
   <div class="map-bar glass">
     <button class="map-btn" onclick="closeNearMap()" aria-label="Fermer">✕</button>
-    <div class="t"><span>Autour de moi</span><small id="nearSub">Chargement…</small></div>
+    <div class="t"><span>Mes parcours</span><small id="nearSub">Chargement…</small></div>
     <button class="map-btn" onclick="nearRecenter()" aria-label="Recentrer">◎</button>
   </div>
 </div>
@@ -3364,7 +3364,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWal
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
 
 /* ========= Carte « Autour de moi » : lignes à proximité + véhicules en mouvement ========= */
-let nearDark=null, nearMl=null, nearMks=new Map(), nearSegs=[], nearTimers=[], nearMe=null, nearRaf=null, nearCenter=null;
+let nearRoutes=null, nearRoutesAt=0, nearDark=null, nearMl=null, nearMks=new Map(), nearSegs=[], nearTimers=[], nearMe=null, nearRaf=null, nearCenter=null;
 async function openNearMap(){
   const btn=$('#nearBtn'); btn.classList.add('busy');
   try{ await freshPos() }catch{} btn.classList.remove('busy');
@@ -3399,11 +3399,21 @@ function nearLeg(sg){ const t=sg.trips[0]||{}; return {...sg,...t,mode:sg.mode||
 function nearColor(sg){ try{ return lineColor(nearLeg(sg)) }catch{ return MODE_COLOR[sg.mode]||['#636e80','#fff'] } }   // mêmes couleurs que le reste de l'app (OSM, opérateur, mode)
 function nearPaint(){ // recolore lignes + véhicules (les couleurs OSM arrivent en différé)
   if(!nearMl) return; const seen=new Set(), feats=[];
-  nearSegs.forEach(sg=>{ const name=nearLeg(sg).routeShortName, line=segLine(sg)||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
-    const k=name+'|'+line[0].join()+'|'+line.at(-1).join(); if(seen.has(k)) return; seen.add(k);
-    feats.push({type:'Feature',properties:{c:nearColor(sg)[0]},geometry:{type:'LineString',coordinates:line}}) });
+  (nearRoutes?.legs||[]).forEach(l=>{ let line; try{ line=legCoords(l) }catch{} if(!line||line.length<2) line=[[l.from.lon,l.from.lat],[l.to.lon,l.to.lat]];
+    let c; try{ c=lineColor(l)[0] }catch{ c=MODE_COLOR[l.mode]?.[0]||'#636e80' }
+    feats.push({type:'Feature',properties:{c},geometry:{type:'LineString',coordinates:line}}) });
   nearMl.getSource('nearLines')?.setData({type:'FeatureCollection',features:feats});
   nearMks.forEach(mk=>{ const sg=mk._sg; if(!sg) return; const [bg,fg]=nearColor(sg), el=mk.getElement(); el.style.background=bg; el.style.color=fg });
+}
+async function nearMyRoutes(){ // parcours de ma position vers chaque destination enregistrée
+  if(nearRoutes&&Date.now()-nearRoutesAt<120000) return nearRoutes;
+  const dests=(S.dests||[]).filter(d=>d&&(d.id||d.lat!=null));
+  const legs=[], names=new Set(), trips=new Set(), seen=new Set();
+  await Promise.all(dests.map(async d=>{ try{ const r=await plan(d,null,null,{lat:pos.lat,lon:pos.lon});
+    (r.itineraries||[]).slice(0,5).forEach(it=>it.legs.forEach(l=>{ if(['WALK','BIKE','CAR'].includes(l.mode)) return;
+      if(l.routeShortName) names.add(l.routeShortName+'|'+l.mode); if(l.tripId) trips.add(l.tripId);
+      const k=(l.routeShortName||'')+'|'+l.from?.name+'|'+l.to?.name; if(seen.has(k)) return; seen.add(k); legs.push(l) })) }catch{} }));
+  nearRoutes={legs,names,trips,n:dests.length}; nearRoutesAt=Date.now(); return nearRoutes;
 }
 async function nearLoad(){
   if(!nearMl||!nearCenter) return;
@@ -3411,8 +3421,11 @@ async function nearLoad(){
   const qs=`zoom=15&min=${c.lat+dd},${c.lon-dd*1.4}&max=${c.lat-dd},${c.lon+dd*1.4}&startTime=${new Date(now-120000).toISOString()}&endTime=${new Date(now+600000).toISOString()}`;
   let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`,{cache:'no-store'}); if(r.ok){ segs=await r.json(); break } }catch{} }
   if(!segs){ $('#nearSub').textContent='Données indisponibles'; return }
-  nearSegs=segs.filter(sg=>(sg.trips||[]).length);
-  const routes=new Set(nearSegs.map(sg=>nearLeg(sg).routeShortName).filter(Boolean));
+  const R=await nearMyRoutes();
+  if(!R.n){ nearSegs=[]; nearPaint(); $('#nearSub').textContent='Aucune destination enregistrée'; return }
+  nearSegs=segs.filter(sg=>{ if(!(sg.trips||[]).length) return false; const L=nearLeg(sg);
+    return R.trips.has(L.tripId) || R.names.has(L.routeShortName+'|'+L.mode) || [...R.names].some(n=>n.split('|')[0]===L.routeShortName&&L.routeShortName) });
+  const routes=new Set((R.legs||[]).map(l=>l.routeShortName).filter(Boolean));
   nearPaint(); setTimeout(nearPaint,2500); setTimeout(nearPaint,6000);   // couleurs OSM chargées en arrière-plan
   nearSub(routes);
 }
@@ -3427,7 +3440,7 @@ function nearAnimate(){
       mk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).setPopup(pop).addTo(nearMl); nearMks.set(id,mk) }
     else mk.setLngLat(p); mk._sg=sg });
   let changed=false; nearMks.forEach((mk,id)=>{ if(!active.has(id)){ mk.remove(); nearMks.delete(id); changed=true } });
-  if(changed||!nearAnimate._n||nearAnimate._n!==nearMks.size){ nearAnimate._n=nearMks.size; const r=new Set(nearSegs.map(sg=>sg.trips[0].routeShortName||sg.routeShortName).filter(Boolean)); nearSub(r) }
+  if(changed||!nearAnimate._n||nearAnimate._n!==nearMks.size){ nearAnimate._n=nearMks.size; nearSub(new Set((nearRoutes?.legs||[]).map(l=>l.routeShortName).filter(Boolean))) }
 }
 </script>
 </body>
