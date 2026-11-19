@@ -2623,18 +2623,19 @@ function drawItinerary(it){
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#0a84ff','line-width':['interpolate',['linear'],['zoom'],12,3,16,5,19,8],'line-dasharray':[0,2]},layout:{'line-cap':'round','line-join':'round'}});   // marche : points ronds réguliers
+    mlMap.addLayer({id:'route-walk-casing',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});   // marche : trait bleu clair bordé de blanc
   }
   if(!mlMap.getSource('walkto')){
     mlMap.addSource('walkto',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#0a84ff','line-width':['interpolate',['linear'],['zoom'],12,3,16,5,19,8],'line-dasharray':[0,2]},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'walkto-casing',type:'line',source:'walkto',paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'walkto',type:'line',source:'walkto',paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});
   }
   // Flèches du sens de la marche, le long des tracés à pied
-  if(!mlMap.hasImage('walk-arrow')){ const c=document.createElement('canvas'), R=3; c.width=c.height=24*R; const g=c.getContext('2d'); g.scale(R,R);
-    g.beginPath(); g.arc(12,12,9.5,0,Math.PI*2); g.fillStyle='#0a84ff'; g.fill(); g.lineWidth=2; g.strokeStyle='#fff'; g.stroke();   // pastille bleue cerclée de blanc
-    g.beginPath(); g.moveTo(9.6,7.6); g.lineTo(14.6,12); g.lineTo(9.6,16.4); g.lineJoin='round'; g.lineCap='round'; g.lineWidth=2.4; g.strokeStyle='#fff'; g.stroke();   // chevron blanc
-    mlMap.addImage('walk-arrow',g.getImageData(0,0,c.width,c.height),{pixelRatio:R}) }
-  const arrowLayout={'symbol-placement':'line','symbol-spacing':['interpolate',['linear'],['zoom'],13,70,18,120],'icon-image':'walk-arrow','icon-size':['interpolate',['linear'],['zoom'],12,0.55,16,0.8,19,1],'icon-padding':0,'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map','icon-keep-upright':false};
+  if(!mlMap.hasImage('walk-arrow2')){ const c=document.createElement('canvas'), R=3; c.width=c.height=12*R; const g=c.getContext('2d'); g.scale(R,R);
+    g.beginPath(); g.moveTo(2,1.5); g.lineTo(10.5,6); g.lineTo(2,10.5); g.closePath(); g.fillStyle='#0a7fd9'; g.fill();   // petit triangle bleu plein
+    mlMap.addImage('walk-arrow2',g.getImageData(0,0,c.width,c.height),{pixelRatio:R}) }
+  const arrowLayout={'symbol-placement':'line','symbol-spacing':['interpolate',['linear'],['zoom'],13,14,18,20],'icon-image':'walk-arrow2','icon-size':['interpolate',['linear'],['zoom'],12,0.5,16,0.8,19,1.1],'icon-padding':0,'icon-allow-overlap':true,'icon-ignore-placement':true,'icon-rotation-alignment':'map','icon-keep-upright':false};
   if(!mlMap.getLayer('route-walk-arrows')) mlMap.addLayer({id:'route-walk-arrows',type:'symbol',source:'route',filter:['==','walk',1],layout:arrowLayout});
   if(!mlMap.getLayer('walkto-arrows')) mlMap.addLayer({id:'walkto-arrows',type:'symbol',source:'walkto',layout:arrowLayout});
   // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
@@ -2775,7 +2776,9 @@ function setRouteDim(on){
     if(id==='route-walk') mlMap.setPaintProperty(id,p,on?['case',['==',['get','idx'],mapWalk],1,0.25]:1);
     else mlMap.setPaintProperty(id,p,1);   // lignes de véhicules toujours en couleur, même quand une marche est sélectionnée
   });
-  if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',on?['case',['==',['get','idx'],mapWalk],7,4]:5);
+  if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',on?['case',['==',['get','idx'],mapWalk],6,3.5]:['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]);
+  if(mlMap.getLayer('route-walk-casing')){ mlMap.setPaintProperty('route-walk-casing','line-width',on?['case',['==',['get','idx'],mapWalk],9,6]:['interpolate',['linear'],['zoom'],12,4,16,7,19,10]); mlMap.setPaintProperty('route-walk-casing','line-opacity',on?['case',['==',['get','idx'],mapWalk],1,0.25]:1) }
+  if(mlMap.getLayer('route-walk-arrows')) mlMap.setPaintProperty('route-walk-arrows','icon-opacity',on?['case',['==',['get','idx'],mapWalk],1,0.25]:1);
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
 }
 function mapFit(){
@@ -3036,8 +3039,8 @@ async function onMyPos(force){
   placeMapSteps(); showMapSteps();   // bandeau du parcours affiché en même temps que « Lancer la marche »
   // évite deux pointillés superposés : on masque la marche du parcours qui mène à la même cible que l'itinéraire recalculé
   const wIdx=tg?tg.walkIdx:-1;
-  if(mlMap.getLayer('route-walk')) mlMap.setFilter('route-walk',show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]);
-  if(mlMap.getLayer('walkto')) mlMap.setLayoutProperty('walkto','visibility',show&&mapWalk!=null&&mapWalk===wIdx?'none':'visible');
+  { const fl=show&&wIdx>=0&&mapWalk!==wIdx?['all',['==',['get','walk'],1],['!=',['get','idx'],wIdx]]:['==',['get','walk'],1]; ['route-walk','route-walk-casing','route-walk-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setFilter(id,fl) }) }
+  { const v=show&&mapWalk!=null&&mapWalk===wIdx?'none':'visible'; ['walkto','walkto-casing','walkto-arrows'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setLayoutProperty(id,'visibility',v) }) }
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
   if(!walkGeo||Date.now()-lastWalkFetch>60000||kmDist(me,walkGeo[0])>0.05){ lastWalkFetch=Date.now(); walkGeo=await walkRoute(me,boardStop) }
   mlMap.getSource('walkto')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:walkGeo}});
