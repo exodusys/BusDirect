@@ -1996,7 +1996,7 @@ function renderJourneyPage(){
   if(actionBar) actionBar.onclick=e=>{
     const act=e.target.closest('[data-act]')?.dataset.act;
     if(act==='map'){openMap(jpIt);return}
-    if(act==='track'){trackIt(jpIt);return}
+    if(act==='track'){trackIt(jpIt);jpTracked=true;renderJourneyPage();return}   // le bouton passe à « Retirer du suivi »
     if(act==='untrack'){const ix=S.tracked.findIndex(x=>jkey(x.it||x)===jpKey);if(ix>=0)S.tracked.splice(ix,1);save();jpTracked=false;updateSuivisTab();renderTracked();toast('Suivi retiré');
       if(jpFromSuivis||$('#v-suivis')?.classList.contains('active')){ closeJourneyPage(); if(!S.tracked.length) showHorairesHome() }   // depuis Suivis : retour à la liste, ou aux Horaires si elle est vide
       else renderJourneyPage() }
