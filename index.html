@@ -445,7 +445,8 @@ html.jp-lock,html.jp-lock body{overflow:hidden}
 .stl-r.me span{font-weight:800}
 .stl-r.me i::before{width:14px;height:14px}
 .stl-r.done{opacity:.45}
-.stl-veh{position:absolute;left:-4px;top:4px;width:26px;height:26px;border-radius:50%;background:var(--c);display:grid;place-items:center;font-size:14px;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:transform 1s linear;z-index:1}
+.stl-veh{position:absolute;left:2px;top:10px;width:14px;height:14px;border-radius:50%;background:var(--c);border:2px solid #fff;box-sizing:border-box;z-index:1;will-change:transform;animation:stlPulse 2s ease-in-out infinite}
+@keyframes stlPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 60%,transparent);opacity:1}50%{box-shadow:0 0 0 7px color-mix(in srgb,var(--c) 0%,transparent);opacity:.7}}   /* point de la couleur de la ligne qui clignote doucement */
 .leg.walk-row{cursor:pointer;border-radius:12px;margin-left:-6px;margin-right:-6px;padding-left:6px;padding-right:6px}
 .leg.walk-row:active{background:rgba(127,127,127,.15)}
 .gare{font-weight:700;color:var(--text)}
@@ -2084,7 +2085,7 @@ function openStopsPage(li){
     box._v={trip,l,s0,e,b};
     box.innerHTML=`<div class="stl-in" style="--c:${c};height:${list.length*STL_H}px"><i class="stl-rail"></i>`+list.map((st,k)=>{const gi=s0+k, me=gi===b||gi===e;
       return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}</span><small>${hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
-      +`<div class="stl-veh" style="--c:${c}">🚌</div></div>`;
+      +`<div class="stl-veh" style="--c:${c}"></div></div>`;
     jpMoveVehicles();
     // le véhicule visible à l'écran
     const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
@@ -2100,13 +2101,24 @@ function jpMoveVehicles(){
   document.querySelectorAll('#stopPage .stl').forEach(box=>{ const v=box._v; if(!v) return; const {trip,l,s0,e}=v, now=Date.now();
     refreshTripTimes(l,trip).then(()=>{ box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx} r.classList.toggle('done',st&&st.d<now-15000)}) });
     const veh=box.querySelector('.stl-veh'); if(!veh) return;
-    const km=kmOnTrip(trip,now); const st=trip.stops;
-    if(km==null||now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; return }
-    let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
-    else for(let i=s0;i<e;i++){ if(km<=st[i+1].km){ y=(i-s0+Math.max(0,Math.min(1,(km-st[i].km)/((st[i+1].km-st[i].km)||1))))*STL_H; break } }
-    veh.style.display=''; veh.style.transform=`translateY(${y}px)`;
+    const st=trip.stops; if(now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; box._km=null; return }
+    veh.style.display=''; jpStartVehAnim();
   });
 }
+/* Point du véhicule : même suivi que sur la carte (kilomètres le long de la course, vitesse ajustée à l'horaire en direct, sans saut ni recul) */
+let jpVehRaf=null, jpVehLast=0;
+function jpStartVehAnim(){ if(jpVehRaf) return;
+  const tick=()=>{ jpVehRaf=null; const pg=$('#stopPage'); if(!pg||!pg.classList.contains('on')) return;
+    const now=Date.now(), dt=Math.min(0.25,(now-(jpVehLast||now))/1000); jpVehLast=now; let any=false;
+    pg.querySelectorAll('.stl').forEach(box=>{ const v=box._v, veh=box.querySelector('.stl-veh'); if(!v||!veh||veh.style.display==='none') return;
+      const {trip,s0,e}=v, st=trip.stops, kT=kmOnTrip(trip,now); if(kT==null) return; any=true;
+      if(box._km==null) box._km=kT; const diff=kT-box._km;
+      if(diff>0) box._km+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5)); else if(diff<-0.4) box._km+=diff*Math.min(1,dt*0.15);
+      const km=box._km; let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
+      else for(let i=s0;i<e;i++){ if(km<=st[i+1].km){ y=(i-s0+Math.max(0,Math.min(1,(km-st[i].km)/((st[i+1].km-st[i].km)||1))))*STL_H; break } }
+      veh.style.transform=`translateY(${y.toFixed(2)}px)` });
+    if(any) jpVehRaf=requestAnimationFrame(tick) };
+  jpVehRaf=requestAnimationFrame(tick) }
 function closeJourneyPage(){
   const pg=$('#jrPage'); if(!pg) return; clearInterval(jpTimer); clearInterval(jpVehTimer); jpOpenLegs=new Set();
   pg.classList.add('out'); document.documentElement.classList.remove('jp-lock');
