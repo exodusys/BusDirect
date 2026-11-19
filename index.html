@@ -3364,15 +3364,18 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWal
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
 
 /* ========= Carte « Autour de moi » : lignes à proximité + véhicules en mouvement ========= */
-let nearMl=null, nearMks=new Map(), nearSegs=[], nearTimers=[], nearMe=null, nearRaf=null, nearCenter=null;
+let nearDark=null, nearMl=null, nearMks=new Map(), nearSegs=[], nearTimers=[], nearMe=null, nearRaf=null, nearCenter=null;
 async function openNearMap(){
   const btn=$('#nearBtn'); btn.classList.add('busy');
   try{ await freshPos() }catch{} btn.classList.remove('busy');
   if(!pos){ toast('Active la localisation pour voir les lignes à proximité'); locate(); return }
   $('#nearView').classList.add('open'); $('#nearSub').textContent='Chargement…';
   try{ await loadMapLib() }catch{ toast('Impossible de charger la carte'); closeNearMap(); return }
-  let style; try{ style=await buildStyle() }catch{ style=mapStyleUrl() }
+  mapDark=document.documentElement.dataset.theme==='dark';   // même thème que dans les Paramètres
+  const themeChanged=nearMl&&nearDark!==mapDark; nearDark=mapDark;
+  let style; if(!nearMl||themeChanged){ try{ style=await buildStyle() }catch{ style=mapStyleUrl() } }
   nearCenter={lat:pos.lat,lon:pos.lon};
+  if(themeChanged){ nearMl.setStyle(style,{diff:false}); await new Promise(r=>nearMl.once('style.load',r)) }
   if(!nearMl){
     nearMl=new maplibregl.Map({container:'nearMap',style,center:[pos.lon,pos.lat],zoom:15,attributionControl:{compact:true}});
     await new Promise(r=>nearMl.once('load',r));
@@ -3380,8 +3383,8 @@ async function openNearMap(){
   } else { nearMl.resize(); nearMl.jumpTo({center:[pos.lon,pos.lat],zoom:15}) }
   if(!nearMl.getSource('nearLines')){
     nearMl.addSource('nearLines',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    nearMl.addLayer({id:'nearLinesCase',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#fff','line-width':6,'line-opacity':.7}});
-    nearMl.addLayer({id:'nearLines',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','c'],'line-width':3.5}});
+    nearMl.addLayer({id:'nearLinesCase',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':nearDark?'#1c1c1e':'#fff','line-width':7,'line-opacity':.8}});
+    nearMl.addLayer({id:'nearLines',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','c'],'line-width':4.5}});
   }
   if(!nearMe){ const el=document.createElement('div'); el.className='me-m'; el.innerHTML='<div class="dot"></div>'; nearMe=new maplibregl.Marker({element:el}).setLngLat([pos.lon,pos.lat]).addTo(nearMl) } else nearMe.setLngLat([pos.lon,pos.lat]);
   await nearLoad();
@@ -3392,7 +3395,16 @@ function closeNearMap(){
   $('#nearView').classList.remove('open'); nearTimers.forEach(clearInterval); nearTimers=[]; cancelAnimationFrame(nearRaf); nearRaf=null;
 }
 function nearRecenter(){ if(nearMl&&pos) nearMl.easeTo({center:[pos.lon,pos.lat],zoom:15}) }
-function nearColor(t){ const c=t.routeColor||t.color; return (c&&c.toLowerCase()!=='ffffff')?['#'+c.replace('#',''), t.routeTextColor?'#'+t.routeTextColor.replace('#',''):'#fff']:['#0a84ff','#fff'] }
+function nearLeg(sg){ const t=sg.trips[0]||{}; return {...sg,...t,mode:sg.mode||t.mode,routeShortName:t.routeShortName||sg.routeShortName||'',routeColor:sg.routeColor||t.routeColor,routeTextColor:sg.routeTextColor||t.routeTextColor,from:sg.from,to:sg.to} }
+function nearColor(sg){ try{ return lineColor(nearLeg(sg)) }catch{ return MODE_COLOR[sg.mode]||['#636e80','#fff'] } }   // mêmes couleurs que le reste de l'app (OSM, opérateur, mode)
+function nearPaint(){ // recolore lignes + véhicules (les couleurs OSM arrivent en différé)
+  if(!nearMl) return; const seen=new Set(), feats=[];
+  nearSegs.forEach(sg=>{ const name=nearLeg(sg).routeShortName, line=segLine(sg)||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
+    const k=name+'|'+line[0].join()+'|'+line.at(-1).join(); if(seen.has(k)) return; seen.add(k);
+    feats.push({type:'Feature',properties:{c:nearColor(sg)[0]},geometry:{type:'LineString',coordinates:line}}) });
+  nearMl.getSource('nearLines')?.setData({type:'FeatureCollection',features:feats});
+  nearMks.forEach(mk=>{ const sg=mk._sg; if(!sg) return; const [bg,fg]=nearColor(sg), el=mk.getElement(); el.style.background=bg; el.style.color=fg });
+}
 async function nearLoad(){
   if(!nearMl||!nearCenter) return;
   const now=Date.now(), dd=0.012, c=nearCenter;
@@ -3400,13 +3412,8 @@ async function nearLoad(){
   let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`,{cache:'no-store'}); if(r.ok){ segs=await r.json(); break } }catch{} }
   if(!segs){ $('#nearSub').textContent='Données indisponibles'; return }
   nearSegs=segs.filter(sg=>(sg.trips||[]).length);
-  // tracés des lignes (un par ligne + tronçon, sans doublons)
-  const seen=new Set(), feats=[], routes=new Set();
-  nearSegs.forEach(sg=>{ const t=sg.trips[0], name=t.routeShortName||sg.routeShortName||''; if(name) routes.add(name);
-    const line=segLine(sg)||[[sg.from.lon,sg.from.lat],[sg.to.lon,sg.to.lat]];
-    const k=name+'|'+line[0].join()+'|'+line.at(-1).join(); if(seen.has(k)) return; seen.add(k);
-    feats.push({type:'Feature',properties:{c:nearColor({...sg,...t})[0]},geometry:{type:'LineString',coordinates:line}}) });
-  nearMl.getSource('nearLines')?.setData({type:'FeatureCollection',features:feats});
+  const routes=new Set(nearSegs.map(sg=>nearLeg(sg).routeShortName).filter(Boolean));
+  nearPaint(); setTimeout(nearPaint,2500); setTimeout(nearPaint,6000);   // couleurs OSM chargées en arrière-plan
   nearSub(routes);
 }
 function nearSub(routes){ const n=nearMks.size; $('#nearSub').textContent=`${routes.size} ligne${routes.size>1?'s':''} · ${n} véhicule${n>1?'s':''} en circulation`; }
@@ -3415,10 +3422,10 @@ function nearAnimate(){
   const now=Date.now(), active=new Map();
   nearSegs.forEach(sg=>{ if(now<+new Date(sg.departure)||now>+new Date(sg.arrival)) return; const t=sg.trips[0]; if(!active.has(t.tripId)) active.set(t.tripId,{sg,t}) });
   active.forEach(({sg,t},id)=>{ const p=segPosNow(sg,now); let mk=nearMks.get(id);
-    if(!mk){ const el=document.createElement('div'); el.className='veh-m near-veh'; const [bg,fg]=nearColor({...sg,...t}); el.style.background=bg; el.style.color=fg; el.textContent=t.routeShortName||sg.routeShortName||'•';
+    if(!mk){ const el=document.createElement('div'); el.className='veh-m near-veh'; const [bg,fg]=nearColor(sg); el.style.background=bg; el.style.color=fg; el.textContent=t.routeShortName||sg.routeShortName||'•';
       const pop=new maplibregl.Popup({offset:16}).setHTML(`<b>${esc(t.routeShortName||'')}</b>${t.headsign?` → ${esc(t.headsign)}`:''}<br><span style="color:var(--muted)">${sg.realTime?'Temps réel':'Position estimée'}</span>`);
       mk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).setPopup(pop).addTo(nearMl); nearMks.set(id,mk) }
-    else mk.setLngLat(p) });
+    else mk.setLngLat(p); mk._sg=sg });
   let changed=false; nearMks.forEach((mk,id)=>{ if(!active.has(id)){ mk.remove(); nearMks.delete(id); changed=true } });
   if(changed||!nearAnimate._n||nearAnimate._n!==nearMks.size){ nearAnimate._n=nearMks.size; const r=new Set(nearSegs.map(sg=>sg.trips[0].routeShortName||sg.routeShortName).filter(Boolean)); nearSub(r) }
 }
