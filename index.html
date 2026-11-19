@@ -1947,13 +1947,15 @@ function bindJourneys(box,list,tracked){
     if(act==='map'){e.stopPropagation();openMap(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
-    if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');return}
+    if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');if(!S.tracked.length)showHorairesHome();return}
     openJourneyPage(it,tracked);
   });
 }
 /* ========= Page de détail d'un parcours (glisse depuis la droite) ========= */
 let jpIt=null, jpKey=null, jpTracked=false, jpTimer=null;
+let jpFromSuivis=false;
 function openJourneyPage(it,tracked){
+  jpFromSuivis=!!$('#v-suivis')?.classList.contains('active');   // ouvert depuis la page Suivis ?
   if(!it) return; if(jkey(it)!==jpKey) jpOpenLegs=new Set(); jpIt=it; jpKey=jkey(it); jpTracked=!!tracked;
   let pg=$('#jrPage');
   if(!pg){ pg=document.createElement('div'); pg.id='jrPage';
@@ -1996,7 +1998,7 @@ function renderJourneyPage(){
     if(act==='map'){openMap(jpIt);return}
     if(act==='track'){trackIt(jpIt);return}
     if(act==='untrack'){const ix=S.tracked.findIndex(x=>jkey(x.it||x)===jpKey);if(ix>=0)S.tracked.splice(ix,1);save();jpTracked=false;updateSuivisTab();renderTracked();toast('Suivi retiré');
-      if($('#v-suivis')?.classList.contains('active')){ closeJourneyPage(); if(!S.tracked.length) document.querySelector('#tabs button[data-v="horaires"]')?.click() }   // depuis Suivis : retour à la liste, ou aux Horaires si elle est vide
+      if(jpFromSuivis||$('#v-suivis')?.classList.contains('active')){ closeJourneyPage(); if(!S.tracked.length) showHorairesHome() }   // depuis Suivis : retour à la liste, ou aux Horaires si elle est vide
       else renderJourneyPage() }
   };
 }
@@ -2080,6 +2082,11 @@ function trackIt(it){
   S.tracked.push({dest,from:selFrom,it,savedAt:Date.now()}); save(); updateSuivisTab(); toast('Ajouté aux suivis');
 }
 // Onglet Suivis visible seulement s'il y a des suivis, avec pastille rouge du nombre
+function showHorairesHome(){   // plus aucun suivi : retour à la page principale Horaires
+  if($('#jrPage')?.classList.contains('on')) closeJourneyPage();
+  document.querySelector('#tabs button[data-v="horaires"]')?.click();
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active',v.id==='v-horaires'));
+}
 function updateSuivisTab(){
   S.tracked=S.tracked.filter(t=>new Date(t.it.endTime)>Date.now()-30*60000);
   const n=S.tracked.length, tab=$('#tabSuivis'), b=$('#suivisBadge');
