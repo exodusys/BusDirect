@@ -3383,8 +3383,8 @@ async function openNearMap(){
   } else { nearMl.resize(); nearMl.jumpTo({center:[pos.lon,pos.lat],zoom:15}) }
   if(!nearMl.getSource('nearLines')){
     nearMl.addSource('nearLines',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
-    nearMl.addLayer({id:'nearLinesCase',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':nearDark?'#1c1c1e':'#fff','line-width':7,'line-opacity':.8}});
-    nearMl.addLayer({id:'nearLines',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','c'],'line-width':4.5}});
+    nearMl.addLayer({id:'nearLinesCase',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':nearDark?'#1c1c1e':'#fff','line-width':6.5,'line-opacity':.8,'line-offset':['coalesce',['get','o'],0]}});
+    nearMl.addLayer({id:'nearLines',type:'line',source:'nearLines',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':['get','c'],'line-width':4.5,'line-offset':['coalesce',['get','o'],0]}});
   }
   if(!nearMe){ const el=document.createElement('div'); el.className='me-m'; el.innerHTML='<div class="dot"></div>'; nearMe=new maplibregl.Marker({element:el}).setLngLat([pos.lon,pos.lat]).addTo(nearMl) } else nearMe.setLngLat([pos.lon,pos.lat]);
   await nearLoad();
@@ -3397,11 +3397,35 @@ function closeNearMap(){
 function nearRecenter(){ if(nearMl&&pos) nearMl.easeTo({center:[pos.lon,pos.lat],zoom:15}) }
 function nearLeg(sg){ const t=sg.trips[0]||{}; return {...sg,...t,mode:sg.mode||t.mode,routeShortName:t.routeShortName||sg.routeShortName||'',routeColor:sg.routeColor||t.routeColor,routeTextColor:sg.routeTextColor||t.routeTextColor,from:sg.from,to:sg.to} }
 function nearColor(sg){ try{ return lineColor(nearLeg(sg)) }catch{ return MODE_COLOR[sg.mode]||['#636e80','#fff'] } }   // mêmes couleurs que le reste de l'app (OSM, opérateur, mode)
+// Lignes sur la même route : découpe en petits tronçons, regroupe ceux qui se superposent, et décale chaque ligne côte à côte
+function nearSideBySide(legs){
+  const G=0.00018, STEP=12/111000;   // grille ~20 m, échantillonnage ~12 m
+  const cell=p=>Math.round(p[1]/G)+':'+Math.round(p[0]/(G*1.45));
+  const routes=[], pieces=[], edges=new Map();
+  legs.forEach(l=>{ let line; try{ line=legCoords(l) }catch{} if(!line||line.length<2) line=[[l.from.lon,l.from.lat],[l.to.lon,l.to.lat]];
+    let c; try{ c=lineColor(l)[0] }catch{ c=MODE_COLOR[l.mode]?.[0]||'#636e80' }
+    const rid=(l.routeShortName||'')+'|'+c; if(!routes.includes(rid)) routes.push(rid);
+    const pts=[line[0]];   // ré-échantillonnage régulier
+    for(let i=1;i<line.length;i++){ const a=line[i-1],b=line[i],d=Math.hypot((b[0]-a[0])*0.69,b[1]-a[1]),n=Math.max(1,Math.ceil(d/STEP));
+      for(let k=1;k<=n;k++) pts.push([a[0]+(b[0]-a[0])*k/n,a[1]+(b[1]-a[1])*k/n]) }
+    const seq=[]; for(let i=1;i<pts.length;i++){ const ca=cell(pts[i-1]),cb=cell(pts[i]); const key=ca===cb?null:(ca<cb?ca+'>'+cb:cb+'>'+ca);
+      const rev=key&&ca>cb; seq.push({a:pts[i-1],b:pts[i],key,rev}); if(key){ if(!edges.has(key)) edges.set(key,new Set()); edges.get(key).add(rid) } }
+    pieces.push({rid,c,seq}) });
+  const W=4.5, feats=[];
+  pieces.forEach(({rid,c,seq})=>{ let cur=null, lastOff=0, lastRev=false;
+    const flush=()=>{ if(cur&&cur.coords.length>1){ const co=cur.rev?cur.coords.slice().reverse():cur.coords; feats.push({type:'Feature',properties:{c,o:cur.off},geometry:{type:'LineString',coordinates:co}}) } cur=null };
+    seq.forEach(sg=>{ let off=lastOff, rev=lastRev;
+      if(sg.key){ const set=[...edges.get(sg.key)].sort((x,y)=>routes.indexOf(x)-routes.indexOf(y)); const n=set.length, i=set.indexOf(rid);
+        off=(i-(n-1)/2)*W; rev=sg.rev; lastOff=off; lastRev=rev }
+      const o=rev?-off:off;   // décalage exprimé dans le sens canonique du tronçon
+      if(!cur||cur.off!==o){ const prev=cur?cur.coords.at(-1):null; flush(); cur={off:o,rev:false,coords:prev?[prev]:[sg.a]} }
+      cur.coords.push(sg.b) });
+    flush() });
+  return feats;
+}
 function nearPaint(){ // recolore lignes + véhicules (les couleurs OSM arrivent en différé)
   if(!nearMl) return; const seen=new Set(), feats=[];
-  (nearRoutes?.legs||[]).forEach(l=>{ let line; try{ line=legCoords(l) }catch{} if(!line||line.length<2) line=[[l.from.lon,l.from.lat],[l.to.lon,l.to.lat]];
-    let c; try{ c=lineColor(l)[0] }catch{ c=MODE_COLOR[l.mode]?.[0]||'#636e80' }
-    feats.push({type:'Feature',properties:{c},geometry:{type:'LineString',coordinates:line}}) });
+  nearSideBySide(nearRoutes?.legs||[]).forEach(f=>feats.push(f));
   nearMl.getSource('nearLines')?.setData({type:'FeatureCollection',features:feats});
   nearMks.forEach(mk=>{ const sg=mk._sg; if(!sg) return; const [bg,fg]=nearColor(sg), el=mk.getElement(); el.style.background=bg; el.style.color=fg });
 }
