@@ -1348,17 +1348,18 @@ function freshPos(){
   return new Promise(res=>{
     if(!navigator.geolocation) return res(pos);
     GEO.getCurrentPosition(p=>{pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}updateAddr();renderSMS();res(pos)},
-      ()=>res(pos),{enableHighAccuracy:true,timeout:8000,maximumAge:0});
+      ()=>res(pos),{enableHighAccuracy:true,timeout:5000,maximumAge:15000});
   });
 }
 async function pickPair(from,to){
   listPos=null; walkIt=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
-  const recent=pos&&SENS.geo.t&&Date.now()-SENS.geo.t<45000&&(SENS.geo.acc||999)<150;
-  if(!from&&!recent) await freshPos();                 // position récente : pas d'attente GPS
-  else if(!from) freshPos().then(()=>{ if(lastPlanPos&&pos&&dist(lastPlanPos,pos)>0.1){ listPos=null; loadJourneys() } });
-  if(selDest===to&&selFrom===from) loadJourneys();
+  // départ immédiat avec la dernière position connue ; la position fraîche n'est attendue que si aucune n'existe
+  const usable=pos&&(!SENS.geo.t||Date.now()-SENS.geo.t<10*60000);
+  if(!from&&!usable) await freshPos();
+  else if(!from) freshPos().then(()=>{ if(selDest===to&&lastPlanPos&&pos&&dist(lastPlanPos,pos)>0.1){ listPos=null; loadJourneys(true) } });
+  if(selDest===to&&selFrom===from) loadJourneys(true);   // jamais bloqué par une mise à jour en cours d'une autre liste
 }
 // Suivi continu de la position : la liste reste calée sur l'endroit où tu es
 let lastPlanPos=null, listPos=null;   // listPos : position figée à l'ouverture de la liste
