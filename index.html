@@ -3168,7 +3168,7 @@ function startMeWatch(){
     pos={lat:p.coords.latitude,lon:p.coords.longitude};try{applySmsTab();fetchCanton();updateAddr()}catch(e){}
     if(p.coords.heading!=null&&!isNaN(p.coords.heading)&&p.coords.speed>0.5&&heading==null) gpsHeading=p.coords.heading;
     onMyPos();
-  },()=>{},{enableHighAccuracy:true,maximumAge:3000});
+  },()=>{},{enableHighAccuracy:true,maximumAge:0});   // positions GPS toujours fraîches
 }
 let gpsHeading=null, lastWalkFetch=0;
 /* Animation fluide de ma position, de l'orientation et de la caméra en navigation */
@@ -3181,6 +3181,8 @@ function startMeAnim(){
     if(meTarget){ if(!meShown) meShown=meTarget.slice();
       const k=kmDist(meShown,meTarget)>0.3?1:0.12; meShown=[meShown[0]+(meTarget[0]-meShown[0])*k, meShown[1]+(meTarget[1]-meShown[1])*k]; meMk.setLngLat(meShown) }
     if(bearTarget!=null){ if(bearShown==null) bearShown=bearTarget; bearShown=(bearShown+angDiff(bearShown,bearTarget)*0.15+360)%360; meMk.setRotation(bearShown) }
+    // le départ du tracé à pied suit ma position affichée, image par image
+    if(meShown&&walkGeo&&walkGeo.length>1){ const sn=snapOnLine(meShown,walkGeo); if(sn.d<0.03){ const src=mlMap.getSource('walkto'); if(src&&(!tick._t||Date.now()-tick._t>50)){ tick._t=Date.now(); src.setData({type:'Feature',geometry:{type:'LineString',coordinates:[meShown,...walkGeo.slice(sn.i)]}}) } } }
     if(navOn&&!userBusy()&&!mlMap.isEasing?.()&&meShown){ const o={center:meShown}; if(bearShown!=null) o.bearing=bearShown; mlMap.jumpTo(o) }
     meRaf=requestAnimationFrame(tick);
   };
@@ -3209,7 +3211,7 @@ async function onMyPos(force){
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
   // tracé à pied adapté à ta position : la partie déjà parcourue disparaît ; nouvel itinéraire dès 10 m d'écart (trottoir d'en face compris)
   { const sn=walkGeo&&walkGeo.length>1?snapOnLine(me,walkGeo):null;
-    if(!walkGeo||!sn||sn.d>0.01||(Date.now()-lastWalkFetch>120000&&!navOn)){ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
+    if(!walkGeo||!sn||sn.d>0.01||Date.now()-lastWalkFetch>(navOn?30000:120000)){ /* en guidage : itinéraire rafraîchi aussi toutes les 30 s */ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
     else walkGeo=[me,...walkGeo.slice(sn.i)];   // départ du tracé collé à ta position
   }
   if(!walkGeo||!walkGeo.length) return;
