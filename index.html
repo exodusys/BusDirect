@@ -705,6 +705,8 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
 #tracked>h3:first-child{margin-top:0}   /* liste des suivis remontée sous le titre */
 .cd .sched{font-size:12px;font-weight:700;color:var(--muted)}   /* pas de temps réel pour cette course */
 #tracked>h3{font-size:11px;letter-spacing:.4px}   /* titres départ → arrivée des suivis, plus petits */
+.suivis-head{justify-content:flex-start;align-items:center;gap:12px}
+.suivis-keep{font-size:12px;line-height:1.3;text-align:left;padding-left:12px;border-left:2px solid color-mix(in srgb,var(--accent) 70%,transparent)}   /* ligne verticale entre « Suivis » et la durée de conservation */
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -748,7 +750,7 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
 
   <!-- SUIVIS -->
   <section class="view" id="v-suivis">
-    <div class="row between"><h2>Suivis</h2><span class="muted" style="font-size:12px;text-align:right;line-height:1.25">Conservés jusqu'à<br>30 min après l'arrivée</span></div>
+    <div class="row suivis-head"><h2>Suivis</h2><span class="suivis-keep muted">Conservés jusqu'à<br>30 min après l'arrivée</span></div>
     <div id="tracked"></div>
   </section>
 
