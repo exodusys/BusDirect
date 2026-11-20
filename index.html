@@ -807,8 +807,6 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
     <h3>Carte</h3>
     <div class="card glass">
-      <div class="set"><div><b>🚶 Trottoirs et chemins</b><div class="muted" style="font-size:12px">Affiche les trottoirs, chemins piétons et escaliers sur la carte</div></div>
-        <label class="switch"><input type="checkbox" id="pathsOn" onchange="setShowPaths(this.checked)"><span></span></label></div>
     </div>
     <h3>Itinéraires</h3>
     <div class="card glass">
@@ -2551,7 +2549,7 @@ async function buildStyle(){
     if(ly['source-layer']==='poi'&&!/transit|railway|station|bus|airport|aerialway|ferry/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
     if(ly.type==='fill-extrusion') (ly.layout=ly.layout||{}).visibility=mapBld?'visible':'none';
     if(/hatch/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';
-    if(!S.settings.showPaths&&ly.type==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track|bridleway/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';   // pas de trottoirs ni de chemins sur la carte
+    if(ly.type==='line'&&/path|foot|pedestrian|sidewalk|steps|cycle|track|bridleway/i.test(ly.id)) (ly.layout=ly.layout||{}).visibility='none';   // pas de trottoirs ni de chemins sur la carte
     if(/shield/i.test(ly.id)||(ly.type==='symbol'&&ly['source-layer']==='transportation_name'&&/"ref"|\{ref\}/.test(JSON.stringify(ly.layout||{}))))
       (ly.layout=ly.layout||{}).visibility='none';   // pas de numéros de routes (ex. 112)      // traverses hachurées des voies
     if(ly.paint&&ly.paint['line-pattern']){ delete ly.paint['line-pattern']; ly.paint['line-color']=ly.paint['line-color']||(mapDark?'#5a5d68':'#cfcac2') }
