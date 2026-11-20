@@ -824,6 +824,8 @@ header .appname::after{content:'';position:absolute;left:1px;right:-34px;bottom:
         <label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div>
       <div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div>
         <label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div>
+      <div class="set"><div><b>🌍 Pays et villes couverts</b><div class="sstat" id="covStat">Mise à jour automatique…</div></div>
+        <button class="info-btn" onclick="showCovUpdate()" aria-label="Détail de la dernière mise à jour">i</button></div>
     </div>
     <input type="file" id="fileIn" accept="image/*" hidden>
   </section>
@@ -924,6 +926,7 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
+  cov: store.get('cov',{}),   // couverture Transitous (mise à jour automatique)
   settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:63,blurV2:true,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='#e30613'; S.settings.accentRed=true; } // accent par défaut : rouge
@@ -3271,52 +3274,136 @@ function stopNav(){
 
 /* ========= Informations ========= */
 const COVERAGE=[
- ['🇨🇭 Suisse','Genève, Lausanne, Berne, Zurich, Bâle, Lucerne, Lugano, Sion, Neuchâtel, Fribourg, Saint-Gall, Winterthour et tout le réseau national'],
- ['🇱🇮 Liechtenstein','Vaduz, Schaan'],
- ['🇫🇷 France','Paris, Lyon, Marseille, Toulouse, Nice, Nantes, Strasbourg, Bordeaux, Lille, Grenoble, Annecy, Montpellier, Rennes et réseaux régionaux TER'],
- ['🇩🇪 Allemagne','Berlin, Hambourg, Munich, Cologne, Francfort, Stuttgart, Düsseldorf, Leipzig, Dresde, Hanovre et tout le réseau national'],
- ['🇦🇹 Autriche','Vienne, Graz, Linz, Salzbourg, Innsbruck'],
- ['🇮🇹 Italie','Milan, Rome, Turin, Naples, Florence, Bologne, Venise, Côme'],
- ['🇧🇪 Belgique','Bruxelles, Anvers, Gand, Liège, Charleroi'],
- ['🇳🇱 Pays-Bas','Amsterdam, Rotterdam, La Haye, Utrecht, Eindhoven'],
- ['🇱🇺 Luxembourg','Luxembourg et tout le pays'],
- ['🇪🇸 Espagne','Madrid, Barcelone, Valence, Séville, Bilbao'],
- ['🇵🇹 Portugal','Lisbonne, Porto'],
- ['🇬🇧 Royaume-Uni','Londres, Manchester, Birmingham, Édimbourg, Glasgow'],
- ['🇮🇪 Irlande','Dublin, Cork'],
- ['🇩🇰 Danemark','Copenhague, Aarhus'],
- ['🇸🇪 Suède','Stockholm, Göteborg, Malmö'],
- ['🇳🇴 Norvège','Oslo, Bergen, Trondheim'],
- ['🇫🇮 Finlande','Helsinki, Tampere, Turku'],
- ['🇪🇪 Estonie','Tallinn, Tartu'],
- ['🇱🇻 Lettonie','Riga'],
- ['🇱🇹 Lituanie','Vilnius, Kaunas'],
- ['🇵🇱 Pologne','Varsovie, Cracovie, Poznań, Wrocław, Gdańsk'],
- ['🇨🇿 Tchéquie','Prague, Brno, Ostrava'],
- ['🇸🇰 Slovaquie','Bratislava, Košice'],
- ['🇭🇺 Hongrie','Budapest'],
- ['🇸🇮 Slovénie','Ljubljana'],
- ['🇭🇷 Croatie','Zagreb, Split'],
- ['🇷🇴 Roumanie','Bucarest, Cluj-Napoca'],
- ['🇧🇬 Bulgarie','Sofia'],
- ['🇬🇷 Grèce','Athènes, Thessalonique'],
- ['🇦🇱 Albanie','Tirana'],
- ['🇧🇦 Bosnie-Herzégovine','Sarajevo'],
- ['🇦🇩 Andorre','Andorre-la-Vieille'],
- ['🇦🇲 Arménie','Erevan'],
- ['🇺🇸 États-Unis','New York, Los Angeles, San Francisco, Chicago, Boston, Seattle, Portland, Washington'],
- ['🇨🇦 Canada','Montréal, Toronto, Vancouver, Ottawa'],
- ['🇧🇲 Bermudes','Hamilton'],
- ['🇦🇷 Argentine','Buenos Aires'],
- ['🇧🇴 Bolivie','La Paz'],
- ['🇦🇺 Australie','Sydney, Melbourne, Brisbane, Perth, Adélaïde, Canberra, Hobart, Darwin'],
- ['🇳🇿 Nouvelle-Zélande','Auckland, Wellington'],
- ['🇰🇷 Corée du Sud','Séoul, Busan et réseau ferroviaire national'],
- ['🇯🇵 Japon','Tokyo et grandes agglomérations']
-];
+ ["🇨🇭 Suisse", "Genève, Lausanne, Berne, Zurich, Bâle, Lucerne, Lugano, Bienne, Sion, Neuchâtel, Fribourg, Saint-Gall, Winterthour et tout le réseau national", 0],
+ ["🇱🇮 Liechtenstein", "Vaduz, Schaan", 0],
+ ["🇫🇷 France", "Paris, Lyon, Marseille, Toulouse, Nice, Nantes, Strasbourg, Bordeaux, Lille, Grenoble, Annecy, Montpellier, Rennes et réseaux régionaux TER", 0],
+ ["🇩🇪 Allemagne", "Berlin, Hambourg, Munich, Cologne, Francfort, Stuttgart, Düsseldorf, Leipzig, Dresde, Hanovre, Karlsruhe et tout le réseau national", 0],
+ ["🇦🇹 Autriche", "Vienne, Graz, Linz, Salzbourg, Innsbruck, Wels, Steyr, Bregenz, Dornbirn, Feldkirch", 0],
+ ["🇮🇹 Italie", "Milan, Rome, Turin, Naples, Florence, Bologne, Venise, Gênes, Côme, Sienne, Pise, Livourne, Lucques, Arezzo", 0],
+ ["🇧🇪 Belgique", "Bruxelles, Anvers, Gand, Liège, Charleroi et réseau SNCB", 0],
+ ["🇳🇱 Pays-Bas", "Amsterdam, Rotterdam, La Haye, Utrecht, Eindhoven et tout le pays", 0],
+ ["🇱🇺 Luxembourg", "Luxembourg et tout le pays", 0],
+ ["🇲🇨 Monaco", "Monaco", 1],
+ ["🇦🇩 Andorre", "Andorre-la-Vieille", 0],
+ ["🇪🇸 Espagne", "Madrid, Barcelone, Valence, Séville, Bilbao, Saragosse, Palma de Majorque et réseau Renfe", 0],
+ ["🇵🇹 Portugal", "Lisbonne, Porto, Braga, Faro, Coimbra, Madère", 0],
+ ["🇬🇧 Royaume-Uni", "Londres, Manchester, Birmingham, Liverpool, Nottingham, Cardiff, Édimbourg, Glasgow", 0],
+ ["🇬🇬 Guernesey", "Sercq", 1],
+ ["🇮🇪 Irlande", "Dublin, Cork, Galway, Limerick, Waterford, Wexford", 0],
+ ["🇮🇸 Islande", "Reykjavík et région, Akureyri", 1],
+ ["🇬🇱 Groenland", "Réseau local", 1],
+ ["🇩🇰 Danemark", "Copenhague, Aarhus, Odense, Bornholm, Svendborg, Samsø, Fanø, Ærø", 0],
+ ["🇸🇪 Suède", "Stockholm, Göteborg, Malmö, Skåne, Gotland, Luleå, Kiruna", 0],
+ ["🇳🇴 Norvège", "Oslo, Bergen, Trondheim, Stavanger, Agder, Nordland", 0],
+ ["🇫🇮 Finlande", "Helsinki, Tampere, Turku, Oulu, Kuopio, Rovaniemi", 0],
+ ["🇪🇪 Estonie", "Tallinn, Tartu, Pärnu, Saaremaa, Viljandi", 0],
+ ["🇱🇻 Lettonie", "Riga, Daugavpils, Jelgava, Liepāja, Rēzekne", 0],
+ ["🇱🇹 Lituanie", "Vilnius, Kaunas, Klaipėda, Šiauliai, Panevėžys", 0],
+ ["🇵🇱 Pologne", "Varsovie, Cracovie, Łódź, Poznań, Wrocław, Gdańsk", 0],
+ ["🇨🇿 Tchéquie", "Prague, Brno, Ostrava, Plzeň, Olomouc, Liberec, České Budějovice", 0],
+ ["🇸🇰 Slovaquie", "Bratislava, Košice, Prešov, Žilina, Trenčín, Nitra", 0],
+ ["🇭🇺 Hongrie", "Budapest, Szeged, Debrecen, Győr, Nyíregyháza, Székesfehérvár", 0],
+ ["🇸🇮 Slovénie", "Ljubljana, Maribor, Koper, Nova Gorica, Novo Mesto, Ptuj", 0],
+ ["🇭🇷 Croatie", "Zagreb, Split, Rijeka, Osijek, Zadar, Dubrovnik", 0],
+ ["🇧🇦 Bosnie-Herzégovine", "Sarajevo, Mostar", 0],
+ ["🇷🇸 Serbie", "Belgrade, Novi Sad, Niš, Čačak, Pančevo", 1],
+ ["🇲🇪 Monténégro", "Podgorica", 1],
+ ["🇽🇰 Kosovo", "Réseau local", 1],
+ ["🇲🇰 Macédoine du Nord", "Skopje", 1],
+ ["🇦🇱 Albanie", "Tirana, Vlorë et cars interurbains", 0],
+ ["🇬🇷 Grèce", "Athènes, Thessalonique", 0],
+ ["🇨🇾 Chypre", "Réseau de bus", 1],
+ ["🇷🇴 Roumanie", "Bucarest, Cluj-Napoca, Iași, Craiova, Galați, Suceava, Alba Iulia", 0],
+ ["🇲🇩 Moldavie", "Chișinău, Ungheni", 1],
+ ["🇧🇬 Bulgarie", "Sofia, Plovdiv, Varna, Stara Zagora, Pleven et réseau BDZ", 0],
+ ["🇺🇦 Ukraine", "Kyiv, Lviv, Odessa, Ivano-Frankivsk", 1],
+ ["🇷🇺 Russie", "Moscou", 1],
+ ["🇹🇷 Turquie", "Istanbul, İzmir, Adana, Gaziantep, Erzurum", 1],
+ ["🇦🇲 Arménie", "Erevan et chemins de fer", 0],
+ ["🇬🇪 Géorgie", "Tbilissi", 1],
+ ["🇦🇿 Azerbaïdjan", "Bakou", 1],
+ ["🇮🇱 Israël", "Tel-Aviv, Jérusalem, Ramat Gan, Beer-Sheva, Eilat", 1],
+ ["🇦🇪 Émirats arabes unis", "Réseaux locaux", 1],
+ ["🇴🇲 Oman", "Tout le pays", 1],
+ ["🇲🇦 Maroc", "Réseau ferroviaire ONCF", 1],
+ ["🇩🇿 Algérie", "Réseau ferroviaire SNTF", 1],
+ ["🇹🇳 Tunisie", "Tunis, Sahel", 1],
+ ["🇪🇬 Égypte", "Le Caire", 1],
+ ["🇪🇹 Éthiopie", "Addis-Abeba", 1],
+ ["🇲🇱 Mali", "Bamako", 1],
+ ["🇨🇮 Côte d'Ivoire", "Abidjan (Abobo, Adjamé, Cocody, Yopougon, Treichville), Bingerville", 1],
+ ["🇬🇭 Ghana", "Réseaux locaux", 1],
+ ["🇳🇬 Nigeria", "Lagos", 1],
+ ["🇨🇲 Cameroun", "Bus et taxis collectifs", 1],
+ ["🇿🇦 Afrique du Sud", "Port Elizabeth (Algoa Bus)", 1],
+ ["🇮🇳 Inde", "Delhi, Bangalore, Hyderabad, Andhra Pradesh", 1],
+ ["🇱🇰 Sri Lanka", "Colombo (Lanka Metro Transit)", 1],
+ ["🇹🇭 Thaïlande", "Bangkok, Phuket, Krabi, Pattaya, Hua Hin", 1],
+ ["🇰🇭 Cambodge", "Phnom Penh", 1],
+ ["🇲🇾 Malaisie", "Kuala Lumpur, Penang, Kuantan", 1],
+ ["🇸🇬 Singapour", "Singapour", 1],
+ ["🇮🇩 Indonésie", "Jakarta", 1],
+ ["🇨🇳 Chine", "Réseaux partiels", 1],
+ ["🇭🇰 Hong Kong", "Hong Kong", 1],
+ ["🇹🇼 Taïwan", "Taipei, Kaohsiung, Taichung, Tainan, Hsinchu, Keelung", 1],
+ ["🇰🇷 Corée du Sud", "Séoul, Busan et réseau ferroviaire national", 0],
+ ["🇯🇵 Japon", "Tokyo, Osaka, Fukuoka, Hiroshima, Kumamoto, Kochi, Nagano", 0],
+ ["🇺🇸 États-Unis", "New York, Los Angeles, San Francisco, Chicago, Boston, Seattle, Portland, Washington, Phoenix, Denver, Dallas, Houston, Nashville", 0],
+ ["🇨🇦 Canada", "Montréal, Québec, Toronto, Ottawa, Vancouver, Calgary, Edmonton, Halifax, Winnipeg et VIA Rail", 0],
+ ["🇵🇷 Porto Rico", "Toute l'île", 1],
+ ["🇧🇲 Bermudes", "Hamilton", 0],
+ ["🇲🇽 Mexique", "Mexico, Oaxaca, Zamora", 1],
+ ["🇳🇮 Nicaragua", "Managua, Estelí", 1],
+ ["🇨🇷 Costa Rica", "Réseaux locaux", 1],
+ ["🇨🇴 Colombie", "Bogotá (TransMilenio)", 1],
+ ["🇻🇪 Venezuela", "Maracaibo", 1],
+ ["🇵🇪 Pérou", "Arequipa, Trujillo", 1],
+ ["🇧🇴 Bolivie", "La Paz, El Alto, Cochabamba", 0],
+ ["🇧🇷 Brésil", "São Paulo, Rio de Janeiro, Belo Horizonte, Porto Alegre, Recife, Fortaleza", 1],
+ ["🇨🇱 Chili", "Santiago", 1],
+ ["🇦🇷 Argentine", "Buenos Aires et Trenes Argentinos", 0],
+ ["🇺🇾 Uruguay", "Montevideo", 1],
+ ["🇦🇺 Australie", "Sydney, Melbourne, Brisbane, Perth, Adélaïde, Canberra, Hobart, Darwin, Newcastle, Cairns", 0],
+ ["🇳🇿 Nouvelle-Zélande", "Auckland, Wellington, Christchurch, Tauranga, Dunedin", 0]
+];   // d'après transitous.org/sources (novembre 2026) ; 3e valeur : nouveau dans la liste
+/* Mise à jour automatique de la couverture : liste des sources de Transitous (dépôt public sur GitHub), une fois par jour */
+const COV_REPO='https://api.github.com/repos/public-transport/transitous/contents/feeds', COV_RAW='https://raw.githubusercontent.com/public-transport/transitous/main/feeds/';
+const ccFlag=cc=>/^[A-Z]{2}$/.test(cc)?String.fromCodePoint(...[...cc].map(c=>0x1F1E6+c.charCodeAt(0)-65)):'🌐';
+const ccName=cc=>{ try{ return new Intl.DisplayNames(['fr'],{type:'region'}).of(cc) }catch{ return cc } };
+const covKnown=()=>new Set([...COVERAGE.map(x=>[...x[0]].slice(0,2).join('')),...((S.cov?.codes)||[]).map(ccFlag)]);
+async function updateCoverage(force){
+  S.cov=S.cov||{}; if(!force&&S.cov.at&&Date.now()-S.cov.at<24*3600e3){ renderCovStat(); return }
+  try{
+    const r=await fetch(COV_REPO,{cache:'no-store'}); if(!r.ok) throw 0; const files=(await r.json()).filter(f=>/\.json$/.test(f.name));
+    const byCC={}; files.forEach(f=>{ const cc=f.name.replace(/\.json$/,'').split(/[-_]/)[0].toUpperCase(); if(/^[A-Z]{2}$/.test(cc)) (byCC[cc]=byCC[cc]||[]).push(f.name) });
+    const known=covKnown(), prevCodes=new Set(S.cov.codes||[]), added=[];
+    for(const cc of Object.keys(byCC)){
+      const isNewCountry=!known.has(ccFlag(cc));
+      const prevFiles=new Set((S.cov.files||{})[cc]||[]), newFiles=byCC[cc].filter(n=>S.cov.files&&!prevFiles.has(n));
+      if(!isNewCountry&&!newFiles.length) continue;
+      const names=[]; for(const fn of (isNewCountry?byCC[cc]:newFiles).slice(0,4)){ try{ const j=await (await fetch(COV_RAW+fn)).json();
+        (j.sources||[]).forEach(x=>{ const n=String(x.name||'').replace(/[-_]/g,' ').trim(); if(n&&names.length<8&&!names.includes(n)) names.push(n) }) }catch{} }
+      added.push({cc,flag:ccFlag(cc),name:ccName(cc),items:names,newCountry:isNewCountry});
+    }
+    S.cov={at:Date.now(),codes:Object.keys(byCC),files:byCC,added:added.length?added:(S.cov.added||[]),addedAt:added.length?Date.now():(S.cov.addedAt||null),extra:[...(S.cov.extra||[]).filter(e=>!added.some(a=>a.cc===e.cc)),...added.filter(a=>a.newCountry)]};
+    store.set('cov',S.cov); $('#countryList')&&($('#countryList').innerHTML='');
+  }catch{ S.cov.err=Date.now() }
+  renderCovStat();
+}
+function renderCovStat(){ const el=$('#covStat'); if(!el) return; const c=S.cov||{};
+  el.textContent=c.at?`Dernière mise à jour : ${new Date(c.at).toLocaleDateString('fr-CH',{day:'numeric',month:'short',year:'numeric'})} à ${hm(c.at)}${c.addedAt&&c.addedAt===c.at&&c.added?.length?` · ${c.added.length} ajout${c.added.length>1?'s':''}`:''}`:(c.err?'Mise à jour impossible pour le moment':'Mise à jour automatique…') }
+function showCovUpdate(){ const c=S.cov||{}, a=c.added||[];
+  let d=document.getElementById('alertDialog'); if(!d){ d=document.createElement('dialog'); d.id='alertDialog'; d.className='glass'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
+  d.innerHTML=`<div class="row between" style="margin-bottom:6px"><h2 style="margin:0;font-size:20px">Pays et villes ajoutés</h2><button class="btn ghost sm" type="button">Fermer</button></div>
+    <p class="muted" style="font-size:12px;margin:0 0 10px">${c.addedAt?'Dernière mise à jour avec des ajouts : '+new Date(c.addedAt).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+' à '+hm(c.addedAt):'Aucun ajout détecté depuis la première vérification.'}</p>
+    ${a.length?a.map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join(''):''}
+    <p class="muted" style="font-size:11px;margin-top:10px">Source : liste des données de Transitous, vérifiée automatiquement une fois par jour.</p>`;
+  d.querySelector('button').onclick=()=>d.close(); d.showModal?d.showModal():d.setAttribute('open','');
+}
+setTimeout(()=>updateCoverage(false),4000);
 function toggleInfo(on){
   const v=$('#infoView'); if(on&&!$('#countryList').innerHTML)
-    $('#countryList').innerHTML=COVERAGE.map(([c,t])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('');
+    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires · ${COVERAGE.filter(x=>x[2]).length+((S.cov?.extra)||[]).length} nouveaux${S.cov?.at?' · liste vérifiée le '+new Date(S.cov.at).toLocaleDateString('fr-CH'):''}</p>`+COVERAGE.map(([c,t,n])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join('');   // pays ajoutés par la mise à jour automatique
   if(on) $('#smsCities').innerHTML=REGIONS.map(r=>`<div class="cov"><b>${esc(r.name)}</b><span>${r.sms.map(x=>esc(x.n)+(x.p!=null?' · ≈ CHF '+x.p.toFixed(2):'')).join(' — ')}</span></div>`).join('');
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
