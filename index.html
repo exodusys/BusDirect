@@ -714,6 +714,11 @@ body.classic main{padding-top:calc(var(--safe-t) + 75px)}   /* classique : 6 px 
 body.classic.list-page main{padding-top:var(--safe-t)}
 .stop-lbl .ontime,.appr-stop .ontime{color:#34c759;font-weight:700}
 .stop-lbl .late,.appr-stop .late{color:#ff9f0a;font-weight:800}
+.stl-r.cancel>span{text-decoration:line-through;opacity:.6}
+.stl-r.cancel>small{color:#ff9f0a;font-weight:700}
+.stl-r.cancel>i{background:transparent!important;border-style:dashed!important;opacity:.7}
+.appr-stop.cancel>span{text-decoration:line-through}
+.stl-alerts .alert{margin:0 0 10px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2107,13 +2112,20 @@ function openStopsPage(li){
     const s0=b, list=trip.stops.slice(s0,e+1), c=lineColor(l)[0];
     box._v={trip,l,s0,e,b};
     box.innerHTML=`<div class="stl-in" style="--c:${c};height:${list.length*STL_H}px"><i class="stl-rail"></i>`+list.map((st,k)=>{const gi=s0+k, me=gi===b||gi===e;
-      return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}</span><small>${hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
+      return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}${st.cancelled?' cancel':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}</span><small>${st.cancelled?'Supprimé':hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
       +`<div class="stl-veh" style="--c:${c}"></div></div>`;
-    jpMoveVehicles();
+    stopsAlert(pg,l); jpMoveVehicles();
     // le véhicule visible à l'écran
     const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
   });
   clearInterval(jpVehTimer); jpVehTimer=setInterval(jpMoveVehicles,1000);
+}
+/* Infos trafic en tête de la liste des arrêts (déviation, travaux…), comme dans le détail */
+function stopsAlert(pg,l){
+  const box=pg.querySelector('.stl'); if(!box) return; let el=pg.querySelector('.stl-alerts');
+  if(!el){ el=document.createElement('div'); el.className='stl-alerts'; box.parentNode.insertBefore(el,box) }
+  const al=(jpIt?alertsNoInterr(jpIt):[]).filter(a=>a.leg===l);
+  const html=al.length?alertBanner(al):''; if(el._h!==html){ el._h=html; el.innerHTML=html; const a=el.querySelector('.alert'); if(a){ a.style.cursor='pointer'; a.onclick=()=>showAlertDialog(al) } }
 }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
   pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
@@ -2122,7 +2134,7 @@ function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterva
 }
 function jpMoveVehicles(){
   document.querySelectorAll('#stopPage .stl').forEach(box=>{ const v=box._v; if(!v) return; const {trip,l,s0,e}=v, now=Date.now();
-    refreshTripTimes(l,trip).then(()=>{ box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx} r.classList.toggle('done',st&&st.d<now-15000)}) });
+    refreshTripTimes(l,trip).then(()=>{ stopsAlert($('#stopPage'),l); box.querySelectorAll('.stl-r').forEach(r=>{const st=trip.stops[+r.dataset.gi]; const sm=r.querySelector('small'); if(st&&sm){const tx=st.cancelled?'Supprimé':hm(+r.dataset.gi!==e?st.t:st.arr); if(sm.textContent!==tx) sm.textContent=tx; r.classList.toggle('cancel',!!st.cancelled)} r.classList.toggle('done',st&&st.d<now-15000)}) });
     const veh=box.querySelector('.stl-veh'); if(!veh) return;
     const st=trip.stops; if(now<st[s0].a-30*60000||now>st[e].a+60000){ veh.style.display='none'; box._km=null; return }
     veh.style.display=''; jpStartVehAnim();
@@ -2815,9 +2827,10 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
     if(r.kind==='from'){ time=''; tag=delayTag(l.startTime,l.scheduledStartTime,l.realTime) }
     else if(r.kind==='to'){ time=''; tag=delayTag(l.endTime,l.scheduledEndTime,l.realTime) }
-    else { const st=r.st, t=st.arrival||st.departure; time=t?hm(t):''; tag=delayTag(t,st.scheduledArrival||st.scheduledDeparture,l.realTime) } }
+    else { const st=r.st, t=st.arrival||st.departure; time=t?hm(t):''; tag=delayTag(t,st.scheduledArrival||st.scheduledDeparture,l.realTime);
+      const tr=l.tripId&&tripCache[l.tripId], x=tr?.stops?.find(z=>nrmS(z.name)===nrmS(st.name)); if(st.cancelled||x?.cancelled){ time=''; tag='<span class="late">Arrêt supprimé</span>'; p._cx=true } else p._cx=false } }
   const sub=r&&r.kind!=='mid'?`${r.role} ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}${r.track?' · '+r.track:''}`:p.sub;
-  return `<b>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}` }
+  return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}` }
 function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }) }
 // Crédits OpenFreeMap : toujours repliés, seul le (i) reste visible (touche-le pour les lire)
 function collapseAttrib(){ document.querySelectorAll('#map .maplibregl-ctrl-attrib').forEach(a=>{ a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open') }) }
@@ -3044,9 +3057,9 @@ function drawApproachStops(trip,p,ft,show){
     trip.stops.slice(0,bi).forEach(st=>{
       if(vKm!=null&&st.km!=null&&st.km<vKm-0.02) return;          // déjà passé
       const k=st.name+'@'+st.lon.toFixed(5); keep.add(k);
-      if(apprMks.has(k)){ const el=apprMks.get(k).getElement(), sm=el.querySelector('small'); if(sm) sm.innerHTML=`${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}`; return }   // heure et retard à jour
+      if(apprMks.has(k)){ const el=apprMks.get(k).getElement(), sm=el.querySelector('small'); if(sm) sm.innerHTML=st.cancelled?'<span class="late">Arrêt supprimé</span>':`${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}`; el.classList.toggle('cancel',!!st.cancelled); return }   // heure et retard à jour
       const el=document.createElement('div'); el.className='appr-stop'; el.style.setProperty('--c',col);
-      el._st=st; el._rt=trip.rt; el.innerHTML=`<i></i><span>${esc(st.name)}<small>${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}</small></span>`;
+      el._st=st; el._rt=trip.rt; if(st.cancelled) el.classList.add('cancel'); el.innerHTML=`<i></i><span>${esc(st.name)}<small>${st.cancelled?'<span class="late">Arrêt supprimé</span>':`${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}`}</small></span>`;
       apprMks.set(k,new maplibregl.Marker({element:el,anchor:'left',offset:[-6,0],subpixelPositioning:true}).setLngLat([st.lon,st.lat]).addTo(mlMap));
     });
   }
