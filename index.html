@@ -732,12 +732,10 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 .dep-r .late{color:#ff9f0a;font-weight:700}.dep-r .ontime{color:#34c759;font-weight:700}
 .early{color:#0a84ff;font-weight:700}
 .cd .early{font-size:12px}
-.share-btn{flex:0 0 auto!important;padding-left:12px!important;padding-right:12px!important}
 .occ{display:inline-flex;gap:1px;vertical-align:middle;margin-left:4px;font-size:12px}
 .occ i{width:6px;height:11px;border-radius:2px;background:rgba(127,127,127,.35);display:inline-block}
 .occ.l1 i:nth-child(-n+1),.occ.l2 i:nth-child(-n+2),.occ.l3 i:nth-child(-n+3){background:currentColor}
 .occ.l1{color:#34c759}.occ.l2{color:#ff9f0a}.occ.l3{color:#ff3b30}
-.share-opts{display:flex;flex-direction:column;gap:8px}.share-opts .btn{width:100%;justify-content:center}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2044,7 +2042,7 @@ function journeyHTML(it,i,tracked){
     </div>
     <div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠️':a.works?'🚧':'⚠️'}</button>`})():''}</div>
     <div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
-      ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button><button class="btn ghost sm share-btn" data-act="share" aria-label="Partager le parcours"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v13"/><path d="m7 8 5-5 5 5"/><path d="M5 13v7h14v-7"/></svg></button></div></div>
+      ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div>
   </div>`;
 }
 function bindJourneys(box,list,tracked){
@@ -2052,7 +2050,6 @@ function bindJourneys(box,list,tracked){
     const act=e.target.closest('[data-act]')?.dataset.act, it=(list||curList)[+el.dataset.i];
     if(act==='alerts'){e.stopPropagation();if(it)showAlertDialog(alertsNoInterr(it));return}   // icône infos trafic de la dalle
     if(act==='map'){e.stopPropagation();openMap(it);return}
-    if(act==='share'){e.stopPropagation();shareJourney(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');if(!S.tracked.length)showHorairesHome();return}
@@ -2105,7 +2102,6 @@ function renderJourneyPage(){
   if(actionBar) actionBar.onclick=e=>{
     const act=e.target.closest('[data-act]')?.dataset.act;
     if(act==='map'){openMap(jpIt);return}
-    if(act==='share'){shareJourney(jpIt);return}
     if(act==='track'){trackIt(jpIt);jpTracked=true;renderJourneyPage();return}   // le bouton passe à « Retirer du suivi »
     if(act==='untrack'){const ix=S.tracked.findIndex(x=>jkey(x.it||x)===jpKey);if(ix>=0)S.tracked.splice(ix,1);save();jpTracked=false;updateSuivisTab();renderTracked();toast('Suivi retiré');
       if(jpFromSuivis||$('#v-suivis')?.classList.contains('active')){ closeJourneyPage(); if(!S.tracked.length) showHorairesHome() }   // depuis Suivis : retour à la liste, ou aux Horaires si elle est vide
@@ -2189,36 +2185,6 @@ async function loadDepartures(){
     return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div>
       <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}${occHTML(x.occupancy||x.occupancyStatus)}</div></div></div>` }).join('');
 }
-/* ========= Partager un parcours ========= */
-function journeyText(it){
-  const d=new Date(it.startTime), day=d.toLocaleDateString('fr-CH',{weekday:'long',day:'numeric',month:'long'});
-  const lines=[`🚏 ${selFrom?.name||'Ma position'} → ${selDest?.name||it.legs.at(-1)?.to?.name||''}`,`${day} · départ ${hm(it.startTime)} · arrivée ${hm(it.endTime)}`,''];
-  it.legs.forEach(l=>{ if(l.mode==='WALK'){ const m=Math.max(1,Math.round((new Date(l.endTime)-new Date(l.startTime))/60000)); if(m>0) lines.push(`🚶 Marche ${m} min${l.to?.name&&!/^end$/i.test(l.to.name)?' jusqu\'à '+l.to.name:''}`); return }
-    const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(l.mode||''), lab=rail?'voie':'quai';
-    lines.push(`${rail?'🚆':'🚌'} ${l.routeShortName||''} direction ${l.headsign||l.to?.name||''}`.replace(/  +/g,' '));
-    lines.push(`   ${hm(l.startTime)} ${l.from?.name||''}${l.from?.track?' ('+lab+' '+l.from.track+')':''}`);
-    lines.push(`   ${hm(l.endTime)} ${l.to?.name||''}${l.to?.track?' ('+lab+' '+l.to.track+')':''}`) });
-  const L=journeyLinks(it); if(L) lines.push('',`🍎 Apple Plans : ${L.apple}`,`🗺️ Google Maps : ${L.google}`);
-  lines.push('','Envoyé depuis BusDirect'); return lines.join('\n');
-}
-function journeyLinks(it){   // même départ, même arrivée, en transports publics, à l'heure du parcours
-  const a=it.legs[0]?.from, b=it.legs.at(-1)?.to; if(a?.lat==null||b?.lat==null) return null;
-  const t=Math.floor(new Date(it.startTime)/1000), an=encodeURIComponent(/^start$/i.test(a.name||'')?'Départ':a.name||''), bn=encodeURIComponent(/^end$/i.test(b.name||'')?(selDest?.name||'Arrivée'):b.name||'');
-  return { apple:`https://maps.apple.com/?saddr=${a.lat},${a.lon}&daddr=${b.lat},${b.lon}&dirflg=r`,
-           google:`https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=transit` } }
-function shareJourney(it){ if(!it) return; const L=journeyLinks(it);
-  let d=document.getElementById('alertDialog'); if(!d){ d=document.createElement('dialog'); d.id='alertDialog'; d.className='glass'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
-  d.innerHTML=`<div class="row between" style="margin-bottom:10px"><h2 style="margin:0;font-size:20px">Partager le parcours</h2><button class="btn ghost sm" type="button" data-x="close">Fermer</button></div>
-    <div class="share-opts"><button class="btn" type="button" data-x="send">📤 Envoyer le parcours</button>
-    ${L?`<button class="btn ghost" type="button" data-x="apple">🍎 Ouvrir dans Apple Plans</button><button class="btn ghost" type="button" data-x="google">🗺️ Ouvrir dans Google Maps</button>`:''}</div>
-    <p class="muted" style="font-size:11px;margin-top:10px">Apple Plans et Google Maps recalculent le trajet en transports publics entre le même départ et la même arrivée : il peut différer légèrement.</p>`;
-  d.onclick=e=>{ const x=e.target.closest('[data-x]')?.dataset.x; if(e.target===d||x==='close'){ d.close(); return } if(!x) return; d.close();
-    if(x==='send') sendJourney(it); else if(x==='apple') location.href=L.apple; else if(x==='google') window.open(L.google,'_blank') };
-  d.showModal?d.showModal():d.setAttribute('open','');
-}
-async function sendJourney(it){ const text=journeyText(it);
-  try{ if(navigator.share){ await navigator.share({title:'Mon parcours',text}); return } }catch(e){ if(e?.name==='AbortError') return }
-  try{ await navigator.clipboard.writeText(text); toast('Parcours copié : colle-le dans un message') }catch{ toast('Partage impossible') } }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
   pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
   void pg.offsetWidth; pg.classList.add('out');
