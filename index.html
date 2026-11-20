@@ -720,7 +720,21 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 .appr-stop.cancel>span{text-decoration:line-through}
 .stl-alerts .alert{margin:0 0 10px}
 .stl-add{font-style:normal;font-size:11px;font-weight:800;color:#34c759;margin-left:6px;text-transform:uppercase;letter-spacing:.3px}
-.stl-diag{display:block;margin:16px auto 4px;font-size:12px;opacity:.75}
+.quai.chg{background:#ff9f0a!important;color:#1a1a1a!important}
+.quai-old{opacity:.6;font-size:.9em}
+#depPage{z-index:33;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:scroll}
+.dep-r{display:flex;gap:12px;align-items:flex-start;padding:10px 2px;border-bottom:1px solid var(--border)}
+.dep-r:last-child{border-bottom:0}
+.dep-t{width:62px;flex:none;display:flex;flex-direction:column;line-height:1.15}
+.dep-t b{font-size:17px}.dep-t s{font-size:12px;opacity:.6}.dep-t small{font-size:11px;color:var(--muted)}
+.dep-m{flex:1;min-width:0}.dep-m>b{font-size:15px}
+.dep-r.cancel .dep-t b,.dep-r.cancel .dep-m>b{text-decoration:line-through;opacity:.6}
+.dep-r .late{color:#ff9f0a;font-weight:700}.dep-r .ontime{color:#34c759;font-weight:700}
+.st-poi{font-size:18px;line-height:1;cursor:pointer;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+.opt-sel{background:rgba(127,127,127,.18);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 8px;font:inherit;font-size:14px}
+.opt-modes{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.opt-mode{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:12px;background:rgba(127,127,127,.15);font-size:14px}
+body.classic .opt-sel,body.classic .opt-mode{border-radius:5px}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -821,6 +835,14 @@ body.classic.list-page main{padding-top:var(--safe-t)}
     <div class="card glass">
       <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
         <label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div>
+      <div class="set"><div><b>🔁 Correspondances</b><div class="muted" style="font-size:12px">Nombre maximal de changements</div></div>
+        <select id="optTransfers" class="opt-sel" onchange="setPlanOpt('maxTransfers',this.value)"><option value="">Illimité</option><option value="0">Direct</option><option value="1">1 max</option><option value="2">2 max</option><option value="3">3 max</option></select></div>
+      <div class="set"><div><b>🚶 Marche jusqu'à l'arrêt</b><div class="muted" style="font-size:12px">Distance à pied maximale au départ</div></div>
+        <select id="optWalk" class="opt-sel" onchange="setPlanOpt('walkMax',+this.value)"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div>
+      <div class="set"><div><b>♿ Accessible</b><div class="muted" style="font-size:12px">Trajets à pied sans escaliers, véhicules accessibles en fauteuil</div></div>
+        <label class="switch"><input type="checkbox" id="optAcc" onchange="setPlanOpt('accessible',this.checked)"><span></span></label></div>
+      <div class="set" style="display:block"><div><b>🚦 Moyens de transport</b><div class="muted" style="font-size:12px">Décoche ceux à éviter</div></div>
+        <div class="opt-modes" id="optModes"></div></div>
     </div>
     <h3>Tickets</h3>
     <div class="card glass">
@@ -1010,7 +1032,7 @@ function goHome(){
  if(document.getElementById('mapView')?.classList.contains('open'))closeMap();
  clearInterval(jpTimer);clearInterval(jpVehTimer);jpOpenLegs=new Set();
  document.getElementById('mapNoticeDialog')?.close();
- for(const id of ['jrPage','stopPage']){const page=document.getElementById(id);if(!page)continue;page.classList.remove('on','out');page.style.transform='';page.style.transition='';page.style.opacity='';page.scrollTop=0}
+ clearInterval(depTimer); for(const id of ['jrPage','stopPage','depPage']){const page=document.getElementById(id);if(!page)continue;page.classList.remove('on','out');page.style.transform='';page.style.transition='';page.style.opacity='';page.scrollTop=0}
  document.documentElement.classList.remove('jp-lock');document.body.classList.remove('list-page');deselectTile();
  document.querySelectorAll('.pg-in,.pg-back,.pg-out').forEach(el=>el.classList.remove('pg-in','pg-back','pg-out'));
  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active',el.id==='v-horaires'));
@@ -1186,6 +1208,7 @@ async function plan(dest, time, cursor, from){
   let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):P.lat+','+P.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
+  qs+=planOptsQS(); if(S.settings.walkMax&&S.settings.walkMax!==15) qs=qs.replace('maxPreTransitTime=900','maxPreTransitTime='+S.settings.walkMax*60);   // options de calcul
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
   const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
@@ -1947,6 +1970,8 @@ function alertsOf(it){
       if(sk.length||ad.length) out.push({leg:l,title:'Déviation',head:sk.length?`Arrêt${sk.length>1?'s':''} non desservi${sk.length>1?'s':''} : ${sk.join(', ')}`:`Arrêt${ad.length>1?'s':''} de remplacement : ${ad.join(', ')}`,
         desc:[sk.length?`La ligne ${l.routeShortName||''} est déviée et ne s'arrête pas ${sk.length>1?'à ces arrêts':'à cet arrêt'}.`:'',ad.length?`Arrêt${ad.length>1?'s':''} de remplacement : ${ad.join(', ')}.`:''].filter(Boolean).join(' ').replace(/  +/g,' '),url:'',detour:true,auto:true});
     }
+    for(const [pl,w] of [[l.from,'départ'],[l.to,'arrivée']]) if(trackChanged(pl)){ const lab=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'')?'Voie':'Quai';
+      out.push({leg:l,title:`${lab} modifié${lab==='Voie'?'e':''}`,head:`${pl.name} : ${lab.toLowerCase()} ${pl.track} au lieu de ${pl.scheduledTrack}`,desc:`Le ${w} de la ligne ${l.routeShortName||''} se fait ${lab==='Voie'?'voie':'quai'} ${pl.track}.`.replace(/  +/g,' '),url:'',works:false,track:true}) }   // changement de voie / quai
     if(l.cancelled||l.canceled) out.push({leg:l,title:'Interruption',head:`Course supprimée : ${l.routeShortName||''} ${l.from?.name||''} → ${l.to?.name||''}`.trim(),desc:'',url:'',cancel:true});
   });
   it.legs.forEach(l=>(l.alerts||[]).forEach(a=>{
@@ -1982,6 +2007,9 @@ function alertDetails(al){
 function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
+/* Voie ou quai : la voie réelle en orange et l'ancienne barrée quand elle a changé */
+const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==String(pl.scheduledTrack));
+const trackHTML=pl=>!pl?.track?'':trackChanged(pl)?`<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`:`<span class="quai">${esc(pl.track)}</span>`;
 function journeyHTML(it,i,tracked){
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
@@ -1989,7 +2017,7 @@ function journeyHTML(it,i,tracked){
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
   const isRail=l=>/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
   const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const gare=l.mode!=='WALK'&&(isRail(l)||/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm));
-    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${isRail(l)?'Voie':'Quai'} <span class="quai">${esc(pl.track)}</span>`:''}` };
+    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${isRail(l)?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
   const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
@@ -2005,7 +2033,7 @@ function journeyHTML(it,i,tracked){
       ${ft?badge(ft,'main'):''}
       <div class="jr-mid">
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
-        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` <span class="quai">${esc(ft.from.track)}</span>`:''}</div>
+        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}</div>
       </div>
       <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="ontime">${dl} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div>
     </div>
@@ -2119,11 +2147,7 @@ function openStopsPage(li){
       return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}${st.cancelled?' cancel':''}${st.added?' added':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}${st.added?' <em class="stl-add">remplacement</em>':''}</span><small>${st.cancelled?'Supprimé':hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
       +`<div class="stl-veh" style="--c:${c}"></div></div>`;
     stopsAlert(pg,l); jpMoveVehicles();
-    // diagnostic : copie les données brutes de la course (pour analyser une déviation)
-    { let dg=pg.querySelector('.stl-diag'); if(!dg){ dg=document.createElement('button'); dg.type='button'; dg.className='btn ghost sm stl-diag'; dg.textContent='Copier les données Transitous de la course'; box.parentNode.appendChild(dg) }
-      dg.onclick=async()=>{ try{ let raw=null; for(const v of tripV?[tripV]:['v5','v4','v3','v2','v1']){ const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(l.tripId)}`,{cache:'no-store'}); if(r.ok){ raw=await r.json(); break } }
-        const leg=(raw?.legs||[]).find(x=>x.mode!=='WALK'), slim=leg?{route:leg.routeShortName,headsign:leg.headsign,realTime:leg.realTime,from:leg.from,to:leg.to,intermediateStops:leg.intermediateStops,alerts:leg.alerts}:raw;
-        await navigator.clipboard.writeText(JSON.stringify(slim,null,1)); toast('Données copiées : colle-les dans la conversation') }catch(e){ toast('Copie impossible') } } }
+    box.querySelectorAll('.stl-r').forEach(r=>{ r.style.cursor='pointer'; r.onclick=()=>{ const st=trip.stops[+r.dataset.gi]; if(st) openDepartures(st) } });   // toucher un arrêt : ses prochains départs
     // le véhicule visible à l'écran
     const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
   });
@@ -2136,6 +2160,45 @@ function stopsAlert(pg,l){
   const al=(jpIt?alertsNoInterr(jpIt):[]).filter(a=>a.leg===l);
   const html=al.length?alertBanner(al):''; if(el._h!==html){ el._h=html; el.innerHTML=html; const a=el.querySelector('.alert'); if(a){ a.style.cursor='pointer'; a.onclick=()=>showAlertDialog(al) } }
 }
+/* ========= Tableau des départs d'un arrêt (comme les écrans aux arrêts) ========= */
+let depTimer=null, depStop=null;
+function openDepartures(stop){
+  if(!stop?.stopId&&stop?.lat==null) return; depStop=stop;
+  let pg=$('#depPage');
+  if(!pg){ pg=document.createElement('div'); pg.id='depPage'; pg.className='sub-page';
+    pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeDepartures()" aria-label="Retour">‹</button><b class="jp-title"></b><button type="button" class="home-btn" onclick="closeDepartures();goHome()" aria-label="Accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button></div><div class="jp-body"><div class="card glass dep-list"></div></div>';
+    document.body.appendChild(pg); jpSwipe(pg,closeDepartures) }
+  pg.querySelector('.jp-title').textContent='Départs · '+(stop.name||'Arrêt');
+  pg.querySelector('.dep-list').innerHTML='<div class="spin"></div>';
+  pg.scrollTop=0; pg.style.transform=''; pg.style.opacity=''; pg.classList.remove('out'); pg.classList.add('on'); clickShieldUntil=Date.now()+400;
+  loadDepartures(); clearInterval(depTimer); depTimer=setInterval(()=>{ if(!document.hidden) loadDepartures() },15000);   // toutes les 15 s
+}
+function closeDepartures(){ const pg=$('#depPage'); if(!pg) return; clearInterval(depTimer); pg.classList.add('out'); setTimeout(()=>{ pg.classList.remove('on','out'); pg.style.transform=''; pg.style.opacity='' },300) }
+async function loadDepartures(){
+  const box=$('#depPage .dep-list'); if(!box||!depStop) return; const st=depStop;
+  const q=st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=150`;
+  let d=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?${q}&n=30&time=${new Date().toISOString()}`,{cache:'no-store'}); if(r.ok){ d=await r.json(); break } }catch{} }
+  if(depStop!==st) return;
+  const rows=(d?.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture));
+  if(!rows.length){ box.innerHTML='<div class="muted" style="padding:6px 0">Aucun départ trouvé pour cet arrêt.</div>'; return }
+  box.innerHTML=rows.map(x=>{ const pl=x.place, t=pl.departure||pl.scheduledDeparture, sch=pl.scheduledDeparture, dl=sch?Math.round((new Date(t)-new Date(sch))/60000):0;
+    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName}, cx=x.cancelled||pl.cancelled;
+    const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
+    return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div>
+      <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
+}
+/* ========= Options de calcul d'itinéraire ========= */
+const PLAN_MODES=[['train','🚆 Train','RAIL,HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_FAST_RAIL,REGIONAL_RAIL,SUBURBAN'],['tram','🚋 Tram','TRAM'],['bus','🚌 Bus','BUS,COACH'],['metro','🚇 Métro','SUBWAY'],['ferry','⛴️ Bateau','FERRY'],['lift','🚡 Funiculaire / téléphérique','FUNICULAR,AERIAL_LIFT']];
+function planOptsQS(){ const st=S.settings; let q='';
+  if(st.maxTransfers!==undefined&&st.maxTransfers!=='') q+=`&maxTransfers=${+st.maxTransfers}`;
+  if(st.accessible) q+='&pedestrianProfile=WHEELCHAIR';
+  const off=st.modesOff||[]; if(off.length&&off.length<PLAN_MODES.length) q+='&transitModes='+PLAN_MODES.filter(m=>!off.includes(m[0])).map(m=>m[2]).join(',');
+  return q }
+function setPlanOpt(k,v){ S.settings[k]=v; save(); try{ sessionStorage.clear() }catch{}; loadedFor=null; toast('Options de calcul enregistrées') }
+function setModeOff(m,on){ const off=new Set(S.settings.modesOff||[]); on?off.delete(m):off.add(m); if(off.size>=PLAN_MODES.length){ toast('Garde au moins un moyen de transport'); renderPlanOpts(); return } S.settings.modesOff=[...off]; setPlanOpt('modesOff',S.settings.modesOff) }
+function renderPlanOpts(){ const st=S.settings; if($('#optTransfers')) $('#optTransfers').value=st.maxTransfers??''; if($('#optWalk')) $('#optWalk').value=String(st.walkMax||15); if($('#optAcc')) $('#optAcc').checked=!!st.accessible;
+  const box=$('#optModes'); if(box) box.innerHTML=PLAN_MODES.map(([k,l])=>`<label class="opt-mode"><input type="checkbox" ${(st.modesOff||[]).includes(k)?'':'checked'} onchange="setModeOff('${k}',this.checked)"> ${l}</label>`).join('') }
+setTimeout(renderPlanOpts,0);
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
   pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
   void pg.offsetWidth; pg.classList.add('out');
@@ -2808,18 +2871,20 @@ function drawItinerary(it){
   transit.forEach((l,i)=>{
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
     const role=i===0?'Départ':'Correspondance';
-    add(l.from,{major:1,color:col,name:l.from.name,ref:{kind:'from',leg:l,role,track:l.from.track?lab+' '+l.from.track:''}});
+    add(l.from,{major:1,color:col,name:l.from.name,ref:{kind:'from',leg:l,role,track:l.from.track?lab+' '+l.from.track+(trackChanged(l.from)?' (au lieu de '+l.from.scheduledTrack+')':''):''}});
     (l.intermediateStops||[]).forEach(st=>add(st,{major:0,color:col,name:st.name,ref:{kind:'mid',leg:l,st}}));
     const last=i===transit.length-1;
-    add(l.to,{major:1,color:col,name:l.to.name,ref:{kind:'to',leg:l,role:last?'Arrivée':'Descente',track:l.to.track?lab+' '+l.to.track:''}});
+    add(l.to,{major:1,color:col,name:l.to.name,ref:{kind:'to',leg:l,role:last?'Arrivée':'Descente',track:l.to.track?lab+' '+l.to.track+(trackChanged(l.to)?' (au lieu de '+l.to.scheduledTrack+')':''):''}});
   });
   // Étiquettes encadrées (HTML) pour chaque arrêt du parcours
   stopLbls.forEach(m=>m.remove()); stopLbls=[];
   pts.forEach(f=>{const p=f.properties, el=document.createElement('div');
     el.className='stop-lbl '+(p.major?'major':'minor'); el.style.setProperty('--c',p.color);
     el._p=p; el.innerHTML=stopLblHTML(p);
+    if(p.ref){ const pl=p.ref.kind==='from'?p.ref.leg.from:p.ref.kind==='to'?p.ref.leg.to:p.ref.st; el.style.cursor='pointer'; el.style.pointerEvents='auto'; el.addEventListener('click',e=>{ e.stopPropagation(); openDepartures(pl) }) }   // toucher un arrêt : ses prochains départs
     el.style.zIndex=p.major?'30':'20'; stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
   updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) }
+  if(!mlMap._stationLyr){ mlMap._stationLyr=1; mlMap.on('moveend',loadStationLayer); setTimeout(loadStationLayer,800) }   // plans de gares, ascenseurs, escalators
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
   else{
@@ -2829,6 +2894,44 @@ function drawItinerary(it){
   }
 }
 let stopLbls=[];
+/* ========= Plans des gares (OpenStreetMap via Overpass) : quais, escaliers, escalators, ascenseurs, entrées — visibles en zoom rapproché ========= */
+const stationCache=new Map(); let stationMks=[], stationBusy=false;
+async function loadStationLayer(){
+  if(!mlMap||stationBusy) return; const z=mlMap.getZoom(), show=z>=16;
+  ['st-plat-fill','st-plat-line','st-plat-lbl','st-stairs','st-esc','st-esc-lbl'].forEach(id=>{ if(mlMap.getLayer(id)) mlMap.setLayoutProperty(id,'visibility',show?'visible':'none') });
+  stationMks.forEach(m=>m.getElement().style.display=show?'':'none'); if(!show) return;
+  const c=mlMap.getCenter(), key=(Math.round(c.lat*200)/200)+','+(Math.round(c.lng*200)/200);   // zones d'environ 500 m, gardées en mémoire
+  let data=stationCache.get(key);
+  if(!data){ stationBusy=true; try{
+      const la=Math.round(c.lat*200)/200, lo=Math.round(c.lng*200)/200, d=0.006, bb=`${la-d},${lo-d},${la+d},${lo+d}`;
+      const q=`[out:json][timeout:20];(way["railway"="platform"](${bb});way["public_transport"="platform"]["train"="yes"](${bb});way["highway"="steps"](${bb});node["highway"="elevator"](${bb});node["railway"~"subway_entrance|train_station_entrance"](${bb}););out geom;`;
+      const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(q)}); if(!r.ok) throw 0;
+      data=(await r.json()).elements||[]; stationCache.set(key,data);
+    }catch{ data=null }finally{ stationBusy=false } }
+  if(!data) return; drawStationLayer(data);
+}
+function drawStationLayer(els){
+  if(!mlMap.getSource('station')){ mlMap._stSeen=new Set(); stationMks.forEach(m=>m.remove()); stationMks=[] }   // nouveau style de carte : tout redessiner
+  const F=[]; const seen=mlMap._stSeen||(mlMap._stSeen=new Set());
+  els.forEach(e=>{ const t=e.tags||{}, id=e.type+e.id; if(seen.has(id)) return; seen.add(id);
+    if(e.type==='way'&&e.geometry){ const co=e.geometry.map(g=>[g.lon,g.lat]);
+      if(t.railway==='platform'||t.public_transport==='platform'){ const ref=t['railway:track_ref']||t.local_ref||t.ref||''; const closed=co.length>3&&co[0][0]===co.at(-1)[0]&&co[0][1]===co.at(-1)[1];
+        F.push({type:'Feature',properties:{k:closed?'platA':'platL',ref:ref?('Voie '+ref.replace(/;/g,' / ')):''},geometry:closed?{type:'Polygon',coordinates:[co]}:{type:'LineString',coordinates:co}}) }
+      else if(t.highway==='steps') F.push({type:'Feature',properties:{k:t.conveying?'esc':'stairs',ref:t.conveying?'Escalator':''},geometry:{type:'LineString',coordinates:co}}) }
+    else if(e.type==='node'){ const el=document.createElement('div'); el.className='st-poi';
+      if(t.highway==='elevator'){ el.textContent='🛗'; el.title='Ascenseur' } else { el.textContent='🚪'; el.title=t.name?'Entrée '+t.name:'Entrée' }
+      const m=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat([e.lon,e.lat]).setPopup(new maplibregl.Popup({offset:12}).setHTML(`<b>${esc(el.title)}</b>${t.level?`<br>Niveau ${esc(t.level)}`:''}${t.wheelchair==='yes'?'<br>Accessible en fauteuil':''}`)).addTo(mlMap); stationMks.push(m) } });
+  const src=mlMap.getSource('station'); const prev=src?(src._data?.features||[]):[]; const fc={type:'FeatureCollection',features:[...prev,...F]};
+  if(src){ src.setData(fc); src._data=fc; return }
+  mlMap.addSource('station',{type:'geojson',data:fc}); mlMap.getSource('station')._data=fc;
+  const before=mlMap.getLayer('route-walk-casing')?'route-walk-casing':undefined;
+  mlMap.addLayer({id:'st-plat-fill',type:'fill',source:'station',filter:['==','k','platA'],paint:{'fill-color':'#9aa4b2','fill-opacity':0.35}},before);
+  mlMap.addLayer({id:'st-plat-line',type:'line',source:'station',filter:['in','k','platA','platL'],paint:{'line-color':'#c4cbd6','line-width':['interpolate',['linear'],['zoom'],16,1,19,3]}},before);
+  mlMap.addLayer({id:'st-stairs',type:'line',source:'station',filter:['==','k','stairs'],paint:{'line-color':'#e0e0e0','line-width':3,'line-dasharray':[0.4,0.4]}},before);
+  mlMap.addLayer({id:'st-esc',type:'line',source:'station',filter:['==','k','esc'],paint:{'line-color':'#34c759','line-width':4,'line-dasharray':[0.5,0.3]}},before);
+  try{ mlMap.addLayer({id:'st-plat-lbl',type:'symbol',source:'station',filter:['all',['in','k','platA','platL'],['!=','ref','']],minzoom:16.5,layout:{'text-field':['get','ref'],'text-size':12,'text-font':['Noto Sans Bold'],'symbol-placement':'point'},paint:{'text-color':'#fff','text-halo-color':'#333','text-halo-width':1.4}});
+       mlMap.addLayer({id:'st-esc-lbl',type:'symbol',source:'station',filter:['==','k','esc'],minzoom:17.5,layout:{'text-field':'Escalator','text-size':10,'text-font':['Noto Sans Regular'],'symbol-placement':'line'},paint:{'text-color':'#34c759','text-halo-color':'#111','text-halo-width':1.2}}) }catch{}
+}
 /* Retard affiché sur chaque arrêt de la carte : « +X min » (orange), « à l'heure » (vert) si en direct, rien sans données en direct */
 function delayTag(live,sched,rt){ if(!live||!sched) return ''; const d=Math.round((new Date(live)-new Date(sched))/60000);
   return d>0?`<span class="late">+${d} min</span>`:(rt?'<span class="ontime">à l\'heure</span>':'') }
@@ -2989,6 +3092,7 @@ function patchLegFromTrip(l,trip){
   const i0=find(l.from), i1=find(l.to,Math.max(0,i0)); if(i0<0||i1<0) return false;
   const set=(o,k,v)=>{ const iso=new Date(v).toISOString(); if(o[k]!==iso){ o[k]=iso; ch=true } };
   set(l,'startTime',trip.stops[i0].d); set(l,'endTime',trip.stops[i1].a);
+  for(const [pl,k] of [[l.from,i0],[l.to,i1]]){ const tk=trip.stops[k].track; if(pl&&tk&&pl.track!==tk){ if(!pl.scheduledTrack) pl.scheduledTrack=trip.stops[k].scheduledTrack||pl.track; pl.track=tk; ch=true } }   // voie / quai en direct
   (l.intermediateStops||[]).forEach(st=>{ const k=find(st,i0); if(k>i0&&k<i1){ set(st,'arrival',trip.stops[k].a); set(st,'departure',trip.stops[k].d) } });
   if(trip.rt&&!l.realTime){ l.realTime=true; ch=true }
   return ch;
@@ -3008,8 +3112,8 @@ async function refreshTripTimes(ft,trip){
   for(const v of tripV?[tripV,...['v5','v4','v3','v2','v1'].filter(x=>x!==tripV)]:['v5','v4','v3','v2','v1']){
     try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`,{cache:'no-store'}); if(!r.ok) continue; tripV=v;
       const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
-      const fresh=[{arr:leg.startTime,dep:leg.startTime,cancelled:!!leg.from?.cancelled},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival,cancelled:!!s.cancelled})),{arr:leg.endTime,dep:leg.endTime,cancelled:!!leg.to?.cancelled}];
-      if(fresh.length===trip.stops.length) fresh.forEach((f,i)=>{ trip.stops[i].a=+new Date(f.arr); trip.stops[i].d=+new Date(f.dep); trip.stops[i].arr=f.arr; trip.stops[i].t=f.dep; trip.stops[i].cancelled=f.cancelled });
+      const fresh=[{arr:leg.startTime,dep:leg.startTime,cancelled:!!leg.from?.cancelled,track:leg.from?.track},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival,cancelled:!!s.cancelled||(s.pickupType==='NOT_ALLOWED'&&s.dropoffType==='NOT_ALLOWED'),track:s.track})),{arr:leg.endTime,dep:leg.endTime,cancelled:!!leg.to?.cancelled,track:leg.to?.track}];
+      if(fresh.length===trip.stops.length) fresh.forEach((f,i)=>{ trip.stops[i].a=+new Date(f.arr); trip.stops[i].d=+new Date(f.dep); trip.stops[i].arr=f.arr; trip.stops[i].t=f.dep; trip.stops[i].cancelled=f.cancelled; if(f.track) trip.stops[i].track=f.track });
       trip.rt=!!leg.realTime; break;
     }catch{}
   }
@@ -3026,7 +3130,8 @@ async function loadTrip(ft){
       const cum=[0]; for(let i=1;i<coords.length;i++) cum.push(cum[i-1]+kmDist(coords[i-1],coords[i]));
       let from=0; const stops=raw.map(st=>{ let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){const d=kmDist(coords[i],[st.lon,st.lat]);if(d<bd){bd=d;bi=i}}
         from=bi; return {...st,t:st.dep,a:+new Date(st.arr),d:+new Date(st.dep),sa:st.sarr?+new Date(st.sarr):null,km:cum[bi]} });
-      const hasSched=stops.some(x=>x.sa); stops.forEach(x=>{ x.added=!!(x.added||x.scheduleRelationship==='ADDED'||(hasSched&&!x.sa&&!x.cancelled)) });   // arrêt de remplacement : ajouté en direct, sans horaire prévu
+      const hasSched=stops.some(x=>x.sa); stops.forEach(x=>{ if(x.pickupType==='NOT_ALLOWED'&&x.dropoffType==='NOT_ALLOWED') x.cancelled=true;   // ni montée ni descente : arrêt non desservi
+         x.added=!!(x.added||x.scheduleRelationship==='ADDED'||(hasSched&&!x.sa&&!x.cancelled)) });   // arrêt de remplacement : ajouté en direct, sans horaire prévu
       return tripCache[ft.tripId]={coords,cum,stops,rt:!!leg.realTime};
     }catch{}
   }
