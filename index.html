@@ -720,6 +720,7 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 .appr-stop.cancel>span{text-decoration:line-through}
 .stl-alerts .alert{margin:0 0 10px}
 .stl-add{font-style:normal;font-size:11px;font-weight:800;color:#34c759;margin-left:6px;text-transform:uppercase;letter-spacing:.3px}
+.stl-diag{display:block;margin:16px auto 4px;font-size:12px;opacity:.75}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2118,6 +2119,11 @@ function openStopsPage(li){
       return `<div class="stl-r${gi<b?' pre':''}${me?' me':''}${st.cancelled?' cancel':''}${st.added?' added':''}" style="top:${k*STL_H}px" data-gi="${gi}"><i></i><span>${esc(st.name)}${st.added?' <em class="stl-add">remplacement</em>':''}</span><small>${st.cancelled?'Supprimé':hm(gi!==e?st.t:st.arr)}</small></div>`}).join('')
       +`<div class="stl-veh" style="--c:${c}"></div></div>`;
     stopsAlert(pg,l); jpMoveVehicles();
+    // diagnostic : copie les données brutes de la course (pour analyser une déviation)
+    { let dg=pg.querySelector('.stl-diag'); if(!dg){ dg=document.createElement('button'); dg.type='button'; dg.className='btn ghost sm stl-diag'; dg.textContent='Copier les données Transitous de la course'; box.parentNode.appendChild(dg) }
+      dg.onclick=async()=>{ try{ let raw=null; for(const v of tripV?[tripV]:['v5','v4','v3','v2','v1']){ const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(l.tripId)}`,{cache:'no-store'}); if(r.ok){ raw=await r.json(); break } }
+        const leg=(raw?.legs||[]).find(x=>x.mode!=='WALK'), slim=leg?{route:leg.routeShortName,headsign:leg.headsign,realTime:leg.realTime,from:leg.from,to:leg.to,intermediateStops:leg.intermediateStops,alerts:leg.alerts}:raw;
+        await navigator.clipboard.writeText(JSON.stringify(slim,null,1)); toast('Données copiées : colle-les dans la conversation') }catch(e){ toast('Copie impossible') } } }
     // le véhicule visible à l'écran
     const veh=box.querySelector('.stl-veh'); setTimeout(()=>{ if(veh&&veh.style.display!=='none') pg.scrollTo({top:Math.max(0,veh.getBoundingClientRect().top+pg.scrollTop-innerHeight/2),behavior:'smooth'}) },300);
   });
