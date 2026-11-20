@@ -737,6 +737,7 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 .occ i{width:6px;height:11px;border-radius:2px;background:rgba(127,127,127,.35);display:inline-block}
 .occ.l1 i:nth-child(-n+1),.occ.l2 i:nth-child(-n+2),.occ.l3 i:nth-child(-n+3){background:currentColor}
 .occ.l1{color:#34c759}.occ.l2{color:#ff9f0a}.occ.l3{color:#ff3b30}
+.share-opts{display:flex;flex-direction:column;gap:8px}.share-opts .btn{width:100%;justify-content:center}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -2003,13 +2004,12 @@ function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new
 /* Voie ou quai : la voie réelle en orange et l'ancienne barrée quand elle a changé */
 const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==String(pl.scheduledTrack));
 const trackHTML=pl=>!pl?.track?'':trackChanged(pl)?`<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`:`<span class="quai">${esc(pl.track)}</span>`;
-/* Affluence (si publiée par l'opérateur) : 1 à 3 barres ; accessibilité en fauteuil : ♿ */
+/* Affluence (si publiée par l'opérateur) : 1 à 3 barres */
 function occHTML(o){ if(o==null||o==='') return ''; const v=String(o).toUpperCase();
   const lv=/EMPTY|MANY_SEATS|^1$|LOW/.test(v)?1:/FEW_SEATS|STANDING_ROOM_ONLY|^2$|MEDIUM/.test(v)&&!/CRUSHED/.test(v)?2:/CRUSHED|FULL|NOT_ACCEPTING|^3$|HIGH/.test(v)?3:0;
   if(!lv) return ''; const t=['','Peu de monde','Assez chargé','Très chargé'][lv];
   return ` <span class="occ l${lv}" title="Affluence : ${t}" aria-label="Affluence : ${t}"><i></i><i></i><i></i></span>` }
 const legOcc=l=>occHTML(l?.occupancy??l?.occupancyStatus??l?.crowding);
-const legAcc=l=>(l?.wheelchairAccessible===true||l?.tripWheelchairAccessible===true||l?.wheelchairAccessible==='ACCESSIBLE'||l?.from?.wheelchairBoarding===true)?' <span class="acc" title="Accessible en fauteuil roulant">♿</span>':'';
 function journeyHTML(it,i,tracked){
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
@@ -2019,7 +2019,7 @@ function journeyHTML(it,i,tracked){
   const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const gare=l.mode!=='WALK'&&(isRail(l)||/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm));
     return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${isRail(l)?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
   const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
-    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legAcc(l)}${legOcc(l)}`}
+    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legOcc(l)}`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
@@ -2033,7 +2033,7 @@ function journeyHTML(it,i,tracked){
       ${ft?badge(ft,'main'):''}
       <div class="jr-mid">
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
-        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}${legAcc(ft)}${legOcc(ft)}</div>
+        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}${legOcc(ft)}</div>
       </div>
       <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="early">en avance ${Math.abs(dl)} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div>
     </div>
@@ -2187,7 +2187,7 @@ async function loadDepartures(){
     const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName}, cx=x.cancelled||pl.cancelled;
     const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
     return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div>
-      <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}${x.wheelchairAccessible||x.tripWheelchairAccessible?' <span title="Accessible">♿</span>':''}${occHTML(x.occupancy||x.occupancyStatus)}</div></div></div>` }).join('');
+      <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}${occHTML(x.occupancy||x.occupancyStatus)}</div></div></div>` }).join('');
 }
 /* ========= Partager un parcours ========= */
 function journeyText(it){
@@ -2198,9 +2198,25 @@ function journeyText(it){
     lines.push(`${rail?'🚆':'🚌'} ${l.routeShortName||''} direction ${l.headsign||l.to?.name||''}`.replace(/  +/g,' '));
     lines.push(`   ${hm(l.startTime)} ${l.from?.name||''}${l.from?.track?' ('+lab+' '+l.from.track+')':''}`);
     lines.push(`   ${hm(l.endTime)} ${l.to?.name||''}${l.to?.track?' ('+lab+' '+l.to.track+')':''}`) });
+  const L=journeyLinks(it); if(L) lines.push('',`🍎 Apple Plans : ${L.apple}`,`🗺️ Google Maps : ${L.google}`);
   lines.push('','Envoyé depuis BusDirect'); return lines.join('\n');
 }
-async function shareJourney(it){ if(!it) return; const text=journeyText(it);
+function journeyLinks(it){   // même départ, même arrivée, en transports publics, à l'heure du parcours
+  const a=it.legs[0]?.from, b=it.legs.at(-1)?.to; if(a?.lat==null||b?.lat==null) return null;
+  const t=Math.floor(new Date(it.startTime)/1000), an=encodeURIComponent(/^start$/i.test(a.name||'')?'Départ':a.name||''), bn=encodeURIComponent(/^end$/i.test(b.name||'')?(selDest?.name||'Arrivée'):b.name||'');
+  return { apple:`https://maps.apple.com/?saddr=${a.lat},${a.lon}&daddr=${b.lat},${b.lon}&dirflg=r`,
+           google:`https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lon}&destination=${b.lat},${b.lon}&travelmode=transit` } }
+function shareJourney(it){ if(!it) return; const L=journeyLinks(it);
+  let d=document.getElementById('alertDialog'); if(!d){ d=document.createElement('dialog'); d.id='alertDialog'; d.className='glass'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
+  d.innerHTML=`<div class="row between" style="margin-bottom:10px"><h2 style="margin:0;font-size:20px">Partager le parcours</h2><button class="btn ghost sm" type="button" data-x="close">Fermer</button></div>
+    <div class="share-opts"><button class="btn" type="button" data-x="send">📤 Envoyer le parcours</button>
+    ${L?`<button class="btn ghost" type="button" data-x="apple">🍎 Ouvrir dans Apple Plans</button><button class="btn ghost" type="button" data-x="google">🗺️ Ouvrir dans Google Maps</button>`:''}</div>
+    <p class="muted" style="font-size:11px;margin-top:10px">Apple Plans et Google Maps recalculent le trajet en transports publics entre le même départ et la même arrivée : il peut différer légèrement.</p>`;
+  d.onclick=e=>{ const x=e.target.closest('[data-x]')?.dataset.x; if(e.target===d||x==='close'){ d.close(); return } if(!x) return; d.close();
+    if(x==='send') sendJourney(it); else if(x==='apple') location.href=L.apple; else if(x==='google') window.open(L.google,'_blank') };
+  d.showModal?d.showModal():d.setAttribute('open','');
+}
+async function sendJourney(it){ const text=journeyText(it);
   try{ if(navigator.share){ await navigator.share({title:'Mon parcours',text}); return } }catch(e){ if(e?.name==='AbortError') return }
   try{ await navigator.clipboard.writeText(text); toast('Parcours copié : colle-le dans un message') }catch{ toast('Partage impossible') } }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
