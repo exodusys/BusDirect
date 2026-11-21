@@ -2826,9 +2826,9 @@ function drawItinerary(it){
   const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
     if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
-      if(tr?.stops) st=st.map(x=>{ const y=tr.stops.find(z=>nm(z)===nm(x)); return y?{...x,cancelled:!!y.cancelled}:x });
+      if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
-      if(cd.pieces.length>1){ cd.pieces.forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}})); dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})); return } }
+      if(cd.pieces.length>1){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}})); dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})); return } }
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
     dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})) });   // tronçon dévié : pointillés
   const src={type:'FeatureCollection',features:feats};
@@ -3111,17 +3111,22 @@ async function loadTrip(ft){
 /* Déviation : le tronçon officiel qui passe par les arrêts supprimés est rendu à part (affiché en pointillés) ; le tracé plein relie l'arrêt d'avant à celui d'après.
    stops : [{lon,lat,cancelled}] dans l'ordre. Rend {coords, dashed:[[a,b],…]} */
 function cutDeviation(coords,stops){
-  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords]};
-  const idx=[]; let from=0; stops.forEach(st=>{ let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){ const d=kmDist(coords[i],[st.lon,st.lat]); if(d<bd){bd=d;bi=i} } from=bi; idx.push(bi) });
-  const out=[], dashed=[], pieces=[]; let pos=0, k=0;
+  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords],repl:[]};
+  const keep=st=>!st.cancelled&&!st.added;
+  const idx=[]; let from=0; stops.forEach(st=>{ if(!keep(st)&&!st.cancelled){ idx.push(-1); return } let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){ const d=kmDist(coords[i],[st.lon,st.lat]); if(d<bd){bd=d;bi=i} } if(keep(st)) from=bi; idx.push(bi) });
+  const out=[], dashed=[], pieces=[], repl=[]; let pos=0, k=0;
   while(k<stops.length){
-    if(!stops[k].cancelled){ k++; continue }
-    let a=k-1; while(k<stops.length&&stops[k].cancelled) k++; const b=k;   // a : arrêt gardé avant, b : arrêt gardé après
-    if(a<0||b>=stops.length) continue;
+    if(keep(stops[k])){ k++; continue }
+    const a=k-1; let hasCx=false; const added=[]; while(k<stops.length&&!keep(stops[k])){ if(stops[k].cancelled) hasCx=true; if(stops[k].added) added.push([stops[k].lon,stops[k].lat]); k++ } const b=k;
+    if(!hasCx||a<0||b>=stops.length) continue;
     const ia=idx[a], ib=idx[b]; if(ib<=ia) continue;
-    out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1)); dashed.push(coords.slice(ia,ib+1)); out.push(coords[ib]); pos=ib;   // tronçon officiel non suivi : en pointillés
+    out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1));
+    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added) }   // parcours de remplacement connu : trait plein par les arrêts de remplacement
+    else dashed.push(coords.slice(ia,ib+1));                                                                     // sinon : tronçon officiel non suivi en pointillés
+    out.push(coords[ib]); pos=ib;
   }
-  out.push(...coords.slice(pos+ (out.length&&pos>0?1:0))); pieces.push(coords.slice(pos)); return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1)};
+  out.push(...coords.slice(pos+(out.length&&pos>0?1:0))); pieces.push(coords.slice(pos));
+  return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1),repl};
 }
 function nearestIdx(coords,p){let bi=0,bd=Infinity;coords.forEach((c,i)=>{const d=kmDist(c,p);if(d<bd){bd=d;bi=i}});return bi}
 function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return c[0]; if(km>=cum.at(-1)) return c.at(-1);
