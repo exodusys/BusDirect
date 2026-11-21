@@ -1215,18 +1215,19 @@ async function geocode(text){
 }
 let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
-/* Versions de l'API essayées en parallèle : la dernière qui a répondu part tout de suite, les autres 1 s plus tard (ou aussitôt qu'elle échoue) ; la première réponse valide gagne, les autres requêtes sont annulées */
+/* Versions de l'API : une seule requête au départ (la dernière version qui a répondu) ; une 2e en renfort après 2,5 s ou dès qu'elle échoue. Jamais plus de 2 requêtes en même temps (Transitous limite le débit : les coupures « réseau » viennent souvent de là) ; la première réponse valide gagne */
 function racePlan(q,tries){
   return new Promise(res=>{
-    let pending=tries.length, done=false, launched=false; const acs=new Map(); res.st=res.st||{}; const st=racePlan.last={};
-    const fail=()=>{ if(!done&&--pending===0) res(null) };
-    const run=async v=>{ if(done) return; const ac=new AbortController(); acs.set(v,ac);
+    let next=0, inflight=0, done=false; const acs=new Map(), st=racePlan.last={}; let hedge=null;
+    const launch=()=>{ if(done||next>=tries.length||inflight>=2) return false; const v=tries[next++]; inflight++; run(v); return true };
+    const after=ms=>setTimeout(()=>{ if(done) return; if(!launch()&&inflight===0) res(null) },ms);
+    const run=async v=>{ const ac=new AbortController(); acs.set(v,ac);
       try{ const r=await fetch(`${API}/${v}/plan?${q}`,{signal:ac.signal}); st[v]=r.status;
-        if(r.ok){ const j=await r.json(); if(!done){ done=true; acs.forEach((a,k)=>{ if(k!==v) a.abort() }); clearTimeout(tm); res({v,j}); return } else return } }catch{}
-      if(st[v]==null) st[v]='réseau'; fail(); if(v===tries[0]) rest() };
-    const rest=()=>{ if(launched) return; launched=true; clearTimeout(tm); tries.slice(1).forEach(run) };
-    const tm=setTimeout(rest,1000);
-    run(tries[0]) }) }
+        if(r.ok){ const j=await r.json(); if(!done){ done=true; clearInterval(hedge); acs.forEach((a,k)=>{ if(k!==v) a.abort() }); res({v,j}) } return } }catch{ if(st[v]==null) st[v]='réseau' }
+      inflight--; if(done) return;
+      if(next>=tries.length&&inflight===0){ clearInterval(hedge); res(null) } else after(st[v]==='réseau'?300:0) };
+    hedge=setInterval(()=>{ if(done){ clearInterval(hedge); return } launch() },2500);
+    launch() }) }
 async function plan(dest, time, cursor, from, fast){
   if(!from&&!pos) throw new Error('nopos');
   const P=(!from&&listPos)?listPos:pos;   // position figée à l'ouverture de la liste
@@ -1240,8 +1241,9 @@ async function plan(dest, time, cursor, from, fast){
   // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
   const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
   const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
-  for(const q of [qs,light]){
+  for(const q of [qs,light,qs]){   // 3e passage : nouvel essai après une coupure passagère
     const w=await racePlan(q,tries); if(w){ if(planVersion!==w.v){planVersion=w.v;try{localStorage.setItem('bd_planv',w.v)}catch{}} return w.j }
+    if(q===light) await new Promise(r=>setTimeout(r,900))
   }
   throw new Error('plan '+Object.entries(racePlan.last||{}).map(([v,c])=>v+':'+c).join(' '));
 }
@@ -2205,13 +2207,13 @@ function stopsAlert(pg,l){
   const html=al.length?alertBanner(al):''; if(el._h!==html){ el._h=html; el.innerHTML=html; const a=el.querySelector('.alert'); if(a){ a.style.cursor='pointer'; a.onclick=()=>showAlertDialog(al) } }
 }
 /* ========= Autour de moi : arrêts proches et leurs prochains départs ========= */
-let nearSt=null, nearAt=0, nearPos=null, nearBusy=false;
+let nearSt=null, nearAt=0, nearPos=null, nearBusy=false, nearRetryAt=0;
 async function nearStops(p){
   for(const d of [0.006,0.012]){ for(const v of ['v1','v5','v2']){ try{
     const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
     const g=new Map(); (await r.json()).filter(x=>x&&x.lat!=null&&x.name).forEach(x=>{ const k=nrmS(x.name), km=kmDist([p.lon,p.lat],[x.lon,x.lat]);   // quais d'un même arrêt regroupés
       const o=g.get(k); if(!o) g.set(k,{name:x.name,lat:x.lat,lon:x.lon,km,n:1,q:[x]}); else { o.lat=(o.lat*o.n+x.lat)/(o.n+1); o.lon=(o.lon*o.n+x.lon)/(o.n+1); o.n++; o.km=Math.min(o.km,km); o.q.push(x) } });
-    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,8); if(l.length>=3||d>0.01){ nearWalkSort(p,l.slice()).then(o=>{ if(nearSt&&nearSt.length===l.length&&nearSt.every(x=>l.includes(x))){ nearSt=o; renderNear() } }).catch(()=>{}); return l } break }catch{} } }
+    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,6); if(l.length>=3||d>0.01){ nearWalkSort(p,l.slice()).then(o=>{ if(nearSt&&nearSt.length===l.length&&nearSt.every(x=>l.includes(x))){ nearSt=o; renderNear() } }).catch(()=>{}); return l } break }catch{} } }
   return [] }
 /* Tri par distance à pied réelle, calculée par Transitous comme pour les dalles (marche jusqu'à l'arrêt lui-même) ; cache par position ~30 m */
 const nearWalkCache=new Map();
@@ -2228,10 +2230,10 @@ async function nearWalkSort(p,l){
 function setNearOn(on){ S.settings.nearOn=!!on; save(); const b=$('#nearBox'); if(b){ b.style.display=on?'':'none'; if(on){ nearAt=0; loadNear(true) } } }
 setTimeout(()=>{ const on=S.settings.nearOn===true; if($('#nearOn')) $('#nearOn').checked=on; if(!on&&$('#nearBox')) $('#nearBox').style.display='none' },0);
 async function loadNear(force){
-  const box=$('#nearBox'); if(!box||!pos||nearBusy||S.settings.nearOn!==true) return; if(!$('#v-horaires')?.classList.contains('active')||document.hidden) return;
+  const box=$('#nearBox'); if(!box||!pos||nearBusy||S.settings.nearOn!==true) return; if(!$('#v-horaires')?.classList.contains('active')||document.hidden||(typeof listOpen==='function'&&listOpen())||(!nearSt&&Date.now()<nearRetryAt)) return;   // pas pendant qu'une liste de départs se charge ; après un échec, nouvel essai seulement 20 s plus tard
   const p={lat:pos.lat,lon:pos.lon}; nearBusy=true;
   try{
-    if(!nearSt||!nearPos||kmDist([p.lon,p.lat],[nearPos.lon,nearPos.lat])>0.15){ const l=await nearStops(p); if(l.length){ nearSt=l; nearPos=p } }   // arrêts recalculés seulement après 150 m
+    if(!nearSt||!nearPos||kmDist([p.lon,p.lat],[nearPos.lon,nearPos.lat])>0.15){ const l=await nearStops(p); if(l.length){ nearSt=l; nearPos=p } else nearRetryAt=Date.now()+20000 }   // arrêts recalculés seulement après 150 m
     if(!nearSt?.length){ if(!box.innerHTML) box.innerHTML=''; return }
     if(force||Date.now()-nearAt>=29000){ nearAt=Date.now();
       await Promise.all(nearSt.map(async st=>{ let d=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?center=${st.lat},${st.lon}&radius=80&n=20&time=${new Date().toISOString()}`,{cache:'no-store'}); if(r.ok){ d=await r.json(); break } }catch{} }
