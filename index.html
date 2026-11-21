@@ -1614,6 +1614,8 @@ async function loadJourneys(force){ lastListLoad=Date.now();
   $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
+  { const st=selDest.type==='STOP'?selDest:selDest.nearStop, me=!selFrom&&pos;   // déjà à l'arrêt de destination : rien à chercher, page affichée aussitôt
+    if(st&&st.lat!=null&&me&&kmDist([me.lon,me.lat],[st.lon,st.lat])<0.12){ lastJourneys=[]; loadedFor=(selFrom?.uid||'me')+'>'+selDest.uid; box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>'; return } }
   const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
   if(first){box.innerHTML='<div class="spin"></div>';lastJourneys=[]}
   loading=true; $('#jrHead').classList.add('busy');
@@ -1637,7 +1639,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList(); { const upcoming=lastJourneys.filter(it=>jStart(it)>Date.now()-60000).slice(0,5); Promise.all(upcoming.map(liveRefreshIt)).then(r=>{ if(r.some(Boolean)&&gen===jGen) renderJourneyList() }) }   // 5 prochains départs : heures en direct de chaque course
-  }catch(e){ console.warn('loadJourneys',e); if(gen===jGen&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.<div class="muted" style="font-size:11px;margin-top:8px;word-break:break-word">Détail : '+esc(String(e&&e.message||e)).slice(0,200)+'</div></div>'; }
+  }catch(e){ console.warn('loadJourneys',e); if(gen===jGen&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
 let shown=5;
