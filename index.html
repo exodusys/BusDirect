@@ -2837,7 +2837,7 @@ function drawItinerary(it){
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':5,'line-dasharray':[1.2,1.2],'line-opacity':0.9},layout:{'line-cap':'round'}});   // déviation : chemin exact inconnu
+    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});   // tronçon de la déviation : trait plein
     mlMap.addLayer({id:'route-walk-casing',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});   // marche : trait bleu clair bordé de blanc
   }
@@ -3120,6 +3120,13 @@ function cutDeviation(coords,stops){
     const a=k-1; let hasCx=false; const added=[]; while(k<stops.length&&!keep(stops[k])){ if(stops[k].cancelled) hasCx=true; if(stops[k].added) added.push([stops[k].lon,stops[k].lat]); k++ } const b=k;
     if(!hasCx||a<0||b>=stops.length) continue;
     const ia=idx[a], ib=idx[b]; if(ib<=ia) continue;
+    // boucle vers l'arrêt supprimé (le bus la saute) : on garde le parcours officiel avant et après la boucle
+    if(!added.length){ const cx=stops.slice(a+1,b).filter(x=>x.cancelled); const jc=cx.length?nearestIdx(coords.slice(ia,ib+1),[cx[0].lon,cx[0].lat])+ia:-1;
+      if(jc>ia&&jc<ib){ const pl=[0]; for(let i=ia+1;i<=ib;i++) pl.push(pl.at(-1)+kmDist(coords[i-1],coords[i]));
+        let best=null; for(let j1=ia;j1<jc;j1++) for(let j2=jc+1;j2<=ib;j2++){ const st=kmDist(coords[j1],coords[j2]), L=pl[j2-ia]-pl[j1-ia];
+          if(st<0.2&&L>st*2+0.08){ const gain=L-st; if(!best||gain>best.gain) best={j1,j2,gain} } }
+        if(best){ out.push(...coords.slice(pos,best.j1+1)); pieces.push(coords.slice(pos,best.j1+1)); dashed.push(coords.slice(best.j1,best.j2+1)); repl.push([coords[best.j1],coords[best.j2]]);
+          out.push(coords[best.j2]); pos=best.j2; continue } } }   // le tracé plein reprend juste après la boucle
     out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1));
     if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added) }   // parcours de remplacement connu : trait plein par les arrêts de remplacement
     else dashed.push(coords.slice(ia,ib+1));                                                                     // sinon : tronçon officiel non suivi en pointillés
@@ -3192,7 +3199,7 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
   drawApproachStops(trip,p,ft,data.type==='Feature');
   if(src) src.setData(data);
   else{ mlMap.addSource('approach',{type:'geojson',data});
-    mlMap.addLayer({id:'approach',type:'line',source:'approach',paint:{'line-color':['coalesce',['get','color'],'#e30613'],'line-width':4,'line-dasharray':[1.2,1.4],'line-opacity':.9},layout:{'line-cap':'round'}},mlMap.getLayer('stops-minor')?'stops-minor':undefined) }
+    mlMap.addLayer({id:'approach',type:'line',source:'approach',paint:{'line-color':['coalesce',['get','color'],'#e30613'],'line-width':4,'line-opacity':.9},layout:{'line-cap':'round'}},mlMap.getLayer('stops-minor')?'stops-minor':undefined) }
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
