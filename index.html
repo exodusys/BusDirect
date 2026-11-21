@@ -2189,7 +2189,7 @@ async function nearStops(p){
     const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
     const g=new Map(); (await r.json()).filter(x=>x&&x.lat!=null&&x.name).forEach(x=>{ const k=nrmS(x.name), km=kmDist([p.lon,p.lat],[x.lon,x.lat]);   // quais d'un même arrêt regroupés
       const o=g.get(k); if(!o) g.set(k,{name:x.name,lat:x.lat,lon:x.lon,km,n:1,q:[x]}); else { o.lat=(o.lat*o.n+x.lat)/(o.n+1); o.lon=(o.lon*o.n+x.lon)/(o.n+1); o.n++; o.km=Math.min(o.km,km); o.q.push(x) } });
-    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,8); if(l.length>=3||d>0.01) return await nearWalkSort(p,l); break }catch{} } }
+    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,8); if(l.length>=3||d>0.01){ nearWalkSort(p,l.slice()).then(o=>{ if(nearSt&&nearSt.length===l.length&&nearSt.every(x=>l.includes(x))){ nearSt=o; renderNear() } }).catch(()=>{}); return l } break }catch{} } }
   return [] }
 /* Tri par distance à pied réelle, calculée par Transitous comme pour les dalles (marche jusqu'à l'arrêt lui-même) ; cache par position ~30 m */
 const nearWalkCache=new Map();
@@ -2202,7 +2202,7 @@ async function nearWalkSort(p,l){
       const d=await r.json(), w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
       if(w) res={walk:w.legs.reduce((k,l)=>k+(l.distance||0),0)/1000||st.km*1.3,walkMin:Math.max(1,Math.round(w.duration/60))}; break }catch{} }
     res=res||{walk:st.km*1.3,walkMin:Math.max(1,Math.round(st.km*1.3/0.075))}; nearWalkCache.set(ck,res); Object.assign(st,res) }));
-  return l.sort((a,b)=>a.walkMin-b.walkMin||a.walk-b.walk).slice(0,5) }
+  return l.sort((a,b)=>a.walkMin-b.walkMin||a.walk-b.walk) }
 function setNearOn(on){ S.settings.nearOn=!!on; save(); const b=$('#nearBox'); if(b){ b.style.display=on?'':'none'; if(on){ nearAt=0; loadNear(true) } } }
 setTimeout(()=>{ const on=S.settings.nearOn===true; if($('#nearOn')) $('#nearOn').checked=on; if(!on&&$('#nearBox')) $('#nearBox').style.display='none' },0);
 async function loadNear(force){
@@ -2219,14 +2219,14 @@ async function loadNear(force){
 function renderNear(){ const box=$('#nearBox'); if(!box||!nearSt?.length||S.settings.nearOn!==true) return; const open=store.get('nearOpen',true);
   const seen=new Set(), lk=x=>(x.routeShortName||x.displayName||'')+'|'+nrmS(x.headsign||'');   // une ligne (et direction) n'apparaît qu'à l'arrêt le plus proche
   nearSt.forEach(st=>{ st.show=null; if(!st.deps) return; const own=new Set(st.deps.map(lk).filter(k=>!seen.has(k))); st.show=st.deps.filter(x=>own.has(lk(x))).slice(0,3); own.forEach(k=>seen.add(k)) });
-  const list=nearSt.map((st,i)=>({st,i})).filter(o=>!o.st.deps||o.st.show.length);
+  const list=nearSt.map((st,i)=>({st,i})).filter(o=>!o.st.deps||o.st.show.length).slice(0,5);
   box.innerHTML=`<div class="near-h" onclick="store.set('nearOpen',!store.get('nearOpen',true));renderNear()"><span>📍 Autour de moi</span><i>${open?'▾':'▸'}</i></div>`+(open?list.map(({st,i})=>{ const wk=st.walk??st.km, m=Math.round(wk*1000), w=st.walkMin||Math.max(1,Math.round(wk/0.075));
     const deps=(st.show||[]).map(x=>{ const pl=x.place, t=+new Date(pl.departure||pl.scheduledDeparture), sch=pl.scheduledDeparture, dl=sch?Math.round((t-new Date(sch))/60000):0, cx=x.cancelled||pl.cancelled||x.tripCancelled, mn=Math.round((t-Date.now())/60000);
-      const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor};
+      const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,from:{name:pl.name||st.name,lat:pl.lat??st.lat,lon:pl.lon??st.lon}};   // couleurs des lignes : même source que les dalles
       return `<div class="near-d">${badge(lg,'mini')}<span class="near-dir">${esc(x.headsign||'')}${pl.track?` <span class="near-q">${esc(pl.track)}</span>`:''}</span><span class="near-cd${cx?' cx':mn<1?' red':mn<5?' or':''}">${cx?'Supprimé':mn<=0?'0 min':mn<60?mn+' min':hm(t)}<small>${cx?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&x.realTime?`<span class="early">en avance ${-dl} min</span>`:x.realTime?'<span class="ontime">à l\'heure</span>':''}</small></span></div>` }).join('');
     return `<div class="near-s glass" data-ni="${i}"><div class="near-t"><b>${esc(st.name)}</b><span>${m<1000?m+' m':wk.toFixed(1)+' km'} · ${w} min 🚶</span></div>${deps||(st.deps?'<div class="muted" style="font-size:13px">Aucun départ prochainement</div>':'<div class="spin" style="margin:6px auto"></div>')}</div>` }).join(''):'');
   box.querySelectorAll('.near-s').forEach(el=>el.onclick=()=>{ const st=nearSt[+el.dataset.ni]; openDepartures({name:st.name,lat:st.lat,lon:st.lon}) }) }
-setInterval(()=>{ loadNear(false); if(nearSt&&$('#v-horaires')?.classList.contains('active')) renderNear() },5000);   // départs toutes les 30 s, minutes mises à jour toutes les 5 s
+let nearTick=0; setInterval(()=>{ nearTick++; if(!nearSt||nearTick%5===0){ loadNear(false); if(nearSt&&$('#v-horaires')?.classList.contains('active')) renderNear() } },1000);   // 1er affichage dès que la position est connue, puis toutes les 5 s   // départs toutes les 30 s, minutes mises à jour toutes les 5 s
 
 /* ========= Tableau des départs d'un arrêt (comme les écrans aux arrêts) ========= */
 let depTimer=null, depStop=null;
