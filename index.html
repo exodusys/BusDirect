@@ -2837,7 +2837,8 @@ function drawItinerary(it){
     mlMap.addSource('route',{type:'geojson',data:src});
     mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});   // tronçon de la déviation : trait plein
+    mlMap.addLayer({id:'route-dev-casing',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':'#fff','line-width':9,'line-dasharray':[1.4,1]},layout:{'line-cap':'butt','line-join':'round'}});
+    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':6,'line-dasharray':[1.9,1.7]},layout:{'line-cap':'butt','line-join':'round'}});   // parcours officiel non suivi : pointillés de la couleur de la ligne, bordés de blanc
     mlMap.addLayer({id:'route-walk-casing',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});   // marche : trait bleu clair bordé de blanc
   }
@@ -3128,7 +3129,7 @@ function cutDeviation(coords,stops){
         if(best){ out.push(...coords.slice(pos,best.j1+1)); pieces.push(coords.slice(pos,best.j1+1)); dashed.push(coords.slice(best.j1,best.j2+1)); repl.push([coords[best.j1],coords[best.j2]]);
           out.push(coords[best.j2]); pos=best.j2; continue } } }   // le tracé plein reprend juste après la boucle
     out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1));
-    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added) }   // parcours de remplacement connu : trait plein par les arrêts de remplacement
+    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added); dashed.push(coords.slice(ia,ib+1)) }   // remplacement connu : trait plein par les arrêts de remplacement + parcours officiel en pointillés sur toute la longueur du remplacement
     else dashed.push(coords.slice(ia,ib+1));                                                                     // sinon : tronçon officiel non suivi en pointillés
     out.push(coords[ib]); pos=ib;
   }
