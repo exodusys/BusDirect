@@ -1891,6 +1891,8 @@ let colT=null;
 function refreshColorsUI(){clearTimeout(colT);colT=setTimeout(()=>{
   if(lastJourneys.length) renderJourneyList();
   if($('#v-suivis').classList.contains('active')) renderTracked();
+  if($('#depPage')?.classList.contains('on')) loadDepartures();   // tableau des départs : couleurs dès qu'elles arrivent
+  if(typeof renderNear==='function'&&$('#v-horaires')?.classList.contains('active')) renderNear();
   if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')) drawItinerary(mapIt);
 },250)}
 function lineColor(l){
@@ -2250,7 +2252,7 @@ async function loadDepartures(){
   const rows=(d?.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture));
   if(!rows.length){ box.innerHTML='<div class="muted" style="padding:6px 0">Aucun départ trouvé pour cet arrêt.</div>'; return }
   box.innerHTML=rows.map(x=>{ const pl=x.place, t=pl.departure||pl.scheduledDeparture, sch=pl.scheduledDeparture, dl=sch?Math.round((new Date(t)-new Date(sch))/60000):0;
-    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName}, cx=x.cancelled||pl.cancelled;
+    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName,from:{name:pl.name||st.name,lat:pl.lat??st.lat,lon:pl.lon??st.lon}}, cx=x.cancelled||pl.cancelled;
     const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
     return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div>
       <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
