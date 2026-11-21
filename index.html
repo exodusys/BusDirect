@@ -2823,13 +2823,21 @@ function drawStairs(which,legs){
 }
 function drawItinerary(it){
   drawStairs('route',it.legs);
-  const feats=it.legs.map((l,idx)=>({type:'Feature',properties:{idx,walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
+  const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
+    if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
+      let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
+      if(tr?.stops) st=st.map(x=>{ const y=tr.stops.find(z=>nm(z)===nm(x)); return y?{...x,cancelled:!!y.cancelled}:x });
+      const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
+      if(cd.pieces.length>1){ cd.pieces.forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}})); dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})); return } }
+    feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
+    dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})) });   // tronçon dévié : pointillés
   const src={type:'FeatureCollection',features:feats};
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
   else{
     mlMap.addSource('route',{type:'geojson',data:src});
-    mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':5,'line-dasharray':[1.2,1.2],'line-opacity':0.9},layout:{'line-cap':'round'}});   // déviation : chemin exact inconnu
     mlMap.addLayer({id:'route-walk-casing',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});   // marche : trait bleu clair bordé de blanc
   }
@@ -3054,7 +3062,7 @@ function rerenderAlerts(){ clearTimeout(rerenderT); rerenderT=setTimeout(()=>{
   try{ if($('#jrPage')?.classList.contains('on')&&jpIt) renderJourneyPage() }catch{}
   try{ if($('#v-suivis')?.classList.contains('active')) renderTracked() }catch{}
   try{ const sp=$('#stopPage'); if(sp?.classList.contains('on')){ const v=sp.querySelector('.stl')?._v; if(v) stopsAlert(sp,v.l) } }catch{}
-  try{ if($('#mapView')?.classList.contains('open')&&mapIt){ refreshStopLbls(); updateMapAlert(mapIt) } }catch{}
+  try{ if($('#mapView')?.classList.contains('open')&&mapIt){ drawItinerary(mapIt); refreshStopLbls(); updateMapAlert(mapIt) } }catch{}
  },120) }
 async function liveRefreshIt(it){   // toutes les étapes d'un parcours, d'après les heures en direct de leurs courses
   let ch=false;
@@ -3091,10 +3099,29 @@ async function loadTrip(ft){
         from=bi; return {...st,t:st.dep,a:+new Date(st.arr),d:+new Date(st.dep),sa:st.sarr?+new Date(st.sarr):null,km:cum[bi]} });
       const hasSched=stops.some(x=>x.sa); stops.forEach(x=>{ if(x.pickupType==='NOT_ALLOWED'&&x.dropoffType==='NOT_ALLOWED') x.cancelled=true;   // ni montée ni descente : arrêt non desservi
          x.added=!!(x.added||x.scheduleRelationship==='ADDED'||(hasSched&&!x.sa&&!x.cancelled)) });   // arrêt de remplacement : ajouté en direct, sans horaire prévu
-      const tcObj=tripCache[ft.tripId]={coords,cum,stops,rt:!!leg.realTime}; if(stops.some(x=>x.cancelled||x.added)) rerenderAlerts(); return tcObj;   // déviation trouvée : affichage immédiat partout
+      let tcCoords=coords, tcCum=cum, tcDash=[];
+      if(stops.some(x=>x.cancelled)){ const cd=cutDeviation(coords,stops); tcCoords=cd.coords; tcDash=cd.dashed;
+        tcCum=[0]; for(let i=1;i<tcCoords.length;i++) tcCum.push(tcCum[i-1]+kmDist(tcCoords[i-1],tcCoords[i]));
+        let f2=0, lastKm=0; stops.forEach(st=>{ if(st.cancelled){ st.km=lastKm; return } let bi=f2,bd=Infinity; for(let i=f2;i<tcCoords.length;i++){const d=kmDist(tcCoords[i],[st.lon,st.lat]);if(d<bd){bd=d;bi=i}} f2=bi; st.km=lastKm=tcCum[bi] }) }   // le bus ne fait plus la boucle par l'arrêt supprimé
+      const tcObj=tripCache[ft.tripId]={coords:tcCoords,cum:tcCum,stops,rt:!!leg.realTime,dashed:tcDash}; if(stops.some(x=>x.cancelled||x.added)) rerenderAlerts(); return tcObj;   // déviation trouvée : affichage immédiat partout
     }catch{}
   }
   return tripCache[ft.tripId]=null;
+}
+/* Déviation : le tronçon officiel qui passe par les arrêts supprimés est rendu à part (affiché en pointillés) ; le tracé plein relie l'arrêt d'avant à celui d'après.
+   stops : [{lon,lat,cancelled}] dans l'ordre. Rend {coords, dashed:[[a,b],…]} */
+function cutDeviation(coords,stops){
+  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords]};
+  const idx=[]; let from=0; stops.forEach(st=>{ let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){ const d=kmDist(coords[i],[st.lon,st.lat]); if(d<bd){bd=d;bi=i} } from=bi; idx.push(bi) });
+  const out=[], dashed=[], pieces=[]; let pos=0, k=0;
+  while(k<stops.length){
+    if(!stops[k].cancelled){ k++; continue }
+    let a=k-1; while(k<stops.length&&stops[k].cancelled) k++; const b=k;   // a : arrêt gardé avant, b : arrêt gardé après
+    if(a<0||b>=stops.length) continue;
+    const ia=idx[a], ib=idx[b]; if(ib<=ia) continue;
+    out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1)); dashed.push(coords.slice(ia,ib+1)); out.push(coords[ib]); pos=ib;   // tronçon officiel non suivi : en pointillés
+  }
+  out.push(...coords.slice(pos+ (out.length&&pos>0?1:0))); pieces.push(coords.slice(pos)); return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1)};
 }
 function nearestIdx(coords,p){let bi=0,bd=Infinity;coords.forEach((c,i)=>{const d=kmDist(c,p);if(d<bd){bd=d;bi=i}});return bi}
 function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return c[0]; if(km>=cum.at(-1)) return c.at(-1);
