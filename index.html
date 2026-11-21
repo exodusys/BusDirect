@@ -2786,7 +2786,8 @@ async function openMap(it,walkLeg){
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));   // carte : toutes les 15 s
-  mapTimers.push(setInterval(async()=>{ if(mapIt&&await liveRefreshIt(mapIt)) refreshStopLbls() },15000)); liveRefreshIt(mapIt).then(ch=>{ if(ch) refreshStopLbls() });   // retards des arrêts à jour syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
+  { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=firstTransit(mapIt)?.from; walkGeo=null } refreshStopLbls() };
+    mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }   // quai exact : tracé et marche recalculés   // retards des arrêts à jour syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
   startMeWatch();
 }
 /* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
@@ -3057,7 +3058,9 @@ function patchLegFromTrip(l,trip){
   const i0=find(l.from), i1=find(l.to,Math.max(0,i0)); if(i0<0||i1<0) return false;
   const set=(o,k,v)=>{ const iso=new Date(v).toISOString(); if(o[k]!==iso){ o[k]=iso; ch=true } };
   set(l,'startTime',trip.stops[i0].d); set(l,'endTime',trip.stops[i1].a);
-  for(const [pl,k] of [[l.from,i0],[l.to,i1]]){ const tk=trip.stops[k].track; if(pl&&tk&&pl.track!==tk){ if(!pl.scheduledTrack) pl.scheduledTrack=trip.stops[k].scheduledTrack||pl.track; pl.track=tk; ch=true } }   // voie / quai en direct
+  for(const [pl,k] of [[l.from,i0],[l.to,i1]]){ const ts=trip.stops[k];   // quai exact de la course : position, identifiant et quai (le calcul en direct donne parfois l'arrêt général sans quai)
+    if(pl&&ts.lat!=null&&(!pl.track||kmDist([pl.lon,pl.lat],[ts.lon,ts.lat])>0.02)&&(ts.track||ts.scheduledTrack)){ pl.lat=ts.lat; pl.lon=ts.lon; if(ts.stopId) pl.stopId=ts.stopId; if(!pl.track) pl.track=ts.track||ts.scheduledTrack; if(!pl.scheduledTrack&&ts.scheduledTrack) pl.scheduledTrack=ts.scheduledTrack; l._geo=true; ch=true }
+    const tk=ts.track; if(pl&&tk&&pl.track!==tk){ if(!pl.scheduledTrack) pl.scheduledTrack=trip.stops[k].scheduledTrack||pl.track; pl.track=tk; ch=true } }   // voie / quai en direct
   (l.intermediateStops||[]).forEach(st=>{ const k=find(st,i0); if(k>i0&&k<i1){ set(st,'arrival',trip.stops[k].a); set(st,'departure',trip.stops[k].d) } });
   if(trip.rt&&!l.realTime){ l.realTime=true; ch=true }
   return ch;
@@ -3077,6 +3080,9 @@ async function liveRefreshIt(it){   // toutes les étapes d'un parcours, d'aprè
     try{ let tr=await loadTrip(l); tr=await refreshTripTimes(l,tr); if(patchLegFromTrip(l,tr)) ch=true;
       const sk=(tr?.stops||[]).filter(x=>x.cancelled).map(x=>x.name).join('|'); if(sk!==(l._sk||'')){ l._sk=sk; ch=true }   // arrêts supprimés : réafficher pour montrer l'alerte
     }catch{} }));
+  if(ch) it.legs.forEach((l,i)=>{ if(l.mode!=='WALK') return; const nx=it.legs[i+1], pv=it.legs[i-1];   // marches : mêmes quais que les étapes en véhicule
+    if(nx&&nx.mode!=='WALK'&&nx.from&&l.to){ l.to.lat=nx.from.lat; l.to.lon=nx.from.lon; l.to.track=nx.from.track }
+    if(pv&&pv.mode!=='WALK'&&pv.to&&l.from){ l.from.lat=pv.to.lat; l.from.lon=pv.to.lon; l.from.track=pv.to.track } });
   if(ch){ const tl=it.legs.filter(l=>l.mode!=='WALK'); if(it.legs[0]===tl[0]) it.startTime=tl[0].startTime; if(it.legs.at(-1)===tl.at(-1)) it.endTime=tl.at(-1).endTime }
   return ch;
 }
