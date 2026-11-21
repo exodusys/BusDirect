@@ -754,6 +754,12 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
+<style>html:not(.bd-ready) body{visibility:hidden}</style>
+<script>/* pas d'écran intermédiaire au chargement : page masquée jusqu'à l'application du thème et des réglages */
+(function(){var t='dark';try{var s=JSON.parse(localStorage.getItem('bd_settings')||'{}');if(s.theme)t=s.theme}catch(e){}
+if(t==='auto'||t==='system')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';
+var d=document.documentElement;d.style.background=t==='light'?'#f2f2f7':'#14161b';d.style.colorScheme=t==='light'?'light':'dark';
+setTimeout(function(){d.classList.add('bd-ready')},1500)})();</script>
 </head>
 <body>
 <div id="appWallpaper" aria-hidden="true"></div>
@@ -3870,6 +3876,7 @@ try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#jou
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
+requestAnimationFrame(()=>requestAnimationFrame(()=>document.documentElement.classList.add('bd-ready')));   // tout est en place : on affiche
 </script>
 </body>
 </html>
