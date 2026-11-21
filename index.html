@@ -1913,6 +1913,27 @@ function alongLine(coords,t){
 }
 function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1]*r),x=Math.cos(a[1]*r)*Math.sin(b[1]*r)-Math.sin(a[1]*r)*Math.cos(b[1]*r)*Math.cos((b[0]-a[0])*r);return (Math.atan2(y,x)/r+360)%360}
 
+function renderWalkCardInstant(it,preciseKm){
+  const tg=walkTarget(it),stop=tg?.stop;
+  const visible=!!stop;
+  $('#walkCard').classList.toggle('on',visible);
+  $('#mapView').classList.toggle('walking',visible);
+  if(!stop)return;
+  const leg=tg.walkIdx>=0?it.legs[tg.walkIdx]:null;
+  let meters=Number.isFinite(preciseKm)?preciseKm*1000:Number(leg?.distance);
+  let estimated=false;
+  if(!Number.isFinite(meters)||meters<=0){
+    meters=pos?kmDist([pos.lon,pos.lat],[stop.lon,stop.lat])*1000:null;
+    estimated=meters!=null;
+  }
+  const minutes=meters!=null?Math.max(1,Math.round(meters/80)):null;
+  const track=stop.track||stop.platformCode||stop.platform||stop.scheduledTrack;
+  $('#walkTitle').innerHTML=`<span class="wt1">Marche jusqu'à :</span><span class="wt2">${esc(/^end$/i.test(stop.name||'')?'la destination':stop.name||'la destination')}${track?' · '+(tg.rail?'Voie ':'Quai ')+esc(track):''}</span>`;
+  const distance=meters==null?'Distance en cours de calcul…':`${estimated?'≈ ':''}${meters<1000?Math.round(meters)+' m':(meters/1000).toFixed(1)+' km'} · ${minutes} min à pied`;
+  const timing=tg.final?`Arrivée prévue à ${hm(tg.at)}`:`${tg.leg?.routeShortName?esc(tg.leg.routeShortName)+' · ':''}Départ dans <span class="cd-t" data-at="${tg.at}">${fmtCd(tg.at)}</span>`;
+  $('#walkInfo').innerHTML=distance+`<div class="walk-dep">${timing}</div>`;
+}
+
 async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
@@ -1920,6 +1941,7 @@ async function openMap(it,walkLeg){
   mapIt=it; boardStop=firstTransit(it)?.from;
   updateMapAlert(it);
   $('#mapView').classList.add('open');
+  renderWalkCardInstant(it);
   const ft=firstTransit(it);
   $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
   $('#mapSub').textContent=`${hm(it.startTime)} → ${hm(it.endTime)} · ${fmtDur(it.duration)}`;
@@ -1947,6 +1969,7 @@ async function openMap(it,walkLeg){
     mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }
   syncFollowBtn();
   mapTimers.push(setInterval(syncFollowBtn,500));
+  if(pos) onMyPos().catch(()=>{});
   startMeWatch();
 }
  
@@ -2076,39 +2099,11 @@ function routeStopPoints(it){
   return out;
 }
 function clearOsmPlatformMarkers(){osmPlatformMarkers.forEach(m=>m.remove());osmPlatformMarkers=[]}
-function platformValue(st){
-  if(!st)return '';
-  for(const v of [st.track,st.platformCode,st.platform,st.scheduledTrack]){
-    if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();
-  }
-  return '';
-}
 function osmPlatformText(tags,rail){
-  const isTrack=rail&&/^(rail|light_rail|subway|tram)$/.test(tags.railway||'');
-  const raw=String(tags.local_ref||tags['platform:ref']||
-    ((isTrack||tags.public_transport==='platform'||tags.railway==='platform')?tags.ref:'')||
-    (/^(quai|voie|platform|track)\s+\S+/i.test(tags.name||'')?tags.name:'')).trim();
-  const value=raw.replace(/^(quai|voie|platform|track)\s*/i,'').trim();
-  return value?(rail?'Voie ':'Quai ')+value:'';
-}
-function osmLabelForStop(st){
-  if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
-  const key=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
-  const items=OSM_STOP_CACHE[key]?.items||[];
-  const live=platformValue(st);
-  const exact=live&&items.find(x=>x.label.replace(/^(quai|voie)\s*/i,'')===live);
-  if(exact)return exact.label;
-  if(items.length===1)return items[0].label;
-  const ranked=items.map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d);
-  return ranked.length>1&&ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0].label:'';
-}
-const stopPlatformMemory=new Map();
-function rememberedPlatform(st,leg){
-  if(!st)return '';
-  const key=String(leg?.tripId||leg?.routeShortName||'')+'|'+nrmS(st.name)+'|'+String(st.stopId||'');
-  const value=platformValue(st);
-  if(value){stopPlatformMemory.set(key,value);return value;}
-  return stopPlatformMemory.get(key)||'';
+  const raw=String(tags.local_ref||tags.ref||tags['platform:ref']||((/^(quai|voie|platform|track)\\s*\\d+/i.test(tags.name||''))?tags.name:'')).trim();
+  if(!raw)return '';
+  if(/^(quai|voie|platform|track)\s*/i.test(raw))return raw;
+  return (rail?'Voie ':'Quai ')+raw;
 }
 async function loadOsmPlatforms(it){
   if(!mlMap||!it)return;
@@ -2121,16 +2116,13 @@ async function loadOsmPlatforms(it){
     const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5),c=OSM_STOP_CACHE[k];
     return c?.items?.map(x=>({...x,_stop:st}))||[];
   });
-  const render=()=>{
-    if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;
-    clearOsmPlatformMarkers(); refreshStopLbls(); requestAnimationFrame(fitLabels);
-  };
+  const render=()=>{if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;clearOsmPlatformMarkers();refreshStopLbls();requestAnimationFrame(fitLabels);};
   render(cached);
   if(!pending.length)return;
   // Requêtes groupées, une zone serrée autour de chaque arrêt du trajet.
   const chunks=[];for(let i=0;i<pending.length;i+=12)chunks.push(pending.slice(i,i+12));
   for(const chunk of chunks){
-    const clauses=chunk.map(st=>`node(around:90,${st.lat},${st.lon})["public_transport"="platform"];way(around:90,${st.lat},${st.lon})["public_transport"="platform"];node(around:90,${st.lat},${st.lon})["railway"="platform"];way(around:90,${st.lat},${st.lon})["railway"="platform"];node(around:90,${st.lat},${st.lon})["public_transport"="stop_position"];node(around:90,${st.lat},${st.lon})["highway"="bus_stop"];${st.rail?`way(around:55,${st.lat},${st.lon})["railway"="rail"]["ref"];`:""}`);
+    const clauses=chunk.map(st=>`node(around:90,${st.lat},${st.lon})["public_transport"="platform"];way(around:90,${st.lat},${st.lon})["public_transport"="platform"];node(around:90,${st.lat},${st.lon})["railway"="platform"];way(around:90,${st.lat},${st.lon})["railway"="platform"];way(around:55,${st.lat},${st.lon})["railway"="rail"]["ref"];`);
     const q=`[out:json][timeout:18];(${clauses.join('')});out center tags;`;
     const els=await overpassRace(q); if(!els)continue;
     chunk.forEach(st=>{
@@ -2157,6 +2149,23 @@ async function loadOsmPlatforms(it){
 
 function delayTag(live,sched,rt){ if(!live||!sched) return ''; const d=Math.round((new Date(live)-new Date(sched))/60000);
   return d>0?`<span class="late">+${d} min</span>`:d<0&&rt?`<span class="early">−${-d} min</span>`:(rt?'<span class="ontime">à l\'heure</span>':'') }
+const knownStopPlatforms=new Map();
+function platformValue(st){for(const v of [st?.track,st?.platformCode,st?.platform,st?.scheduledTrack])if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();return '';}
+function resolvedStopPlatform(st,leg){
+ if(!st)return '';
+ const key=String(leg?.tripId||leg?.routeShortName||'')+'|'+nrmS(st.name);
+ const trip=leg?.tripId&&tripCache[leg.tripId];
+ const ts=trip?.stops?.find(x=>(st.stopId&&x.stopId===st.stopId)||nrmS(x.name)===nrmS(st.name));
+ const live=platformValue(ts)||platformValue(st);
+ if(live){knownStopPlatforms.set(key,live);return live;}
+ if(knownStopPlatforms.has(key))return knownStopPlatforms.get(key);
+ if(!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
+ const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
+ const items=OSM_STOP_CACHE[k]?.items||[];
+ const ranked=items.map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d);
+ const chosen=ranked.length===1?ranked[0]:ranked.length>1&&ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0]:null;
+ return chosen?chosen.label.replace(/^(quai|voie)\s*/i,''):'';
+}
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
     if(r.kind==='from'){ time=''; tag=delayTag(l.startTime,l.scheduledStartTime,l.realTime) }
@@ -2165,15 +2174,13 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
       const tr=l.tripId&&tripCache[l.tripId], x=tr?.stops?.find(z=>nrmS(z.name)===nrmS(st.name)); if(st.cancelled||x?.cancelled){ time=''; tag='<span class="late">Arrêt supprimé</span>'; p._cx=true } else { p._cx=false; if(x?.added) tag=(tag?tag+' ':'')+'<span class="ontime">Arrêt de remplacement</span>' } } }
   const rail=r&&/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(r.leg.mode||'');
   const liveStop=r?(r.kind==='mid'?r.st:r.kind==='from'?r.leg.from:r.leg.to):null;
-  const tr=r?.leg?.tripId&&tripCache[r.leg.tripId];
-  const tripStop=tr?.stops?.find(x=>(liveStop?.stopId&&x.stopId===liveStop.stopId)||nrmS(x.name)===nrmS(liveStop?.name));
-  const liveTrack=platformValue(tripStop)||rememberedPlatform(liveStop,r?.leg)||
-    String(p.track||'').replace(/^(quai|voie)\s*/i,'');
-  if(liveTrack&&liveStop)rememberedPlatform({...liveStop,track:liveTrack},r?.leg);
-  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&String(liveStop.scheduledTrack)!==String(liveTrack)?` (prévu ${liveStop.scheduledTrack})`:''}`:osmLabelForStop(liveStop);
+  const liveTrack=resolvedStopPlatform(liveStop,r?.leg)||p.track||'';
+  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'';
+  // Le quai/la voie reste sur sa propre ligne sous l'heure : il ne se colle
+  // jamais à droite de l'heure ou du retard temps réel.
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
   return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}${trackText?`<small class="stop-track">${esc(trackText)}</small>`:''}` }
-function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }); if(mlMap) requestAnimationFrame(fitLabels) }
+function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }) }
  
 function collapseAttrib(){ document.querySelectorAll('#map .maplibregl-ctrl-attrib').forEach(a=>{ a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open') }) }
 function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
@@ -2716,6 +2723,8 @@ function startMeAnim(){
   meRaf=requestAnimationFrame(tick);
 }
 async function onMyPos(force){
+  if(!mapIt||!$('#mapView').classList.contains('open'))return;
+  renderWalkCardInstant(mapIt);
   if(!mlMap||!pos) return;
   const me=[pos.lon,pos.lat];
   if(!meMk){const el=document.createElement('div');el.className='me-m';el.innerHTML='<div class="cone"></div><div class="dot"></div>';meMk=new maplibregl.Marker({element:el,rotationAlignment:'map',subpixelPositioning:true}).setLngLat(me).addTo(mlMap)}
@@ -2738,7 +2747,7 @@ async function onMyPos(force){
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
    
   { const sn=walkGeo&&walkGeo.length>1?snapOnLine(me,walkGeo):null;
-    if(!walkGeo||!sn||sn.d>0.01||Date.now()-lastWalkFetch>15000){ /* itinéraire à pied rafraîchi aussi toutes les 15 s */ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const g=await walkRoute(me,boardStop); if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
+    if(!walkGeo||!sn||sn.d>0.01||Date.now()-lastWalkFetch>15000){ /* itinéraire à pied rafraîchi aussi toutes les 15 s */ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const requestIt=mapIt,requestKey=walkTargetKey; const g=await walkRoute(me,boardStop); if(mapIt!==requestIt||walkTargetKey!==requestKey||!$('#mapView').classList.contains('open'))return; if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
     else walkGeo=[me,...walkGeo.slice(sn.i)];    
   }
   if(!walkGeo||!walkGeo.length) return;
