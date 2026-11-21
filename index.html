@@ -849,8 +849,6 @@ body.classic.list-page main{padding-top:var(--safe-t)}
         <label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div>
       <div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div>
         <label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div>
-      <div class="set"><div><b>🌍 Pays et villes couverts</b><div class="sstat" id="covStat">Mise à jour automatique…</div></div>
-        <button class="info-btn" onclick="showCovUpdate()" aria-label="Détail de la dernière mise à jour">i</button></div>
     </div>
     <input type="file" id="fileIn" accept="image/*" hidden>
   </section>
@@ -3674,7 +3672,8 @@ function showCovUpdate(){ const c=S.cov||{}, a=c.added||[];
 setTimeout(()=>updateCoverage(false),4000);
 function toggleInfo(on){
   const v=$('#infoView'); if(on&&!$('#countryList').innerHTML)
-    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires · ${COVERAGE.filter(x=>x[2]).length+((S.cov?.extra)||[]).length} nouveaux${S.cov?.at?' · liste vérifiée le '+new Date(S.cov.at).toLocaleDateString('fr-CH'):''}</p>`+COVERAGE.map(([c,t,n])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join('');   // pays ajoutés par la mise à jour automatique
+    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires</p>${(()=>{ const c=S.cov||{}, n=(c.added||[]).length;
+      return `<div class="cov"><b>🔄 Mise à jour : ${c.at?new Date(c.at).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+' à '+hm(c.at):'pas encore effectuée'}</b><span>${n?`${n} ${n>1?'nouveaux ajouts':'nouvel ajout'}${c.addedAt?' (le '+new Date(c.addedAt).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})+' à '+hm(c.addedAt)+')':''} : `+c.added.map(x=>x.flag+' '+esc(x.name)).join(', '):'Aucun nouvel ajout'}</span></div>` })()}`+COVERAGE.map(([c,t,n])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join('');   // pays ajoutés par la mise à jour automatique
   if(on) $('#smsCities').innerHTML=REGIONS.map(r=>`<div class="cov"><b>${esc(r.name)}</b><span>${r.sms.map(x=>esc(x.n)+(x.p!=null?' · ≈ CHF '+x.p.toFixed(2):'')).join(' — ')}</span></div>`).join('');
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
