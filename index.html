@@ -1200,7 +1200,7 @@ async function plan(dest, time, cursor, from){
   // Départ = position actuelle ; marche jusqu'à 15 min pour inclure tous les arrêts à proximité
   let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):P.lat+','+P.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
-  if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=`&maxPostTransitTime=0`;          // arrivée exactement à l'arrêt choisi, sans marche finale
+  if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=dest===selDest?.nearStop?`&maxPostTransitTime=0`:`&maxPostTransitTime=600`;   // arrêt le plus proche d'une adresse : arrivée exacte (la marche jusqu'à l'adresse est ajoutée ensuite) ; arrêt choisi : marche finale jusqu'à 10 min acceptée (ex. bus 8 → gare Cornavin)
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
   // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
   const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
@@ -1281,7 +1281,7 @@ async function nextDepartures(dest,from,onMore){
   const fwP=addFW?finalWalkFor(origDest,dest):null;
   const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
   const d=await plan(dest,planTime,null,from);
-  const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false) return its||[];
+  const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false||dest===origDest) return its||[];   // arrêt choisi lui-même : arrivées proches avec marche finale acceptées
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
       return lt.to?.stopId===dest.id||(norm2?norm2(lt.to?.name):String(lt.to?.name).toLowerCase())===nm }) };
