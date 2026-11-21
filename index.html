@@ -1228,6 +1228,9 @@ async function plan(dest, time, cursor, from, fast){
   // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
   const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
   const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
+  if(fast&&!cursor){ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),6000);   // recherche rapide : une seule tentative, 6 s max, sinon l'appelant relance la recherche habituelle
+    try{ const r=await fetch(`${API}/${tries[0]}/plan?${qs}`,{signal:ac.signal}); if(r.ok) return await r.json() }catch{} finally{ clearTimeout(to) }
+    throw new Error('fast') }
   for(const q of [qs,light]) for(const v of tries){
     try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();}
       if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
@@ -1303,8 +1306,8 @@ async function nextDepartures(dest,from,onMore){
   const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
   const fwP=addFW?finalWalkFor(origDest,dest):null;
   const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
-  let d=await plan(dest,planTime,null,from,true);
-  if(!(d.itineraries||[]).length&&!d.nextPageCursor) d=await plan(dest,planTime,null,from);   // ligne rare : recherche large
+  let d=null; try{ d=await plan(dest,planTime,null,from,true) }catch{}
+  if(!d||(!(d.itineraries||[]).length&&!d.nextPageCursor)) d=await plan(dest,planTime,null,from);   // échec ou ligne rare : recherche habituelle
   const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false||dest===origDest) return its||[];   // arrêt choisi lui-même : arrivées proches avec marche finale acceptées
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
