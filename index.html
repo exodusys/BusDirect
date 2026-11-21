@@ -2077,27 +2077,23 @@ function routeStopPoints(it){
 }
 function clearOsmPlatformMarkers(){osmPlatformMarkers.forEach(m=>m.remove());osmPlatformMarkers=[]}
 function osmPlatformText(tags,rail){
-  // ref on a bus stop can be an inventory ID, not a platform number.
-  const isTrack=rail&&/^(rail|light_rail|subway|tram)$/.test(tags.railway||'');
+  const track=rail&&/^(rail|light_rail|subway|tram)$/.test(tags.railway||'');
   const raw=String(tags.local_ref||tags['platform:ref']||
-    ((isTrack||tags.public_transport==='platform'||tags.railway==='platform')?tags.ref:'')||
+    ((track||tags.public_transport==='platform'||tags.railway==='platform')?tags.ref:'')||
     (/^(quai|voie|platform|track)\s+\S+/i.test(tags.name||'')?tags.name:'')).trim();
-  if(!raw)return '';
   const value=raw.replace(/^(quai|voie|platform|track)\s*/i,'').trim();
   return value?(rail?'Voie ':'Quai ')+value:'';
 }
-function osmLabelForStop(st,rail){
+function osmLabelForStop(st){
   if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
-  const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
-  const items=OSM_STOP_CACHE[k]?.items||[];
+  const key=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
+  const items=OSM_STOP_CACHE[key]?.items||[];
   const live=String(st.track||st.platformCode||st.platform||'').replace(/^(quai|voie)\s*/i,'').trim();
   const exact=live&&items.find(x=>x.label.replace(/^(quai|voie)\s*/i,'').trim()===live);
   if(exact)return exact.label;
-  if(!items.length)return '';
   if(items.length===1)return items[0].label;
   const ranked=items.map(x=>({...x,d:dist(st,x)})).sort((a,b)=>a.d-b.d);
-  // Do not choose arbitrarily between adjacent or opposite platforms.
-  return ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0].label:'';
+  return ranked.length>1&&ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0].label:'';
 }
 async function loadOsmPlatforms(it){
   if(!mlMap||!it)return;
@@ -2112,9 +2108,7 @@ async function loadOsmPlatforms(it){
   });
   const render=()=>{
     if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;
-    clearOsmPlatformMarkers();
-    refreshStopLbls();
-    requestAnimationFrame(fitLabels);
+    clearOsmPlatformMarkers(); refreshStopLbls(); requestAnimationFrame(fitLabels);
   };
   render(cached);
   if(!pending.length)return;
@@ -2157,13 +2151,12 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   const rail=r&&/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(r.leg.mode||'');
   const liveStop=r?(r.kind==='mid'?r.st:r.kind==='from'?r.leg.from:r.leg.to):null;
   const liveTrack=liveStop?(liveStop.track||liveStop.platformCode||liveStop.platform||''):'';
-  const osmTrack=osmLabelForStop(liveStop,rail);
-  const trackText=osmTrack||(liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'');
-  // Le quai/la voie reste sur sa propre ligne sous l'heure : il ne se colle
-  // jamais à droite de l'heure ou du retard temps réel.
+  const osmTrack=osmLabelForStop(liveStop);
+  // Live operational platform takes precedence over static OSM data.
+  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${String(liveTrack).replace(/^(quai|voie)\s*/i,'')}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:osmTrack;
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
-  return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${trackText?`<small class="stop-track">${esc(trackText)}</small>`:''}${sub?`<small>${esc(sub)}</small>`:''}` }
-function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }) }
+  return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}${trackText?`<small class="stop-track">${esc(trackText)}</small>`:''}` }
+function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }); if(mlMap) requestAnimationFrame(fitLabels) }
  
 function collapseAttrib(){ document.querySelectorAll('#map .maplibregl-ctrl-attrib').forEach(a=>{ a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open') }) }
 function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
