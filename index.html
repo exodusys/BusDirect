@@ -2821,9 +2821,14 @@ function drawStairs(which,legs){
  el.innerHTML=point.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${point.up===null?'':`<b>${point.up?'↑':'↓'}</b>`}`;
  const marker=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(point.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(point.t1)}</b>${point.t2?`<br><span style="color:var(--muted)">${esc(point.t2)}</span>`:''}`)).addTo(mlMap);marker._stairKind=point.kind;marker._walkLeg=point.leg;stairMks[which].push(marker)});updateStairVisibility();
 }
+const legWalkGeo=new Map();
 function drawItinerary(it){
   drawStairs('route',it.legs);
   const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
+    if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible
+      const wk=l.from.lon.toFixed(5)+','+l.from.lat.toFixed(5)+'>'+l.to.lon.toFixed(5)+','+l.to.lat.toFixed(5);
+      if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g }
+      else{ legWalkGeo.set(wk,null); walkRouteOSM([l.from.lon,l.from.lat],l.to).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}) } }
     if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
@@ -3433,7 +3438,32 @@ function walkTarget(it){
   if(lastT&&now<+new Date(lastT.endTime)-60000) return null;          // encore à bord du dernier transport
   return {stop:last.mode==='WALK'?last.to:lastT?.to,at:+new Date(it.endTime),final:true,walkIdx:last.mode==='WALK'?legs.length-1:-1};
 }
-async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
+/* Itinéraire piéton calculé sur les chemins OpenStreetMap, en privilégiant trottoirs et chemins piétons (trajets courts) */
+const osmWalkCache=new Map();
+async function walkRouteOSM(me,stop){
+  const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>1.2) return null;
+  const k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5); if(osmWalkCache.has(k)) return osmWalkCache.get(k);
+  const pad=0.004, bb=`${Math.min(me[1],stop.lat)-pad},${Math.min(me[0],stop.lon)-pad},${Math.max(me[1],stop.lat)+pad},${Math.max(me[0],stop.lon)+pad}`;
+  const els=await overpassRace(`[out:json][timeout:12];way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${bb});out geom tags;`);
+  if(!els?.length){ osmWalkCache.set(k,null); return null }
+  const W=t=>{ const h=t.highway, sw=/both|left|right|yes|separate/.test(t.sidewalk||t['sidewalk:both']||t['sidewalk:left']||t['sidewalk:right']||'');
+    if(/footway|pedestrian|path|steps|corridor|platform/.test(h)||t.footway==='sidewalk') return 1;   // trottoirs et chemins piétons : prioritaires
+    if(/living_street|cycleway/.test(h)) return 1.2; if(/residential|service|track|unclassified/.test(h)) return sw?1.2:1.8;
+    return sw?1.4:4 };   // grandes routes sans trottoir : fortement évitées
+  const key=c=>c[0].toFixed(7)+','+c[1].toFixed(7), G=new Map(), P=new Map(), foot=new Set();
+  els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]), f=W(w.tags||{}); for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i])*f; P.set(a,g[i-1]); P.set(b,g[i]); if(f<=1){foot.add(a);foot.add(b)}
+    (G.get(a)||G.set(a,[]).get(a)).push([b,d]); (G.get(b)||G.set(b,[]).get(b)).push([a,d]) } });
+  const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ let d=kmDist(c,p); if(foot.has(kk)) d-=0.015; if(d<bd){bd=d;bk=kk} } return bk };   // accroche de préférence à un trottoir proche
+  const s0=near(me), t0=near([stop.lon,stop.lat]); if(!s0||!t0){ osmWalkCache.set(k,null); return null }
+  const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
+  while(Q.length){ let mi=0; for(let i=1;i<Q.length;i++) if(Q[i][0]<Q[mi][0]) mi=i; const [d,u]=Q.splice(mi,1)[0]; if(done.has(u)) continue; done.add(u); if(u===t0) break;
+    for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); Q.push([nd,v]) } } }
+  if(!done.has(t0)){ osmWalkCache.set(k,null); return null }
+  const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
+  const res=[me,...path,[stop.lon,stop.lat]]; osmWalkCache.set(k,res); return res;
+}
+async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
+  try{ const g=await walkRouteOSM(me,stop); if(g&&g.length>1) return g }catch{}
   try{
     for(const v of PLAN_VERSIONS){
       // vers l'arrêt lui-même (son identifiant) : le calcul utilise ses vrais accès piétons, au lieu de la route la plus proche de ses coordonnées
