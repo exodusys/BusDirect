@@ -495,7 +495,7 @@ body.noglass .map-steps{background:rgba(var(--glass-rgb),.96)!important;backdrop
 .map-steps .ms-item{position:relative;flex:0 0 auto;display:flex;align-items:stretch;border:2px solid #111;border-radius:999px;background:var(--bg);color:var(--fg);margin-left:-22px;padding-left:20px;box-sizing:border-box;min-width:0}
 .map-steps .ms-item:first-child{margin-left:0;padding-left:0}
 .map-steps .ms-item.walk-item{flex:0 0 64px!important;width:64px;min-width:64px;max-width:64px;margin-left:-16px;padding:0}
-.map-steps .ms-item.walk-item:first-child{margin-left:0}
+.map-steps .ms-item.walk-item:first-child{margin-left:0;position:relative}
 .map-steps .ms-item > .ms,.map-steps .ms-item > .ms.w{flex:0 0 auto!important;width:max-content;min-width:0;max-width:none;margin:0;padding:0 12px;border:0;background:transparent;border-radius:999px;overflow:visible;box-sizing:border-box;white-space:nowrap;pointer-events:auto;cursor:pointer}
 .map-steps .ms-item:not(.walk-item){flex:0 0 auto!important;width:max-content;min-width:0;max-width:none}
 .map-steps .ms-item > .ms.w{flex:1 1 auto!important;width:100%;padding:0}
@@ -2960,9 +2960,9 @@ function renderMapSteps(){
   const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))}));   // toutes les marches, même de quelques mètres
   if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});   // marche jusqu'au premier arrêt, même très courte
   const savedScroll=el.scrollLeft;el.classList.add('glass');
-  el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button type="button" class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}">${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button type="button" class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
+  el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button type="button" class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}"${x.w&&k===0?' data-first="1"':''}>${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button type="button" class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
   el.classList.toggle('full-width',segs.length>3);el.scrollLeft=savedScroll;
-  el.onclick=e=>{e.stopPropagation();if(e.detail!==0&&performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(b)focusStep(+b.dataset.i)};
+  el.onclick=e=>{e.stopPropagation();if(e.detail!==0&&performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(!b)return;focusStep(+b.dataset.i)};
   setupStepScroll(el);setupStepHints(el);
   markMapStep(); placeMapSteps();
   $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
@@ -2974,7 +2974,9 @@ function showMapSteps(){ clearTimeout(renderMapSteps._t);
   $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
 function markMapStep(){document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel));updateStairVisibility()}
 function focusStep(i,refit){
-  if(i===-1){ if(!mlMap) return; mapStepSel=-1; markMapStep(); if(!navOn) toggleNav(); return }   // marche jusqu'à l'arrêt : lance la marche
+  if(i===-1){ if(!mlMap) return; if(mapStepSel===-1&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // marche jusqu'à l'arrêt : simple cadrage (la navigation se lance avec « Lancer »)
+    mapStepSel=-1; markMapStep(); setMapOverview(false); const bb=new maplibregl.LngLatBounds(); if(pos) bb.extend([pos.lon,pos.lat]); if(boardStop) bb.extend([boardStop.lon,boardStop.lat]);
+    if(!bb.isEmpty()) mlMap.fitBounds(bb,{padding:mapPad(60,60),maxZoom:18,duration:600}); return }
   const l=mapIt?.legs[i]; if(!l||!mlMap) return;
   if(mapStepSel===i&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // 2e appui : vue d'ensemble
   mapStepSel=i; markMapStep(); setMapOverview(false);
