@@ -3476,11 +3476,21 @@ function walkTarget(it){
 }
 /* Itinéraire piéton calculé sur les chemins OpenStreetMap, en privilégiant trottoirs et chemins piétons (trajets courts) */
 const osmWalkCache=new Map();
+/* Rues et trottoirs gardés par zone : une seule requête Overpass par quartier, ensuite le calcul est instantané */
+const osmAreas=[];
+async function osmWalkArea(me,stop){
+  const need=[Math.min(me[1],stop.lat)-0.003,Math.min(me[0],stop.lon)-0.003,Math.max(me[1],stop.lat)+0.003,Math.max(me[0],stop.lon)+0.003];
+  const hit=osmAreas.find(a=>a.b[0]<=need[0]&&a.b[1]<=need[1]&&a.b[2]>=need[2]&&a.b[3]>=need[3]); if(hit) return hit.p;
+  const pad=0.006, b=[need[0]-pad,need[1]-pad,need[2]+pad,need[3]+pad];   // zone plus large : les recalculs suivants n'ont plus besoin du réseau
+  const p=overpassRace(`[out:json][timeout:12];way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${b.join(',')});out geom tags;`);
+  const a={b,p}; osmAreas.push(a); if(osmAreas.length>12) osmAreas.shift();
+  const r=await p; if(!r?.length){ const i=osmAreas.indexOf(a); if(i>=0) osmAreas.splice(i,1) } return r }
+function heapPush(h,x){ h.push(x); let i=h.length-1; while(i){ const j=(i-1)>>1; if(h[j][0]<=h[i][0]) break; [h[i],h[j]]=[h[j],h[i]]; i=j } }
+function heapPop(h){ const top=h[0], last=h.pop(); if(h.length){ h[0]=last; let i=0; for(;;){ const l=2*i+1, r=l+1; let m=i; if(l<h.length&&h[l][0]<h[m][0]) m=l; if(r<h.length&&h[r][0]<h[m][0]) m=r; if(m===i) break; [h[i],h[m]]=[h[m],h[i]]; i=m } } return top }
 async function walkRouteOSM(me,stop){
   const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>1.2) return null;
   const k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5); if(osmWalkCache.has(k)) return osmWalkCache.get(k);
-  const pad=0.004, bb=`${Math.min(me[1],stop.lat)-pad},${Math.min(me[0],stop.lon)-pad},${Math.max(me[1],stop.lat)+pad},${Math.max(me[0],stop.lon)+pad}`;
-  const els=await overpassRace(`[out:json][timeout:12];way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${bb});out geom tags;`);
+  const els=await osmWalkArea(me,stop);
   if(!els?.length){ osmWalkCache.set(k,null); return null }
   const W=t=>{ const h=t.highway, sw=/both|left|right|yes|separate/.test(t.sidewalk||t['sidewalk:both']||t['sidewalk:left']||t['sidewalk:right']||'');
     if(/footway|pedestrian|path|steps|corridor|platform/.test(h)||t.footway==='sidewalk') return 1;   // trottoirs et chemins piétons : prioritaires
@@ -3492,14 +3502,14 @@ async function walkRouteOSM(me,stop){
   const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ let d=kmDist(c,p); if(foot.has(kk)) d-=0.015; if(d<bd){bd=d;bk=kk} } return bk };   // accroche de préférence à un trottoir proche
   const s0=near(me), t0=near([stop.lon,stop.lat]); if(!s0||!t0){ osmWalkCache.set(k,null); return null }
   const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
-  while(Q.length){ let mi=0; for(let i=1;i<Q.length;i++) if(Q[i][0]<Q[mi][0]) mi=i; const [d,u]=Q.splice(mi,1)[0]; if(done.has(u)) continue; done.add(u); if(u===t0) break;
-    for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); Q.push([nd,v]) } } }
+  while(Q.length){ const [d,u]=heapPop(Q); if(done.has(u)) continue; done.add(u); if(u===t0) break;
+    for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); heapPush(Q,[nd,v]) } } }
   if(!done.has(t0)){ osmWalkCache.set(k,null); return null }
   const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
   const res=[me,...path,[stop.lon,stop.lat]]; osmWalkCache.set(k,res); return res;
 }
 async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
-  try{ const g=await walkRouteOSM(me,stop); if(g&&g.length>1) return g }catch{}
+  try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),1500))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}   // trottoirs pas encore chargés après 1,5 s : tracé Transitous tout de suite, trottoirs au prochain recalcul
   try{
     for(const v of PLAN_VERSIONS){
       // vers l'arrêt lui-même (son identifiant) : le calcul utilise ses vrais accès piétons, au lieu de la route la plus proche de ses coordonnées
