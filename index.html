@@ -688,6 +688,8 @@ html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;bord
 body.classic .map-bar .t small.map-al{border-radius:4px}
 .leg-al{float:right;margin:-2px 0 2px 8px;min-width:34px;height:30px;padding:0 7px;border:0;border-radius:10px;background:rgba(255,159,10,.2);color:var(--text);font-size:16px;line-height:30px;cursor:pointer;position:relative}
 .leg-al.bad{background:rgba(255,59,48,.22)}
+.map-rcol{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
+.map-rcol .leg-al{float:none;margin:0;position:relative}
 .leg-al[data-n]::after{content:attr(data-n);position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;background:#ff9500;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center}
 #alertDialog{max-width:520px;width:calc(100% - 28px);max-height:80vh;overflow:auto;border:0;border-radius:20px;padding:16px;color:var(--text)}
 #alertDialog::backdrop{background:rgba(0,0,0,.45)}
@@ -866,8 +868,8 @@ body.classic.list-page main{padding-top:var(--safe-t)}
   <div id="map"></div>
   <div class="map-bar glass">
     <button class="map-btn" onclick="closeMap()">✕</button>
-    <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div><button type="button" id="mapAl" class="leg-al map-al-btn" aria-label="Infos trafic" style="display:none"></button>
-    <button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button>
+    <div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div>
+    <div class="map-rcol"><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button><button type="button" id="mapAl" class="leg-al map-al-btn" aria-label="Infos trafic" style="display:none"></button></div>
   </div>
   <div class="map-ctrl glass">
     <button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button>
