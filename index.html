@@ -2786,7 +2786,8 @@ async function openMap(it,walkLeg){
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));   // carte : toutes les 15 s
-  mapTimers.push(setInterval(async()=>{ if(mapIt&&await liveRefreshIt(mapIt)) refreshStopLbls() },15000)); liveRefreshIt(mapIt).then(ch=>{ if(ch) refreshStopLbls() });   // retards des arrêts à jour syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
+  { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=firstTransit(mapIt)?.from; walkGeo=null } refreshStopLbls() };
+    mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }   // quai exact : tracé et marche recalculés   // retards des arrêts à jour syncFollowBtn(); mapTimers.push(setInterval(syncFollowBtn,500));
   startMeWatch();
 }
 /* Escaliers / ascenseurs / escalators sur les trajets à pied (étapes Transitous avec changement de niveau) */
@@ -2821,15 +2822,30 @@ function drawStairs(which,legs){
  el.innerHTML=point.kind==='elev'?'🛗':`<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h5v-5h5v-5h5V5h3"/></svg>${point.up===null?'':`<b>${point.up?'↑':'↓'}</b>`}`;
  const marker=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(point.p).setPopup(new maplibregl.Popup({offset:14}).setHTML(`<b>${esc(point.t1)}</b>${point.t2?`<br><span style="color:var(--muted)">${esc(point.t2)}</span>`:''}`)).addTo(mlMap);marker._stairKind=point.kind;marker._walkLeg=point.leg;stairMks[which].push(marker)});updateStairVisibility();
 }
+const legWalkGeo=new Map();
 function drawItinerary(it){
   drawStairs('route',it.legs);
-  const feats=it.legs.map((l,idx)=>({type:'Feature',properties:{idx,walk:l.mode==='WALK'?1:0,color:l.mode==='WALK'?'#0a84ff':lineColor(l)[0]},geometry:{type:'LineString',coordinates:legCoords(l)}}));
+  const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
+    if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible
+      const wk=l.from.lon.toFixed(5)+','+l.from.lat.toFixed(5)+'>'+l.to.lon.toFixed(5)+','+l.to.lat.toFixed(5);
+      if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g }
+      else{ legWalkGeo.set(wk,null); walkRouteOSM([l.from.lon,l.from.lat],l.to).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}) } }
+    if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
+      let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
+      if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
+      const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
+      if(cd.pieces.length>1){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));   // parcours de remplacement : trait plein seulement, plus de pointillés
+        return } }
+    feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
+  });
   const src={type:'FeatureCollection',features:feats};
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
   else{
     mlMap.addSource('route',{type:'geojson',data:src});
-    mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
-    mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['==','walk',0],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-casing',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':'#fff','line-width':9},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-line',type:'line',source:'route',filter:['all',['==','walk',0],['!=','dev',1]],paint:{'line-color':['get','color'],'line-width':6},layout:{'line-cap':'round','line-join':'round'}});
+    mlMap.addLayer({id:'route-dev-casing',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':'#fff','line-width':9,'line-dasharray':[1.4,1]},layout:{'line-cap':'butt','line-join':'round'}});
+    mlMap.addLayer({id:'route-dev',type:'line',source:'route',filter:['==','dev',1],paint:{'line-color':['get','color'],'line-width':6,'line-dasharray':[1.9,1.7]},layout:{'line-cap':'butt','line-join':'round'}});   // parcours officiel non suivi : pointillés de la couleur de la ligne, bordés de blanc
     mlMap.addLayer({id:'route-walk-casing',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],12,4,16,7,19,10]},layout:{'line-cap':'round','line-join':'round'}});
     mlMap.addLayer({id:'route-walk',type:'line',source:'route',filter:['==','walk',1],paint:{'line-color':'#8cc4f2','line-width':['interpolate',['linear'],['zoom'],12,2.5,16,4.5,19,7]},layout:{'line-cap':'round','line-join':'round'}});   // marche : trait bleu clair bordé de blanc
   }
@@ -3042,7 +3058,9 @@ function patchLegFromTrip(l,trip){
   const i0=find(l.from), i1=find(l.to,Math.max(0,i0)); if(i0<0||i1<0) return false;
   const set=(o,k,v)=>{ const iso=new Date(v).toISOString(); if(o[k]!==iso){ o[k]=iso; ch=true } };
   set(l,'startTime',trip.stops[i0].d); set(l,'endTime',trip.stops[i1].a);
-  for(const [pl,k] of [[l.from,i0],[l.to,i1]]){ const tk=trip.stops[k].track; if(pl&&tk&&pl.track!==tk){ if(!pl.scheduledTrack) pl.scheduledTrack=trip.stops[k].scheduledTrack||pl.track; pl.track=tk; ch=true } }   // voie / quai en direct
+  for(const [pl,k] of [[l.from,i0],[l.to,i1]]){ const ts=trip.stops[k];   // quai exact de la course : position, identifiant et quai (le calcul en direct donne parfois l'arrêt général sans quai)
+    if(pl&&ts.lat!=null&&(!pl.track||kmDist([pl.lon,pl.lat],[ts.lon,ts.lat])>0.02)&&(ts.track||ts.scheduledTrack)){ pl.lat=ts.lat; pl.lon=ts.lon; if(ts.stopId) pl.stopId=ts.stopId; if(!pl.track) pl.track=ts.track||ts.scheduledTrack; if(!pl.scheduledTrack&&ts.scheduledTrack) pl.scheduledTrack=ts.scheduledTrack; l._geo=true; ch=true }
+    const tk=ts.track; if(pl&&tk&&pl.track!==tk){ if(!pl.scheduledTrack) pl.scheduledTrack=trip.stops[k].scheduledTrack||pl.track; pl.track=tk; ch=true } }   // voie / quai en direct
   (l.intermediateStops||[]).forEach(st=>{ const k=find(st,i0); if(k>i0&&k<i1){ set(st,'arrival',trip.stops[k].a); set(st,'departure',trip.stops[k].d) } });
   if(trip.rt&&!l.realTime){ l.realTime=true; ch=true }
   return ch;
@@ -3054,7 +3072,7 @@ function rerenderAlerts(){ clearTimeout(rerenderT); rerenderT=setTimeout(()=>{
   try{ if($('#jrPage')?.classList.contains('on')&&jpIt) renderJourneyPage() }catch{}
   try{ if($('#v-suivis')?.classList.contains('active')) renderTracked() }catch{}
   try{ const sp=$('#stopPage'); if(sp?.classList.contains('on')){ const v=sp.querySelector('.stl')?._v; if(v) stopsAlert(sp,v.l) } }catch{}
-  try{ if($('#mapView')?.classList.contains('open')&&mapIt){ refreshStopLbls(); updateMapAlert(mapIt) } }catch{}
+  try{ if($('#mapView')?.classList.contains('open')&&mapIt){ drawItinerary(mapIt); refreshStopLbls(); updateMapAlert(mapIt) } }catch{}
  },120) }
 async function liveRefreshIt(it){   // toutes les étapes d'un parcours, d'après les heures en direct de leurs courses
   let ch=false;
@@ -3062,6 +3080,9 @@ async function liveRefreshIt(it){   // toutes les étapes d'un parcours, d'aprè
     try{ let tr=await loadTrip(l); tr=await refreshTripTimes(l,tr); if(patchLegFromTrip(l,tr)) ch=true;
       const sk=(tr?.stops||[]).filter(x=>x.cancelled).map(x=>x.name).join('|'); if(sk!==(l._sk||'')){ l._sk=sk; ch=true }   // arrêts supprimés : réafficher pour montrer l'alerte
     }catch{} }));
+  if(ch) it.legs.forEach((l,i)=>{ if(l.mode!=='WALK') return; const nx=it.legs[i+1], pv=it.legs[i-1];   // marches : mêmes quais que les étapes en véhicule
+    if(nx&&nx.mode!=='WALK'&&nx.from&&l.to){ l.to.lat=nx.from.lat; l.to.lon=nx.from.lon; l.to.track=nx.from.track }
+    if(pv&&pv.mode!=='WALK'&&pv.to&&l.from){ l.from.lat=pv.to.lat; l.from.lon=pv.to.lon; l.from.track=pv.to.track } });
   if(ch){ const tl=it.legs.filter(l=>l.mode!=='WALK'); if(it.legs[0]===tl[0]) it.startTime=tl[0].startTime; if(it.legs.at(-1)===tl.at(-1)) it.endTime=tl.at(-1).endTime }
   return ch;
 }
@@ -3091,10 +3112,62 @@ async function loadTrip(ft){
         from=bi; return {...st,t:st.dep,a:+new Date(st.arr),d:+new Date(st.dep),sa:st.sarr?+new Date(st.sarr):null,km:cum[bi]} });
       const hasSched=stops.some(x=>x.sa); stops.forEach(x=>{ if(x.pickupType==='NOT_ALLOWED'&&x.dropoffType==='NOT_ALLOWED') x.cancelled=true;   // ni montée ni descente : arrêt non desservi
          x.added=!!(x.added||x.scheduleRelationship==='ADDED'||(hasSched&&!x.sa&&!x.cancelled)) });   // arrêt de remplacement : ajouté en direct, sans horaire prévu
-      const tcObj=tripCache[ft.tripId]={coords,cum,stops,rt:!!leg.realTime}; if(stops.some(x=>x.cancelled||x.added)) rerenderAlerts(); return tcObj;   // déviation trouvée : affichage immédiat partout
+      let tcCoords=coords, tcCum=cum, tcDash=[];
+      if(stops.some(x=>x.cancelled)){ const cd=cutDeviation(coords,stops); tcCoords=cd.coords; tcDash=cd.dashed;
+        tcCum=[0]; for(let i=1;i<tcCoords.length;i++) tcCum.push(tcCum[i-1]+kmDist(tcCoords[i-1],tcCoords[i]));
+        let f2=0, lastKm=0; stops.forEach(st=>{ if(st.cancelled){ st.km=lastKm; return } let bi=f2,bd=Infinity; for(let i=f2;i<tcCoords.length;i++){const d=kmDist(tcCoords[i],[st.lon,st.lat]);if(d<bd){bd=d;bi=i}} f2=bi; st.km=lastKm=tcCum[bi] }) }   // le bus ne fait plus la boucle par l'arrêt supprimé
+      const tcObj=tripCache[ft.tripId]={coords:tcCoords,cum:tcCum,stops,rt:!!leg.realTime,dashed:tcDash}; if(stops.some(x=>x.cancelled||x.added)) rerenderAlerts(); return tcObj;   // déviation trouvée : affichage immédiat partout
     }catch{}
   }
   return tripCache[ft.tripId]=null;
+}
+/* Déviation : le tronçon officiel qui passe par les arrêts supprimés est rendu à part (affiché en pointillés) ; le tracé plein relie l'arrêt d'avant à celui d'après.
+   stops : [{lon,lat,cancelled}] dans l'ordre. Rend {coords, dashed:[[a,b],…]} */
+function cutDeviation(coords,stops){
+  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords],repl:[],runs:[]};
+  const keep=st=>!st.cancelled&&!st.added;
+  const idx=[]; let from=0; stops.forEach(st=>{ if(!keep(st)&&!st.cancelled){ idx.push(-1); return } let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){ const d=kmDist(coords[i],[st.lon,st.lat]); if(d<bd){bd=d;bi=i} } if(keep(st)) from=bi; idx.push(bi) });
+  const out=[], dashed=[], pieces=[], repl=[], runs=[]; let pos=0, k=0;
+  while(k<stops.length){
+    if(keep(stops[k])){ k++; continue }
+    const a=k-1; let hasCx=false; const added=[]; while(k<stops.length&&!keep(stops[k])){ if(stops[k].cancelled) hasCx=true; if(stops[k].added) added.push([stops[k].lon,stops[k].lat]); k++ } const b=k;
+    if(!hasCx||a<0||b>=stops.length) continue;
+    const ia=idx[a], ib=idx[b]; if(ib<=ia) continue;
+    // boucle vers l'arrêt supprimé (le bus la saute) : on garde le parcours officiel avant et après la boucle
+    if(!added.length){ const cx=stops.slice(a+1,b).filter(x=>x.cancelled); const jc=cx.length?nearestIdx(coords.slice(ia,ib+1),[cx[0].lon,cx[0].lat])+ia:-1;
+      if(jc>ia&&jc<ib){ const pl=[0]; for(let i=ia+1;i<=ib;i++) pl.push(pl.at(-1)+kmDist(coords[i-1],coords[i]));
+        let best=null; for(let j1=ia;j1<jc;j1++) for(let j2=jc+1;j2<=ib;j2++){ const st=kmDist(coords[j1],coords[j2]), L=pl[j2-ia]-pl[j1-ia];
+          if(st<0.2&&L>st*2+0.08){ const gain=L-st; if(!best||gain>best.gain) best={j1,j2,gain} } }
+        if(best){ out.push(...coords.slice(pos,best.j1+1)); pieces.push(coords.slice(pos,best.j1+1)); dashed.push(coords.slice(best.j1,best.j2+1)); runs.push({A:stops[a],B:stops[b]}); repl.push([coords[best.j1],coords[best.j2]]);
+          out.push(coords[best.j2]); pos=best.j2; continue } } }   // le tracé plein reprend juste après la boucle
+    out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1));
+    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added); dashed.push(coords.slice(ia,ib+1)); runs.push({A:stops[a],B:stops[b]}) }   // remplacement connu : trait plein par les arrêts de remplacement + parcours officiel en pointillés sur toute la longueur du remplacement
+    else { dashed.push(coords.slice(ia,ib+1)); runs.push({A:stops[a],B:stops[b]}) }                                                                     // sinon : tronçon officiel non suivi en pointillés
+    out.push(coords[ib]); pos=ib;
+  }
+  out.push(...coords.slice(pos+(out.length&&pos>0?1:0))); pieces.push(coords.slice(pos));
+  return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1),repl,runs};
+}
+/* Tracé officiel de la ligne (relation OpenStreetMap) entre deux arrêts : plus court chemin sur les voies de la ligne */
+const officialCache={};
+function officialSeg(ref,A,B){
+  const k=ref+'|'+A.lon.toFixed(4)+','+A.lat.toFixed(4)+'|'+B.lon.toFixed(4)+','+B.lat.toFixed(4); if(k in officialCache) return officialCache[k];
+  officialCache[k]=null; const pad=0.006;
+  const bb=`${Math.min(A.lat,B.lat)-pad},${Math.min(A.lon,B.lon)-pad},${Math.max(A.lat,B.lat)+pad},${Math.max(A.lon,B.lon)+pad}`;
+  const r=String(ref).replace(/"/g,'');
+  overpassRace(`[out:json][timeout:15];relation[type=route][route~"^(bus|trolleybus|tram)$"][ref="${r}"](${bb});way(r)(${bb});out geom;`).then(els=>{
+    if(!els?.length) return; const key=c=>c[0].toFixed(6)+','+c[1].toFixed(6), G=new Map(), P=new Map();
+    els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]); for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i]); P.set(a,g[i-1]); P.set(b,g[i]);
+      (G.get(a)||G.set(a,[]).get(a)).push([b,d]); (G.get(b)||G.set(b,[]).get(b)).push([a,d]) } });
+    const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ const d=kmDist(c,[p.lon,p.lat]); if(d<bd){bd=d;bk=kk} } return bd<0.15?bk:null };
+    const s0=near(A), t0=near(B); if(!s0||!t0) return;
+    const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
+    while(Q.length){ Q.sort((x,y)=>x[0]-y[0]); const [d,u]=Q.shift(); if(done.has(u)) continue; done.add(u); if(u===t0) break;
+      for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); Q.push([nd,v]) } } }
+    if(!done.has(t0)) return; const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
+    officialCache[k]=[[A.lon,A.lat],...path,[B.lon,B.lat]]; rerenderAlerts();
+  }).catch(()=>{});
+  return null;
 }
 function nearestIdx(coords,p){let bi=0,bd=Infinity;coords.forEach((c,i)=>{const d=kmDist(c,p);if(d<bd){bd=d;bi=i}});return bi}
 function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return c[0]; if(km>=cum.at(-1)) return c.at(-1);
@@ -3160,7 +3233,7 @@ function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon ar
   drawApproachStops(trip,p,ft,data.type==='Feature');
   if(src) src.setData(data);
   else{ mlMap.addSource('approach',{type:'geojson',data});
-    mlMap.addLayer({id:'approach',type:'line',source:'approach',paint:{'line-color':['coalesce',['get','color'],'#e30613'],'line-width':4,'line-dasharray':[1.2,1.4],'line-opacity':.9},layout:{'line-cap':'round'}},mlMap.getLayer('stops-minor')?'stops-minor':undefined) }
+    mlMap.addLayer({id:'approach',type:'line',source:'approach',paint:{'line-color':['coalesce',['get','color'],'#e30613'],'line-width':4,'line-opacity':.9},layout:{'line-cap':'round'}},mlMap.getLayer('stops-minor')?'stops-minor':undefined) }
 }
 /* Animation fluide : position recalculée à chaque image + lissage vers la cible */
 let vehState=null, vehShown=null, vehRaf=null, lastApproach=0;
@@ -3371,7 +3444,32 @@ function walkTarget(it){
   if(lastT&&now<+new Date(lastT.endTime)-60000) return null;          // encore à bord du dernier transport
   return {stop:last.mode==='WALK'?last.to:lastT?.to,at:+new Date(it.endTime),final:true,walkIdx:last.mode==='WALK'?legs.length-1:-1};
 }
-async function walkRoute(me,stop){ // itinéraire piéton via Transitous, sinon ligne droite
+/* Itinéraire piéton calculé sur les chemins OpenStreetMap, en privilégiant trottoirs et chemins piétons (trajets courts) */
+const osmWalkCache=new Map();
+async function walkRouteOSM(me,stop){
+  const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>1.2) return null;
+  const k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5); if(osmWalkCache.has(k)) return osmWalkCache.get(k);
+  const pad=0.004, bb=`${Math.min(me[1],stop.lat)-pad},${Math.min(me[0],stop.lon)-pad},${Math.max(me[1],stop.lat)+pad},${Math.max(me[0],stop.lon)+pad}`;
+  const els=await overpassRace(`[out:json][timeout:12];way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${bb});out geom tags;`);
+  if(!els?.length){ osmWalkCache.set(k,null); return null }
+  const W=t=>{ const h=t.highway, sw=/both|left|right|yes|separate/.test(t.sidewalk||t['sidewalk:both']||t['sidewalk:left']||t['sidewalk:right']||'');
+    if(/footway|pedestrian|path|steps|corridor|platform/.test(h)||t.footway==='sidewalk') return 1;   // trottoirs et chemins piétons : prioritaires
+    if(/living_street|cycleway/.test(h)) return 1.2; if(/residential|service|track|unclassified/.test(h)) return sw?1.2:1.8;
+    return sw?1.4:4 };   // grandes routes sans trottoir : fortement évitées
+  const key=c=>c[0].toFixed(7)+','+c[1].toFixed(7), G=new Map(), P=new Map(), foot=new Set();
+  els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]), f=W(w.tags||{}); for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i])*f; P.set(a,g[i-1]); P.set(b,g[i]); if(f<=1){foot.add(a);foot.add(b)}
+    (G.get(a)||G.set(a,[]).get(a)).push([b,d]); (G.get(b)||G.set(b,[]).get(b)).push([a,d]) } });
+  const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ let d=kmDist(c,p); if(foot.has(kk)) d-=0.015; if(d<bd){bd=d;bk=kk} } return bk };   // accroche de préférence à un trottoir proche
+  const s0=near(me), t0=near([stop.lon,stop.lat]); if(!s0||!t0){ osmWalkCache.set(k,null); return null }
+  const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
+  while(Q.length){ let mi=0; for(let i=1;i<Q.length;i++) if(Q[i][0]<Q[mi][0]) mi=i; const [d,u]=Q.splice(mi,1)[0]; if(done.has(u)) continue; done.add(u); if(u===t0) break;
+    for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); Q.push([nd,v]) } } }
+  if(!done.has(t0)){ osmWalkCache.set(k,null); return null }
+  const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
+  const res=[me,...path,[stop.lon,stop.lat]]; osmWalkCache.set(k,res); return res;
+}
+async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
+  try{ const g=await walkRouteOSM(me,stop); if(g&&g.length>1) return g }catch{}
   try{
     for(const v of PLAN_VERSIONS){
       // vers l'arrêt lui-même (son identifiant) : le calcul utilise ses vrais accès piétons, au lieu de la route la plus proche de ses coordonnées
