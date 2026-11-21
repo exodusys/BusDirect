@@ -778,6 +778,7 @@ function renderJourneyList(){
   box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove());  
   const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
+  lastJourneys.forEach(learnItineraryTracks);
   list.forEach((it,i)=>{
     const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
@@ -1166,20 +1167,21 @@ function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
  
 const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==String(pl.scheduledTrack));
-const trackHTML=pl=>!pl?.track?'':trackChanged(pl)?`<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`:`<span class="quai">${esc(pl.track)}</span>`;
+const trackHTML=(pl,leg)=>{ if(!pl)return ''; if(trackChanged(pl))return `<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`; const v=resolvedStopPlatform(pl,leg); return v?`<span class="quai">${esc(v)}</span>`:'' };
  
 function journeyHTML(it,i,tracked){
+  learnItineraryTracks(it);
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
   const isRail=l=>/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
   const railStops=new Set(transit.filter(isRail).flatMap(l=>[nrmS(l.from?.name),nrmS(l.to?.name)]));    
-  const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const rail=l.mode==='WALK'?railStops.has(nrmS(pl.name)):isRail(l);
+  const stopLine=(pl,l,lbl,ctx)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const rail=l.mode==='WALK'?railStops.has(nrmS(pl.name)):isRail(l);
     const gare=!lbl&&(rail||(l.mode!=='WALK'&&/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm)));
-    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
+    const th=trackHTML(pl,ctx||l); return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${th?` · ${rail?'Voie':'Quai'} ${th}`:''}` };
   const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}${legCancelled(l)?' leg-cx':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div><div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legCancelled(l)?'<span class="cx-tag">Supprimée</span>':''}`}
-    <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
+    <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null,l.mode==='WALK'?it.legs[li-1]:l)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null,l.mode==='WALK'?it.legs[li+1]:l)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;             
@@ -1191,7 +1193,7 @@ function journeyHTML(it,i,tracked){
     ${cxIt?`<div class="cx-band">⛔ Course supprimée${(()=>{const c=it.legs.find(legCancelled);return c&&c!==ft?` · ${esc(c.routeShortName||'')} ${hm(c.startTime)}`:''})()}</div>`:''}
     <div class="jr-top">
       ${ft?badge(ft,'main'):''}
-      <div class="jr-mid"><div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div><div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}</div></div><div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="early">en avance ${Math.abs(dl)} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div></div><div class="jr-times"><div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div><div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div><div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div></div><div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠️':a.works?'🚧':'⚠️'}</button>`})():''}</div><div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
+      <div class="jr-mid"><div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div><div class="jr-stop">${esc(ft?.from?.name||'')}${(()=>{const h=trackHTML(ft?.from,ft);return h?' '+h:''})()}</div></div><div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="early">en avance ${Math.abs(dl)} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div></div><div class="jr-times"><div class="tt"><b>${hm(depAt)}</b><small>${otherDay&&inMin>0?'<span class="dep-lbl">départ</span>':inMin<=0?(pastPick?'<span class="dep-lbl">départ</span>':'<span class="ontime">maintenant</span>'):inMin<60?'dans '+inMin+' min':''}${dl>0?` <span class="late">+${dl}′</span>`:''}</small></div><div class="tmid"><span class="tdur">${fmtDur(it.duration)}</span><i class="tline"></i><span class="tsub">${walk?`🚶 ${walk}′ · `:''}${it.transfers?it.transfers+' chgt'+(it.transfers>1?'s':''):'Direct'}</span></div><div class="tt r"><b>${hm(it.endTime)}</b><small>arrivée${rt?' <span class="live"></span>':''}</small></div></div><div class="chain">${chain}${al.length?(()=>{const a=al.find(x=>x.cancel)||al.find(x=>x.repl)||al.find(x=>x.detour)||al.find(x=>x.works)||al[0];return `<button type="button" class="leg-al chain-al${a.cancel?' bad':''}" data-act="alerts" aria-label="Infos trafic"${al.length>1?` data-n="${al.length}"`:''}>${a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠️':a.works?'🚧':'⚠️'}</button>`})():''}</div><div class="legs">${alertDetails(al)}${legs}<div class="row jp-action-bar glass" style="margin-top:8px">
       ${tracked?`<button class="btn ghost sm" data-act="untrack">Retirer du suivi</button>`:`<button class="btn sm" data-act="track">＋ Suivre ce parcours</button>`}<button class="btn ghost sm" data-act="map">🗺️ Carte</button></div></div></div>`;
 }
 function bindJourneys(box,list,tracked){
@@ -1329,9 +1331,9 @@ async function loadDepartures(){
   const rows=(d?.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture));
   if(!rows.length){ box.innerHTML='<div class="muted" style="padding:6px 0">Aucun départ trouvé pour cet arrêt.</div>'; return }
   box.innerHTML=rows.map(x=>{ const pl=x.place, t=pl.departure||pl.scheduledDeparture, sch=pl.scheduledDeparture, dl=sch?Math.round((new Date(t)-new Date(sch))/60000):0;
-    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName}, cx=x.cancelled||pl.cancelled;
+    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName,headsign:x.headsign,tripId:x.tripId}, cx=x.cancelled||pl.cancelled;
     const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
-    return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div><div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
+    return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div><div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${(()=>{const h=trackHTML(pl,lg);return h?`${rail?'Voie':'Quai'} ${h}`:''})()}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
 }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
   pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
@@ -1927,7 +1929,7 @@ function renderWalkCardInstant(it,preciseKm){
     estimated=meters!=null;
   }
   const minutes=meters!=null?Math.max(1,Math.round(meters/80)):null;
-  const track=stop.track||stop.platformCode||stop.platform||stop.scheduledTrack;
+  const track=resolvedStopPlatform(stop,tg.leg)||stop.track||stop.platformCode||stop.platform||stop.scheduledTrack;
   $('#walkTitle').innerHTML=`<span class="wt1">Marche jusqu'à :</span><span class="wt2">${esc(/^end$/i.test(stop.name||'')?'la destination':stop.name||'la destination')}${track?' · '+(tg.rail?'Voie ':'Quai ')+esc(track):''}</span>`;
   const distance=meters==null?'Distance en cours de calcul…':`${estimated?'≈ ':''}${meters<1000?Math.round(meters)+' m':(meters/1000).toFixed(1)+' km'} · ${minutes} min à pied`;
   const timing=tg.final?`Arrivée prévue à ${hm(tg.at)}`:`${tg.leg?.routeShortName?esc(tg.leg.routeShortName)+' · ':''}Départ dans <span class="cd-t" data-at="${tg.at}">${fmtCd(tg.at)}</span>`;
@@ -2150,6 +2152,15 @@ async function loadOsmPlatforms(it){
 function delayTag(live,sched,rt){ if(!live||!sched) return ''; const d=Math.round((new Date(live)-new Date(sched))/60000);
   return d>0?`<span class="late">+${d} min</span>`:d<0&&rt?`<span class="early">−${-d} min</span>`:(rt?'<span class="ontime">à l\'heure</span>':'') }
 const knownStopPlatforms=new Map();
+/* Mémoire des quais : arrêt + ligne + direction. L'API temps réel omet parfois le quai
+   alors que l'horaire théorique l'indique : on réutilise le dernier quai connu. */
+const STOP_TRACK_LS='bd_stop_tracks_v1';
+const stopTrackMem=(()=>{try{return JSON.parse(localStorage.getItem(STOP_TRACK_LS)||'{}')}catch{return {}}})();
+function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return ''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'') }
+function rememberStopTrack(st,leg,v){ const k=stopTrackKey(st,leg); if(!k||!v||stopTrackMem[k]?.v===v)return; stopTrackMem[k]={v,t:Date.now()};
+  try{ const ks=Object.keys(stopTrackMem); if(ks.length>400) ks.sort((a,b)=>(stopTrackMem[a].t||0)-(stopTrackMem[b].t||0)).slice(0,100).forEach(x=>delete stopTrackMem[x]); localStorage.setItem(STOP_TRACK_LS,JSON.stringify(stopTrackMem)) }catch{} }
+function learnItineraryTracks(it){ (it?.legs||[]).forEach(l=>{ if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
+  [l.from,...(l.intermediateStops||[]),l.to].forEach(st=>{ if(!st)return; const v=platformValue({track:st.scheduledTrack})||platformValue(st); if(v)rememberStopTrack(st,l,v) }) }) }
 function platformValue(st){for(const v of [st?.track,st?.platformCode,st?.platform,st?.scheduledTrack])if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();return '';}
 function resolvedStopPlatform(st,leg){
  if(!st)return '';
@@ -2157,8 +2168,9 @@ function resolvedStopPlatform(st,leg){
  const trip=leg?.tripId&&tripCache[leg.tripId];
  const ts=trip?.stops?.find(x=>(st.stopId&&x.stopId===st.stopId)||nrmS(x.name)===nrmS(st.name));
  const live=platformValue(ts)||platformValue(st);
- if(live){knownStopPlatforms.set(key,live);return live;}
+ if(live){knownStopPlatforms.set(key,live);rememberStopTrack(st,leg,platformValue({track:st.scheduledTrack})||live);return live;}
  if(knownStopPlatforms.has(key))return knownStopPlatforms.get(key);
+ { const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk]; if(m&&m.v&&Date.now()-(m.t||0)<90*864e5)return m.v; }
  if(!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
  const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
  const items=OSM_STOP_CACHE[k]?.items||[];
@@ -2199,7 +2211,7 @@ function focusWalk(){
   $('#mapTitle').textContent=`🚶 Marche · ${Math.max(1,mins(l.duration))} min`;
   const len=(l.distance||0)>0?` · ${l.distance<1000?Math.round(l.distance)+' m':(l.distance/1000).toFixed(1)+' km'}`:'';
   const nmF=n=>!n||/^start$/i.test(n)?'Ma position':/^end$/i.test(n)?'Destination':n;
-  $('#mapSub').textContent=`${nmF(l.from?.name)} → ${nmF(l.to?.name)}${next?.from?.track?' · Quai '+next.from.track:''}${len}`;
+  $('#mapSub').textContent=`${nmF(l.from?.name)} → ${nmF(l.to?.name)}${(()=>{const nt=next&&next.mode!=='WALK'?resolvedStopPlatform(next.from,next):'';return nt?' · Quai '+nt:''})()}${len}`;
   setRouteDim(true);
   const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
   mlMap.fitBounds(b,{padding:mapPad(30),maxZoom:19,pitch:is3D?55:0,bearing:0,duration:600});
@@ -2602,7 +2614,8 @@ function drawNextStop(){
 }
  
 function decisiveStop(ft){ const now=Date.now();
-  return now<+new Date(ft.startTime)?{name:ft.from?.name,at:+new Date(ft.startTime),lbl:'Montée'}:{name:ft.to?.name,at:+new Date(ft.endTime),lbl:'Descente'} }
+  const lab=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(ft.mode||'')?'Voie':'Quai';
+  return now<+new Date(ft.startTime)?{name:ft.from?.name,at:+new Date(ft.startTime),lbl:'Montée',track:resolvedStopPlatform(ft.from,ft),lab}:{name:ft.to?.name,at:+new Date(ft.endTime),lbl:'Descente',track:resolvedStopPlatform(ft.to,ft),lab} }
 function vehPosAt(t){
   if(!vehState) return null;
   if(vehState.trip&&vehState.trip.cum){ return estimateOnTrip(vehState.trip,t-liveOffset(t)) }
@@ -2682,7 +2695,7 @@ async function updateVehicle(){
   if(!p){const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(now>=a&&now<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip}; p=vehPosAt(now) }}
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
-  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Arrive à ton arrêt à':'Arrivée prévue à'} ${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
+  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Arrive à ton arrêt à':'Arrivée prévue à'} ${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}${d.track?' · '+d.lab+' '+esc(d.track):''}</span>`;} return }
   if(!vehMk){const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
   const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.zIndex='5'; el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
@@ -2690,7 +2703,7 @@ async function updateVehicle(){
   const before=now<+new Date(ft.startTime);
   if(mapWalk==null){
     const d=decisiveStop(ft);
-    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
+    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}${d.track?' · '+d.lab+' '+esc(d.track):''}</span>`;
   }
 }
 
@@ -2755,7 +2768,7 @@ async function onMyPos(force){
   let len=0; for(let i=1;i<walkGeo.length;i++) len+=kmDist(walkGeo[i-1],walkGeo[i]);
   const depAtMs=tg.at, wmin=Math.max(1,Math.round(len/4.8*60)), left=Math.round((depAtMs-Date.now())/60000);
   const nmS=n=>/^end$/i.test(n||'')?'la destination':n;
-  $('#walkTitle').innerHTML=`<span class="wt1">Marche jusqu'à :</span><span class="wt2">${esc(nmS(boardStop.name))}${boardStop.track?' · '+(tg.rail?'Voie ':'Quai ')+esc(boardStop.track):''}</span>`;
+  $('#walkTitle').innerHTML=`<span class="wt1">Marche jusqu'à :</span><span class="wt2">${esc(nmS(boardStop.name))}${(()=>{const bt=resolvedStopPlatform(boardStop,tg.leg)||boardStop.track;return bt?' · '+(tg.rail?'Voie ':'Quai ')+esc(bt):''})()}</span>`;
   $('#walkInfo').innerHTML=`${len<1?Math.round(len*1000)+' m':len.toFixed(1)+' km'} · ${wmin} min à pied`
     +(tg.final?`<div class="walk-dep">Arrivée prévue à ${hm(depAtMs)}</div>`
       :`<div class="walk-dep">${tg.leg?.routeShortName?esc(tg.leg.routeShortName)+' · ':''}Départ dans <span class="cd-t" data-at="${depAtMs}">${fmtCd(depAtMs)}</span>${wmin>left?' <span class="late">— presse le pas !</span>':''}</div>`);
