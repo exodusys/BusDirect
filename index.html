@@ -169,8 +169,6 @@ nav button{position:relative}
 .info-body ul{margin:0;padding-left:18px}.info-body li{margin:4px 0}
 .cov{display:flex;flex-direction:column;padding:8px 0;border-bottom:1px solid var(--border)}
 .cov span{font-size:12.5px;color:var(--muted)}
-.cov-more{align-self:flex-start;margin-top:5px;padding:3px 0;border:0;background:none;color:var(--accent);font:600 12.5px system-ui;cursor:pointer}
-.cov-full span{line-height:1.5}
 /* ===== Apparence classique : coins droits, barres collées aux bords ===== */
 body.classic{--radius:6px}
 body.classic header{top:0;left:0;right:0;max-width:none;border-radius:0;border-width:0 0 1px;padding:calc(var(--safe-t) + 10px) 16px 10px}
@@ -3641,21 +3639,6 @@ const COVERAGE=[
 ];   // d'après transitous.org/sources (novembre 2026) ; 3e valeur : nouveau dans la liste
 /* Mise à jour automatique de la couverture : liste des sources de Transitous (dépôt public sur GitHub), une fois par jour */
 const COV_REPO='https://api.github.com/repos/public-transport/transitous/contents/feeds', COV_RAW='https://raw.githubusercontent.com/public-transport/transitous/main/feeds/';
-const flagCC=f=>{ const cp=[...String(f)].slice(0,2).map(c=>c.codePointAt(0)-0x1F1E6); return cp.length===2&&cp.every(n=>n>=0&&n<26)?String.fromCharCode(...cp.map(n=>65+n)):'' };
-/* Liste complète d'un pays : tous les réseaux et régions des données Transitous, gardée 7 jours */
-async function covFullList(cc){
-  const all=store.get('covfull')||{}; if(all[cc]&&Date.now()-all[cc].at<7*864e5) return all[cc].names;
-  let files=(S.cov?.files||{})[cc];
-  if(!files){ const r=await fetch(COV_REPO); if(!r.ok) throw 0; files=(await r.json()).map(f=>f.name).filter(n=>/\.json$/.test(n)&&n.split(/[-_.]/)[0].toUpperCase()===cc) }
-  const names=new Set();
-  await Promise.all(files.map(async fn=>{ try{ const j=await (await fetch(COV_RAW+fn)).json();
-    (j.sources||[]).forEach(x=>{ let n=String(x.name||'').replace(/[-_]+/g,' ').trim(); if(!n) return; n=n.replace(/\b\w/g,c=>c.toUpperCase()); names.add(n) }) }catch{} }));
-  const list=[...names].sort((a,b)=>a.localeCompare(b,'fr')); if(list.length){ all[cc]={at:Date.now(),names:list}; store.set('covfull',all) } return list }
-async function showCovFull(row,btn){ const box=row.querySelector('.cov-full'); if(!row.dataset.cc) return;
-  if(box.innerHTML){ const o=box.style.display!=='none'; box.style.display=o?'none':''; btn.textContent=o?'▸ Liste complète':'▾ Masquer'; return }
-  btn.textContent='Chargement…';
-  try{ const l=await covFullList(row.dataset.cc); box.innerHTML=l.length?`<p class="muted" style="font-size:11px;margin:4px 0">${l.length} réseau${l.length>1?'x':''} et région${l.length>1?'s':''}</p><span>${l.map(esc).join(' · ')}</span>`:'<span>Aucune source trouvée</span>'; btn.textContent='▾ Masquer' }
-  catch{ btn.textContent='▸ Liste complète (réessayer)' } }
 const ccFlag=cc=>/^[A-Z]{2}$/.test(cc)?String.fromCodePoint(...[...cc].map(c=>0x1F1E6+c.charCodeAt(0)-65)):'🌐';
 const ccName=cc=>{ try{ return new Intl.DisplayNames(['fr'],{type:'region'}).of(cc) }catch{ return cc } };
 const covKnown=()=>new Set([...COVERAGE.map(x=>[...x[0]].slice(0,2).join('')),...((S.cov?.codes)||[]).map(ccFlag)]);
@@ -3691,8 +3674,7 @@ function showCovUpdate(){ const c=S.cov||{}, a=c.added||[];
 setTimeout(()=>updateCoverage(false),4000);
 function toggleInfo(on){
   const v=$('#infoView'); if(on&&!$('#countryList').innerHTML)
-    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires · ${COVERAGE.filter(x=>x[2]).length+((S.cov?.extra)||[]).length} nouveaux${S.cov?.at?' · liste vérifiée le '+new Date(S.cov.at).toLocaleDateString('fr-CH'):''}</p>`+COVERAGE.map(([c,t,n])=>`<div class="cov" data-cc="${flagCC(c)}"><b>${c}</b><span>${t}</span><button type="button" class="cov-more">▸ Liste complète</button><div class="cov-full"></div></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov" data-cc="${x.cc}"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span><button type="button" class="cov-more">▸ Liste complète</button><div class="cov-full"></div></div>`).join('');
-  if(on&&!$('#countryList')._covBound){ $('#countryList')._covBound=true; $('#countryList').addEventListener('click',e=>{ const b=e.target.closest('.cov-more'); if(b) showCovFull(b.closest('.cov'),b) }) }   // pays ajoutés par la mise à jour automatique
+    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires · ${COVERAGE.filter(x=>x[2]).length+((S.cov?.extra)||[]).length} nouveaux${S.cov?.at?' · liste vérifiée le '+new Date(S.cov.at).toLocaleDateString('fr-CH'):''}</p>`+COVERAGE.map(([c,t,n])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join('');   // pays ajoutés par la mise à jour automatique
   if(on) $('#smsCities').innerHTML=REGIONS.map(r=>`<div class="cov"><b>${esc(r.name)}</b><span>${r.sms.map(x=>esc(x.n)+(x.p!=null?' · ≈ CHF '+x.p.toFixed(2):'')).join(' — ')}</span></div>`).join('');
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
