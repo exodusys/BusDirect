@@ -1308,13 +1308,21 @@ function withFinalWalk(list,orig,stop,fw){
 }
 // Une requête Transitous sans réponse ne bloque plus la recherche : abandon après 15 s
 (()=>{ const f0=window.fetch.bind(window); window.fetch=(u,o={})=>{ try{ if(typeof u==='string'&&u.startsWith(API)&&!o.signal&&window.AbortController){ const c=new AbortController(); const t=setTimeout(()=>c.abort(),15000); return f0(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t)) } }catch(e){} return f0(u,o) } })();
+async function freshStopId(st){
+  try{ const r=await fetch(`${API}/v1/geocode?text=${encodeURIComponent(st.name)}&type=STOP&language=fr&place=${st.lat},${st.lon}`); if(!r.ok) return null;
+    const nm=nrmS(st.name), c=(await r.json()).filter(x=>x&&x.id&&x.lat!=null&&(!x.type||x.type==='STOP')&&x.id!==st.id).map(x=>({...x,km:kmDist([x.lon,x.lat],[st.lon,st.lat])})).filter(x=>x.km<0.4);
+    return c.find(x=>nrmS(x.name)===nm)||c.sort((a,b)=>a.km-b.km)[0]||null }catch{ return null } }
 async function nextDepartures(dest,from,onMore){
   const origDest=dest;
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
   const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
   const fwP=addFW?finalWalkFor(origDest,dest):null;
   const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
-  const d=await plan(dest,planTime,null,from);
+  let d; try{ d=await plan(dest,planTime,null,from) }
+  catch(e){ // identifiant d'arrêt périmé (Transitous renouvelle ses données) : on retrouve l'arrêt par son nom et sa position, puis on relance
+    const fresh=dest.type==='STOP'&&dest.id?await freshStopId(dest):null; if(!fresh) throw e;
+    dest.id=fresh.id; if(dest.nearStop) dest.nearStop.id=fresh.id; try{ const sd=S.dests.find(x=>x.uid===dest.uid); if(sd){ sd.id=fresh.id; if(sd.nearStop) sd.nearStop.id=fresh.id } save() }catch{}
+    d=await plan(dest,planTime,null,from) }
   const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false||dest===origDest) return its||[];   // arrêt choisi lui-même : arrivées proches avec marche finale acceptées
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
@@ -1627,7 +1635,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList(); { const upcoming=lastJourneys.filter(it=>jStart(it)>Date.now()-60000).slice(0,5); Promise.all(upcoming.map(liveRefreshIt)).then(r=>{ if(r.some(Boolean)&&gen===jGen) renderJourneyList() }) }   // 5 prochains départs : heures en direct de chaque course
-  }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
+  }catch(e){ if(gen===jGen&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
 let shown=5;
