@@ -2974,6 +2974,7 @@ function showMapSteps(){ clearTimeout(renderMapSteps._t);
   $('#mapSteps')?.classList.add('ready'); document.querySelector('#mapView .map-ctrl')?.classList.add('ready') }
 function markMapStep(){document.querySelectorAll('#mapSteps .ms').forEach(b=>b.classList.toggle('on',+b.dataset.i===mapStepSel));updateStairVisibility()}
 function focusStep(i,refit){
+  if(!refit&&followVeh){ followVeh=false; $('#btnFollow')?.classList.remove('on') }   // appui sur une étape du bandeau : arrête le suivi du bus
   if(i===-1){ if(!mlMap) return; if(mapStepSel===-1&&!refit){ mapStepSel=null; markMapStep(); mapFit(); return }   // marche jusqu'à l'arrêt : simple cadrage (la navigation se lance avec « Lancer »)
     mapStepSel=-1; markMapStep(); setMapOverview(false); const bb=new maplibregl.LngLatBounds(); if(pos) bb.extend([pos.lon,pos.lat]); if(boardStop) bb.extend([boardStop.lon,boardStop.lat]);
     if(!bb.isEmpty()) mlMap.fitBounds(bb,{padding:mapPad(60,60),maxZoom:18,duration:600}); return }
