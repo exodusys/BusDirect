@@ -1218,12 +1218,12 @@ const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
 /* Versions de l'API essayées en parallèle : la dernière qui a répondu part tout de suite, les autres 1 s plus tard (ou aussitôt qu'elle échoue) ; la première réponse valide gagne, les autres requêtes sont annulées */
 function racePlan(q,tries){
   return new Promise(res=>{
-    let pending=tries.length, done=false, launched=false; const acs=new Map();
+    let pending=tries.length, done=false, launched=false; const acs=new Map(); res.st=res.st||{}; const st=racePlan.last={};
     const fail=()=>{ if(!done&&--pending===0) res(null) };
     const run=async v=>{ if(done) return; const ac=new AbortController(); acs.set(v,ac);
-      try{ const r=await fetch(`${API}/${v}/plan?${q}`,{signal:ac.signal});
+      try{ const r=await fetch(`${API}/${v}/plan?${q}`,{signal:ac.signal}); st[v]=r.status;
         if(r.ok){ const j=await r.json(); if(!done){ done=true; acs.forEach((a,k)=>{ if(k!==v) a.abort() }); clearTimeout(tm); res({v,j}); return } else return } }catch{}
-      fail(); if(v===tries[0]) rest() };
+      if(st[v]==null) st[v]='réseau'; fail(); if(v===tries[0]) rest() };
     const rest=()=>{ if(launched) return; launched=true; clearTimeout(tm); tries.slice(1).forEach(run) };
     const tm=setTimeout(rest,1000);
     run(tries[0]) }) }
@@ -1243,7 +1243,7 @@ async function plan(dest, time, cursor, from, fast){
   for(const q of [qs,light]){
     const w=await racePlan(q,tries); if(w){ if(planVersion!==w.v){planVersion=w.v;try{localStorage.setItem('bd_planv',w.v)}catch{}} return w.j }
   }
-  throw new Error('plan');
+  throw new Error('plan '+Object.entries(racePlan.last||{}).map(([v,c])=>v+':'+c).join(' '));
 }
 // Récupère tous les prochains départs (plusieurs pages), sans doublons, triés par heure de départ
 // Arrêt le plus proche d'une adresse / d'un lieu (mis en cache sur la destination)
@@ -1635,7 +1635,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList(); { const upcoming=lastJourneys.filter(it=>jStart(it)>Date.now()-60000).slice(0,5); Promise.all(upcoming.map(liveRefreshIt)).then(r=>{ if(r.some(Boolean)&&gen===jGen) renderJourneyList() }) }   // 5 prochains départs : heures en direct de chaque course
-  }catch(e){ if(gen===jGen&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
+  }catch(e){ console.warn('loadJourneys',e); if(gen===jGen&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.<div class="muted" style="font-size:11px;margin-top:8px;word-break:break-word">Détail : '+esc(String(e&&e.message||e)).slice(0,200)+'</div></div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
 let shown=5;
