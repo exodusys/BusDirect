@@ -856,7 +856,7 @@ setTimeout(function(){d.classList.add('bd-ready')},1500)})();</script>
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
     <h3>Itinéraires</h3>
     <div class="card glass">
-      <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
+      <div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
         <label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div>
       <div class="set"><div><b>📍 Autour de moi</b><div class="muted" style="font-size:12px">Arrêts proches et leurs prochains départs sur l'écran Horaires</div></div>
         <label class="switch"><input type="checkbox" id="nearOn" onchange="setNearOn(this.checked)"><span></span></label></div>
@@ -1185,7 +1185,7 @@ function setNearestOnly(on){
   toast(on?'Arrêt le plus proche uniquement':'Autres arrêts acceptés');
 }
 function syncNearestUI(){ const on=S.settings.nearestOnly!==false; if($('#nearestOn')) $('#nearestOn').checked=on;
-  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche, puis marche jusqu\'à l\'adresse ou au lieu':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
+  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche de la destination, puis marche jusqu\'à l\'adresse ou au lieu de destination':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
 function setSmsTab(on){
   S.settings.smsOn=on; save(); applySmsTab();
   toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
@@ -2188,13 +2188,25 @@ async function nearStops(p){
   for(const d of [0.006,0.012]){ for(const v of ['v1','v5','v2']){ try{
     const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
     const g=new Map(); (await r.json()).filter(x=>x&&x.lat!=null&&x.name).forEach(x=>{ const k=nrmS(x.name), km=kmDist([p.lon,p.lat],[x.lon,x.lat]);   // quais d'un même arrêt regroupés
-      const o=g.get(k); if(!o) g.set(k,{name:x.name,lat:x.lat,lon:x.lon,km,n:1}); else { o.lat=(o.lat*o.n+x.lat)/(o.n+1); o.lon=(o.lon*o.n+x.lon)/(o.n+1); o.n++; o.km=Math.min(o.km,km) } });
-    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,5); if(l.length>=3||d>0.01) return l; break }catch{} } }
+      const o=g.get(k); if(!o) g.set(k,{name:x.name,lat:x.lat,lon:x.lon,km,n:1,q:[x]}); else { o.lat=(o.lat*o.n+x.lat)/(o.n+1); o.lon=(o.lon*o.n+x.lon)/(o.n+1); o.n++; o.km=Math.min(o.km,km); o.q.push(x) } });
+    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,8); if(l.length>=3||d>0.01) return await nearWalkSort(p,l); break }catch{} } }
   return [] }
+/* Tri par distance à pied réelle, calculée par Transitous comme pour les dalles (marche jusqu'à l'arrêt lui-même) ; cache par position ~30 m */
+const nearWalkCache=new Map();
+async function nearWalkSort(p,l){
+  const me=`${p.lat.toFixed(4)},${p.lon.toFixed(4)}`;
+  await Promise.all(l.map(async st=>{ const q=st.q.slice().sort((a,b)=>kmDist([p.lon,p.lat],[a.lon,a.lat])-kmDist([p.lon,p.lat],[b.lon,b.lat]))[0];
+    const to=q.stopId?encodeURIComponent(q.stopId):`${q.lat},${q.lon}`, ck=me+'>'+to;
+    if(nearWalkCache.has(ck)){ Object.assign(st,nearWalkCache.get(ck)); return }
+    let res=null; for(const v of PLAN_VERSIONS){ try{ const r=await fetch(`${API}/${v}/plan?fromPlace=${p.lat},${p.lon}&toPlace=${to}&directModes=WALK&maxDirectTime=3600&numItineraries=1&pedestrianProfile=FOOT`); if(!r.ok) continue;
+      const d=await r.json(), w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
+      if(w) res={walk:w.legs.reduce((k,l)=>k+(l.distance||0),0)/1000||st.km*1.3,walkMin:Math.max(1,Math.round(w.duration/60))}; break }catch{} }
+    res=res||{walk:st.km*1.3,walkMin:Math.max(1,Math.round(st.km*1.3/0.075))}; nearWalkCache.set(ck,res); Object.assign(st,res) }));
+  return l.sort((a,b)=>a.walkMin-b.walkMin||a.walk-b.walk).slice(0,5) }
 function setNearOn(on){ S.settings.nearOn=!!on; save(); const b=$('#nearBox'); if(b){ b.style.display=on?'':'none'; if(on){ nearAt=0; loadNear(true) } } }
-setTimeout(()=>{ const on=S.settings.nearOn!==false; if($('#nearOn')) $('#nearOn').checked=on; if(!on&&$('#nearBox')) $('#nearBox').style.display='none' },0);
+setTimeout(()=>{ const on=S.settings.nearOn===true; if($('#nearOn')) $('#nearOn').checked=on; if(!on&&$('#nearBox')) $('#nearBox').style.display='none' },0);
 async function loadNear(force){
-  const box=$('#nearBox'); if(!box||!pos||nearBusy||S.settings.nearOn===false) return; if(!$('#v-horaires')?.classList.contains('active')||document.hidden) return;
+  const box=$('#nearBox'); if(!box||!pos||nearBusy||S.settings.nearOn!==true) return; if(!$('#v-horaires')?.classList.contains('active')||document.hidden) return;
   const p={lat:pos.lat,lon:pos.lon}; nearBusy=true;
   try{
     if(!nearSt||!nearPos||kmDist([p.lon,p.lat],[nearPos.lon,nearPos.lat])>0.15){ const l=await nearStops(p); if(l.length){ nearSt=l; nearPos=p } }   // arrêts recalculés seulement après 150 m
@@ -2204,15 +2216,15 @@ async function loadNear(force){
         if(d) st.deps=(d.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).filter(x=>+new Date(x.place.departure||x.place.scheduledDeparture)>Date.now()-30000)
           .sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture)) })) }
     renderNear() }finally{ nearBusy=false } }
-function renderNear(){ const box=$('#nearBox'); if(!box||!nearSt?.length||S.settings.nearOn===false) return; const open=store.get('nearOpen',true);
+function renderNear(){ const box=$('#nearBox'); if(!box||!nearSt?.length||S.settings.nearOn!==true) return; const open=store.get('nearOpen',true);
   const seen=new Set(), lk=x=>(x.routeShortName||x.displayName||'')+'|'+nrmS(x.headsign||'');   // une ligne (et direction) n'apparaît qu'à l'arrêt le plus proche
   nearSt.forEach(st=>{ st.show=null; if(!st.deps) return; const own=new Set(st.deps.map(lk).filter(k=>!seen.has(k))); st.show=st.deps.filter(x=>own.has(lk(x))).slice(0,3); own.forEach(k=>seen.add(k)) });
   const list=nearSt.map((st,i)=>({st,i})).filter(o=>!o.st.deps||o.st.show.length);
-  box.innerHTML=`<div class="near-h" onclick="store.set('nearOpen',!store.get('nearOpen',true));renderNear()"><span>📍 Autour de moi</span><i>${open?'▾':'▸'}</i></div>`+(open?list.map(({st,i})=>{ const m=Math.round(st.km*1000), w=Math.max(1,Math.round(st.km/0.075));
+  box.innerHTML=`<div class="near-h" onclick="store.set('nearOpen',!store.get('nearOpen',true));renderNear()"><span>📍 Autour de moi</span><i>${open?'▾':'▸'}</i></div>`+(open?list.map(({st,i})=>{ const wk=st.walk??st.km, m=Math.round(wk*1000), w=st.walkMin||Math.max(1,Math.round(wk/0.075));
     const deps=(st.show||[]).map(x=>{ const pl=x.place, t=+new Date(pl.departure||pl.scheduledDeparture), sch=pl.scheduledDeparture, dl=sch?Math.round((t-new Date(sch))/60000):0, cx=x.cancelled||pl.cancelled||x.tripCancelled, mn=Math.round((t-Date.now())/60000);
       const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor};
       return `<div class="near-d">${badge(lg,'mini')}<span class="near-dir">${esc(x.headsign||'')}${pl.track?` <span class="near-q">${esc(pl.track)}</span>`:''}</span><span class="near-cd${cx?' cx':mn<1?' red':mn<5?' or':''}">${cx?'Supprimé':mn<=0?'0 min':mn<60?mn+' min':hm(t)}<small>${cx?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&x.realTime?`<span class="early">en avance ${-dl} min</span>`:x.realTime?'<span class="ontime">à l\'heure</span>':''}</small></span></div>` }).join('');
-    return `<div class="near-s glass" data-ni="${i}"><div class="near-t"><b>${esc(st.name)}</b><span>${m<1000?m+' m':(st.km).toFixed(1)+' km'} · ${w} min 🚶</span></div>${deps||(st.deps?'<div class="muted" style="font-size:13px">Aucun départ prochainement</div>':'<div class="spin" style="margin:6px auto"></div>')}</div>` }).join(''):'');
+    return `<div class="near-s glass" data-ni="${i}"><div class="near-t"><b>${esc(st.name)}</b><span>${m<1000?m+' m':wk.toFixed(1)+' km'} · ${w} min 🚶</span></div>${deps||(st.deps?'<div class="muted" style="font-size:13px">Aucun départ prochainement</div>':'<div class="spin" style="margin:6px auto"></div>')}</div>` }).join(''):'');
   box.querySelectorAll('.near-s').forEach(el=>el.onclick=()=>{ const st=nearSt[+el.dataset.ni]; openDepartures({name:st.name,lat:st.lat,lon:st.lon}) }) }
 setInterval(()=>{ loadNear(false); if(nearSt&&$('#v-horaires')?.classList.contains('active')) renderNear() },5000);   // départs toutes les 30 s, minutes mises à jour toutes les 5 s
 
