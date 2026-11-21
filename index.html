@@ -703,7 +703,8 @@ function mergeRefresh(old,data){
   if(!old.length||!data.length) return data;
   const keys=new Set(data.map(jkey)), f0=jStart(data[0]), fL=jStart(data.at(-1));
   const vis=old.slice(0,shown), lastVis=vis.length?jStart(vis.at(-1)):-Infinity;
-  const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor)    
+  const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor);
+  const after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
   const out=before.concat(data,after);
   shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);    
   return out;
@@ -1309,7 +1310,9 @@ function jpStartVehAnim(){ if(jpVehRaf) return;
     const now=Date.now(), dt=Math.min(0.25,(now-(jpVehLast||now))/1000); jpVehLast=now; let any=false;
     pg.querySelectorAll('.stl').forEach(box=>{ const v=box._v, veh=box.querySelector('.stl-veh'); if(!v||!veh||veh.style.display==='none') return;
       const {trip,s0,e,l}=v, st=trip.stops;
-      const kT=kmOnTrip(trip,now);    
+      const kT=kmOnTrip(trip,now);
+      if(kT==null) return;
+      any=true;
       if(box._km==null) box._km=kT; const diff=kT-box._km;
       if(diff>0) box._km+=diff*Math.min(1,dt*(diff>0.3?1.2:2.5)); else if(diff<-0.4) box._km+=diff*Math.min(1,dt*0.15);
       const km=box._km; let y=0; if(km<=st[s0].km) y=0; else if(km>=st[e].km) y=(e-s0)*STL_H;
@@ -1874,7 +1877,9 @@ async function openMap(it,walkLeg){
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));    
   { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=firstTransit(mapIt)?.from; walkGeo=null } refreshStopLbls() };
-    mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }    
+    mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }
+  syncFollowBtn();
+  mapTimers.push(setInterval(syncFollowBtn,500));
   startMeWatch();
 }
  
