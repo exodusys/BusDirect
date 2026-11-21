@@ -838,7 +838,7 @@ body.classic.list-page main{padding-top:var(--safe-t)}
     <div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div>
     <h3>Itinéraires</h3>
     <div class="card glass">
-      <div class="set"><div><b>🚏 Arrêt le plus proche uniquement</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
+      <div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div>
         <label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div>
     </div>
     <h3>Tickets</h3>
@@ -914,7 +914,7 @@ body.classic.list-page main{padding-top:var(--safe-t)}
       <ul><li>Recherche un arrêt, une adresse ou un lieu et ajoute-le à tes destinations. Pour une adresse, l'arrêt le plus proche est utilisé.</li></ul>
       <h4>🚏 Itinéraires</h4>
       <ul>
-        <li><b>Arrêt le plus proche uniquement</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li>
+        <li><b>Arrêt le plus proche</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li>
         <li><b>Désactivé</b> : tous les arrêts des environs sont acceptés, avec une marche jusqu'à la destination. Plus de choix de trajets, mais l'arrivée peut se faire à un autre arrêt.</li>
         <li>Réglage dans Paramètres › Itinéraires.</li>
       </ul>
@@ -979,7 +979,6 @@ const TYPE_ICON = {STOP:'🚏',ADDRESS:'🏠',PLACE:'📍'};
 function setListTitle(){
   const el=$('#jrTitle'); if(!el||!selDest) return;
   const from=selDest.fromLabel||(selFrom?selFrom.name:'Ma position');
-  const stop=S.settings.nearestOnly!==false&&selDest.nearStop&&selDest.nearStop.name!==selDest.name?selDest.nearStop.name:'';
   el.innerHTML=`<span class="lt-line">Depuis - ${esc(from)}</span><span class="lt-line">Vers - ${esc(selDest.name)}</span>`;
   requestAnimationFrame(()=>{ const h=$('#listTop')?.offsetHeight||52; document.documentElement.style.setProperty('--lt-h',h+'px') });
 }
@@ -1162,10 +1161,10 @@ function setNearestOnly(on){
   S.settings.nearestOnly=on; save(); syncNearestUI();
   try{Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>sessionStorage.removeItem(k))}catch{}
   if(selDest){ loadedFor=null; $('#journeys').innerHTML=''; loadJourneys() }
-  toast(on?'Arrêt le plus proche uniquement':'Autres arrêts acceptés');
+  toast(on?'Arrêt le plus proche':'Autres arrêts acceptés');
 }
 function syncNearestUI(){ const on=S.settings.nearestOnly!==false; if($('#nearestOn')) $('#nearestOn').checked=on;
-  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche, puis marche jusqu\'à l\'adresse ou au lieu':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
+  if($('#nearestTxt')) $('#nearestTxt').textContent=on?'Trajets jusqu\'à l\'arrêt le plus proche de la destination, puis marche jusqu\'à l\'adresse ou au lieu de destination':'Tous les arrêts proches sont acceptés, avec marche jusqu\'à la destination' }
 function setSmsTab(on){
   S.settings.smsOn=on; save(); applySmsTab();
   toast(on?'Onglet Tickets affiché':'Onglet Tickets masqué');
@@ -1211,9 +1210,9 @@ async function plan(dest, time, cursor, from, quick){
   // Si elle ne trouve rien, on retombe sur la recherche complète (longs trajets, départs rares).
   const km0=dist(from||P,dest), maxTT=Math.round(Math.min(300,Math.max(60,40+km0*6)));
   const fast=qs.replace('numItineraries=10','numItineraries=6').replace('searchWindow=5400','searchWindow=2700')+`&maxTransfers=4&maxTravelTime=${maxTT}`;
-  for(const q of (quick&&!cursor?[fast,qs,light]:[qs,light])) for(const v of tries){
+  for(const q of (quick?[fast,qs,light]:[qs,light])) for(const v of tries){
     try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}
-        const j=await r.json(); if(q===fast&&!(j.itineraries||[]).length) break;   // rien de trouvé en mode rapide → recherche complète
+        const j=await r.json(); if(q===fast&&!cursor&&!(j.itineraries||[]).length) break;   // rien de trouvé en mode rapide → recherche complète
         return j;}
       if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
   }
@@ -1578,6 +1577,10 @@ async function loadJourneys(force){ lastListLoad=Date.now();
   $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
   if(!pos&&!selFrom){box.innerHTML='<div class="card glass empty">Active la localisation pour calculer les trajets.</div>';locate();return}
+  // Je suis déjà à l'arrêt de destination (départ = ma position) : pas de recherche, message tout de suite
+  if(!selFrom&&pos&&selDest.type==='STOP'&&selDest.lat!=null&&dist(pos,selDest)*1000<120){
+    loadedFor=(selFrom?.uid||'me')+'>'+selDest.uid; lastJourneys=[]; walkIt=null; $('#walkTile')?.remove();
+    box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>'; return }
   const pairKey=(selFrom?.uid||'me')+'>'+selDest.uid, first=loadedFor!==pairKey;           // nouvelle destination → spinner ; sinon mise à jour silencieuse
   if(first){box.innerHTML='<div class="spin"></div>';lastJourneys=[]}
   loading=true; $('#jrHead').classList.add('busy');
@@ -1735,7 +1738,7 @@ async function loadPastJourneys(){
       const oldest=cursor;
       // curseur « page précédente » de Transitous : la page juste avant, en une requête ; sinon recherche par heure
       if(!pastCur&&!pastReserve.length&&listCur?.prev&&tries===1) pastCur=listCur.prev;
-      const d=pastCur?await plan(dest,new Date(oldest),pastCur,from):await plan(dest,new Date(oldest-step*60000),null,from);
+      const d=pastCur?await plan(dest,new Date(oldest),pastCur,from,true):await plan(dest,new Date(oldest-step*60000),null,from);
       pastCur=d.previousPageCursor||null;
       let got=(d.itineraries||[]).filter(it=>{const f=firstTransit(it);return f&&!known.has(jkey(it))&&+new Date(f.startTime)<oldest});
       if(got.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); got=withFinalWalk(got,selDest,dest,fw) }
@@ -1745,7 +1748,7 @@ async function loadPastJourneys(){
       pastReserve=got.concat(pastReserve).sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
     }
     const add=pastReserve.slice(-5); pastReserve=pastReserve.slice(0,-5);
-    await new Promise(r=>setTimeout(r,Math.max(0,700-(Date.now()-t0))));   // même temps de chargement qu'en bas
+    await new Promise(r=>setTimeout(r,Math.max(0,150-(Date.now()-t0))));
     if(add.length){
       prefetchColors(add);
       const anchor=document.querySelector('#journeys > .jr'), top0=anchor?anchor.getBoundingClientRect().top:0;
@@ -1785,7 +1788,7 @@ function animNew(){ // nouveaux trajets : glissent depuis le bas, en cascade
 async function loadMoreJourneys(){
   if(moreBusy||!selDest) return;
   if(lastJourneys.length>shown){ moreBusy=true; $('#more')?.classList.add('busy');
-    await new Promise(r=>setTimeout(r,700));                     // court temps de chargement pour une transition douce
+    await new Promise(r=>setTimeout(r,120));
     shown+=5; appending=true; renderJourneyList(); appending=false; animNew();
     moreBusy=false; $('#more')?.classList.remove('busy'); return }
   // plus rien en réserve : on charge les départs suivants
@@ -1798,7 +1801,7 @@ async function loadMoreJourneys(){
     // curseur « page suivante » de Transitous : la page juste après, sans doublons ; sinon recherche par heure
     if(!nextCur&&listCur?.next) nextCur=listCur.next;
     for(let k=0;k<3&&found.length<5;k++){
-      const d=nextCur?await plan(dest,t,nextCur,from):await plan(dest,t,null,from);
+      const d=nextCur?await plan(dest,t,nextCur,from,true):await plan(dest,t,null,from,true);
       nextCur=d.nextPageCursor||null;
       (d.itineraries||[]).forEach(it=>{ if(firstTransit(it)&&!known.has(jkey(it))&&+new Date(firstTransit(it).startTime)>=+new Date(lastF.startTime)){known.add(jkey(it));found.push(it)} });
       if(!nextCur) break;
@@ -1806,7 +1809,7 @@ async function loadMoreJourneys(){
     const add=found
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
     if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add.splice(0,add.length,...withFinalWalk(add,selDest,dest,fw)) }
-    await new Promise(r=>setTimeout(r,Math.max(0,700-(Date.now()-t0b))));
+    await new Promise(r=>setTimeout(r,Math.max(0,150-(Date.now()-t0b))));
     if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
     else if(sen) sen.remove();
   }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
