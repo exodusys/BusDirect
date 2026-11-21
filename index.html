@@ -1195,7 +1195,7 @@ async function geocode(text){
 }
 let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
-async function plan(dest, time, cursor, from){
+async function plan(dest, time, cursor, from, quick){
   if(!from&&!pos) throw new Error('nopos');
   const P=(!from&&listPos)?listPos:pos;   // position figée à l'ouverture de la liste
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
@@ -1207,8 +1207,14 @@ async function plan(dest, time, cursor, from){
   // 1er essai : version connue ; si elle échoue, toutes les versions ; puis une recherche allégée (longs trajets, ex. Genève → Berlin)
   const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
   const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
-  for(const q of [qs,light]) for(const v of tries){
-    try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}return r.json();}
+  // Affichage rapide (appui sur une destination) : recherche réduite = moins de parcours, fenêtre courte, peu de correspondances, durée plafonnée selon la distance.
+  // Si elle ne trouve rien, on retombe sur la recherche complète (longs trajets, départs rares).
+  const km0=dist(from||P,dest), maxTT=Math.round(Math.min(300,Math.max(60,40+km0*6)));
+  const fast=qs.replace('numItineraries=10','numItineraries=6').replace('searchWindow=5400','searchWindow=2700')+`&maxTransfers=4&maxTravelTime=${maxTT}`;
+  for(const q of (quick&&!cursor?[fast,qs,light]:[qs,light])) for(const v of tries){
+    try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}
+        const j=await r.json(); if(q===fast&&!(j.itineraries||[]).length) break;   // rien de trouvé en mode rapide → recherche complète
+        return j;}
       if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
   }
   throw new Error('plan');
@@ -1282,7 +1288,7 @@ async function nextDepartures(dest,from,onMore){
   const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
   const fwP=addFW?finalWalkFor(origDest,dest):null;
   const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
-  const d=await plan(dest,planTime,null,from);
+  const d=await plan(dest,planTime,null,from,true);   // 1re page : recherche réduite pour afficher vite
   const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false||dest===origDest) return its||[];   // arrêt choisi lui-même : arrivées proches avec marche finale acceptées
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
     return (its||[]).filter(it=>{ const lt=[...it.legs].reverse().find(l=>l.mode!=='WALK'); if(!lt) return false;
@@ -1290,7 +1296,7 @@ async function nextDepartures(dest,from,onMore){
   let all=onlyStop(d.itineraries); if(!all.length&&(d.itineraries||[]).length) all=d.itineraries;   // sécurité : jamais de liste vide à cause du filtre
   const curs={prev:d.previousPageCursor||null,next:d.nextPageCursor||null};   // curseurs Transitous de cette recherche
   if(d.nextPageCursor&&onMore) (async()=>{ let cur=d.nextPageCursor;
-    for(let p=0;p<2&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
+    for(let p=0;p<1&&cur;p++){ try{const n=await plan(dest,planTime,cur,from); all=all.concat(onlyStop(n.itineraries)); cur=n.nextPageCursor; curs.next=cur||null; onMore(await fin(cleanList(all)))}catch{break} } })();
   const out=await fin(cleanList(all)); out._cur=curs;
   { const pk=(selFrom?.uid||'me')+'>'+selDest?.uid; walkOnlyFor(d,origDest,from).then(w=>{ if(pk!==(selFrom?.uid||'me')+'>'+selDest?.uid) return; const had=!!walkIt; walkIt=w; if((w||had)&&listOpen()) renderJourneyList() }).catch(()=>{}) }   // marche à pied seule : calculée en arrière-plan, la liste s'affiche sans l'attendre
   return out;
@@ -3829,6 +3835,13 @@ try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#jou
 addEventListener('pageshow',()=>requestAnimationFrame(syncIOSWallpaperTint));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncIOSWallpaperTint()});
 new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(document.querySelector('main'),{subtree:true,attributes:true,attributeFilter:['class']});
+</script>
+<script>
+/* Au rechargement : on rouvre l'onglet où l'on était (plus de retour forcé sur Horaires) */
+(()=>{ try{
+  document.querySelector('#tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b&&b.dataset.v) localStorage.setItem('bd_tab',b.dataset.v) });
+  const t=localStorage.getItem('bd_tab'); if(t&&t!=='horaires'){ const b=document.querySelector('#tabs button[data-v="'+t+'"]'); if(b&&b.offsetParent!==null){ document.body.style.setProperty('--noanim','1'); b.click(); document.querySelector('main')?.scrollTo(0,0) } }
+}catch(e){} })();
 </script>
 </body>
 </html>
