@@ -2061,8 +2061,8 @@ let stopLbls=[];
 /* Quais et voies OpenStreetMap : enrichissement de chaque arrêt du parcours,
    y compris les arrêts intermédiaires et les arrêts des correspondances. */
 let osmPlatformMarkers=[];
-const OSM_STOP_CACHE=(()=>{try{return JSON.parse(localStorage.getItem('bd_osm_stops_v2')||'{}')}catch{return {}}})();
-function saveOsmStopCache(){try{localStorage.setItem('bd_osm_stops_v2',JSON.stringify(OSM_STOP_CACHE))}catch{}}
+const OSM_STOP_CACHE=(()=>{try{return JSON.parse(localStorage.getItem('bd_osm_stops_v3')||'{}')}catch{return {}}})();
+function saveOsmStopCache(){try{localStorage.setItem('bd_osm_stops_v3',JSON.stringify(OSM_STOP_CACHE))}catch{}}
 function routeStopPoints(it){
   const out=[], seen=new Set();
   (it?.legs||[]).filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR').forEach(l=>{
@@ -2076,10 +2076,17 @@ function routeStopPoints(it){
   return out;
 }
 function clearOsmPlatformMarkers(){osmPlatformMarkers.forEach(m=>m.remove());osmPlatformMarkers=[]}
+function platformValue(st){
+  if(!st)return '';
+  for(const v of [st.track,st.platformCode,st.platform,st.scheduledTrack]){
+    if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();
+  }
+  return '';
+}
 function osmPlatformText(tags,rail){
-  const track=rail&&/^(rail|light_rail|subway|tram)$/.test(tags.railway||'');
+  const isTrack=rail&&/^(rail|light_rail|subway|tram)$/.test(tags.railway||'');
   const raw=String(tags.local_ref||tags['platform:ref']||
-    ((track||tags.public_transport==='platform'||tags.railway==='platform')?tags.ref:'')||
+    ((isTrack||tags.public_transport==='platform'||tags.railway==='platform')?tags.ref:'')||
     (/^(quai|voie|platform|track)\s+\S+/i.test(tags.name||'')?tags.name:'')).trim();
   const value=raw.replace(/^(quai|voie|platform|track)\s*/i,'').trim();
   return value?(rail?'Voie ':'Quai ')+value:'';
@@ -2088,12 +2095,20 @@ function osmLabelForStop(st){
   if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
   const key=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
   const items=OSM_STOP_CACHE[key]?.items||[];
-  const live=String(st.track||st.platformCode||st.platform||'').replace(/^(quai|voie)\s*/i,'').trim();
-  const exact=live&&items.find(x=>x.label.replace(/^(quai|voie)\s*/i,'').trim()===live);
+  const live=platformValue(st);
+  const exact=live&&items.find(x=>x.label.replace(/^(quai|voie)\s*/i,'')===live);
   if(exact)return exact.label;
   if(items.length===1)return items[0].label;
-  const ranked=items.map(x=>({...x,d:dist(st,x)})).sort((a,b)=>a.d-b.d);
+  const ranked=items.map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d);
   return ranked.length>1&&ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0].label:'';
+}
+const stopPlatformMemory=new Map();
+function rememberedPlatform(st,leg){
+  if(!st)return '';
+  const key=String(leg?.tripId||leg?.routeShortName||'')+'|'+nrmS(st.name)+'|'+String(st.stopId||'');
+  const value=platformValue(st);
+  if(value){stopPlatformMemory.set(key,value);return value;}
+  return stopPlatformMemory.get(key)||'';
 }
 async function loadOsmPlatforms(it){
   if(!mlMap||!it)return;
@@ -2122,7 +2137,7 @@ async function loadOsmPlatforms(it){
       const candidates=(els||[]).map(e=>{
         const lat=e.lat??e.center?.lat,lon=e.lon??e.center?.lon,t=e.tags||{};
         if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
-        const d=dist({lat:st.lat,lon:st.lon},{lat,lon});
+        const d=dist({lat:st.lat,lon:st.lon},{lat,lon})*1000;
         const nameOK=!t.name||norm2(t.name)===norm2(st.name)||norm2(st.name).includes(norm2(t.name))||norm2(t.name).includes(norm2(st.name));
         if(d>90||!nameOK)return null;
         const n=osmPlatformText(t,st.rail); if(!n)return null;
@@ -2150,10 +2165,12 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
       const tr=l.tripId&&tripCache[l.tripId], x=tr?.stops?.find(z=>nrmS(z.name)===nrmS(st.name)); if(st.cancelled||x?.cancelled){ time=''; tag='<span class="late">Arrêt supprimé</span>'; p._cx=true } else { p._cx=false; if(x?.added) tag=(tag?tag+' ':'')+'<span class="ontime">Arrêt de remplacement</span>' } } }
   const rail=r&&/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(r.leg.mode||'');
   const liveStop=r?(r.kind==='mid'?r.st:r.kind==='from'?r.leg.from:r.leg.to):null;
-  const liveTrack=liveStop?(liveStop.track||liveStop.platformCode||liveStop.platform||''):'';
-  const osmTrack=osmLabelForStop(liveStop);
-  // Live operational platform takes precedence over static OSM data.
-  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${String(liveTrack).replace(/^(quai|voie)\s*/i,'')}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:osmTrack;
+  const tr=r?.leg?.tripId&&tripCache[r.leg.tripId];
+  const tripStop=tr?.stops?.find(x=>(liveStop?.stopId&&x.stopId===liveStop.stopId)||nrmS(x.name)===nrmS(liveStop?.name));
+  const liveTrack=platformValue(tripStop)||rememberedPlatform(liveStop,r?.leg)||
+    String(p.track||'').replace(/^(quai|voie)\s*/i,'');
+  if(liveTrack&&liveStop)rememberedPlatform({...liveStop,track:liveTrack},r?.leg);
+  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&String(liveStop.scheduledTrack)!==String(liveTrack)?` (prévu ${liveStop.scheduledTrack})`:''}`:osmLabelForStop(liveStop);
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
   return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}${trackText?`<small class="stop-track">${esc(trackText)}</small>`:''}` }
 function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }); if(mlMap) requestAnimationFrame(fitLabels) }
@@ -2347,7 +2364,7 @@ async function refreshTripTimes(ft,trip){
   for(const v of tripV?[tripV,...['v5','v4','v3','v2','v1'].filter(x=>x!==tripV)]:['v5','v4','v3','v2','v1']){
     try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`,{cache:'no-store'}); if(!r.ok) continue; tripV=v;
       const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
-      const fresh=[{arr:leg.startTime,dep:leg.startTime,cancelled:!!leg.from?.cancelled,track:leg.from?.track},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival,cancelled:!!s.cancelled||(s.pickupType==='NOT_ALLOWED'&&s.dropoffType==='NOT_ALLOWED'),track:s.track})),{arr:leg.endTime,dep:leg.endTime,cancelled:!!leg.to?.cancelled,track:leg.to?.track}];
+      const fresh=[{arr:leg.startTime,dep:leg.startTime,cancelled:!!leg.from?.cancelled,track:platformValue(leg.from)},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival,cancelled:!!s.cancelled||(s.pickupType==='NOT_ALLOWED'&&s.dropoffType==='NOT_ALLOWED'),track:platformValue(s)})),{arr:leg.endTime,dep:leg.endTime,cancelled:!!leg.to?.cancelled,track:platformValue(leg.to)}];
       if(fresh.length===trip.stops.length) fresh.forEach((f,i)=>{ trip.stops[i].a=+new Date(f.arr); trip.stops[i].d=+new Date(f.dep); trip.stops[i].arr=f.arr; trip.stops[i].t=f.dep; if(!!trip.stops[i].cancelled!==!!f.cancelled) trip._cxChg=true; trip.stops[i].cancelled=f.cancelled; if(f.track) trip.stops[i].track=f.track }); if(trip._cxChg){ trip._cxChg=false; rerenderAlerts() }
       trip.rt=!!leg.realTime; break;
     }catch{}
