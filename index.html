@@ -266,6 +266,7 @@ svg.link circle{fill:var(--accent);stroke:#fff;stroke-width:2.5}
 .jr.open .legs{display:block}
 .leg{display:flex;gap:10px;padding:6px 0;font-size:14px}
 .leg .t{min-width:46px;font-weight:700}
+.leg .t .leg-al.under-t{float:none;display:block;margin:6px 0 0;position:relative}
 .leg .bar{width:4px;border-radius:2px;background:var(--accent)}
 .btn{border:none;border-radius:14px;padding:11px 16px;font-weight:700;font-size:15px;cursor:pointer;background:var(--accent);color:#fff}
 .btn.ghost{background:rgba(127,127,127,.18);color:var(--text)}
@@ -2013,9 +2014,11 @@ function journeyHTML(it,i,tracked){
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
   const chain=transit.map(l=>badge(l,'mini')).join('<i class="sep"></i>');
-  const isRail=l=>/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
-  const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const gare=l.mode!=='WALK'&&(isRail(l)||/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm));
-    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${isRail(l)?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
+  const isRail=l=>/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
+  const railStops=new Set(transit.filter(isRail).flatMap(l=>[nrmS(l.from?.name),nrmS(l.to?.name)]));   // gares : quais de train → « Voie »
+  const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const rail=l.mode==='WALK'?railStops.has(nrmS(pl.name)):isRail(l);
+    const gare=!lbl&&(rail||(l.mode!=='WALK'&&/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm)));
+    return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
   const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
     <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legOcc(l)}`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
@@ -2086,7 +2089,7 @@ function renderJourneyPage(){
       const b=document.createElement('button'); b.type='button'; b.className='leg-al'+(a.cancel?' bad':''); b.setAttribute('aria-label','Infos trafic');
       b.textContent=a.cancel?'⛔':a.detour?'↪︎':a.repl?'⚠️':a.works?'🚧':'⚠️'; if(g.length>1) b.dataset.n=g.length;
       b.onclick=e=>{ e.stopPropagation(); showAlertDialog(g) };
-      const tgt=row.querySelector(':scope > div:last-child'); (tgt||row).prepend(b) }) }
+      b.classList.add('under-t'); const tgt=row.querySelector(':scope > .t'); (tgt||row).append(b) }) }
   if(jpIt._walkOnly){ const cd=card.querySelector('.jr-top .cd'); if(cd) cd.innerHTML='' }   // marche seule : pas de compte à rebours ni « à quai »
   // Détacher le bandeau du bloc .legs et de la carte : il reste fixe au bas
   // de l'écran, même lorsque la liste détaillée défile.
@@ -2863,7 +2866,7 @@ function drawItinerary(it){
   if(!mlMap.getLayer('walkto-arrows')) mlMap.addLayer({id:'walkto-arrows',type:'symbol',source:'walkto',layout:arrowLayout});
   // Arrêts : intermédiaires (petit point + nom) ; départ, correspondances, arrivée (gros point + nom + quai/voie)
   const transit=it.legs.filter(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR');
-  const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED/.test(l.mode);
+  const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
   const pts=[], key=new Set();
   const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+(p.track||'')+'|'+props.major+'|'+p.lat.toFixed(5)+','+p.lon.toFixed(5);if(key.has(k))return;key.add(k); // même arrêt mais quai différent = étiquette séparée
     pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[p.lon,p.lat]}})};
