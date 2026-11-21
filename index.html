@@ -3105,6 +3105,27 @@ async function refreshTripTimes(ft,trip){
   }
   return trip;
 }
+/* Lit le texte de la perturbation pour trouver les arrêts de remplacement (« arrêt provisoire à … », « reporté à … », « via … ») */
+const replTextCache=new Map();
+async function textReplStops(alerts,stops){
+  const txt=[...new Set(alerts.map(a=>alertTxt((a.headerText||'')+'. '+(a.descriptionText||''))))].join('. '); if(!txt.trim()) return;
+  const cand=new Set(), add=x=>String(x).split(/\s*(?:,|\bet\b|\bou\b|\/|\bpuis\b)\s*/i).forEach(n=>{ n=n.replace(/^(?:l'|la |le |les |l’)?(?:arr[êe]ts?|haltes?)\s+/i,'').replace(/[«»"“”()]/g,'').replace(/\s+(?:situ|en direction|direction|pour|dans|sur|devant|face)\b.*$/i,'').trim(); if(n.length>2&&n.length<40&&/^[A-ZÉÈÀÂÎÔÛ0-9]/.test(n)) cand.add(n) });
+  const res=[/(?:arr[êe]ts?|haltes?)\s+(?:provisoires?|de remplacement|temporaires?|de substitution)\s*(?::|à|au|aux|en|devant|situ[\wÀ-ÿ]+ à)?\s*([^.;\n]+)/gi,
+    /(?:report[\wÀ-ÿ]*|d[ée]plac[\wÀ-ÿ]*|transf[ée]r[\wÀ-ÿ]*|remplac[\wÀ-ÿ]*|desserv[\wÀ-ÿ]*)\s+(?:à|au|aux|vers|par|en)\s+(?:l['’]arr[êe]t\s+|les arr[êe]ts\s+)?([^.;\n]+)/gi,
+    /(?:d[ée]vi[\wÀ-ÿ]*|itin[ée]raire)\s+(?:[^.;\n]{0,40}?)\b(?:via|par)\s+([^.;\n]+)/gi, /\bvia\s+([^.;\n]+)/gi];
+  res.forEach(re=>{ for(const m of txt.matchAll(re)) add(m[1].slice(0,80)) });
+  if(!cand.size) return;
+  const cx=stops.filter(x=>x.cancelled), c0=cx[0]; if(c0?.lat==null) return;
+  const have=new Set(stops.map(x=>nrmS(x.name))), found=[];
+  for(const n of [...cand].slice(0,6)){
+    let r=replTextCache.get(n); if(r===undefined){ try{ const u=`${API}/v1/geocode?text=${encodeURIComponent(n)}&type=STOP&language=fr&place=${c0.lat},${c0.lon}`; const q=await fetch(u); r=q.ok?await q.json():[] }catch{ r=[] } replTextCache.set(n,r) }
+    const best=(r||[]).filter(x=>x.lat!=null&&(!x.type||x.type==='STOP')).map(x=>({...x,km:kmDist([x.lon,x.lat],[c0.lon,c0.lat])})).filter(x=>x.km<1.5&&!have.has(nrmS(x.name))).sort((a,b)=>a.km-b.km)[0];
+    if(best&&!found.some(f=>nrmS(f.name)===nrmS(best.name))) found.push(best) }
+  if(!found.length) return;
+  const iC=stops.indexOf(c0), prev=stops.slice(0,iC).reverse().find(x=>!x.cancelled)||c0;   // ordre : du plus proche de l'arrêt d'avant au plus loin
+  found.sort((a,b)=>kmDist([a.lon,a.lat],[prev.lon,prev.lat])-kmDist([b.lon,b.lat],[prev.lon,prev.lat]));
+  const lastC=stops.lastIndexOf(cx.at(-1));
+  stops.splice(lastC+1,0,...found.map(f=>({name:f.name,lat:f.lat,lon:f.lon,stopId:f.id,added:true,fromText:true,km:c0.km,a:c0.a,d:c0.d,t:c0.t}))) }
 async function loadTrip(ft){
   if(!ft?.tripId) return null; if(tripCache[ft.tripId]!==undefined) return tripCache[ft.tripId];
   for(const v of ['v5','v4','v3','v2','v1']){
@@ -3118,6 +3139,7 @@ async function loadTrip(ft){
         from=bi; return {...st,t:st.dep,a:+new Date(st.arr),d:+new Date(st.dep),sa:st.sarr?+new Date(st.sarr):null,km:cum[bi]} });
       const hasSched=stops.some(x=>x.sa); stops.forEach(x=>{ if(x.pickupType==='NOT_ALLOWED'&&x.dropoffType==='NOT_ALLOWED') x.cancelled=true;   // ni montée ni descente : arrêt non desservi
          x.added=!!(x.added||x.scheduleRelationship==='ADDED'||(hasSched&&!x.sa&&!x.cancelled)) });   // arrêt de remplacement : ajouté en direct, sans horaire prévu
+      if(stops.some(x=>x.cancelled)&&!stops.some(x=>x.added)){ try{ await textReplStops([...(leg.alerts||[]),...(ft.alerts||[])],stops) }catch{} }   // arrêt de remplacement cité seulement dans le texte de la perturbation
       let tcCoords=coords, tcCum=cum, tcDash=[];
       if(stops.some(x=>x.cancelled)){ const cd=cutDeviation(coords,stops); tcCoords=cd.coords; tcDash=cd.dashed;
         tcCum=[0]; for(let i=1;i<tcCoords.length;i++) tcCum.push(tcCum[i-1]+kmDist(tcCoords[i-1],tcCoords[i]));
