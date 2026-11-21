@@ -2828,7 +2828,8 @@ function drawItinerary(it){
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
-      if(cd.pieces.length>1){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}})); dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})); return } }
+      if(cd.pieces.length>1){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}})); dash.forEach((d,di)=>{ const run=cd.runs[di], off=run&&run.A?.lon!=null&&run.B?.lon!=null?officialSeg(l.routeShortName||'',run.A,run.B):null;   // parcours officiel de la ligne (OpenStreetMap) si connu
+        feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:off||d}}) }); return } }
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
     dash.forEach(d=>feats.push({type:'Feature',properties:{idx,walk:0,dev:1,color},geometry:{type:'LineString',coordinates:d}})) });   // tronçon dévié : pointillés
   const src={type:'FeatureCollection',features:feats};
@@ -3112,10 +3113,10 @@ async function loadTrip(ft){
 /* Déviation : le tronçon officiel qui passe par les arrêts supprimés est rendu à part (affiché en pointillés) ; le tracé plein relie l'arrêt d'avant à celui d'après.
    stops : [{lon,lat,cancelled}] dans l'ordre. Rend {coords, dashed:[[a,b],…]} */
 function cutDeviation(coords,stops){
-  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords],repl:[]};
+  if(!coords?.length||!stops?.some(x=>x.cancelled)) return {coords,dashed:[],pieces:[coords],repl:[],runs:[]};
   const keep=st=>!st.cancelled&&!st.added;
   const idx=[]; let from=0; stops.forEach(st=>{ if(!keep(st)&&!st.cancelled){ idx.push(-1); return } let bi=from,bd=Infinity; for(let i=from;i<coords.length;i++){ const d=kmDist(coords[i],[st.lon,st.lat]); if(d<bd){bd=d;bi=i} } if(keep(st)) from=bi; idx.push(bi) });
-  const out=[], dashed=[], pieces=[], repl=[]; let pos=0, k=0;
+  const out=[], dashed=[], pieces=[], repl=[], runs=[]; let pos=0, k=0;
   while(k<stops.length){
     if(keep(stops[k])){ k++; continue }
     const a=k-1; let hasCx=false; const added=[]; while(k<stops.length&&!keep(stops[k])){ if(stops[k].cancelled) hasCx=true; if(stops[k].added) added.push([stops[k].lon,stops[k].lat]); k++ } const b=k;
@@ -3126,15 +3127,36 @@ function cutDeviation(coords,stops){
       if(jc>ia&&jc<ib){ const pl=[0]; for(let i=ia+1;i<=ib;i++) pl.push(pl.at(-1)+kmDist(coords[i-1],coords[i]));
         let best=null; for(let j1=ia;j1<jc;j1++) for(let j2=jc+1;j2<=ib;j2++){ const st=kmDist(coords[j1],coords[j2]), L=pl[j2-ia]-pl[j1-ia];
           if(st<0.2&&L>st*2+0.08){ const gain=L-st; if(!best||gain>best.gain) best={j1,j2,gain} } }
-        if(best){ out.push(...coords.slice(pos,best.j1+1)); pieces.push(coords.slice(pos,best.j1+1)); dashed.push(coords.slice(best.j1,best.j2+1)); repl.push([coords[best.j1],coords[best.j2]]);
+        if(best){ out.push(...coords.slice(pos,best.j1+1)); pieces.push(coords.slice(pos,best.j1+1)); dashed.push(coords.slice(best.j1,best.j2+1)); runs.push({A:stops[a],B:stops[b]}); repl.push([coords[best.j1],coords[best.j2]]);
           out.push(coords[best.j2]); pos=best.j2; continue } } }   // le tracé plein reprend juste après la boucle
     out.push(...coords.slice(pos,ia+1)); pieces.push(coords.slice(pos,ia+1));
-    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added); dashed.push(coords.slice(ia,ib+1)) }   // remplacement connu : trait plein par les arrêts de remplacement + parcours officiel en pointillés sur toute la longueur du remplacement
-    else dashed.push(coords.slice(ia,ib+1));                                                                     // sinon : tronçon officiel non suivi en pointillés
+    if(added.length){ const path=[coords[ia],...added,coords[ib]]; repl.push(path); out.push(...added); dashed.push(coords.slice(ia,ib+1)); runs.push({A:stops[a],B:stops[b]}) }   // remplacement connu : trait plein par les arrêts de remplacement + parcours officiel en pointillés sur toute la longueur du remplacement
+    else { dashed.push(coords.slice(ia,ib+1)); runs.push({A:stops[a],B:stops[b]}) }                                                                     // sinon : tronçon officiel non suivi en pointillés
     out.push(coords[ib]); pos=ib;
   }
   out.push(...coords.slice(pos+(out.length&&pos>0?1:0))); pieces.push(coords.slice(pos));
-  return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1),repl};
+  return {coords:out.length>1?out:coords,dashed,pieces:pieces.filter(p=>p.length>1),repl,runs};
+}
+/* Tracé officiel de la ligne (relation OpenStreetMap) entre deux arrêts : plus court chemin sur les voies de la ligne */
+const officialCache={};
+function officialSeg(ref,A,B){
+  const k=ref+'|'+A.lon.toFixed(4)+','+A.lat.toFixed(4)+'|'+B.lon.toFixed(4)+','+B.lat.toFixed(4); if(k in officialCache) return officialCache[k];
+  officialCache[k]=null; const pad=0.006;
+  const bb=`${Math.min(A.lat,B.lat)-pad},${Math.min(A.lon,B.lon)-pad},${Math.max(A.lat,B.lat)+pad},${Math.max(A.lon,B.lon)+pad}`;
+  const r=String(ref).replace(/"/g,'');
+  overpassRace(`[out:json][timeout:15];relation[type=route][route~"^(bus|trolleybus|tram)$"][ref="${r}"](${bb});way(r)(${bb});out geom;`).then(els=>{
+    if(!els?.length) return; const key=c=>c[0].toFixed(6)+','+c[1].toFixed(6), G=new Map(), P=new Map();
+    els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]); for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i]); P.set(a,g[i-1]); P.set(b,g[i]);
+      (G.get(a)||G.set(a,[]).get(a)).push([b,d]); (G.get(b)||G.set(b,[]).get(b)).push([a,d]) } });
+    const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ const d=kmDist(c,[p.lon,p.lat]); if(d<bd){bd=d;bk=kk} } return bd<0.15?bk:null };
+    const s0=near(A), t0=near(B); if(!s0||!t0) return;
+    const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
+    while(Q.length){ Q.sort((x,y)=>x[0]-y[0]); const [d,u]=Q.shift(); if(done.has(u)) continue; done.add(u); if(u===t0) break;
+      for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); Q.push([nd,v]) } } }
+    if(!done.has(t0)) return; const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
+    officialCache[k]=[[A.lon,A.lat],...path,[B.lon,B.lat]]; rerenderAlerts();
+  }).catch(()=>{});
+  return null;
 }
 function nearestIdx(coords,p){let bi=0,bd=Infinity;coords.forEach((c,i)=>{const d=kmDist(c,p);if(d<bd){bd=d;bi=i}});return bi}
 function pointAtKm(trip,km){ const c=trip.coords,cum=trip.cum; if(km<=0) return c[0]; if(km>=cum.at(-1)) return c.at(-1);
