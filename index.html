@@ -688,6 +688,22 @@ html body #jrPage{top:0!important;bottom:0!important;border-top:0!important;bord
 body.classic .map-bar .t small.map-al{border-radius:4px}
 .leg-al{float:right;margin:-2px 0 2px 8px;min-width:34px;height:30px;padding:0 7px;border:0;border-radius:10px;background:rgba(255,159,10,.2);color:var(--text);font-size:16px;line-height:30px;cursor:pointer;position:relative}
 .leg-al.bad{background:rgba(255,59,48,.22)}
+.near-h{display:flex;justify-content:space-between;align-items:center;margin:18px 6px 10px;color:var(--muted);font:800 13px system-ui;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.near-h i{font-style:normal;color:var(--accent)}
+.near-s{border-radius:22px;padding:12px 14px;margin-bottom:10px;cursor:pointer}
+body.classic .near-s{border-radius:8px}
+.near-t{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px}
+.near-t b{font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.near-t span{color:var(--muted);font-size:12.5px;font-weight:600;white-space:nowrap}
+.near-d{display:flex;align-items:center;gap:9px;padding:6px 0;border-top:1px solid var(--border)}
+.near-dir{flex:1;min-width:0;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.near-q{font-size:11px;font-weight:800;background:rgba(127,127,127,.22);border-radius:5px;padding:1px 5px}
+.near-cd{font-weight:800;font-size:15px;text-align:right;white-space:nowrap}.near-cd small{display:block;font-size:11px;font-weight:700}
+.near-cd.or{color:#ff9f0a}.near-cd.red{color:#ff3b30}.near-cd.cx{color:#ff453a;font-size:13px}
+.cx-band{margin:-2px 0 8px;padding:6px 10px;border-radius:10px;background:rgba(255,59,48,.18);color:#ff453a;font-weight:800;font-size:14px}
+.jr-cx .jr-times b,.jr-cx .cd-t{text-decoration:line-through;opacity:.6}
+.jr-cx .cd .ontime,.jr-cx .cd .late,.jr-cx .cd .early,.jr-cx .tt .ontime{display:none}
+.leg.leg-cx .t{text-decoration:line-through;color:#ff453a}
+.cx-tag{color:#ff453a;font-weight:800;font-size:12px;margin-left:4px}
 .map-rcol{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0}
 .map-rcol .leg-al{float:none;margin:0;position:relative}
 .leg-al[data-n]::after{content:attr(data-n);position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;border-radius:8px;background:#ff9500;color:#fff;font-size:10px;font-weight:800;line-height:16px;text-align:center}
@@ -735,10 +751,6 @@ body.classic.list-page main{padding-top:var(--safe-t)}
 .dep-r .late{color:#ff9f0a;font-weight:700}.dep-r .ontime{color:#34c759;font-weight:700}
 .early{color:#0a84ff;font-weight:700}
 .cd .early{font-size:12px}
-.occ{display:inline-flex;gap:1px;vertical-align:middle;margin-left:4px;font-size:12px}
-.occ i{width:6px;height:11px;border-radius:2px;background:rgba(127,127,127,.35);display:inline-block}
-.occ.l1 i:nth-child(-n+1),.occ.l2 i:nth-child(-n+2),.occ.l3 i:nth-child(-n+3){background:currentColor}
-.occ.l1{color:#34c759}.occ.l2{color:#ff9f0a}.occ.l3{color:#ff3b30}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -760,6 +772,7 @@ body.classic.list-page main{padding-top:var(--safe-t)}
     <div class="tiles" id="tiles"></div>
     <div id="tilesEmpty" class="card glass empty" style="display:none"><b>🧭</b>Aucune destination enregistrée.<br>Ajoute ta première destination pour voir ici les prochains départs.
       <button class="btn" style="margin-top:14px" onclick="goAddFirst()">＋ Ajouter une destination</button></div>
+    <div id="nearBox"></div>
   </section>
 
   <!-- LISTE DES PARCOURS (page séparée) -->
@@ -1998,17 +2011,16 @@ function alertDetails(al){
     ${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener" style="font-size:13px;color:var(--accent)">Plus d'infos ›</a>`:''}</div>`).join('');
 }
 function fmtDur(s){const m=Math.round(s/60);return m<60?m+' min':Math.floor(m/60)+' h '+String(m%60).padStart(2,'0')}
+/* Course entière supprimée : signalée par les données en direct, ou tous ses arrêts non desservis */
+function legCancelled(l){ if(!l||l.mode==='WALK') return false; if(l.cancelled||l.canceled||l.tripCancelled) return true;
+  const st=[l.from,...(l.intermediateStops||[]),l.to].filter(Boolean); if(st.length>1&&st.every(x=>x.cancelled||(x.pickupType==='NOT_ALLOWED'&&x.dropoffType==='NOT_ALLOWED'))) return true;
+  const tr=l.tripId&&typeof tripCache!=='undefined'&&tripCache[l.tripId]; return !!(tr?.stops?.length>1&&tr.stops.every(x=>x.cancelled)) }
 function firstTransit(it){return it.legs.find(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR')}
 function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new Date(l.startTime)-new Date(l.scheduledStartTime))/60000)}
 /* Voie ou quai : la voie réelle en orange et l'ancienne barrée quand elle a changé */
 const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==String(pl.scheduledTrack));
 const trackHTML=pl=>!pl?.track?'':trackChanged(pl)?`<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`:`<span class="quai">${esc(pl.track)}</span>`;
 /* Affluence (si publiée par l'opérateur) : 1 à 3 barres */
-function occHTML(o){ if(o==null||o==='') return ''; const v=String(o).toUpperCase();
-  const lv=/EMPTY|MANY_SEATS|^1$|LOW/.test(v)?1:/FEW_SEATS|STANDING_ROOM_ONLY|^2$|MEDIUM/.test(v)&&!/CRUSHED/.test(v)?2:/CRUSHED|FULL|NOT_ACCEPTING|^3$|HIGH/.test(v)?3:0;
-  if(!lv) return ''; const t=['','Peu de monde','Assez chargé','Très chargé'][lv];
-  return ` <span class="occ l${lv}" title="Affluence : ${t}" aria-label="Affluence : ${t}"><i></i><i></i><i></i></span>` }
-const legOcc=l=>occHTML(l?.occupancy??l?.occupancyStatus??l?.crowding);
 function journeyHTML(it,i,tracked){
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
@@ -2019,22 +2031,23 @@ function journeyHTML(it,i,tracked){
   const stopLine=(pl,l,lbl)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const rail=l.mode==='WALK'?railStops.has(nrmS(pl.name)):isRail(l);
     const gare=!lbl&&(rail||(l.mode!=='WALK'&&/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm)));
     return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${pl.track?` · ${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}` };
-  const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
-    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legOcc(l)}`}
+  const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}${legCancelled(l)?' leg-cx':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div>
+    <div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legCancelled(l)?'<span class="cx-tag">Supprimée</span>':''}`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null)}</div></div></div>`).join('');
   const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;            // parcours déjà passé
   const pastPick=(!!planTime&&+planTime<Date.now())||isPast;
   const dmy=d=>{const t=new Date(d);return String(t.getDate()).padStart(2,'0')+'.'+String(t.getMonth()+1).padStart(2,'0')+'.'+t.getFullYear()};
-  const al=alertsNoInterr(it);
+  const al=alertsNoInterr(it), cxIt=it.legs.some(legCancelled);
   const big=inMin<=0?'<span class="ontime">0</span>':inMin<60?inMin:hm(depAt);
-  return `<div class="jr glass" data-i="${i}">
+  return `<div class="jr glass${cxIt?' jr-cx':''}" data-i="${i}">
+    ${cxIt?`<div class="cx-band">⛔ Course supprimée${(()=>{const c=it.legs.find(legCancelled);return c&&c!==ft?` · ${esc(c.routeShortName||'')} ${hm(c.startTime)}`:''})()}</div>`:''}
     <div class="jr-top">
       ${ft?badge(ft,'main'):''}
       <div class="jr-mid">
         <div class="jr-dir">${esc(ft?.headsign||selDest?.name||'')}</div>
-        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}${legOcc(ft)}</div>
+        <div class="jr-stop">${esc(ft?.from?.name||'')}${ft?.from?.track?` ${trackHTML(ft.from)}`:''}</div>
       </div>
       <div class="cd">${isPast?`<span class="cd-date past">${dmy(depAt)}</span>`:otherDay?`<span class="cd-date">${dmy(depAt)}</span>`:`<span class="cd-t" data-at="${+new Date(depAt)}">${fmtCd(+new Date(depAt))}</span>`}${isPast?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&rt?`<span class="early">en avance ${Math.abs(dl)} min</span>`:rt?'<span class="ontime">à l\'heure</span>':'<span class="sched">horaire prévu</span>'}</div>
     </div>
@@ -2161,6 +2174,35 @@ function stopsAlert(pg,l){
   const al=(jpIt?alertsNoInterr(jpIt):[]).filter(a=>a.leg===l);
   const html=al.length?alertBanner(al):''; if(el._h!==html){ el._h=html; el.innerHTML=html; const a=el.querySelector('.alert'); if(a){ a.style.cursor='pointer'; a.onclick=()=>showAlertDialog(al) } }
 }
+/* ========= Autour de moi : arrêts proches et leurs prochains départs ========= */
+let nearSt=null, nearAt=0, nearPos=null, nearBusy=false;
+async function nearStops(p){
+  for(const d of [0.006,0.012]){ for(const v of ['v1','v5','v2']){ try{
+    const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
+    const g=new Map(); (await r.json()).filter(x=>x&&x.lat!=null&&x.name).forEach(x=>{ const k=nrmS(x.name), km=kmDist([p.lon,p.lat],[x.lon,x.lat]);   // quais d'un même arrêt regroupés
+      const o=g.get(k); if(!o) g.set(k,{name:x.name,lat:x.lat,lon:x.lon,km,n:1}); else { o.lat=(o.lat*o.n+x.lat)/(o.n+1); o.lon=(o.lon*o.n+x.lon)/(o.n+1); o.n++; o.km=Math.min(o.km,km) } });
+    const l=[...g.values()].sort((a,b)=>a.km-b.km).slice(0,5); if(l.length>=3||d>0.01) return l; break }catch{} } }
+  return [] }
+async function loadNear(force){
+  const box=$('#nearBox'); if(!box||!pos||nearBusy) return; if(!$('#v-horaires')?.classList.contains('active')||document.hidden) return;
+  const p={lat:pos.lat,lon:pos.lon}; nearBusy=true;
+  try{
+    if(!nearSt||!nearPos||kmDist([p.lon,p.lat],[nearPos.lon,nearPos.lat])>0.15){ const l=await nearStops(p); if(l.length){ nearSt=l; nearPos=p } }   // arrêts recalculés seulement après 150 m
+    if(!nearSt?.length){ if(!box.innerHTML) box.innerHTML=''; return }
+    if(force||Date.now()-nearAt>=29000){ nearAt=Date.now();
+      await Promise.all(nearSt.map(async st=>{ let d=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?center=${st.lat},${st.lon}&radius=80&n=10&time=${new Date().toISOString()}`,{cache:'no-store'}); if(r.ok){ d=await r.json(); break } }catch{} }
+        if(d) st.deps=(d.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).filter(x=>+new Date(x.place.departure||x.place.scheduledDeparture)>Date.now()-30000)
+          .sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture)).slice(0,3) })) }
+    renderNear() }finally{ nearBusy=false } }
+function renderNear(){ const box=$('#nearBox'); if(!box||!nearSt?.length) return; const open=store.get('nearOpen',true);
+  box.innerHTML=`<div class="near-h" onclick="store.set('nearOpen',!store.get('nearOpen',true));renderNear()"><span>📍 Autour de moi</span><i>${open?'▾':'▸'}</i></div>`+(open?nearSt.map((st,i)=>{ const m=Math.round(st.km*1000), w=Math.max(1,Math.round(st.km/0.075));
+    const deps=(st.deps||[]).map(x=>{ const pl=x.place, t=+new Date(pl.departure||pl.scheduledDeparture), sch=pl.scheduledDeparture, dl=sch?Math.round((t-new Date(sch))/60000):0, cx=x.cancelled||pl.cancelled||x.tripCancelled, mn=Math.round((t-Date.now())/60000);
+      const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor};
+      return `<div class="near-d">${badge(lg,'mini')}<span class="near-dir">${esc(x.headsign||'')}${pl.track?` <span class="near-q">${esc(pl.track)}</span>`:''}</span><span class="near-cd${cx?' cx':mn<1?' red':mn<5?' or':''}">${cx?'Supprimé':mn<=0?'0 min':mn<60?mn+' min':hm(t)}<small>${cx?'':dl>0?`<span class="late">+${dl} min</span>`:dl<0&&x.realTime?`<span class="early">en avance ${-dl} min</span>`:x.realTime?'<span class="ontime">à l\'heure</span>':''}</small></span></div>` }).join('');
+    return `<div class="near-s glass" data-ni="${i}"><div class="near-t"><b>${esc(st.name)}</b><span>${m<1000?m+' m':(st.km).toFixed(1)+' km'} · ${w} min 🚶</span></div>${deps||(st.deps?'<div class="muted" style="font-size:13px">Aucun départ prochainement</div>':'<div class="spin" style="margin:6px auto"></div>')}</div>` }).join(''):'');
+  box.querySelectorAll('.near-s').forEach(el=>el.onclick=()=>{ const st=nearSt[+el.dataset.ni]; openDepartures({name:st.name,lat:st.lat,lon:st.lon}) }) }
+setInterval(()=>{ loadNear(false); if(nearSt&&$('#v-horaires')?.classList.contains('active')) renderNear() },5000);   // départs toutes les 30 s, minutes mises à jour toutes les 5 s
+
 /* ========= Tableau des départs d'un arrêt (comme les écrans aux arrêts) ========= */
 let depTimer=null, depStop=null;
 function openDepartures(stop){
@@ -2186,7 +2228,7 @@ async function loadDepartures(){
     const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName}, cx=x.cancelled||pl.cancelled;
     const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
     return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div>
-      <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}${occHTML(x.occupancy||x.occupancyStatus)}</div></div></div>` }).join('');
+      <div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${pl.track?`${rail?'Voie':'Quai'} ${trackHTML(pl)}`:''}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
 }
 function closeStopsPage(){ const pg=$('#stopPage'); if(!pg) return; clearInterval(jpVehTimer);
   pg.classList.remove('out'); pg.style.transition=''; pg.style.transform=''; pg.style.opacity='';
