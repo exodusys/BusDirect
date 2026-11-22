@@ -2025,7 +2025,7 @@ function drawItinerary(it){
   const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
     if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible, jusqu'au quai exact
       const pvL=it.legs[idx-1], nxL=it.legs[idx+1];
-      const ppF=pvL&&pvL.mode!=='WALK'?platformPos(pvL.to,pvL):null, ppT=nxL&&nxL.mode!=='WALK'?platformPos(nxL.from,nxL):null;
+      const ppF=pvL&&pvL.mode!=='WALK'?(platformPos(pvL.to,pvL)||railLinePoint(pvL,l.from)):null, ppT=nxL&&nxL.mode!=='WALK'?(platformPos(nxL.from,nxL)||railLinePoint(nxL,l.to)):null;
       const fromP=ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP=ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to;
       const wk=fromP.lon.toFixed(5)+','+fromP.lat.toFixed(5)+'>'+toP.lon.toFixed(5)+','+toP.lat.toFixed(5);
       if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g }
@@ -2290,7 +2290,12 @@ function platformPos(st,leg){
  // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par Transitous
  return osmPos||memPos;
 }
-const platStop=(st,leg)=>{ const p=platformPos(st,leg); return p?{...st,lat:p.lat,lon:p.lon}:st };
+/* Gare sans voie connue : la marche rejoint la voie du train telle qu'elle est dessinée (point de sa ligne le plus proche). */
+function railLinePoint(leg,pt){
+ if(!leg||!pt||!isRailLeg(leg)||!Number.isFinite(+pt.lat)||!Number.isFinite(+pt.lon))return null;
+ try{ const co=clipLegToPlatforms(legCoords(leg),leg); if(!co||co.length<2)return null;
+   const pr=projectOnPoly(co,[+pt.lon,+pt.lat]); return pr&&pr.d<0.25?{lat:pr.q[1],lon:pr.q[0]}:null }catch{ return null } }
+const platStop=(st,leg)=>{ const p=platformPos(st,leg)||railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
