@@ -1975,7 +1975,7 @@ function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1
 
 function renderWalkCardInstant(it,preciseKm){
   const tg=walkTarget(it),stop=tg?.stop;
-  const visible=!!stop;
+  const visible=!!stop&&!(it._hideStartWalk&&tg&&tg.walkIdx<0&&!tg.final);
   $('#walkCard').classList.toggle('on',visible);
   $('#mapView').classList.toggle('walking',visible);
   if(!stop)return;
@@ -1998,13 +1998,15 @@ async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
-  mapIt=it; boardStop=boardOf(it); prefetchWalkAreas([it],true);
-  updateMapAlert(it);
+  const firstWalk=it?.legs?.[0]?.mode==='WALK'&&hideStartWalkForDraggedPair;
+  mapIt=firstWalk?{...it,_hideStartWalk:true,duration:Math.max(0,(it.duration||0)-Math.max(0,mins(it.legs[0].duration))*60),startTime:it.legs[1]?.startTime||it.startTime}:it;
+  boardStop=boardOf(mapIt); prefetchWalkAreas([mapIt],true);
+  updateMapAlert(mapIt);
   $('#mapView').classList.add('open');
-  renderWalkCardInstant(it);
-  const ft=firstTransit(it);
+  renderWalkCardInstant(mapIt);
+  const ft=firstTransit(mapIt);
   $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
-  $('#mapSub').textContent=`${hm(it.startTime)} → ${hm(it.endTime)} · ${fmtDur(it.duration)}`;
+  $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`;
   try{await loadMapLib()}catch{toast('Impossible de charger la carte');return}
   mapDark=document.documentElement.dataset.theme==='dark';  
   $('#btnTheme').textContent=mapDark?'☀️':'🌙';
@@ -2067,7 +2069,7 @@ function drawStairs(which,legs){
 const legWalkGeo=new Map();
 function drawItinerary(it){
   drawStairs('route',it.legs);
-  const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
+  const feats=[]; it.legs.forEach((l,idx)=>{ if(it._hideStartWalk&&idx===0&&l.mode==='WALK') return; const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
     if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible, jusqu'au quai exact
       const {fromP,toP,pinF,pinT}=walkLegEnds(it,idx);
       const wk=fromP.lon.toFixed(5)+','+fromP.lat.toFixed(5)+'>'+toP.lon.toFixed(5)+','+toP.lat.toFixed(5);
@@ -2423,8 +2425,8 @@ function renderMapSteps(){
   const el=$('#mapSteps'); if(!el||!mapIt){ return }
   mapStepSel=mapWalk;
   const WALK_IC='<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="13.5" cy="4" r="2"/><path d="M13 7.5c-1.2 0-2 .5-2.6 1.4L8 13l1.7 1 2-3.2.8 3.4L10 21h2.2l2-5 1.6 2.2V21H18v-3.8l-2.3-3.1-.6-2.8 1 1.5 3 1v-2l-2.2-.8-1.6-2.5c-.5-.7-1.3-1-2.3-1z"/></svg>';
-  const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))}));    
-  if(segs.length&&!segs[0].w) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});    
+  const segs=mapIt.legs.map((l,i)=>({l,i,w:l.mode==='WALK',m:Math.max(1,mins(l.duration))})).filter(x=>!(mapIt._hideStartWalk&&x.i===0&&x.w));    
+  if(segs.length&&!segs[0].w&&!mapIt._hideStartWalk) segs.unshift({l:{mode:'WALK'},i:-1,w:true,m:1});    
   const savedScroll=el.scrollLeft;el.classList.add('glass');
   el.innerHTML=segs.map((x,k)=>{const [bg,fg]=x.w?['#1f4f80','#c9d3dd']:lineColor(x.l);return `<div class="ms-item${x.w?' walk-item':''}" style="--bg:${bg};--fg:${fg};z-index:${segs.length-k}"><button type="button" class="ms${x.w?' w':''}${/RAIL|LONG|SUBURBAN/.test(x.l.mode||'')?' rail':''}" data-i="${x.i}"${x.w&&k===0?' data-first="1"':''}>${x.w?WALK_IC:`<b>${esc(x.l.routeShortName||x.l.displayName||'?')}</b>`}</button>${!x.w&&mapLegNotices(x.l).length?`<button type="button" class="ms-notice" data-notice="${x.i}" aria-label="Travaux et perturbations">🚧</button>`:''}</div>`}).join('');
   el.classList.toggle('full-width',segs.length>3);el.scrollLeft=savedScroll;
