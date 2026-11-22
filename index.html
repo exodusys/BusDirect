@@ -336,12 +336,14 @@ async function geocode(text){
 }
 let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
+/* Départ depuis une dalle : comme « Ma position », on part des coordonnées de la dalle pour que le trajet inclue la marche jusqu'à l'arrêt de départ. */
+const fromPlaceOf=p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon)?`${p.lat},${p.lon}`:placeOf(p);
 async function plan(dest, time, cursor, from, quick){
   if(!from&&!pos) throw new Error('nopos');
   const P=(!from&&listPos)?listPos:pos;    
   const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
    
-  let qs = `fromPlace=${encodeURIComponent(from?placeOf(from):P.lat+','+P.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
+  let qs = `fromPlace=${encodeURIComponent(from?fromPlaceOf(from):P.lat+','+P.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
     +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
   if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=dest===selDest?.nearStop?`&maxPostTransitTime=0`:`&maxPostTransitTime=600`;    
   if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
@@ -425,10 +427,12 @@ function withFinalWalk(list,orig,stop,fw){
 (()=>{ const f0=window.fetch.bind(window); window.fetch=(u,o={})=>{ try{ if(typeof u==='string'&&u.startsWith(API)&&!o.signal&&window.AbortController){ const c=new AbortController(); const t=setTimeout(()=>c.abort(),15000); return f0(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t)) } }catch(e){} return f0(u,o) } })();
 async function nextDepartures(dest,from,onMore){
   const origDest=dest;
-  [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
+  dest=await nearestStop(dest);
   const addFW=(origDest.type!=='STOP'&&dest!==origDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false);
   const fwP=addFW?finalWalkFor(origDest,dest):null;
-  const fin=async l=>addFW?withFinalWalk(l,origDest,dest,await fwP):l;
+  const fin=async l=>{ l=addFW?withFinalWalk(l,origDest,dest,await fwP):l;
+    if(from&&from.name) l=l.map(it=>{ const w=it.legs?.[0]; if(w&&w.mode==='WALK'&&/^start$/i.test(w.from?.name||'')) return {...it,legs:[{...w,from:{...w.from,name:from.name}},...it.legs.slice(1)]}; return it });
+    return l };
   const d=await plan(dest,planTime,null,from,true);    
   const onlyStop=its=>{ if(dest.type!=='STOP'||S.settings.nearestOnly===false||dest===origDest) return its||[];    
     const nm=norm2?.(dest.name)||String(dest.name).toLowerCase();
@@ -893,7 +897,7 @@ async function loadPastJourneys(){
      
     let dest=null, from=null, tries=0, cursor=pastReserve.length?+new Date(firstTransit(pastReserve[0]).startTime):firstDep, step=75;
     while(pastReserve.length<5&&tries<8&&firstDep-cursor<3*86400000){
-      tries++; dest=dest||await nearestStop(selDest); from=from||(selFrom?await nearestStop(selFrom):null);
+      tries++; dest=dest||await nearestStop(selDest); from=from||selFrom||null;
       const oldest=cursor;
        
       if(!pastCur&&!pastReserve.length&&listCur?.prev&&tries===1) pastCur=listCur.prev;
@@ -955,7 +959,7 @@ async function loadMoreJourneys(){
   try{
     const lastF=firstTransit(lastJourneys.at(-1)); if(!lastF) return;
     const t=new Date(+new Date(lastF.startTime)+60000);
-    let dest=await nearestStop(selDest), from=selFrom?await nearestStop(selFrom):null;
+    let dest=await nearestStop(selDest), from=selFrom||null;
     const known=new Set(lastJourneys.map(jkey)); let found=[];
      
     if(!nextCur&&listCur?.next) nextCur=listCur.next;
