@@ -1880,6 +1880,12 @@ function toggle3D(){is3D=!is3D;$('#btn3d').textContent=is3D?'2D':'3D';if(mlMap)m
 let mlMap=null, mapIt=null, vehMk=null, meMk=null, navOn=false, heading=null, mapTimers=[], walkGeo=null, boardStop=null;
 function decodePoly(str,prec){let i=0,lat=0,lng=0,out=[],f=Math.pow(10,prec||6);
   while(i<str.length){for(const k of [0,1]){let b,sh=0,r=0;do{b=str.charCodeAt(i++)-63;r|=(b&31)<<sh;sh+=5}while(b>=32);const d=r&1?~(r>>1):r>>1;k?lng+=d:lat+=d}out.push([lng/f,lat/f])}return out}  
+function projectOnPoly(co,p){ // point le plus proche de p sur la polyligne co ([lon,lat]) : {i:segment, q:point, d:km}
+  const k=Math.cos(p[1]*Math.PI/180); let best=null;
+  for(let i=0;i<co.length-1;i++){ const A=co[i],B=co[i+1], dx=(B[0]-A[0])*k, dy=B[1]-A[1], L=dx*dx+dy*dy;
+    const t=L?Math.max(0,Math.min(1,(((p[0]-A[0])*k)*dx+(p[1]-A[1])*dy)/L)):0, q=[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t], d=kmDist(p,q);
+    if(!best||d<best.d) best={i,q,d} }
+  return best }
 function legCoords(l){
   if(l._coords) return l._coords;
   const g=l.legGeometry; if(g&&g.points){for(const p of [g.precision,6,5,7].filter(Boolean)){const c=decodePoly(g.points,p);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05)return c}}
@@ -2022,9 +2028,10 @@ function drawItinerary(it){
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
       if(cd.repl.length){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));    
         return } }
-    if(!walk&&co.length>2){ // retire le petit crochet vers l'ancien point de l'arrêt quand la position du quai est connue
-      if(platformPos(l.from,l)&&kmDist(co[0],[l.from.lon,l.from.lat])<0.012) co=co.slice(1);
-      if(platformPos(l.to,l)&&kmDist(co.at(-1),[l.to.lon,l.to.lat])<0.012) co=co.slice(0,-1) }
+    if(!walk&&co.length>1){ // la ligne commence / finit exactement sur le quai, avec un raccord direct vers la route
+      const pf=platformPos(l.from,l), pt=platformPos(l.to,l);
+      if(pf){ const pr=projectOnPoly(co,[pf.lon,pf.lat]); if(pr&&pr.d<0.12) co=[[pf.lon,pf.lat],pr.q,...co.slice(pr.i+1)] }
+      if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q,[pt.lon,pt.lat]] } }
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
   });
   const src={type:'FeatureCollection',features:feats};
