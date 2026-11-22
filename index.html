@@ -3383,5 +3383,53 @@ new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(do
   document.querySelector('#tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b&&b.dataset.v) localStorage.setItem('bd_tab',b.dataset.v) });
   const t=localStorage.getItem('bd_tab'); if(t&&t!=='horaires'){ const b=document.querySelector('#tabs button[data-v="'+t+'"]'); if(b&&b.offsetParent!==null){ document.body.style.setProperty('--noanim','1'); b.click(); document.querySelector('main')?.scrollTo(0,0) } }
 }catch(e){} })();
+
+/* Préchargement en arrière-plan des couleurs des lignes qui desservent les destinations (boutons de parcours) */
+async function prefetchDestColors(){
+  try{
+    for(const d of S.dests){
+      const k='bd_pfc_'+d.uid; let last=0; try{ last=+localStorage.getItem(k)||0 }catch{}
+      if(Date.now()-last<12*3600e3) continue;
+      const sid=d.type==='STOP'?d.id:d.nearStop?.id, lat=d.type==='STOP'?d.lat:(d.nearStop?.lat??d.lat), lon=d.type==='STOP'?d.lon:(d.nearStop?.lon??d.lon);
+      if(!sid&&lat==null) continue;
+      const q=sid?`stopId=${encodeURIComponent(sid)}`:`center=${lat},${lon}&radius=150`;
+      let data=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?${q}&n=60&time=${new Date().toISOString()}`); if(r.ok){ data=await r.json(); break } }catch{} }
+      if(!data) continue;
+      const seen=new Set();
+      for(const x of (data.stopTimes||[])){ const nm=x.routeShortName||x.displayName; if(!nm||!x.place) continue;
+        const l={mode:x.mode,routeShortName:nm,agencyName:x.agencyName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,from:{lat:x.place.lat??lat,lon:x.place.lon??lon}};
+        const key=osmKey(l); if(seen.has(key)) continue; seen.add(key); lineColor(l) }
+      try{ localStorage.setItem(k,String(Date.now())) }catch{}
+      await new Promise(r=>setTimeout(r,600));
+    }
+  }catch{}
+}
+(window.requestIdleCallback||function(f){setTimeout(f,2500)})(()=>setTimeout(prefetchDestColors,1500));
+
+/* Préchargement des couleurs des autres lignes à chaque arrêt des parcours (départ, correspondances, arrivée, arrêts intermédiaires) */
+const PFS=(()=>{try{return JSON.parse(localStorage.getItem('bd_pfs')||'{}')}catch{return {}}})(); let pfsBusy=false; const pfsQ=new Map();
+async function prefetchJourneyStops(list){
+  try{
+    (list||[]).forEach(it=>(it.legs||[]).forEach(l=>{ if(l.mode==='WALK') return;
+      [l.from,l.to,...(l.intermediateStops||[])].forEach(pl=>{ if(!pl||pl.lat==null) return; const k=pl.stopId||pl.id||(pl.lat.toFixed(4)+','+pl.lon.toFixed(4));
+        if(Date.now()-(PFS[k]||0)<12*3600e3||pfsQ.has(k)) return; pfsQ.set(k,pl) }) }));
+    if(pfsBusy||!pfsQ.size) return; pfsBusy=true;
+    let n=0;
+    for(const [k,pl] of [...pfsQ]){ pfsQ.delete(k); if(++n>40) break;
+      const q=(pl.stopId||pl.id)&&String(pl.stopId||pl.id).includes(':')?`stopId=${encodeURIComponent(pl.stopId||pl.id)}`:`center=${pl.lat},${pl.lon}&radius=150`;
+      let data=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?${q}&n=40&time=${new Date().toISOString()}`); if(r.ok){ data=await r.json(); break } }catch{} }
+      if(!data) continue; const seen=new Set();
+      for(const x of (data.stopTimes||[])){ const nm=x.routeShortName||x.displayName; if(!nm||!x.place) continue;
+        const l={mode:x.mode,routeShortName:nm,agencyName:x.agencyName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,from:{lat:x.place.lat??pl.lat,lon:x.place.lon??pl.lon}};
+        const key=osmKey(l); if(seen.has(key)) continue; seen.add(key); lineColor(l) }
+      PFS[k]=Date.now(); await new Promise(r=>setTimeout(r,400));
+    }
+    const ks=Object.keys(PFS); if(ks.length>300) ks.sort((a,b)=>PFS[a]-PFS[b]).slice(0,ks.length-300).forEach(k=>delete PFS[k]);
+    try{ localStorage.setItem('bd_pfs',JSON.stringify(PFS)) }catch{}
+    pfsBusy=false; if(pfsQ.size) setTimeout(()=>prefetchJourneyStops([]),1000);
+  }catch{ pfsBusy=false }
+}
+{ const _cbr=colorsBeforeRender; colorsBeforeRender=async function(list){ setTimeout(()=>prefetchJourneyStops(list),1500); return _cbr.apply(this,arguments) } }
+setTimeout(()=>prefetchJourneyStops(S.tracked.map(t=>t.it).filter(Boolean)),4000);
 requestAnimationFrame(function(){requestAnimationFrame(function(){window.__bootShow&&window.__bootShow()})});
 </script></body></html>
