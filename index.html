@@ -1062,22 +1062,37 @@ async function colorsBeforeRender(list){
 }
 /* Cache des données : tout ce qui est gardé pendant une durée (couleurs des lignes, trajets à pied, quais, trottoirs, positions de quais…).
    Les destinations, parcours suivis et réglages ne sont jamais touchés. */
-const CACHE_KEY_RE=/^bd_(osmc|osm_stops_v\d+|stop_tracks_v\d+|walk_v\d+|planv|cantonCache)$/;
-function cacheKeys(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(CACHE_KEY_RE.test(k)) out.push(k) } }catch{} return out }
-function updateCacheInfo(){ const el=document.getElementById('cacheTxt'); if(!el)return; let n=0; try{ cacheKeys().forEach(k=>{ n+=(k.length+(localStorage.getItem(k)||'').length)*2 }) }catch{}
+// Cache = toute clé bd_* SAUF ce que l'utilisateur a choisi : destinations, suivis, réglages, couverture, onglet.
+// Ancien code : liste de clés (osmc, walk_vX…) qui ratait tout nouveau cache et laissait croire que c'était vidé.
+// Nouveau code : tout bd_* non protégé est du cache, y compris les futures versions bd_walk_v8, bd_osm_stops_v4…
+const CACHE_PROTECTED=new Set(['bd_dests','bd_tracked','bd_settings','bd_cov','bd_tab']);
+function cacheKeys(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith('bd_')&&!CACHE_PROTECTED.has(k)) out.push(k) } }catch{} return out }
+function updateCacheInfo(){ const el=document.getElementById('cacheTxt'); if(!el)return; let n=0; try{ cacheKeys().forEach(k=>{ n+=(k.length+(localStorage.getItem(k)||'').length)*2 }); Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>{ n+=(k.length+(sessionStorage.getItem(k)||'').length)*2 }) }catch{}
   el.textContent='Couleurs des lignes, trajets à pied, quais, trottoirs… · '+(n<1024?'vide':n<1048576?Math.round(n/1024)+' Ko':(n/1048576).toFixed(1)+' Mo') }
 function clearDataCache(){
   if(!confirm('Vider le cache ? Les couleurs des lignes, trajets à pied, quais et trottoirs seront retéléchargés ou recalculés. Tes destinations, parcours suivis et réglages sont conservés.'))return;
-  cacheKeys().forEach(k=>{ try{localStorage.removeItem(k)}catch{} });
+  const btn=document.querySelector('#v-parametres button[onclick="clearDataCache()"]'); if(btn){ btn.disabled=true; btn.textContent='Vidage…' }
+  // 1) localStorage : toutes les clés de cache, y compris le tracé à pied 90 jours (bd_walk_vX) et les quais (bd_stop_tracks_vX, bd_osm_stops_vX)
+  const keys=cacheKeys(); keys.forEach(k=>{ try{localStorage.removeItem(k)}catch{} });
+  // 2) sessionStorage : trajets affichés (bd_jc_*, 10 min) — sinon la liste réaffichait l'ancien tracé sans refaire de requête
+  try{ Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>sessionStorage.removeItem(k)) }catch{}
+  // 3) Mémoire : c'était le vrai bug — ces caches survivaient au vidage localStorage tant que l'app restait ouverte,
+  //    et les vieux tracés de bus / marche réapparaissaient. On les vide AVANT tout réaffichage.
   try{ OSMC.m={}; OSMC.a={}; OSMC.miss={}; OSMC.t=Date.now(); osmQueue.clear() }catch{}
   try{ for(const k of Object.keys(OSM_STOP_CACHE)) delete OSM_STOP_CACHE[k] }catch{}
   try{ for(const k of Object.keys(stopTrackMem)) delete stopTrackMem[k] }catch{}
   try{ for(const k of Object.keys(walkPersist)) delete walkPersist[k] }catch{}
   try{ osmWalkCache.clear(); osmAreas.length=0; walkPrefetched.clear(); osmCardTried.clear(); knownStopPlatforms.clear(); legWalkGeo.clear() }catch{}
-  try{ planVersion=null }catch{}
+  try{ for(const k of Object.keys(tripCache)) delete tripCache[k] }catch{}
+  try{ replCache.clear() }catch{}
+  try{ for(const k of Object.keys(officialCache)) delete officialCache[k] }catch{}
+  try{ planVersion=null; try{localStorage.removeItem('bd_planv')}catch{} }catch{}
+  // 4) Réaffichage avec des données fraîches : carte si ouverte, sinon liste des trajets recalculée (pas juste repaint de l'ancien lastJourneys)
   try{ refreshColorsUI() }catch{}
   try{ if(mapIt&&$('#mapView')?.classList.contains('open')) drawItinerary(mapIt) }catch{}
-  updateCacheInfo(); toast('Cache vidé');
+  try{ if(typeof selDest!=='undefined'&&selDest){ loadedFor=null; if(typeof loadJourneys==='function') loadJourneys(true) } }catch{}
+  updateCacheInfo(); toast(keys.length?`Cache vidé (${keys.length} entrées)`:'Cache déjà vide');
+  if(btn){ btn.disabled=false; btn.textContent='Vider' }
 }
 document.addEventListener('DOMContentLoaded',()=>{ updateCacheInfo(); document.querySelector('#tabs button[data-v="parametres"]')?.addEventListener('click',updateCacheInfo) });
 setTimeout(updateCacheInfo,1500);
