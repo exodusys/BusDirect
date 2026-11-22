@@ -1956,8 +1956,10 @@ function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la r
   if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q] }
   return co }
 /* Extrémités d'une marche : le point du quai (ou de la voie dessinée) quand il est connu, sinon l'arrêt. */
+/* Voie trouvée : la marche va jusqu'au point de l'arrêt. Aucune voie trouvée (train) : jusqu'au début / à la fin de la ligne colorée. */
+function walkPinPoint(st,leg,pt,which){ if(resolvedStopPlatform(st,leg))return null; return railLinePoint(leg,pt,which) }
 function walkLegEnds(it,idx){ const l=it.legs[idx], pvL=it.legs[idx-1], nxL=it.legs[idx+1];
-  const ppF=pvL&&pvL.mode!=='WALK'?(platformPos(pvL.to,pvL)||railLinePoint(pvL,l.from)):null, ppT=nxL&&nxL.mode!=='WALK'?(platformPos(nxL.from,nxL)||railLinePoint(nxL,l.to)):null;
+  const ppF=pvL&&pvL.mode!=='WALK'?(walkPinPoint(pvL.to,pvL,l.from,'end')):null, ppT=nxL&&nxL.mode!=='WALK'?(walkPinPoint(nxL.from,nxL,l.to,'start')):null;
   return {fromP:ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP:ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to, pinF:!!ppF, pinT:!!ppT} }
 function pinEnds(co,fromP,toP,pinF,pinT){ if(!co||co.length<2||(!pinF&&!pinT))return co; const c=co.slice(); if(pinF)c[0]=[fromP.lon,fromP.lat]; if(pinT)c[c.length-1]=[toP.lon,toP.lat]; return c }
 function legCoords(l){
@@ -2356,12 +2358,14 @@ function platformPos(st,leg){
  // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par Transitous
  return osmPos||memPos;
 }
-/* Gare sans voie connue : la marche rejoint la voie du train telle qu'elle est dessinée (point de sa ligne le plus proche). */
-function railLinePoint(leg,pt){
+/* Gare sans voie connue : la marche rejoint le début (montée) ou la fin (descente) de la ligne colorée du train, et non plus le point de la voie le plus proche de l'arrêt. */
+function railLinePoint(leg,pt,which){
  if(!leg||!pt||!isRailLeg(leg)||!Number.isFinite(+pt.lat)||!Number.isFinite(+pt.lon))return null;
  try{ const co=clipLegToPlatforms(legCoords(leg),leg); if(!co||co.length<2)return null;
-   const pr=projectOnPoly(co,[+pt.lon,+pt.lat]); return pr&&pr.d<0.25?{lat:pr.q[1],lon:pr.q[0]}:null }catch{ return null } }
-const platStop=(st,leg)=>{ const p=platformPos(st,leg)||railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
+   if(!which){ const dS=kmDist([+pt.lon,+pt.lat],co[0]), dE=kmDist([+pt.lon,+pt.lat],co[co.length-1]); which=(pt===leg.to||dE<dS)?'end':'start' }
+   const c=which==='end'?co[co.length-1]:co[0];
+   return kmDist([+pt.lon,+pt.lat],c)<0.35?{lat:c[1],lon:c[0]}:null }catch{ return null } }
+const platStop=(st,leg)=>{ const p=resolvedStopPlatform(st,leg)?null:railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
