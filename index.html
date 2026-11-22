@@ -727,7 +727,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
       if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
     const data=await nextDepartures(selDest,selFrom,more=>{ if(gen!==jGen||selDest!==reqDest||selFrom!==reqFrom) return;
-      prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
+      prefetchColors(more); clearTimeout(osmTimer); osmFetch(); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
     try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
     if(gen!==jGen) return;    
     if(selDest!==reqDest||selFrom!==reqFrom){ if(first&&!lastJourneys.length) box.innerHTML=''; return }    
@@ -902,7 +902,7 @@ async function loadPastJourneys(){
     const add=pastReserve.slice(-5); pastReserve=pastReserve.slice(0,-5);
     await new Promise(r=>setTimeout(r,Math.max(0,150-(Date.now()-t0))));
     if(add.length){
-      prefetchColors(add);
+      await colorsBeforeRender(add);
       const anchor=document.querySelector('#journeys > .jr'), top0=anchor?anchor.getBoundingClientRect().top:0;
       pastFloor=+new Date(firstTransit(add[0]).startTime)-60000;
       lastJourneys=add.concat(lastJourneys); shown+=add.length;
@@ -962,7 +962,7 @@ async function loadMoreJourneys(){
       .sort((a,b)=>new Date(firstTransit(a).startTime)-new Date(firstTransit(b).startTime));
     if(add.length&&selDest.type!=='STOP'&&dest!==selDest&&dest.type==='STOP'&&S.settings.nearestOnly!==false){ const fw=await finalWalkFor(selDest,dest); add.splice(0,add.length,...withFinalWalk(add,selDest,dest,fw)) }
     await new Promise(r=>setTimeout(r,Math.max(0,150-(Date.now()-t0b))));
-    if(add.length){ prefetchColors(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
+    if(add.length){ await colorsBeforeRender(add); lastJourneys=lastJourneys.concat(add); shown+=5; appending=true; renderJourneyList(); appending=false; animNew() }
     else if(sen) sen.remove();
   }catch{} finally{ moreBusy=false; $('#more')?.classList.remove('busy') }
 }
@@ -970,16 +970,16 @@ const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650
   SUBURBAN:['#0072bc','#fff'],REGIONAL_RAIL:['#2d327d','#fff'],REGIONAL_FAST_RAIL:['#2d327d','#fff'],RAIL:['#eb0000','#fff'],
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
  
-const OSMC=(()=>{try{const c=JSON.parse(localStorage.getItem('bd_osmc')||'{}');return Date.now()-(c.t||0)<14*864e5?c:{t:Date.now(),m:{},miss:{}}}catch{return {t:Date.now(),m:{},miss:{}}}})();
+const OSMC=(()=>{try{const c=JSON.parse(localStorage.getItem('bd_osmc')||'{}');return Date.now()-(c.t||0)<90*864e5?c:{t:Date.now(),m:{},miss:{}}}catch{return {t:Date.now(),m:{},miss:{}}}})();
 const nref=s=>String(s||'').toUpperCase().replace(/\s+/g,'');
 const cellOf=(lat,lon)=>(Math.round(lat*50)/50)+','+(Math.round(lon*50)/50);
 const osmKey=l=>nref(l.routeShortName||l.displayName)+'@'+cellOf(l.from.lat,l.from.lon);
-let osmQueue=new Map(), osmTimer=null, osmBusy=false;
+let osmQueue=new Map(), osmTimer=null, osmBusy=false; const osmInflight=new Set();
 function osmSave(){try{localStorage.setItem('bd_osmc',JSON.stringify(OSMC))}catch{}}
 function osmWant(l){
   if(!l||!l.from||l.mode==='WALK') return;
   const k=osmKey(l); if(OSMC.m[k]||OSMC.miss[k]||osmQueue.has(k)) return;
-  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,60);
+  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,15);
 }
 const norm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
 const OSM_EPS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
@@ -994,7 +994,7 @@ async function osmFetch(){
    
   const groups={}; [...osmQueue.entries()].forEach(([k,l])=>{const g=Math.round(l.from.lat*5)+'_'+Math.round(l.from.lon*5);(groups[g]=groups[g]||[]).push([k,l])});
   osmQueue.clear();
-  return Promise.all(Object.values(groups).map(osmFetchGroup));
+  const p=Promise.all(Object.values(groups).map(osmFetchGroup)); osmInflight.add(p); p.finally(()=>osmInflight.delete(p)); return p;
 }
 async function osmFetchGroup(batch){
   const refs=[...new Set(batch.map(([,l])=>nref(l.routeShortName||l.displayName).replace(/[^A-Z0-9]/g,'')).filter(Boolean))];
@@ -1015,10 +1015,12 @@ async function osmFetchGroup(batch){
  
 function prefetchColors(list){ (list||[]).forEach(it=>it.legs.forEach(l=>{ if(l.mode!=='WALK'&&l.from) lineColor(l) })) }
  
+/* Couleurs des lignes : demandées dès l'arrivée des parcours ; l'affichage attend (au plus 1,2 s) les requêtes déjà en cours. */
 async function colorsBeforeRender(list){
   prefetchColors(list); clearTimeout(osmTimer);
-  if(!osmQueue.size) return;
-  await Promise.race([osmFetch(), new Promise(r=>setTimeout(r,450))]);
+  const ps=[...osmInflight]; if(osmQueue.size) ps.push(osmFetch());
+  if(!ps.length) return;
+  await Promise.race([Promise.all(ps.filter(Boolean)), new Promise(r=>setTimeout(r,1200))]);
 }
 /* Cache des données : tout ce qui est gardé pendant une durée (couleurs des lignes, trajets à pied, quais, trottoirs, positions de quais…).
    Les destinations, parcours suivis et réglages ne sont jamais touchés. */
@@ -2152,7 +2154,7 @@ function osmPlatformText(tags,rail){
 async function fetchOsmStops(stops){
   const now=Date.now(), pending=stops.filter(st=>{
     const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5),c=OSM_STOP_CACHE[k];
-    return !c||now-(c.t||0)>14*864e5;
+    return !c||now-(c.t||0)>90*864e5;
   });
   if(!pending.length)return false;
   // Requêtes groupées, une zone serrée autour de chaque arrêt du trajet.
@@ -3014,9 +3016,9 @@ function osmWalkGraph(els,me,stop,strict){
 }
 const WALK_LS='bd_walk_v4', walkPersist=(()=>{try{return JSON.parse(localStorage.getItem(WALK_LS)||'{}')}catch{return {}}})();
 const walkKey=(me,stop)=>me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5)+'|f5';
-function walkPersistGet(k){ const e=walkPersist[k]; return e&&Date.now()-e.t<7*864e5?e.g:null }
-function walkPersistSet(k,g){ if(!g||g.length<2||g.length>600)return; walkPersist[k]={t:Date.now(),g:g.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])};
-  try{ const ks=Object.keys(walkPersist); if(ks.length>40) ks.sort((a,b)=>walkPersist[a].t-walkPersist[b].t).slice(0,15).forEach(x=>delete walkPersist[x]); localStorage.setItem(WALK_LS,JSON.stringify(walkPersist)) }catch{} }
+function walkPersistGet(k){ const e=walkPersist[k]; return e&&Date.now()-e.t<90*864e5?e.g:null }
+function walkPersistSet(k,g){ if(!g||g.length<2||g.length>400)return; walkPersist[k]={t:Date.now(),g:g.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])};
+  try{ const ks=Object.keys(walkPersist); if(ks.length>120) ks.sort((a,b)=>walkPersist[a].t-walkPersist[b].t).slice(0,30).forEach(x=>delete walkPersist[x]); localStorage.setItem(WALK_LS,JSON.stringify(walkPersist)) }catch{} }
 function walkRouteQuick(me,stop){ // synchrone : cache de trajets, puis zones OSM déjà en mémoire
   try{ if(kmDist(me,[stop.lon,stop.lat])>2.5) return null;
     const k=walkKey(me,stop); if(osmWalkCache.get(k)) return osmWalkCache.get(k);
