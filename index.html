@@ -519,7 +519,8 @@ function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===u
 function moveDest(i,dir){const j=i+dir;if(j<0)return;[S.dests[i],S.dests[j]]=[S.dests[j],S.dests[i]];save();renderDests();renderTiles()}
 
  
-let selFrom=null;  
+let selFrom=null;
+let hideStartWalkForDraggedPair=false;
  
 function deselectTile(){
   selDest=null; selFrom=null; loadedFor=null; lastJourneys=[]; curList=[];
@@ -535,7 +536,8 @@ function freshPos(){
       ()=>res(pos),{enableHighAccuracy:true,timeout:5000,maximumAge:15000});
   });
 }
-async function pickPair(from,to){
+async function pickPair(from,to,viaDrag=false){
+  hideStartWalkForDraggedPair=!!viaDrag;
   listPos=null; walkIt=null; shown=5;pastReserve=[];pastCur=null;nextCur=null;listCur=null;pastFloor=null;loadedFor=null;selFrom=from;selDest=to;renderTiles(); openList();
   $('#jrHead').style.display='flex';setListTitle();
   $('#journeys').innerHTML='<div class="spin"></div><p class="muted" style="text-align:center;font-size:12px;margin:0">Localisation…</p>';
@@ -600,7 +602,7 @@ function bindTileDrag(t){
     const fromD=S.dests.find(d=>d.uid===t.dataset.u);
     reset();
     if(wasArmed){
-      if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u));
+      if(over) pickPair(fromD,S.dests.find(d=>d.uid===over.dataset.u),true);
       else {t.classList.remove('from');renderTiles()}
     }else if(!wasMoved){ if(selDest&&(selDest.uid===fromD.uid||selFrom?.uid===fromD.uid)) deselectTile(); else pickPair(null,fromD) }    
   });
@@ -792,7 +794,7 @@ function renderJourneyList(){
   lastJourneys.forEach(learnItineraryTracks);
   prefetchCardTracks(list.slice(0,15)); prefetchWalkAreas(list);
   list.forEach((it,i)=>{
-    const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
+    const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false,hideStartWalkForDraggedPair).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
     if(el){
       existing.delete(k); el.dataset.i=i;
@@ -1231,7 +1233,7 @@ function delayOf(l){if(!l||!l.scheduledStartTime)return 0;return Math.round((new
 const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==String(pl.scheduledTrack));
 const trackHTML=(pl,leg)=>{ if(!pl)return ''; if(trackChanged(pl))return `<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`; const v=resolvedStopPlatform(pl,leg); return v?`<span class="quai">${esc(v)}</span>`:'' };
  
-function journeyHTML(it,i,tracked){
+function journeyHTML(it,i,tracked,suppressStartWalk=false){
   learnItineraryTracks(it);
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
@@ -1242,9 +1244,9 @@ function journeyHTML(it,i,tracked){
   const stopLine=(pl,l,lbl,ctx,trk)=>{ if(!pl) return ''; const nm=lbl||pl.name||''; const rail=l.mode==='WALK'?railStops.has(nrmS(pl.name)):isRail(l);
     const gare=!lbl&&(rail||(l.mode!=='WALK'&&/\bgare\b|\bbahnhof\b|\bstation\b/i.test(nm)));
     const th=trackHTML(trk&&trk.name?trk:pl,ctx||l); return `${gare?'<span class="gare">🚉 Gare</span> ':''}${esc(nm)}${th?` · ${rail?'Voie':'Quai'} ${th}`:''}` };
-  const legs=it.legs.map((l,li)=>`<div class="leg${l.mode==='WALK'?' walk-row':''}${legCancelled(l)?' leg-cx':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div><div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legCancelled(l)?'<span class="cx-tag">Supprimée</span>':''}`}
+  const legs=it.legs.map((l,li)=>({l,li})).filter(({l,li})=>!(suppressStartWalk&&li===0&&l.mode==='WALK')).map(({l,li})=>`<div class="leg${l.mode==='WALK'?' walk-row':''}${legCancelled(l)?' leg-cx':''}"${l.mode==='WALK'?` data-act="walk" data-leg="${li}"`:''}><div class="t">${hm(l.startTime)}</div><div class="bar" style="background:${l.mode==='WALK'?'var(--muted)':lineColor(l)[0]}"></div><div style="flex:1;min-width:0">${l.mode==='WALK'?`<span class="muted">🚶 Marche ${Math.max(1,mins(l.duration))} min</span>`:`${badge(l,'mini')} <b>${esc(l.headsign||l.to?.name)}</b>${legCancelled(l)?'<span class="cx-tag">Supprimée</span>':''}`}
     <div class="muted" style="font-size:12px;margin-top:2px">${stopLine(l.from,l,/^start$/i.test(l.from?.name||'')?'Ma position':null,l.mode==='WALK'?it.legs[li-1]:l,l.mode==='WALK'?it.legs[li-1]?.to:undefined)}<br>${stopLine(l.to,l,/^end$/i.test(l.to?.name||'')?'Destination':null,l.mode==='WALK'?it.legs[li+1]:l,l.mode==='WALK'?it.legs[li+1]?.from:undefined)}</div></div></div>`).join('');
-  const w0=it.legs[0], walk=w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
+  const w0=it.legs[0], walk=!suppressStartWalk&&w0&&w0.mode==='WALK'&&w0!==ft?Math.max(1,mins(w0.duration)):0;
   const otherDay=new Date(depAt).toDateString()!==new Date().toDateString();
   const isPast=+new Date(depAt)<Date.now()-60000;             
   const pastPick=(!!planTime&&+planTime<Date.now())||isPast;
