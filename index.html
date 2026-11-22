@@ -1227,7 +1227,7 @@ function openJourneyPage(it,tracked){
 function renderJourneyPage(){
   const pg=$('#jrPage'); if(!pg||!jpIt) return; const ft=firstTransit(jpIt);
   { const lt=$('#jrTitle'); pg.querySelector('.jp-title').innerHTML=lt&&selDest?lt.innerHTML:esc(`${ft?.routeShortName||''} → ${ft?.headsign||selDest?.name||''}`.trim()) }   
-  const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked);
+  const body=pg.querySelector('.jp-body'); body.innerHTML=journeyHTML(jpIt,0,jpTracked); prefetchWalkAreas([jpIt],true);
   const card=body.firstElementChild; card.classList.add('open'); card.dataset.i=0;
   { card.querySelectorAll('.legs > .al-d').forEach(d=>d.remove()); card.querySelector(':scope > .alert')?.remove();    
     card.querySelector('.chain .chain-al')?.remove();
@@ -1892,6 +1892,11 @@ function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la r
   if(pf){ const pr=projectOnPoly(co,[pf.lon,pf.lat]); if(pr&&pr.d<0.12) co=[pr.q,...co.slice(pr.i+1)] }
   if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q] }
   return co }
+/* Extrémités d'une marche : le point du quai (ou de la voie dessinée) quand il est connu, sinon l'arrêt. */
+function walkLegEnds(it,idx){ const l=it.legs[idx], pvL=it.legs[idx-1], nxL=it.legs[idx+1];
+  const ppF=pvL&&pvL.mode!=='WALK'?(platformPos(pvL.to,pvL)||railLinePoint(pvL,l.from)):null, ppT=nxL&&nxL.mode!=='WALK'?(platformPos(nxL.from,nxL)||railLinePoint(nxL,l.to)):null;
+  return {fromP:ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP:ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to, pinF:!!ppF, pinT:!!ppT} }
+function pinEnds(co,fromP,toP,pinF,pinT){ if(!co||co.length<2||(!pinF&&!pinT))return co; const c=co.slice(); if(pinF)c[0]=[fromP.lon,fromP.lat]; if(pinT)c[c.length-1]=[toP.lon,toP.lat]; return c }
 function legCoords(l){
   if(l._coords) return l._coords;
   const g=l.legGeometry; if(g&&g.points){for(const p of [g.precision,6,5,7].filter(Boolean)){const c=decodePoly(g.points,p);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05)return c}}
@@ -1953,7 +1958,7 @@ async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
-  mapIt=it; boardStop=boardOf(it);
+  mapIt=it; boardStop=boardOf(it); prefetchWalkAreas([it],true);
   updateMapAlert(it);
   $('#mapView').classList.add('open');
   renderWalkCardInstant(it);
@@ -2024,12 +2029,10 @@ function drawItinerary(it){
   drawStairs('route',it.legs);
   const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
     if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible, jusqu'au quai exact
-      const pvL=it.legs[idx-1], nxL=it.legs[idx+1];
-      const ppF=pvL&&pvL.mode!=='WALK'?(platformPos(pvL.to,pvL)||railLinePoint(pvL,l.from)):null, ppT=nxL&&nxL.mode!=='WALK'?(platformPos(nxL.from,nxL)||railLinePoint(nxL,l.to)):null;
-      const fromP=ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP=ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to;
+      const {fromP,toP,pinF,pinT}=walkLegEnds(it,idx);
       const wk=fromP.lon.toFixed(5)+','+fromP.lat.toFixed(5)+'>'+toP.lon.toFixed(5)+','+toP.lat.toFixed(5);
-      if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g }
-      else{ legWalkGeo.set(wk,null); walkRouteOSM([fromP.lon,fromP.lat],toP).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}) } }
+      if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g; else co=pinEnds(co,fromP,toP,pinF,pinT) }
+      else{ legWalkGeo.set(wk,null); walkRouteOSM([fromP.lon,fromP.lat],toP).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}); co=pinEnds(co,fromP,toP,pinF,pinT) } }
     if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
@@ -2961,21 +2964,35 @@ function osmWalkGraph(els,me,stop,strict){
       return sw?1.5:0; }
     if(/living_street|cycleway/.test(h)) return 1.2; if(/residential|service|track|unclassified/.test(h)) return sw?1.2:1.8;
     return sw?1.4:4 };
-  const key=c=>c[0].toFixed(7)+','+c[1].toFixed(7), G=new Map(), P=new Map(), foot=new Set(), plat=new Set();
-  els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]), f=W(w.tags||{}), isPl=w.tags?.railway==='platform'||w.tags?.public_transport==='platform'||w.tags?.highway==='platform'; if(!f)return; for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i])*f; P.set(a,g[i-1]); P.set(b,g[i]); if(f<=1){foot.add(a);foot.add(b)} if(isPl){plat.add(a);plat.add(b)}
+  const key=c=>c[0].toFixed(7)+','+c[1].toFixed(7), G=new Map(), P=new Map(), foot=new Set(), plat=new Set(), E=[];
+  els.forEach(w=>{ const g=(w.geometry||[]).map(x=>[x.lon,x.lat]), f=W(w.tags||{}), isPl=w.tags?.railway==='platform'||w.tags?.public_transport==='platform'||w.tags?.highway==='platform'; if(!f)return; for(let i=1;i<g.length;i++){ const a=key(g[i-1]),b=key(g[i]),d=kmDist(g[i-1],g[i])*f; P.set(a,g[i-1]); P.set(b,g[i]); E.push([a,b,f,isPl]); if(f<=1){foot.add(a);foot.add(b)} if(isPl){plat.add(a);plat.add(b)}
     (G.get(a)||G.set(a,[]).get(a)).push([b,d]); (G.get(b)||G.set(b,[]).get(b)).push([a,d]) } });
-  // départ / arrivée : on s'accroche de préférence au quai (voie) le plus proche, puis aux chemins piétons
-  const near=p=>{ let bk=null,bd=Infinity; for(const [kk,c] of P){ let d=kmDist(c,p); if(foot.has(kk)) d-=0.015; if(plat.has(kk)) d-=0.03; if(d<bd){bd=d;bk=kk} } return bk };
-  const s0=near(me), t0=near([stop.lon,stop.lat]); if(!s0||!t0) return null;
+  // départ / arrivée : accroche au point le plus proche d'un tronçon (et pas seulement à ses extrémités), de préférence sur un chemin piéton ou un quai
+  const kx=Math.cos(me[1]*Math.PI/180);
+  const snap=(p,tag)=>{ let best=null;
+    for(let ei=0;ei<E.length;ei++){ const [a,b,f,pl]=E[ei], A=P.get(a), B=P.get(b), dx=(B[0]-A[0])*kx, dy=B[1]-A[1], L=dx*dx+dy*dy;
+      const t=L?Math.max(0,Math.min(1,(((p[0]-A[0])*kx)*dx+(p[1]-A[1])*dy)/L)):0, q=[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t], real=kmDist(p,q); if(real>0.08)continue;
+      let sc=real; if(f<=1)sc-=0.015; if(pl)sc-=0.03; if(!best||sc<best.sc) best={sc,ei,q,a,b,f} }
+    if(!best) return null;
+    const vk='v'+tag; P.set(vk,best.q); const wa=kmDist(best.q,P.get(best.a))*best.f, wb=kmDist(best.q,P.get(best.b))*best.f;
+    G.set(vk,[[best.a,wa],[best.b,wb]]); (G.get(best.a)||G.set(best.a,[]).get(best.a)).push([vk,wa]); (G.get(best.b)||G.set(best.b,[]).get(best.b)).push([vk,wb]);
+    return {vk,ei:best.ei,f:best.f} };
+  const S=snap(me,'s'), T=snap([stop.lon,stop.lat],'t'); if(!S||!T) return null;
+  const s0=S.vk, t0=T.vk;
+  if(S.ei===T.ei){ const w=kmDist(P.get(s0),P.get(t0))*S.f; G.get(s0).push([t0,w]); G.get(t0).push([s0,w]) }
   const dist=new Map([[s0,0]]), prev=new Map(), done=new Set(), Q=[[0,s0]];
   while(Q.length){ const [d,u]=heapPop(Q); if(done.has(u)) continue; done.add(u); if(u===t0) break;
     for(const [v,w] of G.get(u)||[]){ const nd=d+w; if(nd<(dist.get(v)??Infinity)){ dist.set(v,nd); prev.set(v,u); heapPush(Q,[nd,v]) } } }
   if(!done.has(t0)) return null;
   const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
-  return [me,...path,[stop.lon,stop.lat]];
+  const res=[me,...path,[stop.lon,stop.lat]];
+  // garde-fou : pas de détour absurde (aller-retour vers un chemin éloigné) ; sinon on laisse le secours prendre le relais
+  let len=0; for(let i=1;i<res.length;i++) len+=kmDist(res[i-1],res[i]);
+  if(len>kmDist(me,[stop.lon,stop.lat])*2+0.06) return null;
+  return res;
 }
-const WALK_LS='bd_walk_v2', walkPersist=(()=>{try{return JSON.parse(localStorage.getItem(WALK_LS)||'{}')}catch{return {}}})();
-const walkKey=(me,stop)=>me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5)+'|f3';
+const WALK_LS='bd_walk_v4', walkPersist=(()=>{try{return JSON.parse(localStorage.getItem(WALK_LS)||'{}')}catch{return {}}})();
+const walkKey=(me,stop)=>me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5)+'|f5';
 function walkPersistGet(k){ const e=walkPersist[k]; return e&&Date.now()-e.t<7*864e5?e.g:null }
 function walkPersistSet(k,g){ if(!g||g.length<2||g.length>600)return; walkPersist[k]={t:Date.now(),g:g.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])};
   try{ const ks=Object.keys(walkPersist); if(ks.length>40) ks.sort((a,b)=>walkPersist[a].t-walkPersist[b].t).slice(0,15).forEach(x=>delete walkPersist[x]); localStorage.setItem(WALK_LS,JSON.stringify(walkPersist)) }catch{} }
@@ -2989,10 +3006,10 @@ function walkRouteQuick(me,stop){ // synchrone : cache de trajets, puis zones OS
     return null;
   }catch{ return null } }
 const walkPrefetched=new Set();
-function prefetchWalkAreas(list){ (list||[]).slice(0,4).forEach(it=>(it.legs||[]).forEach(l=>{
+function prefetchWalkAreas(list,all){ (all?list:(list||[]).slice(0,4)).forEach(it=>(it.legs||[]).forEach((l,idx)=>{
   if(l.mode!=='WALK'||!l.from||!l.to||!Number.isFinite(+l.from.lat)||!Number.isFinite(+l.to.lat))return;
-  const me=[+l.from.lon,+l.from.lat], k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+(+l.to.lon).toFixed(5)+','+(+l.to.lat).toFixed(5); if(walkPrefetched.has(k))return; walkPrefetched.add(k);
-  walkRouteOSM(me,l.to).catch(()=>{}) })) }
+  const {fromP,toP}=walkLegEnds(it,idx), me=[+fromP.lon,+fromP.lat], k=walkKey(me,toP); if(walkPrefetched.has(k))return; walkPrefetched.add(k);
+  walkRouteOSM(me,toP).catch(()=>{}) })) }
 async function walkRouteOSM(me,stop){
   const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>2.5) return null;
   const k=walkKey(me,stop); if(osmWalkCache.has(k)) return osmWalkCache.get(k);
