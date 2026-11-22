@@ -407,9 +407,6 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .now-sep{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 12px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;letter-spacing:.2px}
 .now-sep::before{content:'';width:8px;height:8px;border-radius:50%;background:#fff;animation:pulse 1.4s infinite}
 body.classic .now-sep{border-radius:5px}
-.walk-sep{display:flex;align-items:center;gap:8px;margin:4px 0 6px;padding:6px 12px;border-radius:12px;background:#0a84ff;color:#fff;font-weight:800;font-size:13px;letter-spacing:.2px}
-.walk-sep::before{content:'🚶';font-size:12px}
-body.classic .walk-sep{border-radius:5px}
 .cd-date.past{color:#ff3b30!important}
 #jrPage,.sub-page{position:fixed;inset:0;z-index:29;display:none;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--wall) center/cover no-repeat,var(--bg);background-attachment:scroll;transition:transform .26s ease;overscroll-behavior:contain}
 #jrPage.on,.sub-page.on{display:block;transform:none;animation:jpIn .3s ease}
@@ -613,8 +610,6 @@ body.list-page main{padding-top:var(--safe-t)}
 #edgeTop{top:0}
 #edgeBottom{bottom:0;height:max(6px,env(safe-area-inset-bottom,0px))}
 html.map-edge .edge-tint{display:none}
-/* Rafraîchissement teinte iOS : masquer brièvement la page comme à l'ouverture du détail du parcours */
-body.edge-refresh>main,body.edge-refresh>header,body.edge-refresh>nav{visibility:hidden!important}
 
 /* Toutes les pages = même rendu que la page détail : le conteneur qui défile porte lui-même le fond, débordant haut et bas */
 html body>main{
@@ -629,8 +624,8 @@ html body>main{
 
 
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
-.edge-tint{display:block!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
-#edgeBottom{display:none!important;height:env(safe-area-inset-bottom,0px)!important}
+.edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
+#edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
 
 /* Bandeaux supérieur et inférieur à 15px du bord */
 body:not(.classic) header{top:calc(var(--safe-t) + 15px)}
@@ -1517,7 +1512,7 @@ function renderJourneyList(){
   if(selDest?.type!=='TRIP') lastJourneys=lastJourneys.filter(it=>{const f=firstTransit(it);return new Date(f.startTime)>Math.min(pastFloor??Infinity,(planTime?+planTime:Date.now())-60000)});
   $('#moreTop').style.display=lastJourneys.length?'':'none';
   const list=lastJourneys.slice(0,shown);
-  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(.walk-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
+  box.querySelectorAll(':scope > :not(.jr):not(.day-sep):not(.now-sep):not(#more)').forEach(n=>n.remove()); // spinner / message / bouton
   const existing=new Map([...box.querySelectorAll(':scope > .jr')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   list.forEach((it,i)=>{
@@ -1552,18 +1547,7 @@ function renderJourneyList(){
     else{ if(!ns){ns=document.createElement('div');ns.className='now-sep';ns.textContent=planTime?'Heure choisie':'Maintenant'}
       ns.textContent=planTime?'Heure choisie':'Maintenant';
       const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
-      const pv=before.previousElementSibling, pv2=pv?.classList.contains('walk-sep')?pv.previousElementSibling:pv;
-      if(pv2!==ns) (pv?.classList.contains('walk-sep')?pv:before).before(ns) } }
-  // bandeau « Arrêts atteignables à pied » : après « Maintenant », au-dessus du premier parcours dont on peut encore rejoindre l'arrêt de départ à pied
-  { let ws=box.querySelector(':scope > .walk-sep'); const ns=box.querySelector(':scope > .now-sep'); const now=planTime?+planTime:Date.now();
-    const jrs=[...box.querySelectorAll(':scope > .jr:not(.leave)')];
-    const reach=it=>{const ft=firstTransit(it);if(!ft)return false;const walk=it.legs.slice(0,it.legs.indexOf(ft)).reduce((t,l)=>t+((+new Date(l.endTime)-+new Date(l.startTime))||0),0);return +new Date(ft.startTime)-walk>=now};
-    const first=jrs.find(el=>{const it=list[+el.dataset.i];return it&&reach(it)});
-    const show=first&&(ns||jrs.indexOf(first)>0);
-    if(!show){ ws?.remove() }
-    else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep';ws.textContent='Arrêts atteignables à pied'}
-      let before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
-      if(before.previousElementSibling!==ws) before.before(ws) } }
+      if(before.previousElementSibling!==ns) before.before(ns) } }
   if(anc){ const el=box.querySelector(`:scope > .jr[data-k="${CSS.escape(anc)}"]`); if(el){ const dy=el.getBoundingClientRect().top-ancTop; if(Math.abs(dy)>0.5) document.querySelector('main')?.scrollBy(0,dy) } }
   curList=list; requestAnimationFrame(followTimeBar);
   bindJourneys(box,null,false); // réassigne onclick (idempotent), y compris nouvelles cartes
@@ -2151,14 +2135,6 @@ function syncIOSWallpaperTint(){
   const m=document.querySelector('meta[name="theme-color"]');if(m)m.content=tint;
  }));
  document.querySelectorAll('main,#jrPage,#stopPage,.sub-page').forEach(p=>p.style.setProperty('background-color',tint,'important'));
- // Safari iOS 26 ne relit la teinte des bords que lorsqu'un nouvel élément fixe plein écran apparaît (comme à l'ouverture du détail du parcours) :
- // on fait apparaître un calque plein écran identique au fond pendant 2 images, puis on le retire.
- if(window.__edgeFlashTint===tint)return;window.__edgeFlashTint=tint;
- clearTimeout(window.__edgeFlashT);document.getElementById('edgeFlash')?.remove();
- const f=document.createElement('div');f.id='edgeFlash';f.setAttribute('aria-hidden','true');
- f.style.cssText='position:fixed;left:0;right:0;top:calc(-160px - env(safe-area-inset-top,0px));bottom:calc(-160px - env(safe-area-inset-bottom,0px));z-index:9998;pointer-events:none;background:'+tint+' var(--wall,none) center/cover no-repeat';
- document.body.appendChild(f);document.body.classList.add('edge-refresh');void f.offsetHeight;
- window.__edgeFlashT=setTimeout(()=>requestAnimationFrame(()=>{document.body.classList.remove('edge-refresh');requestAnimationFrame(()=>f.remove())}),150);
 }
 
 function paintWallpaperPalette(colors,dark){
