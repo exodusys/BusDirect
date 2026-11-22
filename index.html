@@ -2264,11 +2264,15 @@ function resolvedStopPlatform(st,leg){
 /* Position réelle du quai (OpenStreetMap) quand elle est connue : sert à placer l'arrêt sur la carte et à guider la marche. */
 function platformPos(st,leg){
  if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return null;
- { const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk]; if(m&&Number.isFinite(m.lat)&&dist(st,m)*1000<=150)return {lat:m.lat,lon:m.lon}; }
- const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return null;
- const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase(); if(!v)return null;
- const m=items.filter(x=>String(x.label).replace(/^(quai|voie)\s*/i,'').trim().toLowerCase()===v).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
- return m&&m.d<=90?{lat:m.lat,lon:m.lon}:null;
+ const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk], memPos=m&&Number.isFinite(m.lat)&&dist(st,m)*1000<=150?{lat:m.lat,lon:m.lon}:null;
+ const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[];
+ const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase();
+ let osmPos=null;
+ if(v&&items.length){ // quai OSM dont le numéro correspond à la voie connue (ex. « 7;8 » correspond à 7)
+   const m2=items.filter(x=>String(x.label).replace(/^(quai|voie|platform|track)\s*/i,'').toLowerCase().split(/[;,\/\s]+/).includes(v)).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
+   if(m2&&m2.d<=90)osmPos={lat:m2.lat,lon:m2.lon} }
+ // gares : OpenStreetMap (quai dessiné) d'abord ; bus/tram : point du quai fourni par Transitous d'abord
+ return isRailLeg(leg)?(osmPos||memPos):(memPos||osmPos);
 }
 const platStop=(st,leg)=>{ const p=platformPos(st,leg); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
