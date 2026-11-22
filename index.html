@@ -744,7 +744,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
   }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
-let shown=Infinity;
+let shown=5;
 const jStart=it=>+new Date(firstTransit(it).startTime);
  
 function mergeRefresh(old,data){
@@ -754,7 +754,7 @@ function mergeRefresh(old,data){
   const before=pastFloor==null?[]:old.filter(it=>!keys.has(jkey(it))&&jStart(it)<f0&&jStart(it)>=pastFloor);
   const after=old.filter(it=>!keys.has(jkey(it))&&jStart(it)>fL);
   const out=before.concat(data,after);
-  shown=Math.max(shown,out.filter(it=>jStart(it)<=lastVis).length);    
+  shown=Math.max(5,out.filter(it=>jStart(it)<=lastVis).length);    
   return out;
 }
 const jkey=it=>{const f=firstTransit(it);return `${f?.routeShortName}|${f?.from?.name}|${f?.scheduledStartTime||f?.startTime}`};
