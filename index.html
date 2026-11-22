@@ -1886,6 +1886,12 @@ function projectOnPoly(co,p){ // point le plus proche de p sur la polyligne co (
     const t=L?Math.max(0,Math.min(1,(((p[0]-A[0])*k)*dx+(p[1]-A[1])*dy)/L)):0, q=[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t], d=kmDist(p,q);
     if(!best||d<best.d) best={i,q,d} }
   return best }
+function clipLegToPlatforms(co,l){ // la ligne commence / finit exactement sur le quai, avec un raccord direct vers la route
+  if(!co||co.length<2)return co;
+  const pf=platformPos(l.from,l), pt=platformPos(l.to,l);
+  if(pf){ const pr=projectOnPoly(co,[pf.lon,pf.lat]); if(pr&&pr.d<0.12) co=[[pf.lon,pf.lat],pr.q,...co.slice(pr.i+1)] }
+  if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q,[pt.lon,pt.lat]] }
+  return co }
 function legCoords(l){
   if(l._coords) return l._coords;
   const g=l.legGeometry; if(g&&g.points){for(const p of [g.precision,6,5,7].filter(Boolean)){const c=decodePoly(g.points,p);if(c.length&&Math.abs(c[0][1]-l.from.lat)<.05)return c}}
@@ -2028,10 +2034,7 @@ function drawItinerary(it){
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
       if(cd.repl.length){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));    
         return } }
-    if(!walk&&co.length>1){ // la ligne commence / finit exactement sur le quai, avec un raccord direct vers la route
-      const pf=platformPos(l.from,l), pt=platformPos(l.to,l);
-      if(pf){ const pr=projectOnPoly(co,[pf.lon,pf.lat]); if(pr&&pr.d<0.12) co=[[pf.lon,pf.lat],pr.q,...co.slice(pr.i+1)] }
-      if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q,[pt.lon,pt.lat]] } }
+    if(!walk) co=clipLegToPlatforms(co,l);
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
   });
   const src={type:'FeatureCollection',features:feats};
@@ -2354,8 +2357,10 @@ function focusStep(i,refit){
   navOn=false; followVeh=false; $('#btnFollow')?.classList.remove('on');
   $('#mapTitle').textContent=`${l.routeShortName||''} → ${l.headsign||l.to?.name||''}`;
   $('#mapSub').textContent=`${hm(l.startTime)} ${l.from?.name||''} → ${hm(l.endTime)} ${l.to?.name||''}`;
-  const b=new maplibregl.LngLatBounds(); legCoords(l).forEach(c=>b.extend(c));
-  mlMap.fitBounds(b,{padding:mapPad(20,Math.min(170,innerWidth*.38)),maxZoom:17,pitch:is3D?55:0,bearing:0,duration:600});
+  // zoom sur le trajet de ce transport : du quai de montée au quai de descente
+  const b=new maplibregl.LngLatBounds(); clipLegToPlatforms(legCoords(l),l).forEach(c=>b.extend(c));
+  [platformPos(l.from,l)||l.from,platformPos(l.to,l)||l.to].forEach(p=>{ if(p&&Number.isFinite(+p.lon)&&Number.isFinite(+p.lat)) b.extend([+p.lon,+p.lat]) });
+  mlMap.fitBounds(b,{padding:mapPad(20,Math.min(170,innerWidth*.38)),maxZoom:18.5,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
    
