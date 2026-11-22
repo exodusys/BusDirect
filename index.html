@@ -1978,7 +1978,7 @@ function bearing(a,b){const r=Math.PI/180,y=Math.sin((b[0]-a[0])*r)*Math.cos(b[1
 
 function renderWalkCardInstant(it,preciseKm){
   const tg=walkTarget(it),stop=tg?.stop;
-  const visible=!!stop&&!(it._hideStartWalk&&tg&&tg.walkIdx<0&&!tg.final);
+  const visible=!!stop&&!(it._hideStartWalk&&tg&&!tg.final&&tg.walkIdx<0);
   $('#walkCard').classList.toggle('on',visible);
   $('#mapView').classList.toggle('walking',visible);
   if(!stop)return;
@@ -2001,8 +2001,12 @@ async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
-  const firstWalk=it?.legs?.[0]?.mode==='WALK'&&(hideStartWalkForDraggedPair||it?._hideStartWalk);
-  mapIt=firstWalk?{...it,_hideStartWalk:true,duration:Math.max(0,(it.duration||0)-Math.max(0,mins(it.legs[0].duration))*60),startTime:it.legs[1]?.startTime||it.startTime}:it;
+  // Pour une paire choisie par glissement, la marche d'accès initiale est exclue
+  // entièrement de la carte (tracé, étapes, cible de marche et bandeau inférieur).
+  const firstWalk=!!it?._hideStartWalk&&it?.legs?.[0]?.mode==='WALK';
+  mapIt=firstWalk?{...it,legs:it.legs.slice(1),_hideStartWalk:true,
+    duration:Math.max(0,(it.duration||0)-Math.max(0,(+new Date(it.legs[0].endTime)-+new Date(it.legs[0].startTime))/1000)),
+    startTime:it.legs[1]?.startTime||it.startTime}:it;
   boardStop=boardOf(mapIt); prefetchWalkAreas([mapIt],true);
   updateMapAlert(mapIt);
   $('#mapView').classList.add('open');
