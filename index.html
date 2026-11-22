@@ -2940,7 +2940,7 @@ async function osmWalkArea(me,stop,strict=false){
   const hit=osmAreas.find(a=>a.strict===strict&&a.b[0]<=need[0]&&a.b[1]<=need[1]&&a.b[2]>=need[2]&&a.b[3]>=need[3]); if(hit) return hit.p;
   const pad=strict?0.002:0.006, b=[need[0]-pad,need[1]-pad,need[2]+pad,need[3]+pad], bb=b.join(',');
   // niveau 1 : uniquement chemins piétons, trottoirs, passages, escaliers, quais (réponse petite = rapide)
-  const q1=`[out:json][timeout:10];(way["highway"~"^(footway|pedestrian|path|steps|corridor|living_street|elevator)$"]["foot"!~"no|private"](${bb});way["highway"="cycleway"]["foot"~"yes|designated|permissive"](${bb});way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway|footway|pedestrian|path|steps|corridor|living_street|elevator|cycleway)$"][~"^sidewalk"~"^(both|left|right|yes|separate)$"](${bb});way["railway"="platform"](${bb});way["public_transport"="platform"](${bb}););out geom tags qt;`;
+  const q1=`[out:json][timeout:10];(way["highway"~"^(footway|pedestrian|path|steps|corridor|living_street|elevator)$"]["foot"!~"no|private"](${bb});way["highway"="cycleway"]["foot"~"yes|designated|permissive"](${bb});way["highway"]["highway"!~"^(motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway|footway|pedestrian|path|steps|corridor|living_street|elevator|cycleway)$"][~"^sidewalk"~"^(both|left|right|yes|separate)$"](${bb});way["railway"="platform"](${bb});way["public_transport"="platform"](${bb});way["conveying"]["highway"](${bb});way["indoor"="corridor"](${bb});way["footway"="crossing"](${bb});way["highway"="elevator"](${bb}););out geom tags qt;`;
   const q2=`[out:json][timeout:15];(way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${bb});way["railway"="platform"](${bb});way["public_transport"="platform"](${bb}););out geom tags qt;`;
   const p=overpassRace(strict?q1:q2);
   const a={b,p,strict}; osmAreas.push(a); if(osmAreas.length>16) osmAreas.shift();
@@ -2952,7 +2952,9 @@ function heapPop(h){ const top=h[0], last=h.pop(); if(h.length){ h[0]=last; let 
    Une route sans trottoir n'est utilisée qu'en dernier recours, si aucun chemin piéton ne relie les deux points. */
 function osmWalkGraph(els,me,stop,strict){
   const W=t=>{ const h=t.highway, sw=/both|left|right|yes|separate/.test(t.sidewalk||t['sidewalk:both']||t['sidewalk:left']||t['sidewalk:right']||'');
-    if(t.railway==='platform'||t.public_transport==='platform'||/footway|pedestrian|path|steps|corridor|platform|elevator/.test(h||'')||t.footway==='sidewalk'||t.footway==='crossing') return 1;
+    if(t.conveying&&t.conveying!=='no') return 1; // escalator / tapis roulant
+    if(h==='steps') return 1.3;
+    if(t.railway==='platform'||t.public_transport==='platform'||t.indoor==='corridor'||/footway|pedestrian|path|corridor|platform|elevator/.test(h||'')||t.footway==='sidewalk'||t.footway==='crossing'||t.footway==='traffic_island') return 1;
     if(strict){
       if(/cycleway/.test(h)) return /yes|designated|permissive/.test(t.foot||'')?1.2:0;
       if(/living_street/.test(h)) return 1.2;
@@ -2978,7 +2980,7 @@ function walkPersistGet(k){ const e=walkPersist[k]; return e&&Date.now()-e.t<7*8
 function walkPersistSet(k,g){ if(!g||g.length<2||g.length>600)return; walkPersist[k]={t:Date.now(),g:g.map(c=>[+c[0].toFixed(6),+c[1].toFixed(6)])};
   try{ const ks=Object.keys(walkPersist); if(ks.length>40) ks.sort((a,b)=>walkPersist[a].t-walkPersist[b].t).slice(0,15).forEach(x=>delete walkPersist[x]); localStorage.setItem(WALK_LS,JSON.stringify(walkPersist)) }catch{} }
 function walkRouteQuick(me,stop){ // synchrone : cache de trajets, puis zones OSM déjà en mémoire
-  try{ if(kmDist(me,[stop.lon,stop.lat])>1.2) return null;
+  try{ if(kmDist(me,[stop.lon,stop.lat])>2.5) return null;
     const k=walkKey(me,stop); if(osmWalkCache.get(k)) return osmWalkCache.get(k);
     const pg=walkPersistGet(k); if(pg){ osmWalkCache.set(k,pg); return pg }
     for(const strict of [true,false]){ const pad0=strict?0.002:0.003, need=[Math.min(me[1],stop.lat)-pad0,Math.min(me[0],stop.lon)-pad0,Math.max(me[1],stop.lat)+pad0,Math.max(me[0],stop.lon)+pad0];
@@ -2992,7 +2994,7 @@ function prefetchWalkAreas(list){ (list||[]).slice(0,4).forEach(it=>(it.legs||[]
   const me=[+l.from.lon,+l.from.lat], k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+(+l.to.lon).toFixed(5)+','+(+l.to.lat).toFixed(5); if(walkPrefetched.has(k))return; walkPrefetched.add(k);
   walkRouteOSM(me,l.to).catch(()=>{}) })) }
 async function walkRouteOSM(me,stop){
-  const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>1.2) return null;
+  const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>2.5) return null;
   const k=walkKey(me,stop); if(osmWalkCache.has(k)) return osmWalkCache.get(k);
   const pg=walkPersistGet(k); if(pg){ osmWalkCache.set(k,pg); return pg }
   // 1) données légères (trottoirs / chemins piétons uniquement) ; 2) tout le réseau, seulement si le niveau 1 ne suffit pas
@@ -3003,7 +3005,7 @@ async function walkRouteOSM(me,stop){
   osmWalkCache.set(k,res); if(res) walkPersistSet(k,res); return res;
 }
 async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
-  try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),1500))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}    
+  try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),6000))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}    
   try{
     for(const v of PLAN_VERSIONS){
        
