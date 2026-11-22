@@ -2162,14 +2162,14 @@ async function loadOsmPlatforms(it){
 }
 /* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
 const osmCardTried=new Set(); let osmCardBusy=false;
-async function learnTracksFromStopTimes(st,l,atISO){
-  const q=st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`;
+async function learnTracksFromStopTimes(st,l,atISO,isDep=true){
+  const q=(st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`)+(isDep?'':'&arriveBy=true');
   for(const v of ['v1','v4','v5']){
     try{
       const r=await fetch(`${API}/${v}/stoptimes?${q}&n=40&time=${atISO}`,{cache:'no-store'}); if(!r.ok)continue;
       const d=await r.json(); let got=false;
       (d?.stopTimes||[]).forEach(x=>{ const pl=x.place; const tv=platformValue({track:pl?.scheduledTrack})||platformValue(pl); if(!tv)return;
-        const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign};
+        const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign,startTime:pl.scheduledDeparture||pl.departure||pl.scheduledArrival||pl.arrival};
         // même arrêt : mémorise pour cette ligne et direction ; même course : mémorise pour la course exacte
         const sameStop=nrmS(pl.name)===nrmS(st.name);
         const pos=Number.isFinite(+pl.lat)&&Number.isFinite(+pl.lon)?{lat:+pl.lat,lon:+pl.lon}:null;
@@ -2187,7 +2187,7 @@ async function ensurePlatformCoords(it){
       if(!st||!Number.isFinite(+st.lat)||platformPos(st,l))continue;
       const k='pos|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(!stopTrackKey(st,l)||seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
       const t=new Date(at||Date.now()); if(isNaN(t))continue;
-      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())&&platformPos(st,l))got=true; }
+      if(await learnTracksFromStopTimes(st,l,new Date(+t+(st===l.from?-60000:60000)).toISOString(),st===l.from)&&platformPos(st,l))got=true; }
   }
   if(got&&mapIt===it&&$('#mapView')?.classList.contains('open'))drawItinerary(it);
 }
@@ -2210,7 +2210,7 @@ async function prefetchCardTracks(list){
     for(const [st,l,at] of pairs){
       const k='st|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
       const t=new Date(at||Date.now()); if(isNaN(t))continue;
-      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())) found=true;
+      if(await learnTracksFromStopTimes(st,l,new Date(+t+(st===l.from?-60000:60000)).toISOString(),st===l.from)) found=true;
     }
     // 2) secours OpenStreetMap pour ce qui manque encore
     const stops=[], refs=[];
@@ -2234,7 +2234,10 @@ const knownStopPlatforms=new Map();
    alors que l'horaire théorique l'indique : on réutilise le dernier quai connu. */
 const STOP_TRACK_LS='bd_stop_tracks_v1';
 const stopTrackMem=(()=>{try{return JSON.parse(localStorage.getItem(STOP_TRACK_LS)||'{}')}catch{return {}}})();
-function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return ''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'') }
+const isRailLeg=l=>!!l&&(/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim()));
+/* Bus/tram : un quai fixe par arrêt, ligne et direction. Train : la voie change d'un jour à l'autre, donc la clé inclut la date. */
+function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return '';
+  const day=isRailLeg(leg)?'|'+String(leg.scheduledStartTime||leg.startTime||'').slice(0,10):''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'')+day }
 function rememberStopTrack(st,leg,v,pos){ const k=stopTrackKey(st,leg); if(!k||!v)return; const old=stopTrackMem[k], hasPos=pos&&Number.isFinite(+pos.lat)&&Number.isFinite(+pos.lon);
   if(old?.v===v&&(!hasPos||Number.isFinite(old.lat)))return;
   stopTrackMem[k]=hasPos?{v,t:Date.now(),lat:+pos.lat,lon:+pos.lon}:{v,t:Date.now(),...(old?.v===v&&Number.isFinite(old.lat)?{lat:old.lat,lon:old.lon}:{})};
