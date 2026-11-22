@@ -73,6 +73,8 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
   <section class="view" id="v-parametres"><div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div><h3>Apparence</h3><div class="card glass"><div class="set"><span>Style</span><div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div><div class="set"><span>Thème</span><div class="seg" id="themeSeg"><button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button></div></div><div class="set"><span>Couleur d'accent</span><input type="color" id="accent" style="width:44px;height:30px;border:none;background:none"></div></div><h3>Liquid Glass</h3><div class="card glass"><div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div><div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div><div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div><div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div></div><div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div><div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div><h3>Itinéraires</h3><div class="card glass"><div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div><label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div></div><h3>Tickets</h3><div class="card glass"><div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div><label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div></div><h3>Capteurs</h3><div class="card glass"><div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div><label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div><div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div><label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div></div><h3>Données</h3><div class="card glass"><div class="set"><div><b>🧹 Vider le cache</b><div class="muted" style="font-size:12px" id="cacheTxt">Couleurs des lignes, trajets à pied, quais, trottoirs…</div></div><button class="btn ghost sm" type="button" onclick="clearDataCache()">Vider</button></div></div><input type="file" id="fileIn" accept="image/*" hidden></section></main>
 
 <nav class="glass" id="tabs"><button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button><button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button><button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button><button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button><button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button></nav>
+<script>(function(){try{var t=localStorage.getItem('bd_tab');if(!t||t==='horaires')return;var v=document.getElementById('v-'+t),b=document.querySelector('#tabs button[data-v="'+t+'"]');if(!v||!b||b.offsetParent===null)return;document.querySelectorAll('.view').forEach(function(e){e.classList.toggle('active',e===v)});document.querySelectorAll('#tabs button').forEach(function(e){e.classList.toggle('active',e===b)});var st=document.createElement('style');st.id='bootNoAnim';st.textContent='.view{animation:none!important}';document.head.appendChild(st);addEventListener('load',function(){setTimeout(function(){st.remove()},400)})}catch(e){}})();</script>
+
 
 <div id="mapView"><div id="map"></div><div class="map-bar glass"><button class="map-btn" onclick="closeMap()">✕</button><div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div><div class="map-rcol"><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button><button type="button" id="mapAl" class="leg-al map-al-btn" aria-label="Infos trafic" style="display:none"></button></div></div><div class="map-ctrl glass"><button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button><button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button><button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button><button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button><button class="map-btn" onclick="mapFit()">⤢</button></div><div class="map-steps glass" id="mapSteps"></div><div class="walk-card glass" id="walkCard"><div class="row between"><div><b id="walkTitle">Marche jusqu'à l'arrêt</b><div class="muted" id="walkInfo" style="font-size:13px"></div></div><button class="btn sm" id="walkBtn" onclick="toggleNav()">▶︎ Lancer</button></div></div></div><div id="infoView" class="info-view"><div class="info-sheet glass"><div class="info-head"><b>Informations</b><button class="map-btn" onclick="toggleInfo(false)">✕</button></div><div class="info-body"><h4>🕒 Horaires</h4><ul><li><b>Appui court sur une dalle</b> : prochains trajets depuis ta position vers cette destination.</li><li><b>Appui long puis glisser</b> d'une dalle vers une autre : trajets entre ces deux destinations. Une ligne relie les deux dalles tant que la paire est sélectionnée.</li><li><b>Date et heure</b> : le champ en haut de la liste permet de choisir un autre horaire. « Maintenant » revient à l'heure actuelle.</li><li><b>Chaque trajet</b> : ligne et direction, arrêt et quai, compte à rebours, heure de départ, durée, marche et changements, heure d'arrivée. Les retards s'affichent en orange, les déviations en cours dans un bandeau.</li><li><b>Toucher un trajet</b> pour voir le détail, l'ouvrir sur la carte ou le suivre.</li><li><b>Liste des parcours</b> : elle s'ouvre sur sa propre page, en plein écran. Pour revenir aux dalles, touche ‹ ou glisse depuis le bord gauche de l'écran vers la droite.</li><li>Quitter une liste arrête son actualisation et remet l'heure sur « Maintenant ».</li><li><b>Plus de trajets</b> : en bas de la liste, continue de faire défiler jusqu'à ce que les quatre barres s'allument.</li></ul><h4>🗺️ Carte</h4><ul><li>Parcours complet dans les couleurs des lignes, marches en pointillés bleus, arrêts avec quai ou voie.</li><li>Position du véhicule (temps réel si disponible, sinon estimée) et son trajet en tirets jusqu'à ton arrêt.</li><li><b>Marche</b> : touche le bandeau de marche pour ouvrir une marche à pied seule, avec escaliers et ascenseurs.</li><li><b>Lancer</b> : marche guidée vers l'arrêt, orientée dans ton sens de marche. Tu peux déplacer ou zoomer, la carte se recentre après 3 s.</li><li>Boutons à droite : clair/sombre, bâtiments 3D, vue 3D/2D, vue d'ensemble.</li></ul><h4>🔖 Suivis</h4><ul><li>« Suivre » enregistre un trajet. L'onglet apparaît avec une pastille indiquant le nombre de suivis. Touche un suivi pour le déplier.</li></ul><h4>🧭 Parcours</h4><ul><li>Recherche un arrêt, une adresse ou un lieu et ajoute-le à tes destinations. Pour une adresse, l'arrêt le plus proche est utilisé.</li></ul><h4>🚏 Itinéraires</h4><ul><li><b>Arrêt le plus proche</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li><li><b>Désactivé</b> : tous les arrêts des environs sont acceptés, avec une marche jusqu'à la destination. Plus de choix de trajets, mais l'arrivée peut se faire à un autre arrêt.</li><li>Réglage dans Paramètres › Itinéraires.</li></ul><h4>🎫 Tickets</h4><ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li><li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul><h4>⚙️ Paramètres</h4><ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul><h4>📡 Sources de données</h4><ul><li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li><li><b>OpenStreetMap</b> : couleurs des lignes, chemins piétons et gares.</li><li><b>OpenFreeMap</b> : fond de carte.</li></ul><h4>🌍 Pays et régions couverts</h4><p class="muted" style="font-size:12px">Couverture fournie par Transitous, qui évolue régulièrement. La qualité (temps réel, quais) varie selon les opérateurs. Liste indicative.</p><div id="countryList"></div><p class="muted" style="font-size:12px;margin-top:12px">Liste complète et à jour : transitous.org/sources</p></div></div></div><div class="toast glass" id="toast"></div>
 
@@ -971,15 +973,17 @@ const MODE_COLOR={BUS:['#e30613','#fff'],COACH:['#e30613','#fff'],TRAM:['#00a650
   LONG_DISTANCE:['#eb0000','#fff'],HIGHSPEED_RAIL:['#eb0000','#fff'],NIGHT_RAIL:['#1a1a2e','#fff'],FERRY:['#0aa0c8','#fff'],FUNICULAR:['#8e44ad','#fff'],AERIAL_LIFT:['#8e44ad','#fff']};
  
 const OSMC=(()=>{try{const c=JSON.parse(localStorage.getItem('bd_osmc')||'{}');return Date.now()-(c.t||0)<90*864e5?c:{t:Date.now(),m:{},miss:{}}}catch{return {t:Date.now(),m:{},miss:{}}}})();
+OSMC.a=OSMC.a||{};
 const nref=s=>String(s||'').toUpperCase().replace(/\s+/g,'');
 const cellOf=(lat,lon)=>(Math.round(lat*50)/50)+','+(Math.round(lon*50)/50);
 const osmKey=l=>nref(l.routeShortName||l.displayName)+'@'+cellOf(l.from.lat,l.from.lon);
+const aliasKey=l=>{const ag=String(l.agencyName||'').toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g,'');return ag?nref(l.routeShortName||l.displayName)+'@'+ag+'@'+Math.round(l.from.lat*10)+','+Math.round(l.from.lon*10):null};
 let osmQueue=new Map(), osmTimer=null, osmBusy=false; const osmInflight=new Set();
 function osmSave(){try{localStorage.setItem('bd_osmc',JSON.stringify(OSMC))}catch{}}
 function osmWant(l){
   if(!l||!l.from||l.mode==='WALK') return;
   const k=osmKey(l); if(OSMC.m[k]||OSMC.miss[k]||osmQueue.has(k)) return;
-  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,15);
+  osmQueue.set(k,l); clearTimeout(osmTimer); osmTimer=setTimeout(osmFetch,0);
 }
 const norm2=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,'');
 const OSM_EPS=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
@@ -1001,14 +1005,14 @@ async function osmFetchGroup(batch){
   if(!refs.length) return;
   const lats=batch.map(([,l])=>l.from.lat), lons=batch.map(([,l])=>l.from.lon), pad=0.012;
   const bbox=`${Math.min(...lats)-pad},${Math.min(...lons)-pad},${Math.max(...lats)+pad},${Math.max(...lons)+pad}`;
-  const q=`[out:json][timeout:10][bbox:${bbox}];relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref~"^(${refs.join('|')})$",i][colour];out tags;`;
+  const q=`[out:json][timeout:8][bbox:${bbox}];relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref~"^(${refs.join('|')})$",i][colour];out tags;`;
   const els=await overpassRace(q);
   if(!els){ batch.forEach(([k,l])=>setTimeout(()=>osmWant(l),20000)); return }
   batch.forEach(([k,l])=>{
     const ref=nref(l.routeShortName||l.displayName), ag=norm2(l.agencyName);
     const cands=els.filter(e=>nref(e.tags.ref)===ref);
     const best=cands.find(e=>ag&&[e.tags.operator,e.tags.network].some(x=>x&&(norm2(x).includes(ag)||ag.includes(norm2(x)))))||cands[0];
-    if(best){const t=best.tags;OSMC.m[k]=[t.colour,t['colour:text']||t.text_colour||null]} else OSMC.miss[k]=1;
+    if(best){const t=best.tags;OSMC.m[k]=[t.colour,t['colour:text']||t.text_colour||null];const ak=aliasKey(l);if(ak)OSMC.a[ak]=OSMC.m[k]} else OSMC.miss[k]=1;
   });
   osmSave(); refreshColorsUI();
 }
@@ -1020,7 +1024,7 @@ async function colorsBeforeRender(list){
   prefetchColors(list); clearTimeout(osmTimer);
   const ps=[...osmInflight]; if(osmQueue.size) ps.push(osmFetch());
   if(!ps.length) return;
-  await Promise.race([Promise.all(ps.filter(Boolean)), new Promise(r=>setTimeout(r,1200))]);
+  await Promise.race([Promise.all(ps.filter(Boolean)), new Promise(r=>setTimeout(r,800))]);
 }
 /* Cache des données : tout ce qui est gardé pendant une durée (couleurs des lignes, trajets à pied, quais, trottoirs, positions de quais…).
    Les destinations, parcours suivis et réglages ne sont jamais touchés. */
@@ -1031,7 +1035,7 @@ function updateCacheInfo(){ const el=document.getElementById('cacheTxt'); if(!el
 function clearDataCache(){
   if(!confirm('Vider le cache ? Les couleurs des lignes, trajets à pied, quais et trottoirs seront retéléchargés ou recalculés. Tes destinations, parcours suivis et réglages sont conservés.'))return;
   cacheKeys().forEach(k=>{ try{localStorage.removeItem(k)}catch{} });
-  try{ OSMC.m={}; OSMC.miss={}; OSMC.t=Date.now(); osmQueue.clear() }catch{}
+  try{ OSMC.m={}; OSMC.a={}; OSMC.miss={}; OSMC.t=Date.now(); osmQueue.clear() }catch{}
   try{ for(const k of Object.keys(OSM_STOP_CACHE)) delete OSM_STOP_CACHE[k] }catch{}
   try{ for(const k of Object.keys(stopTrackMem)) delete stopTrackMem[k] }catch{}
   try{ for(const k of Object.keys(walkPersist)) delete walkPersist[k] }catch{}
@@ -1044,7 +1048,7 @@ function clearDataCache(){
 document.addEventListener('DOMContentLoaded',()=>{ updateCacheInfo(); document.querySelector('#tabs button[data-v="parametres"]')?.addEventListener('click',updateCacheInfo) });
 setTimeout(updateCacheInfo,1500);
 function resetLineColors(){
-  OSMC.m={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
+  OSMC.m={};OSMC.a={};OSMC.miss={};OSMC.t=Date.now();osmQueue.clear();
   try{localStorage.removeItem('bd_osmc')}catch{}
   refreshColorsUI(); toast('Couleurs en cours de mise à jour…');
 }
@@ -1073,16 +1077,18 @@ function refreshColorsUI(){clearTimeout(colT);colT=setTimeout(()=>{
     if(title) title.innerHTML=`${badge(v.l,'mini')} → ${esc(v.l.headsign||v.l.to?.name||'')}`;
   }
 
-  if($('#depPage')?.classList.contains('on')) loadDepartures();
+  if($('#depPage')?.classList.contains('on')) renderDepartures();
 
   if(typeof mapIt!=='undefined'&&mapIt&&typeof mlMap!=='undefined'&&mlMap&&$('#mapView').classList.contains('open')){
     drawItinerary(mapIt);
     refreshStopLbls();
     renderMapSteps();
   }
-},250)}
+},40)}
 function lineColor(l){
-  if(l&&l.from&&l.mode!=='WALK'){const o=OSMC.m[osmKey(l)]; if(o){const bg=cssColor(o[0]);return [bg,cssColor(o[1])||textOn(bg)]} osmWant(l)}
+  if(l&&l.from&&l.mode!=='WALK'){const o=OSMC.m[osmKey(l)]; if(o){const bg=cssColor(o[0]);return [bg,cssColor(o[1])||textOn(bg)]}
+    const ak=aliasKey(l), oa=ak&&OSMC.a[ak]; if(oa){const bg=cssColor(oa[0]);return [bg,cssColor(oa[1])||textOn(bg)]}
+    osmWant(l)}
   if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
   return MODE_COLOR[l.mode]||['#636e80','#fff'];
 }
@@ -1366,7 +1372,7 @@ function openDepartures(stop){
     pg.innerHTML='<div class="jp-bar glass"><button class="back-btn" onclick="closeDepartures()" aria-label="Retour">‹</button><b class="jp-title"></b><button type="button" class="home-btn" onclick="closeDepartures();goHome()" aria-label="Accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button></div><div class="jp-body"><div class="card glass dep-list"></div></div>';
     document.body.appendChild(pg); jpSwipe(pg,closeDepartures) }
   pg.querySelector('.jp-title').textContent='Départs · '+(stop.name||'Arrêt');
-  pg.querySelector('.dep-list').innerHTML='<div class="spin"></div>';
+  depRows=[]; pg.querySelector('.dep-list').innerHTML='<div class="spin"></div>';
   pg.scrollTop=0; pg.style.transform=''; pg.style.opacity=''; pg.classList.remove('out'); pg.classList.add('on'); clickShieldUntil=Date.now()+400;
   loadDepartures(); clearInterval(depTimer); depTimer=setInterval(()=>{ if(!document.hidden) loadDepartures() },15000);    
 }
@@ -1377,9 +1383,14 @@ async function loadDepartures(){
   let d=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?${q}&n=30&time=${new Date().toISOString()}`,{cache:'no-store'}); if(r.ok){ d=await r.json(); break } }catch{} }
   if(depStop!==st) return;
   const rows=(d?.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture));
+  depRows=rows; renderDepartures();
+}
+let depRows=[];
+function renderDepartures(){
+  const box=$('#depPage .dep-list'); if(!box||!depStop) return; const rows=depRows, st=depStop;
   if(!rows.length){ box.innerHTML='<div class="muted" style="padding:6px 0">Aucun départ trouvé pour cet arrêt.</div>'; return }
   box.innerHTML=rows.map(x=>{ const pl=x.place, t=pl.departure||pl.scheduledDeparture, sch=pl.scheduledDeparture, dl=sch?Math.round((new Date(t)-new Date(sch))/60000):0;
-    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName,headsign:x.headsign,tripId:x.tripId}, cx=x.cancelled||pl.cancelled;
+    const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,routeColor:x.routeColor,routeTextColor:x.routeTextColor,agencyName:x.agencyName,headsign:x.headsign,tripId:x.tripId,from:{lat:pl.lat??st.lat,lon:pl.lon??st.lon}}, cx=x.cancelled||pl.cancelled;
     const rail=/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN/i.test(x.mode||''), mn=Math.round((new Date(t)-Date.now())/60000);
     return `<div class="dep-r${cx?' cancel':''}"><div class="dep-t"><b>${hm(t)}</b>${dl>0?`<s>${hm(sch)}</s>`:''}<small>${cx?'Supprimé':mn<=0?'maintenant':mn<60?'dans '+mn+' min':''}</small></div><div class="dep-m">${badge(lg,'mini')} <b>${esc(x.headsign||'')}</b><div class="muted" style="font-size:12px">${(()=>{const h=trackHTML(pl,lg);return h?`${rail?'Voie':'Quai'} ${h}`:''})()}${dl>0?` <span class="late">+${dl} min</span>`:dl<0&&x.realTime?` <span class="early">en avance ${-dl} min</span>`:x.realTime&&!cx?' <span class="ontime">à l\'heure</span>':''}</div></div></div>` }).join('');
 }
