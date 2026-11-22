@@ -2162,14 +2162,14 @@ async function loadOsmPlatforms(it){
 }
 /* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
 const osmCardTried=new Set(); let osmCardBusy=false;
-async function learnTracksFromStopTimes(st,l,atISO){
-  const q=st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`;
+async function learnTracksFromStopTimes(st,l,atISO,isDep=true){
+  const q=(st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`)+(isDep?'':'&arriveBy=true');
   for(const v of ['v1','v4','v5']){
     try{
       const r=await fetch(`${API}/${v}/stoptimes?${q}&n=40&time=${atISO}`,{cache:'no-store'}); if(!r.ok)continue;
       const d=await r.json(); let got=false;
       (d?.stopTimes||[]).forEach(x=>{ const pl=x.place; const tv=platformValue({track:pl?.scheduledTrack})||platformValue(pl); if(!tv)return;
-        const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign};
+        const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign,startTime:pl.scheduledDeparture||pl.departure||pl.scheduledArrival||pl.arrival};
         // même arrêt : mémorise pour cette ligne et direction ; même course : mémorise pour la course exacte
         const sameStop=nrmS(pl.name)===nrmS(st.name);
         const pos=Number.isFinite(+pl.lat)&&Number.isFinite(+pl.lon)?{lat:+pl.lat,lon:+pl.lon}:null;
@@ -2187,30 +2187,32 @@ async function ensurePlatformCoords(it){
       if(!st||!Number.isFinite(+st.lat)||platformPos(st,l))continue;
       const k='pos|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(!stopTrackKey(st,l)||seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
       const t=new Date(at||Date.now()); if(isNaN(t))continue;
-      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())&&platformPos(st,l))got=true; }
+      if(await learnTracksFromStopTimes(st,l,new Date(+t+(st===l.from?-60000:60000)).toISOString(),st===l.from)&&platformPos(st,l))got=true; }
   }
   if(got&&mapIt===it&&$('#mapView')?.classList.contains('open'))drawItinerary(it);
 }
 async function prefetchCardTracks(list){
   if(osmCardBusy)return;
-  const pairs=[];
+  const pairs=[], allStops=[], allSeen=new Set();
   (list||[]).forEach(it=>(it.legs||[]).forEach(l=>{
     if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
+    [l.from,l.to].forEach(st=>{ if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return; const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5); if(allSeen.has(k))return; allSeen.add(k); allStops.push({name:st.name||'Arrêt',lat:+st.lat,lon:+st.lon,rail:isRailLeg(l)}) });
     [[l.from,l.startTime],[l.to,l.endTime]].forEach(([st,at])=>{
       if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)||resolvedStopPlatform(st,l))return;
       pairs.push([st,l,at]);
     });
   }));
-  if(!pairs.length)return;
+  if(!pairs.length&&!allStops.length)return;
   osmCardBusy=true;
   try{
     let found=false;
+    if(allStops.length){ const fresh=allStops.filter(x=>!osmCardTried.has('all|'+nrmS(x.name)+'|'+x.lat.toFixed(5)+'|'+x.lon.toFixed(5))); fresh.forEach(x=>osmCardTried.add('all|'+nrmS(x.name)+'|'+x.lat.toFixed(5)+'|'+x.lon.toFixed(5))); if(fresh.length&&await fetchOsmStops(fresh)) found=true }
     // 1) horaires de l'arrêt : l'API y indique souvent le quai même quand le parcours ne le donne pas
     const seen=new Set();
     for(const [st,l,at] of pairs){
       const k='st|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
       const t=new Date(at||Date.now()); if(isNaN(t))continue;
-      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())) found=true;
+      if(await learnTracksFromStopTimes(st,l,new Date(+t+(st===l.from?-60000:60000)).toISOString(),st===l.from)) found=true;
     }
     // 2) secours OpenStreetMap pour ce qui manque encore
     const stops=[], refs=[];
@@ -2234,7 +2236,10 @@ const knownStopPlatforms=new Map();
    alors que l'horaire théorique l'indique : on réutilise le dernier quai connu. */
 const STOP_TRACK_LS='bd_stop_tracks_v1';
 const stopTrackMem=(()=>{try{return JSON.parse(localStorage.getItem(STOP_TRACK_LS)||'{}')}catch{return {}}})();
-function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return ''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'') }
+const isRailLeg=l=>!!l&&(/RAIL|TRAIN|SUBWAY|METRO|FUNICULAR|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim()));
+/* Bus/tram : un quai fixe par arrêt, ligne et direction. Train : la voie change d'un jour à l'autre, donc la clé inclut la date. */
+function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return '';
+  const day=isRailLeg(leg)?'|'+String(leg.scheduledStartTime||leg.startTime||'').slice(0,10):''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'')+day }
 function rememberStopTrack(st,leg,v,pos){ const k=stopTrackKey(st,leg); if(!k||!v)return; const old=stopTrackMem[k], hasPos=pos&&Number.isFinite(+pos.lat)&&Number.isFinite(+pos.lon);
   if(old?.v===v&&(!hasPos||Number.isFinite(old.lat)))return;
   stopTrackMem[k]=hasPos?{v,t:Date.now(),lat:+pos.lat,lon:+pos.lon}:{v,t:Date.now(),...(old?.v===v&&Number.isFinite(old.lat)?{lat:old.lat,lon:old.lon}:{})};
@@ -2242,8 +2247,20 @@ function rememberStopTrack(st,leg,v,pos){ const k=stopTrackKey(st,leg); if(!k||!
 function learnItineraryTracks(it){ (it?.legs||[]).forEach(l=>{ if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
   [l.from,...(l.intermediateStops||[]),l.to].forEach(st=>{ if(!st)return; const v=platformValue({track:st.scheduledTrack})||platformValue(st); if(v)rememberStopTrack(st,l,v) }) }) }
 function platformValue(st){for(const v of [st?.track,st?.platformCode,st?.platform,st?.scheduledTrack])if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();return '';}
+/* Lettre / numéro du quai : OpenStreetMap d'abord. Le quai retenu est celui le plus proche de la position du quai
+   (fournie par Transitous si connue, sinon de l'arrêt), à condition qu'il soit seul ou nettement plus proche que les autres. */
+function osmPlatformLabel(st,leg){
+ if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
+ const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return '';
+ const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk], ref=m&&Number.isFinite(m.lat)?m:st;
+ const ranked=items.map(x=>({...x,d:dist(ref,x)*1000})).sort((a,b)=>a.d-b.d);
+ const chosen=ranked.length===1?(ranked[0].d<=60?ranked[0]:null):ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0]:null;
+ return chosen?String(chosen.label).replace(/^(quai|voie|platform|track)\s*/i,'').trim():'';
+}
 function resolvedStopPlatform(st,leg){
  if(!st)return '';
+ if(trackChanged(st))return platformValue({track:st.track}); // changement de quai en temps réel : toujours affiché
+ { const o=osmPlatformLabel(st,leg); if(o)return o; }
  const key=String(leg?.tripId||leg?.routeShortName||'')+'|'+nrmS(st.name);
  const trip=leg?.tripId&&tripCache[leg.tripId];
  const ts=trip?.stops?.find(x=>(st.stopId&&x.stopId===st.stopId)||nrmS(x.name)===nrmS(st.name));
@@ -2261,11 +2278,15 @@ function resolvedStopPlatform(st,leg){
 /* Position réelle du quai (OpenStreetMap) quand elle est connue : sert à placer l'arrêt sur la carte et à guider la marche. */
 function platformPos(st,leg){
  if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return null;
- { const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk]; if(m&&Number.isFinite(m.lat)&&dist(st,m)*1000<=150)return {lat:m.lat,lon:m.lon}; }
- const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return null;
- const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase(); if(!v)return null;
- const m=items.filter(x=>String(x.label).replace(/^(quai|voie)\s*/i,'').trim().toLowerCase()===v).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
- return m&&m.d<=90?{lat:m.lat,lon:m.lon}:null;
+ const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk], memPos=m&&Number.isFinite(m.lat)&&dist(st,m)*1000<=150?{lat:m.lat,lon:m.lon}:null;
+ const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[];
+ const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase();
+ let osmPos=null;
+ if(v&&items.length){ // quai OSM dont le numéro correspond à la voie connue (ex. « 7;8 » correspond à 7)
+   const m2=items.filter(x=>String(x.label).replace(/^(quai|voie|platform|track)\s*/i,'').toLowerCase().split(/[;,\/\s]+/).includes(v)).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
+   if(m2&&m2.d<=90)osmPos={lat:m2.lat,lon:m2.lon} }
+ // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par Transitous
+ return osmPos||memPos;
 }
 const platStop=(st,leg)=>{ const p=platformPos(st,leg); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
