@@ -2193,18 +2193,20 @@ async function ensurePlatformCoords(it){
 }
 async function prefetchCardTracks(list){
   if(osmCardBusy)return;
-  const pairs=[];
+  const pairs=[], allStops=[], allSeen=new Set();
   (list||[]).forEach(it=>(it.legs||[]).forEach(l=>{
     if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
+    [l.from,l.to].forEach(st=>{ if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return; const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5); if(allSeen.has(k))return; allSeen.add(k); allStops.push({name:st.name||'Arrêt',lat:+st.lat,lon:+st.lon,rail:isRailLeg(l)}) });
     [[l.from,l.startTime],[l.to,l.endTime]].forEach(([st,at])=>{
       if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)||resolvedStopPlatform(st,l))return;
       pairs.push([st,l,at]);
     });
   }));
-  if(!pairs.length)return;
+  if(!pairs.length&&!allStops.length)return;
   osmCardBusy=true;
   try{
     let found=false;
+    if(allStops.length){ const fresh=allStops.filter(x=>!osmCardTried.has('all|'+nrmS(x.name)+'|'+x.lat.toFixed(5)+'|'+x.lon.toFixed(5))); fresh.forEach(x=>osmCardTried.add('all|'+nrmS(x.name)+'|'+x.lat.toFixed(5)+'|'+x.lon.toFixed(5))); if(fresh.length&&await fetchOsmStops(fresh)) found=true }
     // 1) horaires de l'arrêt : l'API y indique souvent le quai même quand le parcours ne le donne pas
     const seen=new Set();
     for(const [st,l,at] of pairs){
@@ -2245,8 +2247,20 @@ function rememberStopTrack(st,leg,v,pos){ const k=stopTrackKey(st,leg); if(!k||!
 function learnItineraryTracks(it){ (it?.legs||[]).forEach(l=>{ if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
   [l.from,...(l.intermediateStops||[]),l.to].forEach(st=>{ if(!st)return; const v=platformValue({track:st.scheduledTrack})||platformValue(st); if(v)rememberStopTrack(st,l,v) }) }) }
 function platformValue(st){for(const v of [st?.track,st?.platformCode,st?.platform,st?.scheduledTrack])if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();return '';}
+/* Lettre / numéro du quai : OpenStreetMap d'abord. Le quai retenu est celui le plus proche de la position du quai
+   (fournie par Transitous si connue, sinon de l'arrêt), à condition qu'il soit seul ou nettement plus proche que les autres. */
+function osmPlatformLabel(st,leg){
+ if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
+ const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return '';
+ const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk], ref=m&&Number.isFinite(m.lat)?m:st;
+ const ranked=items.map(x=>({...x,d:dist(ref,x)*1000})).sort((a,b)=>a.d-b.d);
+ const chosen=ranked.length===1?(ranked[0].d<=60?ranked[0]:null):ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0]:null;
+ return chosen?String(chosen.label).replace(/^(quai|voie|platform|track)\s*/i,'').trim():'';
+}
 function resolvedStopPlatform(st,leg){
  if(!st)return '';
+ if(trackChanged(st))return platformValue({track:st.track}); // changement de quai en temps réel : toujours affiché
+ { const o=osmPlatformLabel(st,leg); if(o)return o; }
  const key=String(leg?.tripId||leg?.routeShortName||'')+'|'+nrmS(st.name);
  const trip=leg?.tripId&&tripCache[leg.tripId];
  const ts=trip?.stops?.find(x=>(st.stopId&&x.stopId===st.stopId)||nrmS(x.name)===nrmS(st.name));
@@ -2271,8 +2285,8 @@ function platformPos(st,leg){
  if(v&&items.length){ // quai OSM dont le numéro correspond à la voie connue (ex. « 7;8 » correspond à 7)
    const m2=items.filter(x=>String(x.label).replace(/^(quai|voie|platform|track)\s*/i,'').toLowerCase().split(/[;,\/\s]+/).includes(v)).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
    if(m2&&m2.d<=90)osmPos={lat:m2.lat,lon:m2.lon} }
- // gares : OpenStreetMap (quai dessiné) d'abord ; bus/tram : point du quai fourni par Transitous d'abord
- return isRailLeg(leg)?(osmPos||memPos):(memPos||osmPos);
+ // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par Transitous
+ return osmPos||memPos;
 }
 const platStop=(st,leg)=>{ const p=platformPos(st,leg); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
