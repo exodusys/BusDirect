@@ -502,7 +502,7 @@ function addDest(r){
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
   S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
     area:(r.areas||[]).find(a=>a.default||a.matched)?.name||'',detail:resDetail(r),zip:String(r.zip||'').split(';')[0]});
-  save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1)); setTimeout(()=>{ try{ downloadRegionData() }catch{} },5000);
+  save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
 }
 function renderDests(){
@@ -1029,7 +1029,7 @@ async function colorsBeforeRender(list){
 }
 /* Cache des données : tout ce qui est gardé pendant une durée (couleurs des lignes, trajets à pied, quais, trottoirs, positions de quais…).
    Les destinations, parcours suivis et réglages ne sont jamais touchés. */
-const CACHE_KEY_RE=/^bd_(region_dl|osmc|osm_stops_v\d+|stop_tracks_v\d+|walk_v\d+|planv|cantonCache)$/;
+const CACHE_KEY_RE=/^bd_(osmc|osm_stops_v\d+|stop_tracks_v\d+|walk_v\d+|planv|cantonCache)$/;
 function cacheKeys(){ const out=[]; try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(CACHE_KEY_RE.test(k)) out.push(k) } }catch{} return out }
 function updateCacheInfo(){ const el=document.getElementById('cacheTxt'); if(!el)return; let n=0; try{ cacheKeys().forEach(k=>{ n+=(k.length+(localStorage.getItem(k)||'').length)*2 }) }catch{}
   el.textContent='Couleurs des lignes, trajets à pied, quais, trottoirs… · '+(n<1024?'vide':n<1048576?Math.round(n/1024)+' Ko':(n/1048576).toFixed(1)+' Mo') }
@@ -1088,7 +1088,7 @@ function refreshColorsUI(){clearTimeout(colT);colT=setTimeout(()=>{
 },40)}
 function lineColor(l){
   if(l&&l.from&&l.mode!=='WALK'){const o=OSMC.m[osmKey(l)]; if(o){const bg=cssColor(o[0]);return [bg,cssColor(o[1])||textOn(bg)]}
-    const ak=aliasKey(l), oa=(ak&&OSMC.a[ak])||OSMC.a[nref(l.routeShortName||l.displayName)+'@@'+Math.round(l.from.lat*10)+','+Math.round(l.from.lon*10)]; if(oa){const bg=cssColor(oa[0]);return [bg,cssColor(oa[1])||textOn(bg)]}
+    const ak=aliasKey(l), oa=ak&&OSMC.a[ak]; if(oa){const bg=cssColor(oa[0]);return [bg,cssColor(oa[1])||textOn(bg)]}
     osmWant(l)}
   if(l.routeColor&&l.routeColor.toLowerCase()!=='ffffff') return ['#'+l.routeColor, l.routeTextColor?'#'+l.routeTextColor:'#fff'];
   return MODE_COLOR[l.mode]||['#636e80','#fff'];
@@ -3384,47 +3384,5 @@ new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(do
   const t=localStorage.getItem('bd_tab'); if(t&&t!=='horaires'){ const b=document.querySelector('#tabs button[data-v="'+t+'"]'); if(b&&b.offsetParent!==null){ document.body.style.setProperty('--noanim','1'); b.click(); document.querySelector('main')?.scrollTo(0,0) } }
 }catch(e){} })();
 
-
-/* Téléchargement en arrière-plan des données de la région de chaque dalle (destination) :
-   1) couleurs de toutes les lignes de la zone (une seule requête), 2) quais des arrêts proches (hors gares). Refait au plus une fois par semaine. */
-const REGION_LS='bd_region_dl'; let regionBusy=false;
-async function regionColors(lat,lon){
-  const pad=0.05, b=[lat-pad,lon-pad,lat+pad,lon+pad];
-  const els=await overpassRace(`[out:json][timeout:25][bbox:${b.join(',')}];relation[type=route][route~"^(bus|trolleybus|tram|train|subway|light_rail|ferry|funicular|monorail)$"][ref][colour];out tags bb;`);
-  if(!els) return false; const cl=(x,a,z)=>Math.max(a,Math.min(z,x)); let n=0;
-  els.forEach(e=>{ const t=e.tags||{}, bd=e.bounds, ref=nref(t.ref), bg=t.colour; if(!ref||!bg||!bd) return;
-    const val=[bg,t['colour:text']||t.text_colour||null], ags=[...new Set([t.operator,t.network].filter(Boolean).map(norm2))];
-    const la0=Math.round(cl(bd.minlat,b[0],b[2])*10), la1=Math.round(cl(bd.maxlat,b[0],b[2])*10), lo0=Math.round(cl(bd.minlon,b[1],b[3])*10), lo1=Math.round(cl(bd.maxlon,b[1],b[3])*10);
-    for(let la=la0;la<=la1;la++) for(let lo=lo0;lo<=lo1;lo++){ const pos=la+','+lo;
-      ags.forEach(ag=>{ OSMC.a[ref+'@'+ag+'@'+pos]=val }); if(!OSMC.a[ref+'@@'+pos]) OSMC.a[ref+'@@'+pos]=val; n++ } });
-  osmSave(); refreshColorsUI(); return n>0;
-}
-async function regionStops(lat,lon){
-  const d=0.012; let list=null;
-  for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/stops?min=${lat-d},${lon-d}&max=${lat+d},${lon+d}`); if(r.ok){ list=await r.json(); break } }catch{} }
-  if(!Array.isArray(list)) return false;
-  const RAIL=/gare|bahnhof|hbf|stazione|a[ée]roport|airport/i;
-  const stops=list.filter(x=>x&&x.name&&Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)&&!RAIL.test(x.name))
-    .map(x=>({name:x.name,lat:+x.lat,lon:+x.lon,rail:false,d:(x.lat-lat)**2+(x.lon-lon)**2})).sort((a,b)=>a.d-b.d).slice(0,40);
-  if(stops.length) await fetchOsmStops(stops);
-  return true;
-}
-async function downloadRegionData(){
-  if(regionBusy) return; regionBusy=true;
-  try{
-    if(document.hidden||navigator.connection?.saveData) return;
-    let st={}; try{ st=JSON.parse(localStorage.getItem(REGION_LS)||'{}') }catch{}
-    for(const d of S.dests){
-      const lat=+(d.type==='STOP'?d.lat:(d.nearStop?.lat??d.lat)), lon=+(d.type==='STOP'?d.lon:(d.nearStop?.lon??d.lon));
-      if(!Number.isFinite(lat)||!Number.isFinite(lon)) continue;
-      const k=lat.toFixed(2)+','+lon.toFixed(2); if(Date.now()-(st[k]||0)<7*864e5) continue;
-      const ok1=await regionColors(lat,lon); const ok2=await regionStops(lat,lon);
-      if(ok1&&ok2){ st[k]=Date.now(); try{ localStorage.setItem(REGION_LS,JSON.stringify(st)) }catch{} }
-      await new Promise(r=>setTimeout(r,2000));
-    }
-  }catch{} finally{ regionBusy=false }
-}
-(window.requestIdleCallback||function(f){setTimeout(f,3000)})(()=>setTimeout(downloadRegionData,6000));
-document.addEventListener('visibilitychange',()=>{ if(!document.hidden) setTimeout(downloadRegionData,4000) });
 requestAnimationFrame(function(){requestAnimationFrame(function(){window.__bootShow&&window.__bootShow()})});
 </script></body></html>
