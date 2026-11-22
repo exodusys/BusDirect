@@ -14,7 +14,7 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
 <title>BusDirect</title>
 <style>
 :root{
-  --accent:#e30613; --accent2:#e30613aa;
+  --accent:#5ec26a; --accent2:#8fd897;
   --bg:#eef2f7; --text:#0d1424; --muted:#5b6578;
   --glass-rgb:255,255,255; --glass-a:.55; --blur:22px; --sat:180%;
   --border:rgba(255,255,255,.6); --shadow:0 8px 30px rgba(15,23,42,.12);
@@ -52,7 +52,7 @@ body.noglass .glass{backdrop-filter:none;-webkit-backdrop-filter:none;background
 header{position:fixed;top:calc(var(--safe-t) + 10px);left:10px;right:10px;z-index:20;padding:8px 14px;max-width:700px;margin:0 auto;
   display:flex;align-items:center;gap:10px;border-radius:28px} /* barre flottante, comme la barre d'onglets du bas */
 .logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;overflow:hidden;
-  color:var(--accent);font-size:20px}
+  color:#5ec26a;font-size:20px}
 .logo img{width:100%;height:100%;object-fit:cover}
 .appname{font-weight:800;font-size:20px;letter-spacing:-.3px}
 .appname span{color:var(--accent)}
@@ -276,7 +276,6 @@ svg.link circle{fill:var(--accent);stroke:#fff;stroke-width:2.5}
 .res{display:flex;gap:12px;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--border)}
 .res:last-child{border-bottom:none}
 .res .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(127,127,127,.15);font-size:17px}
-.res .nd{font-weight:500;color:var(--muted);font-size:.9em}
 .res .n{font-weight:600}
 .res .a{font-size:12px;color:var(--muted)}
 .del{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
@@ -307,9 +306,9 @@ input[type=range]{width:55%;accent-color:var(--accent)}
 .picker2.walls{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
 .pick2{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 4px 10px;border-radius:16px;background:rgba(127,127,127,.12);border:2px solid transparent;cursor:pointer;text-align:center}
 .pick2 span{font-size:11.5px;font-weight:700;line-height:1.15}
-.pick2.on{border-color:var(--accent);background:rgba(227,6,19,.15)}
+.pick2.on{border-color:#5ec26a;background:rgba(94,194,106,.15)}
 .pick2 .pv{width:44px;height:44px;display:grid;place-items:center;border-radius:12px;background-size:cover;background-position:center;font-size:22px;color:var(--muted)}
-.pick2 .logo-pv{color:var(--accent)}
+.pick2 .logo-pv{color:#5ec26a}
 .pick2 .wall-pv{width:100%;height:auto;aspect-ratio:3/4;border-radius:12px;background:#0b0b0d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
 .pick2.add .pv{background:rgba(127,127,127,.18)}
 .pick2 .pick-x{top:-6px;right:-6px}
@@ -514,8 +513,8 @@ html.map-edge #map{position:absolute;left:0;right:0;top:calc(-160px - env(safe-a
 
 
 /* Accueil discret : icône fine de 18 px, zone tactile conservée. */
-.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:9px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
-.home-btn svg{display:block;width:22px;height:22px;opacity:.75;pointer-events:none}
+.home-btn{flex:0 0 40px;width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer;touch-action:manipulation}
+.home-btn svg{display:block;width:18px;height:18px;opacity:.75;pointer-events:none}
 .home-btn:active{background:rgba(127,127,127,.08);color:var(--text)}
 .home-btn:active svg,.home-btn:focus-visible svg{opacity:1}
 .home-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -626,44 +625,6 @@ html body>main{
 /* Bandes de teinte : seulement sous la barre d'état / l'indicateur d'accueil, au-dessus de tout, sans toucher au bandeau */
 .edge-tint{display:none!important;z-index:9999!important;height:env(safe-area-inset-top,0px)!important}
 #edgeBottom{height:env(safe-area-inset-bottom,0px)!important}
-
-/* Bandeaux supérieur et inférieur à 15px du bord */
-body:not(.classic) header{top:calc(var(--safe-t) + 15px)}
-body:not(.classic) nav{bottom:calc(var(--safe-b) + 15px)}
-body.list-page #listTop{top:calc(var(--safe-t) + 15px)}
-body.list-page #timeBar{top:calc(var(--safe-t) + 23px + var(--lt-h,52px))}
-main{padding-top:calc(var(--safe-t) + 77px)}
-body.classic main{padding-top:calc(var(--safe-t) + 66px)}
-body.list-page main{padding-top:var(--safe-t)}
-
-/* Dans Safari (hors app écran d'accueil), la fenêtre s'arrête déjà au-dessus de la barre d'accueil : pas de zone sûre en plus */
-@media not all and (display-mode:standalone){
-  body:not(.classic) nav{bottom:15px}
-}
-
-/* Bandeau du bas remonté de 15px */
-body:not(.classic) nav{bottom:calc(var(--safe-b) + 30px)}
-@media not all and (display-mode:standalone){
-  body:not(.classic) nav{bottom:30px}
-}
-
-/* Page étendue jusqu'au bas de l'écran : main et fond débordent sous la barre du bas */
-html,body{height:100%!important;min-height:100lvh!important}
-html body>main{
-  top:0!important;bottom:0!important;height:auto!important;
-  border-top:0!important;border-bottom:0!important;
-  background:transparent!important;background-image:none!important;   /* le fond vient du calque fixe #appWallpaper, étendu sous la barre du bas */
-  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 100px)!important;   /* main finit au bord de l'écran : les animations de fin de liste restent visibles */
-}
-body.list-page>main{padding-bottom:calc(env(safe-area-inset-bottom,0px) + 24px)!important}
-body::before,#appWallpaper{
-  top:0!important;bottom:-160px!important;height:auto!important;min-height:0!important;
-}
-/* Animations d'allongement de la liste : barres seules, sans texte, un peu plus grandes */
-.load-more span{display:none!important}
-.load-more{gap:7px}
-.load-more i{width:10px;height:24px;border-radius:3px}
-@keyframes lm{0%,100%{opacity:.15;transform:skewX(-18deg) translateX(0)}40%{opacity:1;transform:skewX(-18deg) translateX(8px)}}
 </style>
 <link rel="apple-touch-icon" id="appIcon" href="">
 <link rel="icon" id="favIcon" href="">
@@ -886,9 +847,9 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
+  settings: Object.assign({theme:'dark',accent:'#5ec26a',glass:true,blur:20,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
-if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='#e30613'; S.settings.accentRed=true; } // accent par défaut : rouge
+if(S.settings.accent==='#e30613') S.settings.accent='#5ec26a'; // nouvel accent par défaut
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
 // migration ancienne version (une seule image perso)
 (()=>{const s=S.settings;
@@ -1203,8 +1164,6 @@ function withFinalWalk(list,orig,stop,fw){
     return {...it,legs:[...it.legs,leg],endTime:leg.endTime,duration:(it.duration||0)+fw.dur,_fw:true};
   });
 }
-// Une requête Transitous sans réponse ne bloque plus la recherche : abandon après 15 s
-(()=>{ const f0=window.fetch.bind(window); window.fetch=(u,o={})=>{ try{ if(typeof u==='string'&&u.startsWith(API)&&!o.signal&&window.AbortController){ const c=new AbortController(); const t=setTimeout(()=>c.abort(),15000); return f0(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t)) } }catch(e){} return f0(u,o) } })();
 async function nextDepartures(dest,from,onMore){
   const origDest=dest;
   [dest,from]=await Promise.all([nearestStop(dest),from?nearestStop(from):null]);
@@ -1225,15 +1184,6 @@ async function nextDepartures(dest,from,onMore){
 
 /* ========= Parcours (search & save) ========= */
 function goAddFirst(){ document.querySelector('#tabs button[data-v="parcours"]').click(); const q=$('#q'); if(q) q.focus({preventScroll:true}) }   // focus immédiat : iOS ouvre le clavier
-// Détails sur la 1re ligne des résultats : type de lieu et adresse (rue + numéro)
-const CAT_FR={convenience:'Épicerie',department_store:'Grand magasin',clothes:'Vêtements',hairdresser:'Coiffeur',kiosk:'Kiosque',butcher:'Boucherie',florist:'Fleuriste',optician:'Opticien',chemist:'Droguerie',electronics:'Électronique',furniture:'Meubles',hardware:'Quincaillerie',doityourself:'Bricolage',books:'Librairie',shoes:'Chaussures',jewelry:'Bijouterie',gym:'Salle de sport',fitness_centre:'Salle de sport',playground:'Place de jeux',place_of_worship:'Lieu de culte',community_centre:'Centre communautaire',nightclub:'Boîte de nuit',pub:'Pub',ice_cream:'Glacier',car_wash:'Lavage auto',car_repair:'Garage',veterinary:'Vétérinaire',atm:'Distributeur',marketplace:'Marché',zoo:'Zoo',viewpoint:'Point de vue',monument:'Monument',castle:'Château',college:'Haute école',post_box:'Boîte aux lettres',toilets:'Toilettes',bus_station:'Gare routière',airport:'Aéroport',ferry_terminal:'Débarcadère',restaurant:'Restaurant',cafe:'Café',bar:'Bar',fast_food:'Restauration rapide',school:'École',university:'Université',hospital:'Hôpital',clinic:'Clinique',pharmacy:'Pharmacie',supermarket:'Supermarché',shop:'Magasin',hotel:'Hôtel',museum:'Musée',park:'Parc',church:'Église',bank:'Banque',post_office:'Poste',library:'Bibliothèque',cinema:'Cinéma',theatre:'Théâtre',stadium:'Stade',parking:'Parking',fuel:'Station-service',townhall:'Mairie',police:'Police',station:'Gare',bakery:'Boulangerie',doctors:'Médecin',dentist:'Dentiste',kindergarten:'Crèche',sports_centre:'Centre sportif',swimming_pool:'Piscine',mall:'Centre commercial',office:'Bureau',attraction:'Attraction'};
-function resDetail(r){
-  const ck=String(r.category||'').replace(/[\d\s]+$/,'').trim().toLowerCase().replace(/\s+/g,'_');   // « Supermarket 14 » → supermarket
-  const cat=ck?(CAT_FR[ck]||ck.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase())):'';
-  const street=r.street?(r.street+(r.houseNumber?' '+r.houseNumber:'')):'';
-  const addr=r.type==='PLACE'?'':street&&!r.name.toLowerCase().includes(r.street.toLowerCase())?street:(r.type==='ADDRESS'&&r.houseNumber&&!r.name.includes(r.houseNumber)?r.houseNumber:'');
-  return [r.type==='STOP'?'Arrêt':r.type==='ADDRESS'?'':cat,addr].filter(Boolean).join(' · ');
-}
 let qTimer;
 $('#q').addEventListener('input',e=>{
   clearTimeout(qTimer); const v=e.target.value.trim();
@@ -1241,11 +1191,10 @@ $('#q').addEventListener('input',e=>{
   qTimer=setTimeout(async()=>{
     const box=$('#results'); box.style.display='block'; box.innerHTML='<div class="spin"></div>';
     try{
-      let res=await geocode(v); if(pos) res=res.map(r=>({...r,_km:kmDist([r.lon,r.lat],[pos.lon,pos.lat])})).sort((a,b)=>a._km-b._km);   // du plus proche au plus loin
-      res=res.slice(0,10);
+      const res=(await geocode(v)).slice(0,10);
       if(!res.length){box.innerHTML='<div class="empty">Aucun résultat</div>';return}
       box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${TYPE_ICON[r.type]||'📍'}</div>
-        <div style="flex:1"><div class="n">${esc(r.name)}${resDetail(r)?` <span class="nd">· ${esc(resDetail(r))}</span>`:''}</div><div class="a">${esc([String(r.zip||'').split(';')[0],...(r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2)].filter(Boolean).join(' ')||r.type)}${r._km!=null?` · ${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(1)+' km'}`:''}</div></div><span>＋</span></div>`).join('');
+        <div style="flex:1"><div class="n">${esc(r.name)}</div><div class="a">${esc((r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2).join(', ')||r.type)}</div></div><span>＋</span></div>`).join('');
       box.querySelectorAll('.res').forEach(el=>el.onclick=()=>addDest(res[+el.dataset.i]));
     }catch{box.innerHTML='<div class="empty">Recherche indisponible</div>'}
   },300);
@@ -1253,7 +1202,7 @@ $('#q').addEventListener('input',e=>{
 function addDest(r){
   if(S.dests.some(d=>d.lat===r.lat&&d.lon===r.lon)){toast('Déjà enregistré');return}
   S.dests.push({uid:Date.now().toString(36),id:r.id,type:r.type,name:r.name,lat:r.lat,lon:r.lon,
-    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||'',detail:resDetail(r),zip:String(r.zip||'').split(';')[0]});
+    area:(r.areas||[]).find(a=>a.default||a.matched)?.name||''});
   save(); renderDests(); renderTiles(); toast('Destination ajoutée'); nearestStop(S.dests.at(-1));
   $('#q').value=''; $('#results').style.display='none';
 }
@@ -1261,7 +1210,7 @@ function renderDests(){
   const el=$('#destList');
   if(!S.dests.length){el.innerHTML='<div class="empty"><b>⭐</b>Recherche un arrêt, une adresse ou un lieu.</div>';return}
   el.innerHTML=S.dests.map((d,i)=>`<div class="res" style="padding:10px 4px"><div class="ic">${TYPE_ICON[d.type]||'📍'}</div>
-    <div style="flex:1"><div class="n">${esc(d.name)}${d.detail?` <span class="nd">· ${esc(d.detail)}</span>`:''}</div><div class="a">${esc([d.zip,d.area].filter(Boolean).join(' '))}${pos&&d.lat!=null?(k=>` · ${k<1?Math.round(k*1000)+' m':k.toFixed(1)+' km'}`)(kmDist([d.lon,d.lat],[pos.lon,pos.lat])):''}</div></div>
+    <div style="flex:1"><div class="n">${esc(d.name)}</div><div class="a">${esc(d.area)}</div></div>
     <button class="del" onclick="moveDest(${i},-1)">↑</button><button class="del" onclick="delDest('${d.uid}')">✕</button></div>`).join('');
 }
 function delDest(uid){S.dests=S.dests.filter(d=>d.uid!==uid);if(selDest?.uid===uid||selFrom?.uid===uid){selDest=null;selFrom=null}save();renderDests();renderTiles()}
@@ -1371,14 +1320,14 @@ function goNow(){   // retour à l'affichage de départ : le prochain départ en
   document.querySelector('main')?.scrollTo({top:0,behavior:'smooth'});
   const toTop=()=>{ if((document.querySelector('main')?.scrollTop||0)!==0) document.querySelector('main')?.scrollTo({top:0}) };  // la liste revient exactement tout en haut
   setTimeout(toTop,450); setTimeout(toTop,1200);
-  loadJourneys(true).then(()=>setTimeout(toTop,50));         // relance toujours, même si une recherche était bloquée
+  if(!loading) loadJourneys().then(()=>setTimeout(toTop,50));         // actualisation en direct, sans vider la liste
   setTimeout(followTimeBar,500);
 }
 function setPlanTime(v){
   pastFloor=null;
   planTime=v?new Date(v):null;
   if(planTime&&Math.abs(planTime-Date.now())<60000) planTime=null;
-  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys(true);
+  syncTimeBar(); shown=5; pastReserve=[];pastCur=null;nextCur=null;listCur=null; loadedFor=null; $('#journeys').innerHTML=''; loadJourneys();
 }
 setInterval(()=>{ if(!planTime&&document.activeElement!==$('#planTime')) syncTimeBar() },30000);
 /* ========= « Où suis-je ? » : trouver le véhicule dans lequel je me trouve ========= */
@@ -1456,10 +1405,8 @@ async function refreshMyTrip(){ // actualisation en direct de la course suivie
   lastJourneys=[itin]; renderJourneyList();
 }
 let loadedFor=null, loading=false;
-let jGen=0;
-async function loadJourneys(force){
-  if(!selDest||(loading&&!force)) return;   // force : « Maintenant » / nouvelle date relancent même si une recherche est en cours
-  const gen=++jGen;
+async function loadJourneys(){
+  if(!selDest||loading) return;
   if(selDest.type==='TRIP') return refreshMyTrip();
   $('#jrHead').style.display='flex'; $('#timeBar').style.display='flex'; syncTimeBar(); setListTitle();
   const box=$('#journeys');
@@ -1474,11 +1421,10 @@ async function loadJourneys(force){
     if(first&&!planTime){ try{const c=JSON.parse(sessionStorage.getItem(ck)||'null');
       if(c&&Date.now()-c.t<10*60000){ const fresh=cleanList(c.d); if(fresh.length){ lastJourneys=fresh; loadedFor=pairKey; renderJourneyList(); } } }catch{} }
     const reqDest=selDest, reqFrom=selFrom;
-    const data=await nextDepartures(selDest,selFrom,more=>{ if(gen!==jGen||selDest!==reqDest||selFrom!==reqFrom) return;
+    const data=await nextDepartures(selDest,selFrom,more=>{ if(selDest!==reqDest||selFrom!==reqFrom) return;
       prefetchColors(more); lastJourneys=first?more:mergeRefresh(lastJourneys,more); renderJourneyList(); try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:more}))}catch{} });
     try{sessionStorage.setItem(ck,JSON.stringify({t:Date.now(),d:data}))}catch{}
-    if(gen!==jGen) return;   // une recherche plus récente a pris le relais
-    if(selDest!==reqDest||selFrom!==reqFrom){ if(first&&!lastJourneys.length) box.innerHTML=''; return }   // dalle désélectionnée / changée pendant le chargement
+    if(selDest!==reqDest||selFrom!==reqFrom) return;   // dalle désélectionnée / changée pendant le chargement
     lastPlanPos=usedPos;
     if(first&&loadedFor!==pairKey) await colorsBeforeRender(data); else prefetchColors(data);
     if(first||!listCur) listCur=data._cur||null;   // la première recherche fournit les curseurs page précédente / suivante
@@ -1486,8 +1432,8 @@ async function loadJourneys(force){
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList();
-  }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
-  finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
+  }catch(e){ if(first) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous.</div>'; }
+  finally{loading=false; $('#jrHead').classList.remove('busy')}
 }
 let shown=5;
 const jStart=it=>+new Date(firstTransit(it).startTime);
@@ -1745,7 +1691,7 @@ function lineColor(l){
 function badge(l,size){const [bg,fg]=lineColor(l);const rail=/RAIL|LONG|SUBURBAN/.test(l.mode);
   return `<span class="lb ${size}${rail?' rail':''}" style="background:${bg};color:${fg}">${esc(l.routeShortName||l.displayName||'?')}</span>`}
 function fmtDay(d){const t=new Date(d);return t.toLocaleDateString('fr-CH',{weekday:'short',day:'numeric',month:'short'})}
-function fmtMapCountdown(at){const t=fmtCd(Number(at));return t==='à quai'?t:'dans '+t}
+function fmtMapCountdown(at){return fmtCd(Number(at))}
 setInterval(()=>document.querySelectorAll('#mapSub .map-countdown').forEach(el=>{const text=fmtMapCountdown(el.dataset.at);if(el.textContent!==text)el.textContent=text}),1000);
 function fmtCd(at){let d=Math.round((at-Date.now())/1000);if(d<=0)return 'à quai';const h=Math.floor(d/3600),m=Math.floor(d%3600/60),x=d%60;return (h?h+'h ':'')+(h||m?String(m).padStart(h?2:1,'0')+'m ':'')+String(x).padStart(2,'0')+'s'}
 // Compte à rebours à la seconde, sans re-rendre la liste
@@ -2061,7 +2007,7 @@ const LOGOS={
 // Icône de l'écran d'accueil = logo choisi (Safari lit l'icône au moment de « Sur l'écran d'accueil »)
 let appIconKey='';
 function updateAppIcon(customUrl,key){
-  const accent=(S.settings&&S.settings.accent)||'#e30613'; const k=(customUrl||key)+'|'+accent; if(k===appIconKey) return; appIconKey=k;
+  const accent=(S.settings&&S.settings.accent)||'#5ec26a'; const k=(customUrl||key)+'|'+accent; if(k===appIconKey) return; appIconKey=k;
   const src=customUrl||('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="180" height="180" color="${accent}">${(LOGOS[key]||LOGOS.original).s}</svg>`));
   const im=new Image(); im.crossOrigin='anonymous';
   im.onload=()=>{ try{
@@ -2621,7 +2567,7 @@ function setRouteDim(on){
   [['route-line','line-opacity'],['route-casing','line-opacity'],['route-walk','line-opacity']].forEach(([id,p])=>{
     if(!mlMap.getLayer(id)) return;
     if(id==='route-walk') mlMap.setPaintProperty(id,p,on?['case',['==',['get','idx'],mapWalk],1,0.25]:1);
-    else mlMap.setPaintProperty(id,p,1);   // lignes de véhicules toujours en couleur, même quand une marche est sélectionnée
+    else mlMap.setPaintProperty(id,p,on?0.25:1);
   });
   if(mlMap.getLayer('route-walk')) mlMap.setPaintProperty('route-walk','line-width',on?['case',['==',['get','idx'],mapWalk],7,4]:5);
   document.querySelectorAll('.stop-lbl.minor').forEach(e=>e.style.opacity=on?0.35:'');
@@ -2758,7 +2704,7 @@ function drawNextStop(){
   const tr=vehState?.trip; if(!tr||!tr.stops||!vehMk){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
   const t=Date.now()-(delayShown??delayTarget);
   const ns=tr.stops.find(x=>x.a>t+5000); if(!ns){ if(nextStopMk){nextStopMk.remove();nextStopMk=null} return }
-  const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#e30613';
+  const ft=activeLeg(mapIt), col=ft?lineColor(ft)[0]:'#5ec26a';
   const html=`<div class="ns-b" style="--c:${col}"><small>Prochain arrêt</small><b>${esc(ns.name)}</b><em>${hm(ns.arr)}</em></div>`;
   if(!nextStopMk){ const el=document.createElement('div'); el.className='ns-wrap'; nextStopMk=new maplibregl.Marker({element:el,anchor:'bottom',offset:[0,-10],subpixelPositioning:true}).setLngLat([ns.lon,ns.lat]).addTo(mlMap) }
   const el=nextStopMk.getElement(); if(el._h!==html){ el.innerHTML=html; el._h=html } nextStopMk.setLngLat([ns.lon,ns.lat]);
@@ -2828,7 +2774,7 @@ async function updateVehicle(){
   if(!p){const a=+new Date(ft.startTime),b=+new Date(ft.endTime); if(now>=a&&now<=b){ vehState={kind:'seg',line:legCoords(ft),dep:a,arr:b,trip}; p=vehPosAt(now) }}
   if(!p) vehState=null;
   drawApproach(trip,p,ft);
-  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Arrive à ton arrêt à':'Arrivée prévue à'} ${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
+  if(!p){ vehShown=null; if(vehMk){vehMk.remove();vehMk=null} if(mapWalk==null){const d=decisiveStop(ft);$('#mapSub').innerHTML=`<span class="sub2">${d.lbl==='Montée'?'Départ':'Arrivée'} ${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub1">Position du véhicule pas encore disponible</span><span class="sub3">${d.lbl} : ${esc(d.name||'')}</span>`;} return }
   if(!vehMk){const el=document.createElement('div');el.className='veh-m';el.style.zIndex='5'; vehMk=new maplibregl.Marker({element:el,subpixelPositioning:true}).setLngLat(p).addTo(mlMap)}
   const [bg,fg]=lineColor(ft); const el=vehMk.getElement(); el.style.zIndex='5'; el.style.background=bg; el.style.color=fg; el.textContent=ft.routeShortName||'';
   if(!vehShown) {vehShown=p.slice(); vehMk.setLngLat(p)}
@@ -2836,7 +2782,7 @@ async function updateVehicle(){
   const before=now<+new Date(ft.startTime);
   if(mapWalk==null){
     const d=decisiveStop(ft);
-    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} / <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
+    $('#mapSub').innerHTML=`<span class="sub1">${live?'🟢 Position en temps réel':trip?.rt?'🟢 Selon l\'horaire en direct':'Position estimée (horaire prévu)'}</span><span class="sub2">${before?'Arrive à ton arrêt à ':'Arrivée prévue à '}${hm(d.at)} <span class="map-countdown" data-at="${d.at}">${fmtMapCountdown(d.at)}</span></span><span class="sub3">🎯 ${d.lbl} : ${esc(d.name||'')}</span>`;
   }
 }
 
@@ -3091,27 +3037,6 @@ renderDests(); renderTiles(); renderSMS(); locate();
  },{capture:true,passive:true});
  new MutationObserver(()=>{if(active&&context()?.content!==active.content)clear()}).observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});window.addEventListener('resize',clear,{passive:true});
 })();
-
-// Espace barre de date → première dalle = espace entre deux dalles (mesuré, pas codé en dur)
-function fitListGap(){ try{
-  const main=document.querySelector('main'), vl=$('#v-list'), tb=$('#timeBar');
-  const cards=document.querySelectorAll('#journeys > .jr'), card=cards[0]||document.querySelector('#journeys > .card, #journeys > .spin');   // aussi « Aucun départ à proximité »
-  if(!main||!vl||!tb||!card||tb.style.display==='none'||!document.body.classList.contains('list-page')) return;
-  const gap=parseFloat(getComputedStyle(cards[0]||card).marginBottom)||8;   // écart entre dalles (ne mesure plus à travers « Maintenant » ou un séparateur de jour)
-  const cur=parseFloat(getComputedStyle(vl).paddingTop)||0;
-  const mt=$('#moreTop'), mtH=mt&&mt.style.display!=='none'?mt.offsetHeight:0;   // l'animation du haut ne compte pas dans l'écart
-  const cardTop=card.getBoundingClientRect().top+main.scrollTop-mtH;          // position de la 1re dalle sans défilement
-  const pad=Math.max(0,Math.round(cur+(tb.getBoundingClientRect().bottom+gap-cardTop)));
-  if(Math.abs(pad-cur)>0.5){
-    const st=main.scrollTop;
-    vl.style.setProperty('padding-top',pad+'px','important');
-    if(st>2) main.scrollTop=st+(pad-cur);   // liste défilée : les dalles ne sautent pas sous la barre de date
-  }
-}catch(e){} }
-{ const _r=renderJourneyList; renderJourneyList=function(){ const r=_r.apply(this,arguments); requestAnimationFrame(fitListGap); setTimeout(fitListGap,300); setTimeout(fitListGap,1000); return r } }
-try{ const ro=new ResizeObserver(()=>requestAnimationFrame(fitListGap)); ['#timeBar','#listTop'].forEach(id=>{const n=$(id); if(n) ro.observe(n)}); new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#timeBar'),{attributes:true,attributeFilter:['style','class']}) }catch(e){}
-addEventListener('resize',()=>requestAnimationFrame(fitListGap));
-try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#journeys'),{childList:true}) }catch(e){}
 </script>
 
 <script>
