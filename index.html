@@ -34,7 +34,7 @@ document.write('<meta name="theme-color" content="'+t+'"><meta name="color-schem
   filter:none!important;
   will-change:auto!important;
 }
-</style><link rel="apple-touch-icon" id="appIcon" href=""><link rel="icon" id="favIcon" href=""></head><body><script>try{if(JSON.parse(localStorage.getItem("bd_settings")||"{}").glass===false)document.body.classList.add("noglass")}catch(e){}</script><div id="appWallpaper" aria-hidden="true"></div><script>try{const t=localStorage.getItem('bd_tab');if(t&&t!=='horaires')document.documentElement.setAttribute('data-boot-tab',t)}catch(e){}</script><style>html[data-boot-tab]:not([data-boot-tab="horaires"]) #v-horaires{visibility:hidden!important}</style>
+</style><link rel="apple-touch-icon" id="appIcon" href=""><link rel="icon" id="favIcon" href=""></head><body><script>try{if(JSON.parse(localStorage.getItem("bd_settings")||"{}").glass===false)document.body.classList.add("noglass")}catch(e){}</script><div id="appWallpaper" aria-hidden="true"></div>
 
 <header class="glass"><div class="logo" id="logo">🚌</div><div class="appname">Bus<span>Direct</span></div><div class="spacer"></div><div class="loc" id="locLabel" aria-live="polite"></div></header>
 
@@ -3368,6 +3368,6 @@ new MutationObserver(()=>requestAnimationFrame(syncIOSWallpaperTint)).observe(do
  
 (()=>{ try{
   document.querySelector('#tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b&&b.dataset.v) localStorage.setItem('bd_tab',b.dataset.v) });
-  const t=localStorage.getItem('bd_tab'); if(t&&t!=='horaires'){ const b=document.querySelector('#tabs button[data-v="'+t+'"]'); if(b&&b.offsetParent!==null){ document.body.style.setProperty('--noanim','1'); b.click(); document.querySelector('main')?.scrollTo(0,0) } } document.documentElement.removeAttribute('data-boot-tab'); setTimeout(()=>document.documentElement.removeAttribute('data-boot-tab'),400)
+  const t=localStorage.getItem('bd_tab'); if(t&&t!=='horaires'){ const b=document.querySelector('#tabs button[data-v="'+t+'"]'); if(b&&b.offsetParent!==null){ document.body.style.setProperty('--noanim','1'); b.click(); document.querySelector('main')?.scrollTo(0,0) } }
 }catch(e){} })();
 </script></body></html>
