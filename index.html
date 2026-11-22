@@ -2360,7 +2360,7 @@ function focusStep(i,refit){
   // zoom sur le trajet de ce transport : du quai de montée au quai de descente
   const b=new maplibregl.LngLatBounds(); clipLegToPlatforms(legCoords(l),l).forEach(c=>b.extend(c));
   [platformPos(l.from,l)||l.from,platformPos(l.to,l)||l.to].forEach(p=>{ if(p&&Number.isFinite(+p.lon)&&Number.isFinite(+p.lat)) b.extend([+p.lon,+p.lat]) });
-  mlMap.fitBounds(b,{padding:mapPad(20,Math.min(170,innerWidth*.38)),maxZoom:18.5,pitch:is3D?55:0,bearing:0,duration:600});
+  mlMap.fitBounds(b,{padding:mapPad(20),maxZoom:18.5,pitch:is3D?55:0,bearing:0,duration:600});
 }
 function placeMapSteps(){ const el=$('#mapSteps'), wc=$('#walkCard'); if(!el) return;
    
