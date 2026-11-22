@@ -779,6 +779,7 @@ function renderJourneyList(){
   const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   lastJourneys.forEach(learnItineraryTracks);
+  prefetchCardTracks(list);
   list.forEach((it,i)=>{
     const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
@@ -2107,22 +2108,15 @@ function osmPlatformText(tags,rail){
   if(/^(quai|voie|platform|track)\s*/i.test(raw))return raw;
   return (rail?'Voie ':'Quai ')+raw;
 }
-async function loadOsmPlatforms(it){
-  if(!mlMap||!it)return;
-  const stops=routeStopPoints(it); if(!stops.length)return;
+async function fetchOsmStops(stops){
   const now=Date.now(), pending=stops.filter(st=>{
     const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5),c=OSM_STOP_CACHE[k];
     return !c||now-(c.t||0)>14*864e5;
   });
-  const cached=stops.flatMap(st=>{
-    const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5),c=OSM_STOP_CACHE[k];
-    return c?.items?.map(x=>({...x,_stop:st}))||[];
-  });
-  const render=()=>{if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;clearOsmPlatformMarkers();refreshStopLbls();requestAnimationFrame(fitLabels);};
-  render(cached);
-  if(!pending.length)return;
+  if(!pending.length)return false;
   // Requêtes groupées, une zone serrée autour de chaque arrêt du trajet.
   const chunks=[];for(let i=0;i<pending.length;i+=12)chunks.push(pending.slice(i,i+12));
+  let did=false;
   for(const chunk of chunks){
     const clauses=chunk.map(st=>`node(around:90,${st.lat},${st.lon})["public_transport"="platform"];way(around:90,${st.lat},${st.lon})["public_transport"="platform"];node(around:90,${st.lat},${st.lon})["railway"="platform"];way(around:90,${st.lat},${st.lon})["railway"="platform"];way(around:55,${st.lat},${st.lon})["railway"="rail"]["ref"];`);
     const q=`[out:json][timeout:18];(${clauses.join('')});out center tags;`;
@@ -2140,13 +2134,39 @@ async function loadOsmPlatforms(it){
       const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5);
       OSM_STOP_CACHE[k]={t:Date.now(),items:candidates.map(({lat,lon,label})=>({lat,lon,label}))};
     });
-    saveOsmStopCache();
+    saveOsmStopCache(); did=true;
   }
-  const fresh=stops.flatMap(st=>{
-    const k=nrmS(st.name)+'|'+st.lat.toFixed(5)+'|'+st.lon.toFixed(5);
-    return OSM_STOP_CACHE[k]?.items?.map(x=>({...x,_stop:st}))||[];
-  });
-  render(fresh);
+  return did;
+}
+async function loadOsmPlatforms(it){
+  if(!mlMap||!it)return;
+  const stops=routeStopPoints(it); if(!stops.length)return;
+  const render=()=>{if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;clearOsmPlatformMarkers();refreshStopLbls();requestAnimationFrame(fitLabels);};
+  render();
+  if(await fetchOsmStops(stops)) render();
+}
+/* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
+const osmCardTried=new Set(); let osmCardBusy=false;
+async function prefetchCardTracks(list){
+  if(osmCardBusy)return;
+  const stops=[], refs=[];
+  (list||[]).forEach(it=>(it.legs||[]).forEach(l=>{
+    if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
+    const rail=/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
+    [l.from,l.to].forEach(st=>{
+      if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)||resolvedStopPlatform(st,l))return;
+      const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
+      if(osmCardTried.has(k))return; osmCardTried.add(k);
+      stops.push({name:st.name||'Arrêt',lat:+st.lat,lon:+st.lon,rail}); refs.push([st,l]);
+    });
+  }));
+  if(!stops.length)return;
+  osmCardBusy=true;
+  try{
+    const did=await fetchOsmStops(stops); let found=false;
+    refs.forEach(([st,l])=>{ const v=resolvedStopPlatform(st,l); if(v){ rememberStopTrack(st,l,v); found=true } });
+    if(did&&found&&$('#journeys')&&typeof renderJourneyList==='function')renderJourneyList();
+  }catch{}finally{osmCardBusy=false}
 }
 
 function delayTag(live,sched,rt){ if(!live||!sched) return ''; const d=Math.round((new Date(live)-new Date(sched))/60000);
