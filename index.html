@@ -2037,7 +2037,7 @@ function drawItinerary(it){
     if(!walk) co=clipLegToPlatforms(co,l);
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
   });
-  const src={type:'FeatureCollection',features:feats};
+  const src={type:'FeatureCollection',features:feats}; routeLinesLL=feats.map(f=>f.geometry.coordinates);
   if(mlMap.getSource('route')) mlMap.getSource('route').setData(src);
   else{
     mlMap.addSource('route',{type:'geojson',data:src});
@@ -2082,7 +2082,7 @@ function drawItinerary(it){
     el._p=p; el.innerHTML=stopLblHTML(p);
     if(p.ref){ const pl=p.ref.kind==='from'?p.ref.leg.from:p.ref.kind==='to'?p.ref.leg.to:p.ref.st; el.style.cursor='pointer'; el.style.pointerEvents='auto'; el.addEventListener('click',e=>{ e.stopPropagation(); openDepartures(pl) }) }    
     el.style.zIndex=p.major?'30':'20'; stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
-  updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) } loadOsmPlatforms(it).catch(()=>{}); ensurePlatformCoords(it).catch(()=>{});
+  updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) } loadOsmPlatforms(it).catch(()=>{}); ensurePlatformCoords(it).catch(()=>{}); requestAnimationFrame(fitLabels);
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
   else{
@@ -2283,16 +2283,38 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   // jamais à droite de l'heure ou du retard temps réel.
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
   return `<b${p._cx?' style="text-decoration:line-through;opacity:.7"':''}>${esc(p.name)}</b>${time||tag?`<em class="lt">${esc(time||'')}${tag?' '+tag:''}</em>`:''}${sub?`<small>${esc(sub)}</small>`:''}${trackText?`<small class="stop-track">${esc(trackText)}</small>`:''}` }
-function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }) }
+function refreshStopLbls(){ stopLbls.forEach(m=>{ const el=m.getElement(); if(el._p) el.innerHTML=stopLblHTML(el._p) }); requestAnimationFrame(fitLabels) }
  
 function collapseAttrib(){ document.querySelectorAll('#map .maplibregl-ctrl-attrib').forEach(a=>{ a.classList.remove('maplibregl-compact-show'); a.removeAttribute('open') }) }
 function updateLblZoom(){ if(mlMap) $('#map').classList.toggle('z-lo',mlMap.getZoom()<14.5) }
 function setMapOverview(on){ if(!on) setTimeout(fitLabels,650) }    
  
-function fitLabels(){ if(!mlMap) return; const W=$('#map').clientWidth;
-  stopLbls.forEach(m=>{ const el=m.getElement(); if(!el.offsetWidth) return; const major=el.classList.contains('major'), gap=major?14:9;
-    const pt=mlMap.project(m.getLngLat()); const flip=pt.x+gap+el.offsetWidth>W-6&&pt.x-gap-el.offsetWidth>6;
-    if(flip!==!!m._flip){ m._flip=flip; m.setOffset(flip?[-(gap+el.offsetWidth),0]:[gap,0]) } }) }
+let routeLinesLL=[];
+function segHitsRect(a,b,r){
+  const inR=p=>p.x>=r.x0&&p.x<=r.x1&&p.y>=r.y0&&p.y<=r.y1; if(inR(a)||inR(b))return true;
+  if(Math.max(a.x,b.x)<r.x0||Math.min(a.x,b.x)>r.x1||Math.max(a.y,b.y)<r.y0||Math.min(a.y,b.y)>r.y1)return false;
+  const ccw=(p,q,s)=>(s.y-p.y)*(q.x-p.x)-(q.y-p.y)*(s.x-p.x);
+  const inter=(p1,p2,p3,p4)=>(ccw(p1,p3,p4)>0)!==(ccw(p2,p3,p4)>0)&&(ccw(p1,p2,p3)>0)!==(ccw(p1,p2,p4)>0);
+  const c=[{x:r.x0,y:r.y0},{x:r.x1,y:r.y0},{x:r.x1,y:r.y1},{x:r.x0,y:r.y1}];
+  for(let i=0;i<4;i++) if(inter(a,b,c[i],c[(i+1)%4])) return true; return false }
+/* Placement des étiquettes d'arrêt : jamais sur la ligne du parcours, jamais l'une sur l'autre. */
+function fitLabels(){ if(!mlMap) return; const W=$('#map').clientWidth, M=3, prj=co=>co.map(c=>{const p=mlMap.project(c);return {x:p.x,y:p.y}});
+  const lines=routeLinesLL.map(prj); if(walkGeo&&walkGeo.length>1) lines.push(prj(walkGeo));
+  const items=stopLbls.filter(m=>m.getElement().offsetWidth).map(m=>{ const el=m.getElement(); return {m,pt:mlMap.project(m.getLngLat()),w:el.offsetWidth,h:el.offsetHeight,major:el.classList.contains('major')?1:0} });
+  items.sort((a,b)=>b.major-a.major);
+  const dots=items.map(it=>({x0:it.pt.x-9,x1:it.pt.x+9,y0:it.pt.y-9,y1:it.pt.y+9,o:it})), placed=[];
+  items.forEach(it=>{ const {pt,w,h}=it, g=it.major?14:9, v=h/2+2;
+    const cands=[[g,0],[-(g+w),0],[g,-v],[g,v],[-(g+w),-v],[-(g+w),v],[-w/2,-(h/2+g)],[-w/2,h/2+g],[g,-(h+4)],[g,h+4],[-(g+w),-(h+4)],[-(g+w),h+4]];
+    let best=null;
+    for(const [ox,oy] of cands){ const r={x0:pt.x+ox-M,x1:pt.x+ox+w+M,y0:pt.y+oy-h/2-M,y1:pt.y+oy+h/2+M};
+      let pen=0; if(r.x0<2||r.x1>W-2) pen+=2;
+      for(const q of placed) if(r.x0<q.x1&&r.x1>q.x0&&r.y0<q.y1&&r.y1>q.y0){ pen+=10; break }
+      for(const d of dots) if(d.o!==it&&r.x0<d.x1&&r.x1>d.x0&&r.y0<d.y1&&r.y1>d.y0){ pen+=4; break }
+      outer: for(const ln of lines){ for(let i=1;i<ln.length;i++){ if(segHitsRect(ln[i-1],ln[i],r)){ pen+=6; break outer } } }
+      if(!best||pen<best.pen){ best={ox,oy,pen,r}; if(!pen)break } }
+    placed.push(best.r);
+    const key=best.ox+','+best.oy; if(it.m._off!==key){ it.m._off=key; it.m.setOffset([best.ox,best.oy]) } });
+}
 let mapWalk=null;
  
 function focusWalk(){
