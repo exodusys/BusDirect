@@ -1384,6 +1384,7 @@ async function loadDepartures(){
   let d=null; for(const v of ['v1','v4','v5']){ try{ const r=await fetch(`${API}/${v}/stoptimes?${q}&n=30&time=${new Date().toISOString()}`,{cache:'no-store'}); if(r.ok){ d=await r.json(); break } }catch{} }
   if(depStop!==st) return;
   const rows=(d?.stopTimes||[]).filter(x=>x.place&&(x.place.departure||x.place.scheduledDeparture)).sort((a,b)=>new Date(a.place.departure||a.place.scheduledDeparture)-new Date(b.place.departure||b.place.scheduledDeparture));
+  if(!depRows.length){ const legs=rows.map(x=>({mode:x.mode,routeShortName:x.routeShortName||x.displayName,agencyName:x.agencyName,from:{lat:x.place.lat??st.lat,lon:x.place.lon??st.lon}})); try{ await colorsBeforeRender([{legs}]) }catch{} if(depStop!==st) return }
   depRows=rows; renderDepartures();
 }
 let depRows=[];
