@@ -1265,11 +1265,16 @@ function journeyHTML(it,i,tracked,suppressStartWalk=false){
 }
 function bindJourneys(box,list,tracked){
   box.querySelectorAll('.jr:not(.walk-tile)').forEach(el=>el.onclick=e=>{
-    const act=e.target.closest('[data-act]')?.dataset.act, it=(list||curList)[+el.dataset.i];
+    // Les cartes issues du glissement entre deux dalles sont réordonnées et
+    // réutilisées pendant les actualisations : retrouver d'abord le parcours
+    // par sa clé stable évite d'ouvrir une autre course que celle touchée.
+    const source=list||curList;
+    const it=source.find(x=>jkey(x)===el.dataset.k)||source[+el.dataset.i];
+    const act=e.target.closest('[data-act]')?.dataset.act;
     if(act==='alerts'){e.stopPropagation();if(it)showAlertDialog(alertsNoInterr(it));return}    
     if(act==='map'){e.stopPropagation();openMap(it);return}
     const wr=e.target.closest('.leg.walk-row'); if(act==='walk'||wr){e.stopPropagation();openMap(it,+(wr||e.target).dataset.leg);return}
-    const stopRow=e.target.closest('.legs > .leg[data-act="stops"]'); if(act==='stops'||stopRow){e.stopPropagation();const li=+(stopRow||e.target).dataset.leg;if(Number.isInteger(li)&&it?.legs?.[li]){jpIt=it;jpKey=jkey(it);jpTracked=!!tracked;openStopsPage(li)}return}
+    const stopRow=e.target.closest('.legs > .leg[data-act="stops"]'); if(act==='stops'||stopRow){e.preventDefault();e.stopPropagation();const li=+(stopRow||e.target).dataset.leg;if(Number.isInteger(li)&&it?.legs?.[li]){jpIt=it;jpKey=jkey(it);jpTracked=!!tracked;openStopsPage(li)}return}
     if(act==='track'){e.stopPropagation();trackIt(it);return}
     if(act==='untrack'){e.stopPropagation();S.tracked.splice(+el.dataset.i,1);save();updateSuivisTab();renderTracked();toast('Suivi retiré');if(!S.tracked.length)showHorairesHome();return}
     openJourneyPage(it,tracked);
