@@ -2148,25 +2148,56 @@ async function loadOsmPlatforms(it){
 }
 /* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
 const osmCardTried=new Set(); let osmCardBusy=false;
+async function learnTracksFromStopTimes(st,l,atISO){
+  const q=st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`;
+  for(const v of ['v1','v4','v5']){
+    try{
+      const r=await fetch(`${API}/${v}/stoptimes?${q}&n=40&time=${atISO}`,{cache:'no-store'}); if(!r.ok)continue;
+      const d=await r.json(); let got=false;
+      (d?.stopTimes||[]).forEach(x=>{ const pl=x.place; const tv=platformValue({track:pl?.scheduledTrack})||platformValue(pl); if(!tv)return;
+        const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign};
+        // même arrêt : mémorise pour cette ligne et direction ; même course : mémorise pour la course exacte
+        const sameStop=nrmS(pl.name)===nrmS(st.name);
+        if(sameStop){ rememberStopTrack(st,lg,tv); got=true }
+        if(sameStop&&l.tripId&&x.tripId===l.tripId){ rememberStopTrack(st,l,tv); got=true } });
+      return got;
+    }catch{}
+  }
+  return false;
+}
 async function prefetchCardTracks(list){
   if(osmCardBusy)return;
-  const stops=[], refs=[];
+  const pairs=[];
   (list||[]).forEach(it=>(it.legs||[]).forEach(l=>{
     if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
-    const rail=/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
-    [l.from,l.to].forEach(st=>{
+    [[l.from,l.startTime],[l.to,l.endTime]].forEach(([st,at])=>{
       if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)||resolvedStopPlatform(st,l))return;
+      pairs.push([st,l,at]);
+    });
+  }));
+  if(!pairs.length)return;
+  osmCardBusy=true;
+  try{
+    let found=false;
+    // 1) horaires de l'arrêt : l'API y indique souvent le quai même quand le parcours ne le donne pas
+    const seen=new Set();
+    for(const [st,l,at] of pairs){
+      const k='st|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
+      const t=new Date(at||Date.now()); if(isNaN(t))continue;
+      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())) found=true;
+    }
+    // 2) secours OpenStreetMap pour ce qui manque encore
+    const stops=[], refs=[];
+    pairs.forEach(([st,l])=>{
+      if(resolvedStopPlatform(st,l))return;
+      const rail=/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'');
       const k=nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5);
       if(osmCardTried.has(k))return; osmCardTried.add(k);
       stops.push({name:st.name||'Arrêt',lat:+st.lat,lon:+st.lon,rail}); refs.push([st,l]);
     });
-  }));
-  if(!stops.length)return;
-  osmCardBusy=true;
-  try{
-    const did=await fetchOsmStops(stops); let found=false;
+    let did=false; if(stops.length) did=await fetchOsmStops(stops);
     refs.forEach(([st,l])=>{ const v=resolvedStopPlatform(st,l); if(v){ rememberStopTrack(st,l,v); found=true } });
-    if(did&&found&&$('#journeys')&&typeof renderJourneyList==='function')renderJourneyList();
+    if((found||did)&&$('#journeys')&&typeof renderJourneyList==='function')renderJourneyList();
   }catch{}finally{osmCardBusy=false}
 }
 
