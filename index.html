@@ -2011,16 +2011,20 @@ const legWalkGeo=new Map();
 function drawItinerary(it){
   drawStairs('route',it.legs);
   const feats=[]; it.legs.forEach((l,idx)=>{ const color=l.mode==='WALK'?'#0a84ff':lineColor(l)[0], walk=l.mode==='WALK'?1:0; let co=legCoords(l), dash=[];
-    if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible
-      const wk=l.from.lon.toFixed(5)+','+l.from.lat.toFixed(5)+'>'+l.to.lon.toFixed(5)+','+l.to.lat.toFixed(5);
+    if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible, jusqu'au quai exact
+      const pvL=it.legs[idx-1], nxL=it.legs[idx+1], fromP=pvL&&pvL.mode!=='WALK'?platStop(l.from,pvL):l.from, toP=nxL&&nxL.mode!=='WALK'?platStop(l.to,nxL):l.to;
+      const wk=fromP.lon.toFixed(5)+','+fromP.lat.toFixed(5)+'>'+toP.lon.toFixed(5)+','+toP.lat.toFixed(5);
       if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g }
-      else{ legWalkGeo.set(wk,null); walkRouteOSM([l.from.lon,l.from.lat],l.to).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}) } }
+      else{ legWalkGeo.set(wk,null); walkRouteOSM([fromP.lon,fromP.lat],toP).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}) } }
     if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
       if(cd.repl.length){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));    
         return } }
+    if(!walk&&co.length>2){ // retire le petit crochet vers l'ancien point de l'arrêt quand la position du quai est connue
+      if(platformPos(l.from,l)&&kmDist(co[0],[l.from.lon,l.from.lat])<0.012) co=co.slice(1);
+      if(platformPos(l.to,l)&&kmDist(co.at(-1),[l.to.lon,l.to.lat])<0.012) co=co.slice(0,-1) }
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
   });
   const src={type:'FeatureCollection',features:feats};
@@ -2825,7 +2829,7 @@ async function onMyPos(force){
   const all=mapIt.legs.flatMap(legCoords), off=nearestOnLine(me,all);
    
   const tg=walkTarget(mapIt); boardStop=tg?.stop||null;
-  const tk=tg?(tg.stop.name+'|'+tg.at):''; if(tk!==walkTargetKey){ walkTargetKey=tk; walkGeo=null }
+  const tk=tg?(tg.stop.name+'|'+tg.at+'|'+(+tg.stop.lat).toFixed(5)+','+(+tg.stop.lon).toFixed(5)):''; if(tk!==walkTargetKey){ walkTargetKey=tk; walkGeo=null }
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
   const show=!!boardStop||navOn;    
   $('#walkCard').classList.toggle('on',!!show); $('#mapView').classList.toggle('walking',!!show);
