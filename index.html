@@ -794,7 +794,9 @@ function renderJourneyList(){
   lastJourneys.forEach(learnItineraryTracks);
   prefetchCardTracks(list.slice(0,15)); prefetchWalkAreas(list);
   list.forEach((it,i)=>{
-    const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false,hideStartWalkForDraggedPair).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
+    if(hideStartWalkForDraggedPair) it._hideStartWalk=true;
+    else if(it._hideStartWalk) delete it._hideStartWalk;
+    const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false,hideStartWalkForDraggedPair||!!it._hideStartWalk).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
     if(el){
       existing.delete(k); el.dataset.i=i;
@@ -1234,6 +1236,7 @@ const trackChanged=pl=>!!(pl&&pl.track&&pl.scheduledTrack&&String(pl.track)!==St
 const trackHTML=(pl,leg)=>{ if(!pl)return ''; if(trackChanged(pl))return `<span class="quai chg">${esc(pl.track)}</span> <s class="quai-old">${esc(pl.scheduledTrack)}</s>`; const v=resolvedStopPlatform(pl,leg); return v?`<span class="quai">${esc(v)}</span>`:'' };
  
 function journeyHTML(it,i,tracked,suppressStartWalk=false){
+  suppressStartWalk=!!(suppressStartWalk||it?._hideStartWalk);
   learnItineraryTracks(it);
   const ft=firstTransit(it), dl=delayOf(ft), rt=it.legs.some(l=>l.realTime);
   const depAt=ft?ft.startTime:it.startTime, inMin=Math.round((new Date(depAt)-Date.now())/60000);
@@ -1998,7 +2001,7 @@ async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
-  const firstWalk=it?.legs?.[0]?.mode==='WALK'&&hideStartWalkForDraggedPair;
+  const firstWalk=it?.legs?.[0]?.mode==='WALK'&&(hideStartWalkForDraggedPair||it?._hideStartWalk);
   mapIt=firstWalk?{...it,_hideStartWalk:true,duration:Math.max(0,(it.duration||0)-Math.max(0,mins(it.legs[0].duration))*60),startTime:it.legs[1]?.startTime||it.startTime}:it;
   boardStop=boardOf(mapIt); prefetchWalkAreas([mapIt],true);
   updateMapAlert(mapIt);
@@ -2504,7 +2507,7 @@ function mapFit(){
     $('#mapTitle').textContent=ft?`${ft.routeShortName||''} → ${ft.headsign||selDest?.name||''}`:'Parcours';
     $('#mapSub').textContent=`${hm(mapIt.startTime)} → ${hm(mapIt.endTime)} · ${fmtDur(mapIt.duration)}`}
   if(!mlMap||!mapIt) return;
-  const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach(l=>legCoords(l).forEach(c=>b.extend(c)));
+  const b=new maplibregl.LngLatBounds(); mapIt.legs.forEach((l,i)=>{if(mapIt._hideStartWalk&&i===0&&l.mode==='WALK')return;legCoords(l).forEach(c=>b.extend(c))});
   if(pos) b.extend([pos.lon,pos.lat]);
   navOn=false; $('#walkBtn').textContent='▶︎ Lancer'; followVeh=false; $('#btnFollow')?.classList.remove('on');
   mlMap.fitBounds(b,{padding:mapPad(16),pitch:is3D?55:0,bearing:0,duration:600});
@@ -2937,7 +2940,15 @@ async function onMyPos(force){
    
   const all=mapIt.legs.flatMap(legCoords), off=nearestOnLine(me,all);
    
-  const tg=walkTarget(mapIt); boardStop=tg?.stop||null;
+  const tg=walkTarget(mapIt);
+  if(mapIt._hideStartWalk&&tg&&tg.walkIdx<0&&!tg.final){
+    boardStop=null; walkGeo=null; walkTargetKey='';
+    $('#walkCard').classList.remove('on'); $('#mapView').classList.remove('walking');
+    mlMap.getSource('walkto')?.setData({type:'FeatureCollection',features:[]});
+    ['walkto','walkto-casing','walkto-arrows'].forEach(id=>{if(mlMap.getLayer(id))mlMap.setLayoutProperty(id,'visibility','none')});
+    placeMapSteps(); showMapSteps(); return;
+  }
+  boardStop=tg?.stop||null;
   const tk=tg?(tg.stop.name+'|'+tg.at+'|'+(+tg.stop.lat).toFixed(5)+','+(+tg.stop.lon).toFixed(5)):''; if(tk!==walkTargetKey){ walkTargetKey=tk; walkGeo=null }
   const toStop=boardStop?kmDist(me,[boardStop.lon,boardStop.lat]):0;
   const show=!!boardStop||navOn;    
