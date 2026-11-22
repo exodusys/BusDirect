@@ -2068,7 +2068,7 @@ function drawItinerary(it){
     el._p=p; el.innerHTML=stopLblHTML(p);
     if(p.ref){ const pl=p.ref.kind==='from'?p.ref.leg.from:p.ref.kind==='to'?p.ref.leg.to:p.ref.st; el.style.cursor='pointer'; el.style.pointerEvents='auto'; el.addEventListener('click',e=>{ e.stopPropagation(); openDepartures(pl) }) }    
     el.style.zIndex=p.major?'30':'20'; stopLbls.push(new maplibregl.Marker({element:el,anchor:'left',offset:[p.major?14:9,0],subpixelPositioning:true}).setLngLat(f.geometry.coordinates).addTo(mlMap))});
-  updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) } loadOsmPlatforms(it).catch(()=>{});
+  updateLblZoom(); if(!mlMap._fitLbl){ mlMap._fitLbl=1; mlMap.on('moveend',fitLabels) } loadOsmPlatforms(it).catch(()=>{}); ensurePlatformCoords(it).catch(()=>{});
   const fc={type:'FeatureCollection',features:pts};
   if(mlMap.getSource('stops')) mlMap.getSource('stops').setData(fc);
   else{
@@ -2158,12 +2158,24 @@ async function learnTracksFromStopTimes(st,l,atISO){
         const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign};
         // même arrêt : mémorise pour cette ligne et direction ; même course : mémorise pour la course exacte
         const sameStop=nrmS(pl.name)===nrmS(st.name);
-        if(sameStop){ rememberStopTrack(st,lg,tv); got=true }
-        if(sameStop&&l.tripId&&x.tripId===l.tripId){ rememberStopTrack(st,l,tv); got=true } });
+        const pos=Number.isFinite(+pl.lat)&&Number.isFinite(+pl.lon)?{lat:+pl.lat,lon:+pl.lon}:null;
+        if(sameStop){ rememberStopTrack(st,lg,tv,pos); got=true }
+        if(sameStop&&l.tripId&&x.tripId===l.tripId){ rememberStopTrack(st,l,tv,pos); got=true } });
       return got;
     }catch{}
   }
   return false;
+}
+async function ensurePlatformCoords(it){
+  if(!it)return; let got=false; const seen=new Set();
+  for(const l of it.legs||[]){ if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')continue;
+    for(const [st,at] of [[l.from,l.startTime],[l.to,l.endTime]]){
+      if(!st||!Number.isFinite(+st.lat)||platformPos(st,l))continue;
+      const k='pos|'+stopTrackKey(st,l)+'|'+(l.tripId||''); if(!stopTrackKey(st,l)||seen.has(k)||osmCardTried.has(k))continue; seen.add(k); osmCardTried.add(k);
+      const t=new Date(at||Date.now()); if(isNaN(t))continue;
+      if(await learnTracksFromStopTimes(st,l,new Date(+t-60000).toISOString())&&platformPos(st,l))got=true; }
+  }
+  if(got&&mapIt===it&&$('#mapView')?.classList.contains('open'))drawItinerary(it);
 }
 async function prefetchCardTracks(list){
   if(osmCardBusy)return;
@@ -2209,7 +2221,9 @@ const knownStopPlatforms=new Map();
 const STOP_TRACK_LS='bd_stop_tracks_v1';
 const stopTrackMem=(()=>{try{return JSON.parse(localStorage.getItem(STOP_TRACK_LS)||'{}')}catch{return {}}})();
 function stopTrackKey(st,leg){ if(!st||!leg||leg.mode==='WALK'||leg.mode==='BIKE'||leg.mode==='CAR')return ''; const r=String(leg.routeShortName||leg.displayName||'').trim(); if(!r)return ''; return nrmS(st.name)+'|'+r+'|'+nrmS(leg.headsign||leg.to?.name||'') }
-function rememberStopTrack(st,leg,v){ const k=stopTrackKey(st,leg); if(!k||!v||stopTrackMem[k]?.v===v)return; stopTrackMem[k]={v,t:Date.now()};
+function rememberStopTrack(st,leg,v,pos){ const k=stopTrackKey(st,leg); if(!k||!v)return; const old=stopTrackMem[k], hasPos=pos&&Number.isFinite(+pos.lat)&&Number.isFinite(+pos.lon);
+  if(old?.v===v&&(!hasPos||Number.isFinite(old.lat)))return;
+  stopTrackMem[k]=hasPos?{v,t:Date.now(),lat:+pos.lat,lon:+pos.lon}:{v,t:Date.now(),...(old?.v===v&&Number.isFinite(old.lat)?{lat:old.lat,lon:old.lon}:{})};
   try{ const ks=Object.keys(stopTrackMem); if(ks.length>400) ks.sort((a,b)=>(stopTrackMem[a].t||0)-(stopTrackMem[b].t||0)).slice(0,100).forEach(x=>delete stopTrackMem[x]); localStorage.setItem(STOP_TRACK_LS,JSON.stringify(stopTrackMem)) }catch{} }
 function learnItineraryTracks(it){ (it?.legs||[]).forEach(l=>{ if(l.mode==='WALK'||l.mode==='BIKE'||l.mode==='CAR')return;
   [l.from,...(l.intermediateStops||[]),l.to].forEach(st=>{ if(!st)return; const v=platformValue({track:st.scheduledTrack})||platformValue(st); if(v)rememberStopTrack(st,l,v) }) }) }
@@ -2233,6 +2247,7 @@ function resolvedStopPlatform(st,leg){
 /* Position réelle du quai (OpenStreetMap) quand elle est connue : sert à placer l'arrêt sur la carte et à guider la marche. */
 function platformPos(st,leg){
  if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return null;
+ { const mk=stopTrackKey(st,leg), m=mk&&stopTrackMem[mk]; if(m&&Number.isFinite(m.lat)&&dist(st,m)*1000<=150)return {lat:m.lat,lon:m.lon}; }
  const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return null;
  const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase(); if(!v)return null;
  const m=items.filter(x=>String(x.label).replace(/^(quai|voie)\s*/i,'').trim().toLowerCase()===v).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
@@ -2249,7 +2264,7 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   const rail=r&&/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(r.leg.mode||'');
   const liveStop=r?(r.kind==='mid'?r.st:r.kind==='from'?r.leg.from:r.leg.to):null;
   const liveTrack=resolvedStopPlatform(liveStop,r?.leg)||p.track||'';
-  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'';
+  const trackText=liveTrack&&rail?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'';
   // Le quai/la voie reste sur sa propre ligne sous l'heure : il ne se colle
   // jamais à droite de l'heure ou du retard temps réel.
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
