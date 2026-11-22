@@ -779,7 +779,7 @@ function renderJourneyList(){
   const existing=new Map([...box.querySelectorAll(':scope > .jr:not(.walk-tile)')].map(el=>[el.dataset.k,el]));
   const tpl=document.createElement('template'); let prev=null;
   lastJourneys.forEach(learnItineraryTracks);
-  prefetchCardTracks(list);
+  prefetchCardTracks(list); prefetchWalkAreas(list);
   list.forEach((it,i)=>{
     const k=jkey(it); tpl.innerHTML=journeyHTML(it,i,false).trim(); const fresh=tpl.content.firstElementChild; fresh.dataset.k=k;
     let el=existing.get(k);
@@ -2837,7 +2837,10 @@ async function onMyPos(force){
   if(!show){ if(mlMap.getSource('walkto')) mlMap.getSource('walkto').setData({type:'FeatureCollection',features:[]}); if(navOn) stopNav(); return }
    
   { const sn=walkGeo&&walkGeo.length>1?snapOnLine(me,walkGeo):null;
-    if(!walkGeo||!sn||sn.d>0.01||Date.now()-lastWalkFetch>15000){ /* itinéraire à pied rafraîchi aussi toutes les 15 s */ if(!walkFetching){ walkFetching=true; try{ lastWalkFetch=Date.now(); const requestIt=mapIt,requestKey=walkTargetKey; const g=await walkRoute(me,boardStop); if(mapIt!==requestIt||walkTargetKey!==requestKey||!$('#mapView').classList.contains('open'))return; if(g&&g.length) walkGeo=g }finally{ walkFetching=false } } }
+    if(!walkGeo||!sn||sn.d>0.01||Date.now()-lastWalkFetch>15000){ /* itinéraire à pied rafraîchi aussi toutes les 15 s */ if(!walkFetching){ walkFetching=true; lastWalkFetch=Date.now(); const requestIt=mapIt,requestKey=walkTargetKey, tgt=boardStop;
+      // affichage immédiat : trottoirs si la zone est déjà en mémoire, sinon trait droit, puis mise à jour dès que le calcul est prêt
+      const q=walkRouteQuick(me,tgt); if(q&&q.length>1) walkGeo=q; else if(!walkGeo) walkGeo=[me,[tgt.lon,tgt.lat]];
+      walkRoute(me,tgt).then(g=>{ if(mapIt!==requestIt||walkTargetKey!==requestKey||!$('#mapView').classList.contains('open'))return; if(g&&g.length>1){ walkGeo=g; mlMap.getSource('walkto')?.setData({type:'Feature',geometry:{type:'LineString',coordinates:walkGeo}}) } }).catch(()=>{}).finally(()=>{ walkFetching=false }) } }
     else walkGeo=[me,...walkGeo.slice(sn.i)];    
   }
   if(!walkGeo||!walkGeo.length) return;
@@ -2872,6 +2875,7 @@ async function osmWalkArea(me,stop){
   const pad=0.006, b=[need[0]-pad,need[1]-pad,need[2]+pad,need[3]+pad];    
   const p=overpassRace(`[out:json][timeout:12];way["highway"]["highway"!~"motorway|motorway_link|trunk|trunk_link|construction|proposed|raceway|bus_guideway"]["foot"!~"no|private"]["access"!~"private|no"](${b.join(',')});out geom tags;`);
   const a={b,p}; osmAreas.push(a); if(osmAreas.length>12) osmAreas.shift();
+  p.then(r=>{ if(r?.length) a.data=r }).catch(()=>{});
   const r=await p; if(!r?.length){ const i=osmAreas.indexOf(a); if(i>=0) osmAreas.splice(i,1) } return r }
 function heapPush(h,x){ h.push(x); let i=h.length-1; while(i){ const j=(i-1)>>1; if(h[j][0]<=h[i][0]) break; [h[i],h[j]]=[h[j],h[i]]; i=j } }
 function heapPop(h){ const top=h[0], last=h.pop(); if(h.length){ h[0]=last; let i=0; for(;;){ const l=2*i+1, r=l+1; let m=i; if(l<h.length&&h[l][0]<h[m][0]) m=l; if(r<h.length&&h[r][0]<h[m][0]) m=r; if(m===i) break; [h[i],h[m]]=[h[m],h[i]]; i=m } } return top }
@@ -2898,6 +2902,18 @@ function osmWalkGraph(els,me,stop,strict){
   const path=[]; for(let u=t0;u;u=prev.get(u)) path.unshift(P.get(u));
   return [me,...path,[stop.lon,stop.lat]];
 }
+function walkRouteQuick(me,stop){ // synchrone : uniquement si la zone OSM est déjà en mémoire
+  try{ if(kmDist(me,[stop.lon,stop.lat])>1.2) return null;
+    const k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5)+'|f2'; if(osmWalkCache.get(k)) return osmWalkCache.get(k);
+    const need=[Math.min(me[1],stop.lat)-0.003,Math.min(me[0],stop.lon)-0.003,Math.max(me[1],stop.lat)+0.003,Math.max(me[0],stop.lon)+0.003];
+    const a=osmAreas.find(a=>a.data&&a.b[0]<=need[0]&&a.b[1]<=need[1]&&a.b[2]>=need[2]&&a.b[3]>=need[3]); if(!a)return null;
+    const res=osmWalkGraph(a.data,me,stop,true)||osmWalkGraph(a.data,me,stop,false); if(res) osmWalkCache.set(k,res); return res;
+  }catch{ return null } }
+const walkPrefetched=new Set();
+function prefetchWalkAreas(list){ (list||[]).slice(0,4).forEach(it=>(it.legs||[]).forEach(l=>{
+  if(l.mode!=='WALK'||!l.from||!l.to||!Number.isFinite(+l.from.lat)||!Number.isFinite(+l.to.lat))return;
+  const me=[+l.from.lon,+l.from.lat], k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+(+l.to.lon).toFixed(5)+','+(+l.to.lat).toFixed(5); if(walkPrefetched.has(k))return; walkPrefetched.add(k);
+  walkRouteOSM(me,l.to).catch(()=>{}) })) }
 async function walkRouteOSM(me,stop){
   const crow=kmDist(me,[stop.lon,stop.lat]); if(crow>1.2) return null;
   const k=me[0].toFixed(4)+','+me[1].toFixed(4)+'>'+stop.lon.toFixed(5)+','+stop.lat.toFixed(5)+'|f2'; if(osmWalkCache.has(k)) return osmWalkCache.get(k);
