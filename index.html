@@ -1941,7 +1941,7 @@ async function openMap(it,walkLeg){
  stopNav();mapStepSel=null;
   delayTarget=0; delayShown=null; vehShown=null; vehLegKey=''; if(nextStopMk){nextStopMk.remove();nextStopMk=null} apprMks.forEach(m=>m.remove()); apprMks.clear(); followVeh=false; $('#btnFollow')?.classList.remove('on');
   mapWalk=Number.isInteger(walkLeg)?walkLeg:null;
-  mapIt=it; boardStop=firstTransit(it)?.from;
+  mapIt=it; boardStop=boardOf(it);
   updateMapAlert(it);
   $('#mapView').classList.add('open');
   renderWalkCardInstant(it);
@@ -1968,7 +1968,7 @@ async function openMap(it,walkLeg){
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
   updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));    
-  { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=firstTransit(mapIt)?.from; walkGeo=null } refreshStopLbls() };
+  { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=boardOf(mapIt); walkGeo=null } refreshStopLbls() };
     mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }
   syncFollowBtn();
   mapTimers.push(setInterval(syncFollowBtn,500));
@@ -2051,7 +2051,8 @@ function drawItinerary(it){
   const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
   const pts=[], key=new Set();
   const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+(p.track||'')+'|'+props.major+'|'+p.lat.toFixed(5)+','+p.lon.toFixed(5);if(key.has(k))return;key.add(k);  
-    pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[p.lon,p.lat]}})};
+    const pp=platformPos(p,props.ref?.leg)||p;
+    pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[pp.lon,pp.lat]}})};
   transit.forEach((l,i)=>{
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
     const role=i===0?'Départ':'Correspondance';
@@ -2143,7 +2144,7 @@ async function loadOsmPlatforms(it){
   const stops=routeStopPoints(it); if(!stops.length)return;
   const render=()=>{if(mapIt!==it||!$('#mapView')?.classList.contains('open'))return;clearOsmPlatformMarkers();refreshStopLbls();requestAnimationFrame(fitLabels);};
   render();
-  if(await fetchOsmStops(stops)) render();
+  if(await fetchOsmStops(stops)){ if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it); else render(); }
 }
 /* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
 const osmCardTried=new Set(); let osmCardBusy=false;
@@ -2198,6 +2199,16 @@ function resolvedStopPlatform(st,leg){
  const chosen=ranked.length===1?ranked[0]:ranked.length>1&&ranked[0].d<=20&&ranked[1].d-ranked[0].d>=8?ranked[0]:null;
  return chosen?chosen.label.replace(/^(quai|voie)\s*/i,''):'';
 }
+/* Position réelle du quai (OpenStreetMap) quand elle est connue : sert à placer l'arrêt sur la carte et à guider la marche. */
+function platformPos(st,leg){
+ if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return null;
+ const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return null;
+ const v=String(resolvedStopPlatform(st,leg)||'').toLowerCase(); if(!v)return null;
+ const m=items.filter(x=>String(x.label).replace(/^(quai|voie)\s*/i,'').trim().toLowerCase()===v).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
+ return m&&m.d<=90?{lat:m.lat,lon:m.lon}:null;
+}
+const platStop=(st,leg)=>{ const p=platformPos(st,leg); return p?{...st,lat:p.lat,lon:p.lon}:st };
+const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
     if(r.kind==='from'){ time=''; tag=delayTag(l.startTime,l.scheduledStartTime,l.realTime) }
@@ -2800,7 +2811,7 @@ function walkTarget(it){
   if(!it) return null; const now=Date.now(), legs=it.legs;
   if(legs.some(l=>l.mode!=='WALK'&&now>=+new Date(l.startTime)+60000&&now<+new Date(l.endTime)-60000)) return null;    
   const i=legs.findIndex(l=>l.mode!=='WALK'&&l.mode!=='BIKE'&&l.mode!=='CAR'&&+new Date(l.startTime)>now-60000);
-  if(i>=0){ const l=legs[i]; return {stop:l.from,at:+new Date(l.startTime),leg:l,rail:/RAIL|LONG|SUBURBAN/.test(l.mode),walkIdx:i>0&&legs[i-1].mode==='WALK'?i-1:-1} }
+  if(i>=0){ const l=legs[i]; return {stop:platStop(l.from,l),at:+new Date(l.startTime),leg:l,rail:/RAIL|LONG|SUBURBAN/.test(l.mode),walkIdx:i>0&&legs[i-1].mode==='WALK'?i-1:-1} }
   const last=legs.at(-1); const lastT=[...legs].reverse().find(l=>l.mode!=='WALK');
   if(lastT&&now<+new Date(lastT.endTime)-60000) return null;           
   return {stop:last.mode==='WALK'?last.to:lastT?.to,at:+new Date(it.endTime),final:true,walkIdx:last.mode==='WALK'?legs.length-1:-1};
