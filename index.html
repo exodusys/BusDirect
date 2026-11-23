@@ -72,7 +72,7 @@ var h=document.head,m1=document.createElement('meta');m1.name='theme-color';m1.c
   <section class="view" id="v-tickets"><h2>Tickets</h2><div class="card glass"><div class="row between"><div><b id="regionName">Région</b><div class="muted" style="font-size:12px">Ticket SMS selon ta position</div></div><button class="btn ghost sm" onclick="locate(true)">📍</button></div></div><h3>Tickets disponibles</h3><div class="card glass" id="smsList"></div><h3>Autres régions</h3><div class="card glass" id="smsOther"></div><p class="muted" style="font-size:12px;margin:6px">Tarifs et mots-clés indicatifs : vérifie auprès de l'opérateur avant l'envoi. Le ticket SMS est facturé sur ta facture mobile (abonnement suisse requis).</p></section>
 
   
-  <section class="view" id="v-parametres"><div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div><h3>Apparence</h3><div class="card glass"><div class="set"><span>Style</span><div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div><div class="set"><span>Thème</span><div class="seg" id="themeSeg"><button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button></div></div><div class="set"><span>Couleur d'accent</span><input type="color" id="accent" style="width:44px;height:30px;border:none;background:none"></div></div><h3>Liquid Glass</h3><div class="card glass"><div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div><div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div><div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div><div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div></div><div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div><div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div><h3>Itinéraires</h3><div class="card glass"><div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div><label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div></div><h3>Tickets</h3><div class="card glass"><div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div><label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div></div><h3>Capteurs</h3><div class="card glass"><div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div><label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div><div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div><label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div></div><h3>Données</h3><div class="card glass"><div class="set"><div><b>🧹 Vider le cache</b><div class="muted" style="font-size:12px" id="cacheTxt">Couleurs des lignes, quais et voies, trajets des véhicules…</div></div><button class="btn ghost sm" type="button" onclick="clearDataCache()">Vider</button></div></div><div class="card glass"><div class="set"><div><b>📊 Requêtes Transitous</b><div class="muted" style="font-size:12px" id="apiCountTxt">0</div></div></div></div><div class="card glass"><div class="set"><div><b>♻️ Remise à zéro</b><div class="muted" style="font-size:12px">Remet le compteur de requêtes Transitous à zéro</div></div><button class="btn ghost sm" type="button" onclick="resetApiCount()">Remettre à zéro</button></div></div><input type="file" id="fileIn" accept="image/*" hidden></section></main>
+  <section class="view" id="v-parametres"><div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div><h3>Apparence</h3><div class="card glass"><div class="set"><span>Style</span><div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div><div class="set"><span>Thème</span><div class="seg" id="themeSeg"><button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button></div></div><div class="set"><span>Couleur d'accent</span><input type="color" id="accent" style="width:44px;height:30px;border:none;background:none"></div></div><h3>Liquid Glass</h3><div class="card glass"><div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div><div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div><div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div><div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div></div><div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div><div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div><h3>Itinéraires</h3><div class="card glass"><div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div><label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div></div><h3>Tickets</h3><div class="card glass"><div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div><label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div></div><h3>Capteurs</h3><div class="card glass"><div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div><label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div><div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div><label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div></div><h3>Données</h3><div class="card glass"><div class="set"><div><b>🧹 Vider le cache</b><div class="muted" style="font-size:12px" id="cacheTxt">Couleurs des lignes, quais et voies, trajets des véhicules…</div></div><button class="btn ghost sm" type="button" onclick="clearDataCache()">Vider</button></div></div><div class="card glass"><div class="set"><div><b>📊 Requêtes Transitous</b><div class="muted" style="font-size:12px" id="apiCountTxt">0</div></div><button class="btn ghost sm" type="button" onclick="resetApiCount()">Remettre à zéro</button></div></div><input type="file" id="fileIn" accept="image/*" hidden></section></main>
 
 <nav class="glass" id="tabs"><button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button><button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button><button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button><button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button><button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button></nav>
 <script>(function(){try{var t=localStorage.getItem('bd_tab');if(!t||t==='horaires')return;var v=document.getElementById('v-'+t),b=document.querySelector('#tabs button[data-v="'+t+'"]');if(!v||!b||b.offsetParent===null)return;document.querySelectorAll('.view').forEach(function(e){e.classList.toggle('active',e===v)});document.querySelectorAll('#tabs button').forEach(function(e){e.classList.toggle('active',e===b)});var st=document.createElement('style');st.id='bootNoAnim';st.textContent='.view{animation:none!important}';document.head.appendChild(st);addEventListener('load',function(){setTimeout(function(){st.remove()},400)})}catch(e){}})();</script>
@@ -90,49 +90,12 @@ const store = {
   get(k,d){try{const v=localStorage.getItem('bd_'+k);return v?JSON.parse(v):d}catch{return d}},
   set(k,v){try{localStorage.setItem('bd_'+k,JSON.stringify(v))}catch{}}
 };
-let apiCount=store.get('apiCount',0);
-let apiVersion=store.get('apiVersion','v5');
-const apiCache=new Map(), apiPending=new Map();
+let apiCount = store.get('apiCount',0);
 function updateApiCountUI(){ const el=document.getElementById('apiCountTxt'); if(el) el.textContent=apiCount.toLocaleString('fr-CH'); }
 function bumpApiCount(){ apiCount++; store.set('apiCount',apiCount); updateApiCountUI(); }
 function resetApiCount(){ apiCount=0; store.set('apiCount',0); updateApiCountUI(); toast('Compteur Transitous remis à zéro'); }
-function apiTtl(u){
-  if(u.includes('/map/stops?')) return 600000;
-  if(u.includes('/reverse-geocode?')) return 1800000;
-  if(u.includes('/plan?')) return 45000;
-  if(u.includes('/stoptimes?')) return 30000;
-  if(u.includes('/map/trips?')) return 10000;
-  if(u.includes('/trip?')) return 15000;
-  return 20000;
-}
 const __origFetch=window.fetch.bind(window);
-window.fetch=function(...args){
-  let url=typeof args[0]==='string'?args[0]:((args[0]&&args[0].url)||'');
-  url=String(url);
-  if(!url.includes('api.transitous.org')) return __origFetch(...args);
-  const opts=args[1]||{};
-  const cacheable=!opts.method||String(opts.method).toUpperCase()==='GET';
-  const live=/\/(trip\?|map\/trips\?)/.test(url);
-  if(cacheable){
-    const ttl=apiTtl(url), hit=apiCache.get(url);
-    if(hit&&Date.now()-hit.at<ttl) return Promise.resolve(new Response(JSON.stringify(hit.data),{status:200,headers:{'Content-Type':'application/json'}}));
-    if(document.hidden&&live&&hit) return Promise.resolve(new Response(JSON.stringify(hit.data),{status:200,headers:{'Content-Type':'application/json'}}));
-    if(apiPending.has(url)) return apiPending.get(url);
-    const p=__origFetch(...args).then(r=>{
-      if(r.ok){
-        const m=url.match(/\/api\/(v\d+)\//);
-        if(m){ apiVersion=m[1]; store.set('apiVersion',apiVersion) }
-        try{ return r.clone().json().then(d=>{ apiCache.set(url,{at:Date.now(),data:d}); return r }) }catch{}
-      }
-      return r;
-    }).finally(()=>apiPending.delete(url));
-    apiPending.set(url,p);
-    bumpApiCount();
-    return p;
-  }
-  bumpApiCount();
-  return __origFetch(...args);
-};
+window.fetch=function(...args){ try{ const u=typeof args[0]==='string'?args[0]:((args[0]&&args[0].url)||''); if(String(u).includes('api.transitous.org')) bumpApiCount(); }catch{} return __origFetch(...args); };
 updateApiCountUI();
 let S = {
   dests: store.get('dests',[]),
@@ -1094,7 +1057,6 @@ function clearDataCache(){
   cacheKeys().forEach(k=>{ try{localStorage.removeItem(k)}catch{} });
   try{ Object.keys(sessionStorage).filter(k=>k.startsWith('bd_jc_')).forEach(k=>sessionStorage.removeItem(k)) }catch{}
   try{ OSMC.m={}; OSMC.a={}; OSMC.miss={}; OSMC.t=Date.now(); osmQueue.clear() }catch{}
-  try{ apiCache.clear(); apiPending.clear() }catch{}
   try{ for(const k of Object.keys(tripCache)) delete tripCache[k] }catch{}
   try{ for(const k of Object.keys(OSM_STOP_CACHE)) delete OSM_STOP_CACHE[k] }catch{}
   try{ for(const k of Object.keys(stopTrackMem)) delete stopTrackMem[k] }catch{}
@@ -1340,7 +1302,7 @@ function openJourneyPage(it,tracked){
   renderJourneyPage(); clickShieldUntil=Date.now()+180;
   pg.scrollTop=0; pg.classList.remove('out'); pg.style.transform=''; pg.classList.add('on'); requestAnimationFrame(()=>{try{syncIOSWallpaperTint()}catch(e){}});   
   document.documentElement.classList.add('jp-lock');
-  clearInterval(jpTimer); jpTimer=setInterval(async()=>{ if(document.hidden) return; const f=curList.find(x=>jkey(x)===jpKey); if(f) jpIt=f; renderJourneyPage(); if(await liveRefreshIt(jpIt)) renderJourneyPage() },30000);    
+  clearInterval(jpTimer); jpTimer=setInterval(async()=>{ const f=curList.find(x=>jkey(x)===jpKey); if(f) jpIt=f; renderJourneyPage(); if(await liveRefreshIt(jpIt)) renderJourneyPage() },15000);    
   liveRefreshIt(jpIt).then(ch=>{ if(ch) renderJourneyPage() });
 }
 function renderJourneyPage(){
@@ -1576,9 +1538,9 @@ setInterval(async()=>{
 var lastListLoad=0;
 setInterval(()=>{ if(!listOpen()||!selDest||document.hidden) return;
   const now=Date.now(), soon=lastJourneys.some(it=>{const t=jStart(it);return t>now-60000&&t<now+10*60000});
-  if(now-lastListLoad>=30000){ lastListLoad=now; loadJourneys() } },2000);    
+  if(now-lastListLoad>=15000){ lastListLoad=now; loadJourneys() } },2000);    
 setInterval(()=>{
-  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(true); },30000);    
+  if($('#v-suivis').classList.contains('active')&&S.tracked.length&&!document.hidden) refreshTracked(true); },5000);    
 
  
 const REGIONS=[
@@ -2150,9 +2112,9 @@ async function openMap(it,walkLeg){
   mlMap.resize();drawItinerary(mapIt); renderMapSteps();
   if(mapWalk!=null) focusWalk(); else {setRouteDim(false);mapFit();}
   mapTimers.forEach(clearInterval); mapTimers=[];
-  updateVehicle(); mapTimers.push(setInterval(()=>{ if(!document.hidden) updateVehicle() },20000));    
+  updateVehicle(); mapTimers.push(setInterval(updateVehicle,15000));    
   { const apply=ch=>{ if(!ch||!mapIt) return; if(mapIt.legs.some(l=>l._geo)){ mapIt.legs.forEach(l=>delete l._geo); drawItinerary(mapIt); boardStop=boardOf(mapIt); walkGeo=null } refreshStopLbls() };
-    mapTimers.push(setInterval(async()=>{ if(document.hidden||!mapIt) return; apply(await liveRefreshIt(mapIt)) },30000)); liveRefreshIt(mapIt).then(apply) }
+    mapTimers.push(setInterval(async()=>{ if(mapIt) apply(await liveRefreshIt(mapIt)) },15000)); liveRefreshIt(mapIt).then(apply) }
   syncFollowBtn();
   mapTimers.push(setInterval(syncFollowBtn,500));
   if(pos) onMyPos().catch(()=>{});
@@ -3229,7 +3191,7 @@ async function walkRouteOSM(me,stop){
 async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
   try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),6000))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}    
   try{
-    for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+    for(const v of PLAN_VERSIONS){
        
       const to=stop.stopId?encodeURIComponent(stop.stopId):`${stop.lat},${stop.lon}`;
       const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${to}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
