@@ -2433,7 +2433,7 @@ function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   const rail=r&&/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(r.leg.mode||'');
   const liveStop=r?(r.kind==='mid'?r.st:r.kind==='from'?r.leg.from:r.leg.to):null;
   const liveTrack=resolvedStopPlatform(liveStop,r?.leg)||p.track||'';
-  const trackText=liveTrack&&rail?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'';
+  const trackText=liveTrack?`${rail?'Voie':'Quai'} ${liveTrack}${liveStop?.scheduledTrack&&liveStop.scheduledTrack!==liveTrack?` (prévu ${liveStop.scheduledTrack})`:''}`:'';
   // Le quai/la voie reste sur sa propre ligne sous l'heure : il ne se colle
   // jamais à droite de l'heure ou du retard temps réel.
   const sub=r&&r.kind!=='mid'?`${r.role} · ${hm(r.kind==='from'?r.leg.startTime:r.leg.endTime)}`:p.sub||'';
