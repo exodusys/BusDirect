@@ -1982,7 +1982,7 @@ function railSidePos(co,base){
     let minL=Infinity, minR=Infinity; const W=railWaysNear(base);
     if(W) for(const g of W) for(let i=1;i<g.length;i++){ const P=g[i-1], Q=g[i], sx=(Q[0]-P[0])*k*M, sy=(Q[1]-P[1])*M, sl=Math.hypot(sx,sy), n=Math.max(1,Math.ceil(sl/2));
       for(let j=0;j<=n;j++){ const f=j/n, rx=((P[0]-base.lon)*k*M)+sx*f, ry=((P[1]-base.lat)*M)+sy*f, al=rx*ux+ry*uy, la=rx*nx+ry*ny;
-        if(Math.abs(al)>60||Math.abs(la)<1.8||Math.abs(la)>25) continue; if(la>0) minL=Math.min(minL,la); else minR=Math.min(minR,-la) } }
+        if(Math.abs(al)>30||Math.abs(la)<2.5||Math.abs(la)>25) continue; if(la>0) minL=Math.min(minL,la); else minR=Math.min(minR,-la) } }
     const side=minL===minR?-1:(minL>minR?1:-1);                  // côté le plus dégagé ; à égalité : droite
     const D=7/M; return {lat:base.lat+ny*side*D, lon:base.lon+nx*side*D/k, base:[base.lon,base.lat]} }catch{ return null } }
 const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg)||platformGuess(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK') return null;
