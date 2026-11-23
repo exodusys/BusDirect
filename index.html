@@ -1959,7 +1959,7 @@ function sidePos(co,st,minM=6,maxM=12){
     if(cross<0&&dm>=Math.min(4,minM)) return null;                       // déjà du bon côté
     const D=Math.max(minM,Math.min(maxM,dm))/111320;      // distance à l'axe
     const rx=dy/L, ry=-dx/L;                              // normale droite (est/nord)
-    return {lat:pr.q[1]+ry*D, lon:pr.q[0]+rx*D/k} }catch{ return null } }
+    return {lat:pr.q[1]+ry*D, lon:pr.q[0]+rx*D/k, base:[pr.q[0],pr.q[1]]} }catch{ return null } }
 /* Train, voie inconnue : quai OpenStreetMap le plus proche de l'extrémité de la ligne colorée (début à la montée, fin à la descente). */
 function platformGuess(st,leg){
   try{ if(!st||!leg||!isRailLeg(leg)||resolvedStopPlatform(st,leg)||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)) return null;
@@ -1984,7 +1984,7 @@ function railSidePos(co,base){
       for(let j=0;j<=n;j++){ const f=j/n, rx=((P[0]-base.lon)*k*M)+sx*f, ry=((P[1]-base.lat)*M)+sy*f, al=rx*ux+ry*uy, la=rx*nx+ry*ny;
         if(Math.abs(al)>60||Math.abs(la)<1.8||Math.abs(la)>25) continue; if(la>0) minL=Math.min(minL,la); else minR=Math.min(minR,-la) } }
     const side=minL===minR?-1:(minL>minR?1:-1);                  // côté le plus dégagé ; à égalité : droite
-    const D=7/M; return {lat:base.lat+ny*side*D, lon:base.lon+nx*side*D/k} }catch{ return null } }
+    const D=7/M; return {lat:base.lat+ny*side*D, lon:base.lon+nx*side*D/k, base:[base.lon,base.lat]} }catch{ return null } }
 const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg)||platformGuess(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK') return null;
   if(isRailLeg(leg)){ // train sans quai trouvé : extrémité de la ligne colorée, décalée du bon côté de la voie (à droite du sens de marche)
     const co=legCoords(leg); if(!co||co.length<2||!st||!Number.isFinite(+st.lon)||!Number.isFinite(+st.lat)) return null;
@@ -2191,7 +2191,7 @@ function drawItinerary(it){
   const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
   const pts=[], key=new Set();
   const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+(p.track||'')+'|'+props.major+'|'+p.lat.toFixed(5)+','+p.lon.toFixed(5);if(key.has(k))return;key.add(k);  
-    const pp=stopDispPos(p,props.ref?.leg)||p;
+    const pp=stopDispPos(p,props.ref?.leg)||p; if(pp.base) props.sideBase=pp.base;
     pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[pp.lon,pp.lat]}})};
   transit.forEach((l,i)=>{
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
@@ -2454,14 +2454,16 @@ function segHitsRect(a,b,r){
 /* Placement des étiquettes d'arrêt : jamais sur la ligne du parcours, jamais l'une sur l'autre. */
 function fitLabels(){ if(!mlMap) return; const W=$('#map').clientWidth, M=3, prj=co=>co.map(c=>{const p=mlMap.project(c);return {x:p.x,y:p.y}});
   const lines=routeLinesLL.map(prj); if(walkGeo&&walkGeo.length>1) lines.push(prj(walkGeo));
-  const items=stopLbls.filter(m=>m.getElement().offsetWidth).map(m=>{ const el=m.getElement(); return {m,pt:mlMap.project(m.getLngLat()),w:el.offsetWidth,h:el.offsetHeight,major:el.classList.contains('major')?1:0} });
+  const items=stopLbls.filter(m=>m.getElement().offsetWidth).map(m=>{ const el=m.getElement(); return {m,pt:mlMap.project(m.getLngLat()),w:el.offsetWidth,h:el.offsetHeight,major:el.classList.contains('major')?1:0,sb:el._p?.sideBase} });
   items.sort((a,b)=>b.major-a.major);
   const dots=items.map(it=>({x0:it.pt.x-9,x1:it.pt.x+9,y0:it.pt.y-9,y1:it.pt.y+9,o:it})), placed=[];
   items.forEach(it=>{ const {pt,w,h}=it, g=it.major?14:9, v=h/2+2;
+    let sv=null; if(it.sb){ const b=mlMap.project(it.sb), vx=pt.x-b.x, vy=pt.y-b.y, n=Math.hypot(vx,vy); if(n>1) sv=[vx/n,vy/n] }   // côté de la voie où l'arrêt a été placé
     const cands=[[g,0],[-(g+w),0],[g,-v],[g,v],[-(g+w),-v],[-(g+w),v],[-w/2,-(h/2+g)],[-w/2,h/2+g],[g,-(h+4)],[g,h+4],[-(g+w),-(h+4)],[-(g+w),h+4]];
     let best=null;
     for(const [ox,oy] of cands){ const r={x0:pt.x+ox-M,x1:pt.x+ox+w+M,y0:pt.y+oy-h/2-M,y1:pt.y+oy+h/2+M};
       let pen=0; if(r.x0<2||r.x1>W-2) pen+=2;
+      if(sv){ let mn=Infinity; for(const cx of [r.x0+M,r.x1-M]) for(const cy of [r.y0+M,r.y1-M]) mn=Math.min(mn,(cx-pt.x)*sv[0]+(cy-pt.y)*sv[1]); if(mn<-2) pen+=12 }
       for(const q of placed) if(r.x0<q.x1&&r.x1>q.x0&&r.y0<q.y1&&r.y1>q.y0){ pen+=10; break }
       for(const d of dots) if(d.o!==it&&r.x0<d.x1&&r.x1>d.x0&&r.y0<d.y1&&r.y1>d.y0){ pen+=4; break }
       outer: for(const ln of lines){ for(let i=1;i<ln.length;i++){ if(segHitsRect(ln[i-1],ln[i],r)){ pen+=6; break outer } } }
