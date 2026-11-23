@@ -1956,7 +1956,7 @@ function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la r
   return co }
 /* Extrémités d'une marche : le point du quai (ou de la voie dessinée) quand il est connu, sinon l'arrêt. */
 /* Voie trouvée : la marche va jusqu'au point de l'arrêt. Aucune voie trouvée (train) : jusqu'au début / à la fin de la ligne colorée. */
-function walkPinPoint(st,leg,pt,which){ if(resolvedStopPlatform(st,leg))return null; return railLinePoint(leg,pt,which) }
+function walkPinPoint(st,leg,pt,which){ const pp=platformPos(st,leg); if(pp)return pp; if(resolvedStopPlatform(st,leg))return null; return railLinePoint(leg,pt,which) }
 function walkLegEnds(it,idx){ const l=it.legs[idx], pvL=it.legs[idx-1], nxL=it.legs[idx+1];
   const ppF=pvL&&pvL.mode!=='WALK'?(walkPinPoint(pvL.to,pvL,l.from,'end')):null, ppT=nxL&&nxL.mode!=='WALK'?(walkPinPoint(nxL.from,nxL,l.to,'start')):null;
   return {fromP:ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP:ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to, pinF:!!ppF, pinT:!!ppT} }
@@ -2034,6 +2034,7 @@ async function openMap(it,walkLeg){
   }else mapIt=it;
   boardStop=boardOf(mapIt); prefetchWalkAreas([mapIt],true);
   updateMapAlert(mapIt);
+  $('#mapSteps')?.classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
   $('#mapView').classList.add('open');
   renderWalkCardInstant(mapIt);
   const ft=firstTransit(mapIt);
@@ -2111,9 +2112,10 @@ function drawItinerary(it){
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
       const cd=cutDeviation(co,st.filter(x=>x.lon!=null)); co=cd.pieces.length===1?cd.pieces[0]:co; dash=cd.dashed;
-      if(cd.repl.length){ [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));    
+      if(cd.repl.length){ { const f0=(cd.pieces[0]||co||[])[0]; if(f0) l._lineStart=f0 } [...cd.pieces,...cd.repl].forEach(pc=>feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:pc}}));    
         return } }
     if(!walk) co=clipLegToPlatforms(co,l);
+    if(!walk&&co&&co[0]) l._lineStart=co[0];
     feats.push({type:'Feature',properties:{idx,walk,dev:0,color},geometry:{type:'LineString',coordinates:co}});
   });
   const src={type:'FeatureCollection',features:feats}; routeLinesLL=feats.map(f=>f.geometry.coordinates);
@@ -2374,7 +2376,7 @@ function railLinePoint(leg,pt,which){
    if(!which){ const dS=kmDist([+pt.lon,+pt.lat],co[0]), dE=kmDist([+pt.lon,+pt.lat],co[co.length-1]); which=(pt===leg.to||dE<dS)?'end':'start' }
    const c=which==='end'?co[co.length-1]:co[0];
    return kmDist([+pt.lon,+pt.lat],c)<0.35?{lat:c[1],lon:c[0]}:null }catch{ return null } }
-const platStop=(st,leg)=>{ const p=resolvedStopPlatform(st,leg)?null:railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
+const platStop=(st,leg)=>{ const pp=platformPos(st,leg); if(pp) return {...st,lat:pp.lat,lon:pp.lon}; const p=resolvedStopPlatform(st,leg)?null:railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
@@ -2465,8 +2467,8 @@ function renderMapSteps(){
   el.onclick=e=>{e.stopPropagation();if(e.detail!==0&&performance.now()<(el._noClickUntil||0))return;const n=e.target.closest('[data-notice]');if(n){showMapLegNotices(+n.dataset.notice);return}const b=e.target.closest('.ms');if(!b)return;focusStep(+b.dataset.i)};
   setupStepScroll(el);setupStepHints(el);
   markMapStep(); placeMapSteps();
-  $('#mapSteps').classList.remove('ready'); document.querySelector('#mapView .map-ctrl')?.classList.remove('ready');
-  clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500);    
+  // le bandeau et les boutons ne sont masqués qu'à l'ouverture de la carte : les rafraîchissements suivants ne les font plus clignoter
+  if(!$('#mapSteps').classList.contains('ready')){ clearTimeout(renderMapSteps._t); renderMapSteps._t=setTimeout(showMapSteps,2500); }    
 }
 function showMapSteps(){ clearTimeout(renderMapSteps._t);
   const first=!$('#mapSteps')?.classList.contains('ready');
@@ -2803,17 +2805,17 @@ let apprIb=null, apprIbKey='';
 function updateApproachLive(){
   const src=mlMap?.getSource('approach'); if(!src||!vehState?.trip?.cum||vehKm==null||!mapIt) return;
   const ft=activeLeg(mapIt), trip=vehState.trip; if(!ft||Date.now()>=+new Date(ft.startTime)+30000){ src.setData({type:'FeatureCollection',features:[]}); return }
-  const key=ft.tripId+'|'+ft.from.name; if(key!==apprIbKey){ apprIbKey=key; apprIb=nearestIdx(trip.coords,[ft.from.lon,ft.from.lat]) }
+  const ep=ft._lineStart||[ft.from.lon,ft.from.lat], key=ft.tripId+'|'+ft.from.name+'|'+ep[0].toFixed(5)+','+ep[1].toFixed(5); if(key!==apprIbKey){ apprIbKey=key; apprIb=nearestIdx(trip.coords,ep) }
   const kb=trip.cum[apprIb]; if(vehKm>=kb){ src.setData({type:'FeatureCollection',features:[]}); return }
   const cum=trip.cum; let lo=0,hi=cum.length-1; while(hi-lo>1){const m=(lo+hi)>>1; if(cum[m]<=vehKm) lo=m; else hi=m}
-  const line=[pointAtKm(trip,vehKm),...trip.coords.slice(lo+1,apprIb+1),[ft.from.lon,ft.from.lat]];
+  const line=[pointAtKm(trip,vehKm),...trip.coords.slice(lo+1,apprIb+1),ep];
   src.setData({type:'Feature',properties:{color:lineColor(ft)[0]},geometry:{type:'LineString',coordinates:line}});
 }
 function drawApproach(trip,p,ft){ // trait tillé : du véhicule jusqu'à mon arrêt de montée
   const src=mlMap.getSource('approach'); let data={type:'FeatureCollection',features:[]};
   if(trip&&p&&ft&&Date.now()<+new Date(ft.startTime)+30000){
-    const iv=nearestIdx(trip.coords,p), ib=nearestIdx(trip.coords,[ft.from.lon,ft.from.lat]);
-    if(iv<ib){const line=[p,...trip.coords.slice(iv+1,ib+1),[ft.from.lon,ft.from.lat]];
+    const ep=ft._lineStart||[ft.from.lon,ft.from.lat], iv=nearestIdx(trip.coords,p), ib=nearestIdx(trip.coords,ep);
+    if(iv<ib){const line=[p,...trip.coords.slice(iv+1,ib+1),ep];
       data={type:'Feature',properties:{color:lineColor(ft)[0]},geometry:{type:'LineString',coordinates:line}}}
   }
   drawApproachStops(trip,p,ft,data.type==='Feature');
