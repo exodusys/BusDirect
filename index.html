@@ -1960,10 +1960,17 @@ function sidePos(co,st){
     const D=Math.max(6,Math.min(12,dm))/111320;           // distance à l'axe : 6 à 12 m
     const rx=dy/L, ry=-dx/L;                              // normale droite (est/nord)
     return {lat:pr.q[1]+ry*D, lon:pr.q[0]+rx*D/k} }catch{ return null } }
-const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK'||isRailLeg(leg)) return null; return sidePos(legCoords(leg),st) };
+/* Train, voie inconnue : quai OpenStreetMap le plus proche de l'extrémité de la ligne colorée (début à la montée, fin à la descente). */
+function platformGuess(st,leg){
+  try{ if(!st||!leg||!isRailLeg(leg)||resolvedStopPlatform(st,leg)||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon)) return null;
+    const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length) return null;
+    const co=legCoords(leg); let ref=[+st.lon,+st.lat]; if(co&&co.length>1){ if(st===leg.to) ref=co[co.length-1]; else if(st===leg.from) ref=co[0] }
+    const b=items.filter(x=>Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)).map(x=>({x,d:kmDist(ref,[+x.lon,+x.lat])*1000})).sort((a,b)=>a.d-b.d)[0];
+    return b&&b.d<=90?{lat:+b.x.lat,lon:+b.x.lon}:null }catch{ return null } }
+const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg)||platformGuess(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK'||isRailLeg(leg)) return null; return sidePos(legCoords(leg),st) };
 function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la route le plus proche du quai, sans coude jusqu'à l'arrêt
   if(!co||co.length<2)return co;
-  const pf=platformPos(l.from,l), pt=platformPos(l.to,l);
+  const pf=platformPos(l.from,l)||platformGuess(l.from,l), pt=platformPos(l.to,l)||platformGuess(l.to,l);
   if(pf){ const pr=projectOnPoly(co,[pf.lon,pf.lat]); if(pr&&pr.d<0.12) co=[pr.q,...co.slice(pr.i+1)] }
   if(pt){ const pr=projectOnPoly(co,[pt.lon,pt.lat]); if(pr&&pr.d<0.12) co=[...co.slice(0,pr.i+1),pr.q] }
   return co }
