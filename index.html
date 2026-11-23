@@ -1950,6 +1950,17 @@ function projectOnPoly(co,p){ // point le plus proche de p sur la polyligne co (
     const t=L?Math.max(0,Math.min(1,(((p[0]-A[0])*k)*dx+(p[1]-A[1])*dy)/L)):0, q=[A[0]+(B[0]-A[0])*t,A[1]+(B[1]-A[1])*t], d=kmDist(p,q);
     if(!best||d<best.d) best={i,q,d} }
   return best }
+/* Côté de la route : un arrêt est placé du côté droit du sens de marche du véhicule (circulation à droite). */
+function sidePos(co,st){
+  try{ if(!co||co.length<2||!st||!Number.isFinite(+st.lon)||!Number.isFinite(+st.lat)) return null;
+    const p=[+st.lon,+st.lat], pr=projectOnPoly(co,p); if(!pr||pr.d>0.06) return null;
+    const A=co[pr.i], B=co[pr.i+1], k=Math.cos(p[1]*Math.PI/180), dx=(B[0]-A[0])*k, dy=B[1]-A[1], L=Math.hypot(dx,dy); if(!L) return null;
+    const vx=(p[0]-pr.q[0])*k, vy=p[1]-pr.q[1], cross=dx*vy-dy*vx, dm=pr.d*1000;
+    if(cross<0&&dm>=4) return null;                       // déjà du bon côté
+    const D=Math.max(6,Math.min(12,dm))/111320;           // distance à l'axe : 6 à 12 m
+    const rx=dy/L, ry=-dx/L;                              // normale droite (est/nord)
+    return {lat:pr.q[1]+ry*D, lon:pr.q[0]+rx*D/k} }catch{ return null } }
+const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK'||isRailLeg(leg)) return null; return sidePos(legCoords(leg),st) };
 function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la route le plus proche du quai, sans coude jusqu'à l'arrêt
   if(!co||co.length<2)return co;
   const pf=platformPos(l.from,l), pt=platformPos(l.to,l);
@@ -1958,7 +1969,7 @@ function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la r
   return co }
 /* Extrémités d'une marche : le point du quai (ou de la voie dessinée) quand il est connu, sinon l'arrêt. */
 /* Voie trouvée : la marche va jusqu'au point de l'arrêt. Aucune voie trouvée (train) : jusqu'au début / à la fin de la ligne colorée. */
-function walkPinPoint(st,leg,pt,which){ const pp=platformPos(st,leg); if(pp)return pp; if(resolvedStopPlatform(st,leg))return null; return railLinePoint(leg,pt,which) }
+function walkPinPoint(st,leg,pt,which){ const pp=stopDispPos(st,leg); if(pp)return pp; if(resolvedStopPlatform(st,leg))return null; return railLinePoint(leg,pt,which) }
 function walkLegEnds(it,idx){ const l=it.legs[idx], pvL=it.legs[idx-1], nxL=it.legs[idx+1];
   const ppF=pvL&&pvL.mode!=='WALK'?(walkPinPoint(pvL.to,pvL,l.from,'end')):null, ppT=nxL&&nxL.mode!=='WALK'?(walkPinPoint(nxL.from,nxL,l.to,'start')):null;
   return {fromP:ppF?{...l.from,lat:ppF.lat,lon:ppF.lon}:l.from, toP:ppT?{...l.to,lat:ppT.lat,lon:ppT.lon}:l.to, pinF:!!ppF, pinT:!!ppT} }
@@ -2148,7 +2159,7 @@ function drawItinerary(it){
   const isRail=l=>/RAIL|LONG|SUBURBAN|NIGHT|HIGHSPEED|REGIONAL|TRAIN|SUBWAY|METRO|FUNICULAR/i.test(l.mode||'')||/^(IC|ICE|IR|IRE|RE|R|S|EC|EN|TGV|TER|RJX?|NJ|PE|EXT|RB|S\d+)\b/i.test(String(l.routeShortName||l.displayName||'').trim());
   const pts=[], key=new Set();
   const add=(p,props)=>{if(!p||p.lat==null)return;const k=p.name+'|'+(p.track||'')+'|'+props.major+'|'+p.lat.toFixed(5)+','+p.lon.toFixed(5);if(key.has(k))return;key.add(k);  
-    const pp=platformPos(p,props.ref?.leg)||p;
+    const pp=stopDispPos(p,props.ref?.leg)||p;
     pts.push({type:'Feature',properties:props,geometry:{type:'Point',coordinates:[pp.lon,pp.lat]}})};
   transit.forEach((l,i)=>{
     const col=lineColor(l)[0], lab=isRail(l)?'Voie':'Quai';
@@ -2378,7 +2389,7 @@ function railLinePoint(leg,pt,which){
    if(!which){ const dS=kmDist([+pt.lon,+pt.lat],co[0]), dE=kmDist([+pt.lon,+pt.lat],co[co.length-1]); which=(pt===leg.to||dE<dS)?'end':'start' }
    const c=which==='end'?co[co.length-1]:co[0];
    return kmDist([+pt.lon,+pt.lat],c)<0.35?{lat:c[1],lon:c[0]}:null }catch{ return null } }
-const platStop=(st,leg)=>{ const pp=platformPos(st,leg); if(pp) return {...st,lat:pp.lat,lon:pp.lon}; const p=resolvedStopPlatform(st,leg)?null:railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
+const platStop=(st,leg)=>{ const pp=stopDispPos(st,leg); if(pp) return {...st,lat:pp.lat,lon:pp.lon}; const p=resolvedStopPlatform(st,leg)?null:railLinePoint(leg,st); return p?{...st,lat:p.lat,lon:p.lon}:st };
 const boardOf=it=>{ const f=firstTransit(it); return f?platStop(f.from,f):undefined };
 function stopLblHTML(p){ const r=p.ref; let time=p.time, tag='';
   if(r){ const l=r.leg;
@@ -2797,7 +2808,7 @@ function drawApproachStops(trip,p,ft,show){
       if(apprMks.has(k)){ const el=apprMks.get(k).getElement(), sm=el.querySelector('small'); if(sm) sm.innerHTML=st.cancelled?'<span class="late">Arrêt supprimé</span>':`${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}`; el.classList.toggle('cancel',!!st.cancelled); return }    
       const el=document.createElement('div'); el.className='appr-stop'; el.style.setProperty('--c',col);
       el._st=st; el._rt=trip.rt; if(st.cancelled) el.classList.add('cancel'); const addT=st.added?' <span class="ontime">remplacement</span>':''; el.innerHTML=`<i></i><span>${esc(st.name)}<small>${st.cancelled?'<span class="late">Arrêt supprimé</span>':`${st.a?hm(st.a):''} ${delayTag(st.a,st.sa,trip.rt)}${addT}`}</small></span>`;
-      apprMks.set(k,new maplibregl.Marker({element:el,anchor:'left',offset:[-6,0],subpixelPositioning:true}).setLngLat([st.lon,st.lat]).addTo(mlMap));
+      apprMks.set(k,new maplibregl.Marker({element:el,anchor:'left',offset:[-6,0],subpixelPositioning:true}).setLngLat((()=>{const q=sidePos(trip.coords,st);return q?[q.lon,q.lat]:[st.lon,st.lat]})()).addTo(mlMap));
     });
   }
   for(const [k,m] of apprMks) if(!keep.has(k)){ m.remove(); apprMks.delete(k) }
