@@ -2105,26 +2105,8 @@ function drawItinerary(it){
     if(walk&&l.from?.lat!=null&&l.to?.lat!=null){   // marches : par les trottoirs (OpenStreetMap) quand c'est possible, jusqu'au quai exact
       const {fromP,toP,pinF,pinT}=walkLegEnds(it,idx);
       const wk=fromP.lon.toFixed(5)+','+fromP.lat.toFixed(5)+'>'+toP.lon.toFixed(5)+','+toP.lat.toFixed(5);
-      const targetStop=(typeof platStop==='function'?platStop(l.to,l):null)||toP;
-      if(legWalkGeo.has(wk)&&Array.isArray(legWalkGeo.get(wk))&&legWalkGeo.get(wk).length>1){
-        co=legWalkGeo.get(wk);
-      }else{
-        const fallback=[[fromP.lon,fromP.lat],[targetStop.lon,targetStop.lat]];
-        co=pinEnds(co.length>1?co:fallback,fromP,targetStop,pinF,true);
-        if(typeof walkRouteOSM==='function'){
-          walkRouteOSM([fromP.lon,fromP.lat],targetStop)
-            .then(g=>{
-              const coords=(Array.isArray(g)&&g.length>1)?g:fallback;
-              const pinned=pinEnds(coords,fromP,targetStop,pinF,true);
-              legWalkGeo.set(wk,pinned);
-              if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it);
-            })
-            .catch(()=>{
-              legWalkGeo.set(wk,fallback);
-            });
-        }
-      }
-    }
+      if(legWalkGeo.has(wk)){ const g=legWalkGeo.get(wk); if(g) co=g; else co=pinEnds(co,fromP,toP,pinF,pinT) }
+      else{ legWalkGeo.set(wk,null); walkRouteOSM([fromP.lon,fromP.lat],toP).then(g=>{ if(g&&g.length>1){ legWalkGeo.set(wk,g); if(mapIt===it&&$('#mapView')?.classList.contains('open')) drawItinerary(it) } }).catch(()=>{}); co=pinEnds(co,fromP,toP,pinF,pinT) } }
     if(!walk){ const tr=l.tripId&&tripCache[l.tripId], nm=x=>nrmS(x?.name);
       let st=[l.from,...(l.intermediateStops||[]),l.to].map(x=>({lon:x?.lon,lat:x?.lat,name:x?.name,cancelled:!!(x?.cancelled||(x?.pickupType==='NOT_ALLOWED'&&x?.dropoffType==='NOT_ALLOWED'))}));
       if(tr?.stops){ const i0=tr.stops.findIndex(z=>nm(z)===nm(l.from)), i1=tr.stops.findIndex((z,i)=>i>i0&&nm(z)===nm(l.to)); if(i0>=0&&i1>i0) st=tr.stops.slice(i0,i1+1).map(z=>({lon:z.lon,lat:z.lat,name:z.name,cancelled:!!z.cancelled,added:!!z.added})) }
