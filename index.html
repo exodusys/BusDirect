@@ -1967,12 +1967,31 @@ function platformGuess(st,leg){
     const co=legCoords(leg); let ref=[+st.lon,+st.lat]; if(co&&co.length>1){ if(st===leg.to) ref=co[co.length-1]; else if(st===leg.from) ref=co[0] }
     const b=items.filter(x=>Number.isFinite(+x.lat)&&Number.isFinite(+x.lon)).map(x=>({x,d:kmDist(ref,[+x.lon,+x.lat])*1000})).sort((a,b)=>a.d-b.d)[0];
     return b&&b.d<=90?{lat:+b.x.lat,lon:+b.x.lon}:null }catch{ return null } }
+/* Train sans quai trouvé : l'arrêt se place du côté de la voie où il n'y a pas d'autre voie à côté (données des voies OpenStreetMap). */
+const railWaysCache=new Map();
+function railWaysNear(b){ const key=b.lat.toFixed(5)+','+b.lon.toFixed(5), c=railWaysCache.get(key); if(c) return c==='loading'?null:c;
+  railWaysCache.set(key,'loading');
+  overpassRace(`[out:json][timeout:10];way["railway"~"^(rail|light_rail|narrow_gauge|tram|subway)$"](around:70,${b.lat},${b.lon});out geom qt;`).then(r=>{
+    railWaysCache.set(key,(r||[]).map(w=>(w.geometry||[]).map(x=>[x.lon,x.lat])));
+    try{ if(mapIt&&$('#mapView')?.classList.contains('open')){ drawItinerary(mapIt); refreshStopLbls(); walkGeo=null; walkTargetKey='' } }catch{} }).catch(()=>railWaysCache.set(key,[]));
+  return null }
+function railSidePos(co,base){
+  try{ const pr=projectOnPoly(co,[base.lon,base.lat]); if(!pr) return null;
+    const A=co[pr.i], B=co[pr.i+1], k=Math.cos(base.lat*Math.PI/180), M=111320, dx=(B[0]-A[0])*k, dy=B[1]-A[1], L=Math.hypot(dx,dy); if(!L) return null;
+    const ux=dx/L, uy=dy/L, nx=-uy, ny=ux;                      // sens de la voie et normale gauche
+    let minL=Infinity, minR=Infinity; const W=railWaysNear(base);
+    if(W) for(const g of W) for(let i=1;i<g.length;i++){ const P=g[i-1], Q=g[i], sx=(Q[0]-P[0])*k*M, sy=(Q[1]-P[1])*M, sl=Math.hypot(sx,sy), n=Math.max(1,Math.ceil(sl/2));
+      for(let j=0;j<=n;j++){ const f=j/n, rx=((P[0]-base.lon)*k*M)+sx*f, ry=((P[1]-base.lat)*M)+sy*f, al=rx*ux+ry*uy, la=rx*nx+ry*ny;
+        if(Math.abs(al)>60||Math.abs(la)<1.8||Math.abs(la)>25) continue; if(la>0) minL=Math.min(minL,la); else minR=Math.min(minR,-la) } }
+    const side=minL===minR?-1:(minL>minR?1:-1);                  // côté le plus dégagé ; à égalité : droite
+    const D=4/M; return {lat:base.lat+ny*side*D, lon:base.lon+nx*side*D/k} }catch{ return null } }
 const stopDispPos=(st,leg)=>{ const pp=platformPos(st,leg)||platformGuess(st,leg); if(pp) return pp; if(!leg||leg.mode==='WALK') return null;
   if(isRailLeg(leg)){ // train sans quai trouvé : extrémité de la ligne colorée, décalée du bon côté de la voie (à droite du sens de marche)
     const co=legCoords(leg); if(!co||co.length<2||!st||!Number.isFinite(+st.lon)||!Number.isFinite(+st.lat)) return null;
-    let base=st; const isTo=st===leg.to, isFrom=st===leg.from;
+    const isTo=st===leg.to, isFrom=st===leg.from; let base=null;
     if(isTo||isFrom){ const e=isTo?co[co.length-1]:co[0]; if(kmDist([+st.lon,+st.lat],e)<0.35) base={lon:e[0],lat:e[1]} }
-    return sidePos(co,base,3,6) }
+    if(!base){ const pr=projectOnPoly(co,[+st.lon,+st.lat]); if(!pr||pr.d>0.06) return null; base={lon:pr.q[0],lat:pr.q[1]} }
+    return railSidePos(co,base) }
   return sidePos(legCoords(leg),st) };
 function clipLegToPlatforms(co,l){ // la ligne commence / finit au point de la route le plus proche du quai, sans coude jusqu'à l'arrêt
   if(!co||co.length<2)return co;
