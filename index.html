@@ -19,7 +19,7 @@ var h=document.head,m1=document.createElement('meta');m1.name='theme-color';m1.c
 #journeys>.jr.jr-enter{animation:journeyEnter .48s cubic-bezier(.22,.78,.24,1) both;animation-delay:calc(var(--enter-i,0)*48ms)}
 #journeys>.jr.pop{animation:journeyEnter .48s cubic-bezier(.22,.78,.24,1) both}
 #journeys>.jr.leave{opacity:0;transform:translateY(-7px) scale(.985);filter:blur(1px);transition:opacity .22s ease,transform .28s cubic-bezier(.4,0,.2,1),filter .22s ease;pointer-events:none}
-#journeys>.day-sep,#journeys>.now-sep,#journeys>.walk-sep{animation:listMarkerIn .32s cubic-bezier(.2,.75,.25,1) both}
+#journeys>.day-sep.mk-new,#journeys>.now-sep.mk-new,#journeys>.walk-sep.mk-new{animation:listMarkerIn .32s cubic-bezier(.2,.75,.25,1) both}
 @keyframes journeyEnter{0%{opacity:0;transform:translate3d(0,14px,0) scale(.985)}65%{opacity:1;transform:translate3d(0,-1px,0) scale(1.002)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}
 @keyframes listMarkerIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){#journeys>.jr,#journeys>.jr.jr-enter,#journeys>.jr.pop,#journeys>.day-sep,#journeys>.now-sep,#journeys>.walk-sep{animation:none!important;transition:none!important;filter:none!important}#journeys>.jr{will-change:auto}}
@@ -804,7 +804,7 @@ function renderJourneyList(){
       ['.jr-top','.jr-times','.chain','.legs'].forEach(sel=>{const a=el.querySelector(sel),b=fresh.querySelector(sel);
         if(a&&b&&a.innerHTML!==b.innerHTML){const sig=x=>[...x.querySelectorAll('b,.late')].map(n=>n.textContent).join('|');const chg=sel==='.jr-times'&&sig(a)!==sig(b);a.innerHTML=b.innerHTML;  }});
     }else{el=fresh;el.classList.add('jr-enter');el.style.setProperty('--enter-i',String(Math.min(i,5)));const clean=()=>{el.classList.remove('jr-enter');el.style.removeProperty('--enter-i')};el.addEventListener('animationend',clean,{once:true});setTimeout(clean,750)}
-    const ref=prev?prev.nextSibling:box.firstChild; if(el!==ref) box.insertBefore(el,ref);
+    let ref=prev?prev.nextSibling:box.firstChild; while(ref&&ref!==el&&ref.nodeType===1&&(ref.classList.contains('now-sep')||ref.classList.contains('walk-sep')||ref.classList.contains('day-sep'))) ref=ref.nextSibling; if(el!==ref) box.insertBefore(el,ref);
     prev=el;
   });
   existing.forEach(el=>{el.classList.add('leave');setTimeout(()=>el.remove(),250)});
@@ -817,7 +817,7 @@ function renderJourneyList(){
   box.querySelectorAll(':scope > .jr').forEach(el=>{const it=list[+el.dataset.i]; if(!it) return; const d=new Date(firstTransit(it).startTime);
     if(d.toDateString()!==lastDay){ lastDay=d.toDateString(); want.add(el.dataset.k);
       const prevEl=el.previousElementSibling; if(!(prevEl&&prevEl.classList.contains('day-sep')&&prevEl.dataset.for===el.dataset.k)){
-        const sep=document.createElement('div'); sep.className='day-sep'; sep.dataset.for=el.dataset.k;
+        const sep=document.createElement('div'); sep.className='day-sep mk-new'; sep.addEventListener('animationend',()=>sep.classList.remove('mk-new'),{once:true}); sep.dataset.for=el.dataset.k;
         sep.textContent=d.toLocaleDateString('fr-CH',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); el.before(sep) } }});
   box.querySelectorAll('.day-sep').forEach(sp=>{ const nx=sp.nextElementSibling; if(!want.has(sp.dataset.for)||!nx||nx.dataset.k!==sp.dataset.for) sp.remove() });
   box.querySelectorAll(':scope > .jr').forEach(el=>{ if(!appending) el.dataset.shown=el.dataset.shown||1 });
@@ -825,7 +825,7 @@ function renderJourneyList(){
   { let ns=box.querySelector(':scope > .now-sep'); const ref=planTime?+planTime:Date.now();
     const target=(selDest?.type!=='TRIP'&&pastFloor!=null)?[...box.querySelectorAll(':scope > .jr:not(.leave)')].find(el=>{const it=list[+el.dataset.i];return it&&jStart(it)>=ref-60000&&el.previousElementSibling&&[...box.querySelectorAll(':scope > .jr')].indexOf(el)>0}):null;
     if(!target){ ns?.remove() }
-    else{ if(!ns){ns=document.createElement('div');ns.className='now-sep';ns.textContent=planTime?'Heure choisie':'Maintenant'}
+    else{ if(!ns){ns=document.createElement('div');ns.className='now-sep mk-new';ns.addEventListener('animationend',()=>ns.classList.remove('mk-new'),{once:true});ns.textContent=planTime?'Heure choisie':'Maintenant'}
       ns.textContent=planTime?'Heure choisie':'Maintenant';
       const before=target.previousElementSibling?.classList.contains('day-sep')?target.previousElementSibling:target;
       const pv=before.previousElementSibling, pv2=pv?.classList.contains('walk-sep')?pv.previousElementSibling:pv;
@@ -837,7 +837,7 @@ function renderJourneyList(){
     const first=jrs.find(el=>{const it=list[+el.dataset.i];return it&&reach(it)});
     const show=first&&(ns||jrs.indexOf(first)>0);
     if(!show){ ws?.remove() }
-    else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep';ws.textContent='Arrêts atteignables à pied'}
+    else{ if(!ws){ws=document.createElement('div');ws.className='walk-sep mk-new';ws.addEventListener('animationend',()=>ws.classList.remove('mk-new'),{once:true});ws.textContent='Arrêts atteignables à pied'}
       let before=first.previousElementSibling?.classList.contains('day-sep')?first.previousElementSibling:first;
       if(before.previousElementSibling!==ws) before.before(ws) } }
    
