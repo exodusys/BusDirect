@@ -36,24 +36,7 @@ var h=document.head,m1=document.createElement('meta');m1.name='theme-color';m1.c
   will-change:auto!important;
 }
 #v-parametres>.row:first-child h2{margin-bottom:0}#v-parametres>.row:first-child+h3{margin-top:10px}
-</style><link rel="apple-touch-icon" id="appIcon" href=""><link rel="icon" id="favIcon" href=""><style id="gtCss">
-.gt-sum{padding:10px 12px;border-radius:12px;background:rgba(127,127,127,.12);font-size:13px;margin-bottom:4px}.gt-sum.ok{background:rgba(52,199,89,.15)}.gt-sum.warn{background:rgba(255,159,10,.18)}
-.gt-sec{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 2px 6px;font-weight:700}
-.gt-item{border:1px solid var(--border);border-radius:14px;padding:11px 12px;margin-bottom:8px;background:rgba(127,127,127,.06)}.gt-item.off{opacity:.55}
-.gt-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.gt-head>div:first-child{min-width:0;flex:1}.gt-head b{font-size:15px}
-.gt-url{font-size:11.5px;color:var(--muted);word-break:break-all;margin-top:2px}
-.gt-line{font-size:12.5px;color:var(--muted);margin-top:5px;line-height:1.35}.gt-line.bad{color:#ff453a}
-.gt-prog{height:5px;border-radius:5px;background:rgba(127,127,127,.25);overflow:hidden;margin-top:9px}.gt-prog i{display:block;height:100%;background:var(--accent);transition:width .25s}
-.gt-btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.gt-btns .btn{flex:0 1 auto}.btn:disabled{opacity:.45}
-.gt-empty{font-size:13px;color:var(--muted);padding:4px 2px}.gt-small{font-size:12px;margin-top:3px;line-height:1.35}
-.gt-fld{margin:10px 0;flex:1 1 auto;min-width:0}.gt-fld label{display:block;font-size:12px;color:var(--muted);margin:0 2px 4px;font-weight:600}
-.gt-in{width:100%;box-sizing:border-box;background:rgba(127,127,127,.14);border:1px solid var(--border);border-radius:12px;padding:10px 12px;color:var(--text);font:inherit;font-size:16px;outline:none}
-textarea.gt-in{resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:13px}.gt-row{display:flex;gap:8px}
-.gt-help{margin:12px 0 4px;font-size:13px}.gt-help summary{cursor:pointer;font-weight:600;color:var(--accent)}.gt-help p{margin:8px 0}.gt-help code{font-size:11.5px;background:rgba(127,127,127,.18);padding:1px 5px;border-radius:5px}
-dialog.gt-dlg{width:min(560px,calc(100vw - 28px));max-height:86vh;overflow:auto;border-radius:22px;padding:16px;color:var(--text);border:1px solid var(--border)}
-#gtfsBox .set>div:first-child{flex:1;min-width:0}#gtfsBox .set .seg{flex:none}
-</style>
-</head><body><script>try{if(JSON.parse(localStorage.getItem("bd_settings")||"{}").glass===false)document.body.classList.add("noglass")}catch(e){}</script><div id="appWallpaper" aria-hidden="true"></div>
+</style><link rel="apple-touch-icon" id="appIcon" href=""><link rel="icon" id="favIcon" href=""></head><body><script>try{if(JSON.parse(localStorage.getItem("bd_settings")||"{}").glass===false)document.body.classList.add("noglass")}catch(e){}</script><div id="appWallpaper" aria-hidden="true"></div>
 
 <header class="glass"><div class="logo" id="logo"></div><div class="appname">Bus<span>Direct</span></div><div class="spacer"></div><div class="loc" id="locLabel" aria-live="polite"></div></header>
 
@@ -89,791 +72,18 @@ dialog.gt-dlg{width:min(560px,calc(100vw - 28px));max-height:86vh;overflow:auto;
   <section class="view" id="v-tickets"><h2>Tickets</h2><div class="card glass"><div class="row between"><div><b id="regionName">Région</b><div class="muted" style="font-size:12px">Ticket SMS selon ta position</div></div><button class="btn ghost sm" onclick="locate(true)">📍</button></div></div><h3>Tickets disponibles</h3><div class="card glass" id="smsList"></div><h3>Autres régions</h3><div class="card glass" id="smsOther"></div><p class="muted" style="font-size:12px;margin:6px">Tarifs et mots-clés indicatifs : vérifie auprès de l'opérateur avant l'envoi. Le ticket SMS est facturé sur ta facture mobile (abonnement suisse requis).</p></section>
 
   
-  <section class="view" id="v-parametres"><div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div><h3>Apparence</h3><div class="card glass"><div class="set"><span>Style</span><div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div><div class="set"><span>Thème</span><div class="seg" id="themeSeg"><button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button></div></div><div class="set"><span>Couleur d'accent</span><input type="color" id="accent" style="width:44px;height:30px;border:none;background:none"></div></div><h3>Liquid Glass</h3><div class="card glass"><div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div><div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div><div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div><div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div></div><div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div><div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div><h3>Itinéraires</h3><div class="card glass"><div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div><label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div></div><h3>Tickets</h3><div class="card glass"><div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div><label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div></div><h3>Capteurs</h3><div class="card glass"><div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div><label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div><div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div><label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div></div><h3>Sources de données</h3><div class="card glass" id="gtfsBox"></div><h3>Données</h3><div class="card glass"><div class="set"><div><b>🧹 Vider le cache</b><div class="muted" style="font-size:12px" id="cacheTxt">Couleurs des lignes, quais et voies, trajets des véhicules…</div></div><button class="btn ghost sm" type="button" onclick="clearDataCache()">Vider</button></div></div><input type="file" id="fileIn" accept="image/*" hidden></section></main>
+  <section class="view" id="v-parametres"><div class="row between"><h2>Paramètres</h2><button class="info-btn" onclick="toggleInfo(true)" aria-label="Informations">i</button></div><h3>Apparence</h3><div class="card glass"><div class="set"><span>Style</span><div class="seg" id="styleSeg"><button data-v="round">Arrondi</button><button data-v="classic">Classique</button></div></div><div class="set"><span>Thème</span><div class="seg" id="themeSeg"><button data-v="light">Clair</button><button data-v="dark">Sombre</button><button data-v="auto">Auto</button></div></div><div class="set"><span>Couleur d'accent</span><input type="color" id="accent" style="width:44px;height:30px;border:none;background:none"></div></div><h3>Liquid Glass</h3><div class="card glass"><div class="set"><span>Activer l'effet</span><label class="switch"><input type="checkbox" id="glassOn"><span></span></label></div><div class="set"><span>Flou</span><input type="range" id="blur" min="0" max="100"><output class="range-value" id="blurValue" for="blur">20%</output></div><div class="set"><span>Transparence</span><input type="range" id="alpha" min="0" max="100"><output class="range-value" id="alphaValue" for="alpha">80%</output></div><div class="set"><span>Saturation</span><input type="range" id="sat" min="0" max="100"><output class="range-value" id="satValue" for="sat">0%</output></div></div><div class="card glass"><b style="font-size:19px">Logo de l'application</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Choisissez le logo affiché en haut de l'écran.</div><div class="picker2 logos" id="logoPicker"></div></div><div class="card glass"><b style="font-size:19px">Fond d'écran</b><div class="muted" style="font-size:13px;margin:4px 0 10px">Fond affiché derrière l'application, avec ou sans effet Liquid Glass.</div><div class="picker2 walls" id="wallPicker"></div></div><h3>Itinéraires</h3><div class="card glass"><div class="set"><div><b>🚏 Arrêt le plus proche</b><div class="muted" style="font-size:12px" id="nearestTxt"></div></div><label class="switch"><input type="checkbox" id="nearestOn" onchange="setNearestOnly(this.checked)"><span></span></label></div></div><h3>Tickets</h3><div class="card glass"><div class="set"><div><b>🎫 Tickets SMS</b><div class="muted" style="font-size:12px">Affiche l'onglet Tickets quand un service SMS existe dans ton canton</div></div><label class="switch"><input type="checkbox" id="smsOn" onchange="setSmsTab(this.checked)"><span></span></label></div></div><h3>Capteurs</h3><div class="card glass"><div class="set"><div><b>📍 Localisation</b><div class="sstat" id="geoStat"></div></div><label class="switch"><input type="checkbox" id="geoOn" onchange="setGeo(this.checked)"><span></span></label></div><div class="set"><div><b>🧭 Mouvement et orientation</b><div class="sstat" id="motStat"></div></div><label class="switch"><input type="checkbox" id="motOn" onchange="setMotion(this.checked)"><span></span></label></div></div><h3>Données</h3><div class="card glass"><div class="set"><div><b>🧹 Vider le cache</b><div class="muted" style="font-size:12px" id="cacheTxt">Couleurs des lignes, quais et voies, trajets des véhicules…</div></div><button class="btn ghost sm" type="button" onclick="clearDataCache()">Vider</button></div></div><input type="file" id="fileIn" accept="image/*" hidden></section></main>
 
 <nav class="glass" id="tabs"><button data-v="horaires" class="active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Horaires</button><button data-v="suivis" id="tabSuivis"><span class="tab-badge" id="suivisBadge"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>Suivis</button><button data-v="parcours"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></svg>Parcours</button><button data-v="tickets" id="tabTickets"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8a2 2 0 0 0 0 4v0a2 2 0 0 1 0 4v2h18v-2a2 2 0 0 1 0-4 2 2 0 0 0 0-4V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>Tickets</button><button data-v="parametres"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Paramètres</button></nav>
 <script>(function(){try{var t=localStorage.getItem('bd_tab');if(!t||t==='horaires')return;var v=document.getElementById('v-'+t),b=document.querySelector('#tabs button[data-v="'+t+'"]');if(!v||!b||b.offsetParent===null)return;document.querySelectorAll('.view').forEach(function(e){e.classList.toggle('active',e===v)});document.querySelectorAll('#tabs button').forEach(function(e){e.classList.toggle('active',e===b)});var st=document.createElement('style');st.id='bootNoAnim';st.textContent='.view{animation:none!important}';document.head.appendChild(st);addEventListener('load',function(){setTimeout(function(){st.remove()},400)})}catch(e){}})();</script>
 
 
-<div id="mapView"><div id="map"></div><div class="map-bar glass"><button class="map-btn" onclick="closeMap()">✕</button><div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div><div class="map-rcol"><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button><button type="button" id="mapAl" class="leg-al map-al-btn" aria-label="Infos trafic" style="display:none"></button></div></div><div class="map-ctrl glass"><button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button><button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button><button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button><button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button><button class="map-btn" onclick="mapFit()">⤢</button></div><div class="map-steps glass" id="mapSteps"></div><div class="walk-card glass" id="walkCard"><div class="row between"><div><b id="walkTitle">Marche jusqu'à l'arrêt</b><div class="muted" id="walkInfo" style="font-size:13px"></div></div><button class="btn sm" id="walkBtn" onclick="toggleNav()">▶︎ Lancer</button></div></div></div><div id="infoView" class="info-view"><div class="info-sheet glass"><div class="info-head"><b>Informations</b><button class="map-btn" onclick="toggleInfo(false)">✕</button></div><div class="info-body"><h4>🕒 Horaires</h4><ul><li><b>Appui court sur une dalle</b> : prochains trajets depuis ta position vers cette destination.</li><li><b>Appui long puis glisser</b> d'une dalle vers une autre : trajets entre ces deux destinations. Une ligne relie les deux dalles tant que la paire est sélectionnée.</li><li><b>Date et heure</b> : le champ en haut de la liste permet de choisir un autre horaire. « Maintenant » revient à l'heure actuelle.</li><li><b>Chaque trajet</b> : ligne et direction, arrêt et quai, compte à rebours, heure de départ, durée, marche et changements, heure d'arrivée. Les retards s'affichent en orange, les déviations en cours dans un bandeau.</li><li><b>Toucher un trajet</b> pour voir le détail, l'ouvrir sur la carte ou le suivre.</li><li><b>Liste des parcours</b> : elle s'ouvre sur sa propre page, en plein écran. Pour revenir aux dalles, touche ‹ ou glisse depuis le bord gauche de l'écran vers la droite.</li><li>Quitter une liste arrête son actualisation et remet l'heure sur « Maintenant ».</li><li><b>Plus de trajets</b> : en bas de la liste, continue de faire défiler jusqu'à ce que les quatre barres s'allument.</li></ul><h4>🗺️ Carte</h4><ul><li>Parcours complet dans les couleurs des lignes, marches en pointillés bleus, arrêts avec quai ou voie.</li><li>Position du véhicule (temps réel si disponible, sinon estimée) et son trajet en tirets jusqu'à ton arrêt.</li><li><b>Marche</b> : touche le bandeau de marche pour ouvrir une marche à pied seule, avec escaliers et ascenseurs.</li><li><b>Lancer</b> : marche guidée vers l'arrêt, orientée dans ton sens de marche. Tu peux déplacer ou zoomer, la carte se recentre après 3 s.</li><li>Boutons à droite : clair/sombre, bâtiments 3D, vue 3D/2D, vue d'ensemble.</li></ul><h4>🔖 Suivis</h4><ul><li>« Suivre » enregistre un trajet. L'onglet apparaît avec une pastille indiquant le nombre de suivis. Touche un suivi pour le déplier.</li></ul><h4>🧭 Parcours</h4><ul><li>Recherche un arrêt, une adresse ou un lieu et ajoute-le à tes destinations. Pour une adresse, l'arrêt le plus proche est utilisé.</li></ul><h4>🚏 Itinéraires</h4><ul><li><b>Arrêt le plus proche</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li><li><b>Désactivé</b> : tous les arrêts des environs sont acceptés, avec une marche jusqu'à la destination. Plus de choix de trajets, mais l'arrivée peut se faire à un autre arrêt.</li><li>Réglage dans Paramètres › Itinéraires.</li></ul><h4>🎫 Tickets</h4><ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li><li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul><h4>⚙️ Paramètres</h4><ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul><h4>📡 Sources de données</h4><ul><li><b>Tes sources GTFS</b> : horaires, gardés sur l'appareil. <b>GTFS-RT</b> : retards, suppressions de courses ou d'arrêts, positions des véhicules, perturbations. À régler dans Paramètres › Sources de données.</li><li><b>OpenStreetMap</b> : couleurs des lignes, chemins piétons, gares et recherche d'adresses.</li><li><b>OpenFreeMap</b> : fond de carte.</li></ul><h4>🌍 Couverture</h4><p class="muted" style="font-size:12px">Selon les sources configurées. La qualité (temps réel, quais) dépend de chaque fournisseur.</p><div id="countryList"></div></div></div></div><div class="toast glass" id="toast"></div>
+<div id="mapView"><div id="map"></div><div class="map-bar glass"><button class="map-btn" onclick="closeMap()">✕</button><div class="t"><span id="mapTitle"></span><small id="mapSub"></small></div><div class="map-rcol"><button type="button" class="home-btn" onclick="goHome()" aria-label="Accueil — revenir aux dalles" title="Revenir aux dalles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h5v-7h4v7h5V9"/></svg></button><button type="button" id="mapAl" class="leg-al map-al-btn" aria-label="Infos trafic" style="display:none"></button></div></div><div class="map-ctrl glass"><button class="map-btn" id="btnFollow" onclick="toggleFollowVeh()" title="Suivre le véhicule" style="display:none">🚌</button><button class="map-btn" id="btnTheme" onclick="toggleMapTheme()">🌙</button><button class="map-btn" id="btnBld" onclick="toggleBuildings()" title="Bâtiments 3D">🏢</button><button class="map-btn" id="btn3d" onclick="toggle3D()" style="font-size:13px;font-weight:800">3D</button><button class="map-btn" onclick="mapFit()">⤢</button></div><div class="map-steps glass" id="mapSteps"></div><div class="walk-card glass" id="walkCard"><div class="row between"><div><b id="walkTitle">Marche jusqu'à l'arrêt</b><div class="muted" id="walkInfo" style="font-size:13px"></div></div><button class="btn sm" id="walkBtn" onclick="toggleNav()">▶︎ Lancer</button></div></div></div><div id="infoView" class="info-view"><div class="info-sheet glass"><div class="info-head"><b>Informations</b><button class="map-btn" onclick="toggleInfo(false)">✕</button></div><div class="info-body"><h4>🕒 Horaires</h4><ul><li><b>Appui court sur une dalle</b> : prochains trajets depuis ta position vers cette destination.</li><li><b>Appui long puis glisser</b> d'une dalle vers une autre : trajets entre ces deux destinations. Une ligne relie les deux dalles tant que la paire est sélectionnée.</li><li><b>Date et heure</b> : le champ en haut de la liste permet de choisir un autre horaire. « Maintenant » revient à l'heure actuelle.</li><li><b>Chaque trajet</b> : ligne et direction, arrêt et quai, compte à rebours, heure de départ, durée, marche et changements, heure d'arrivée. Les retards s'affichent en orange, les déviations en cours dans un bandeau.</li><li><b>Toucher un trajet</b> pour voir le détail, l'ouvrir sur la carte ou le suivre.</li><li><b>Liste des parcours</b> : elle s'ouvre sur sa propre page, en plein écran. Pour revenir aux dalles, touche ‹ ou glisse depuis le bord gauche de l'écran vers la droite.</li><li>Quitter une liste arrête son actualisation et remet l'heure sur « Maintenant ».</li><li><b>Plus de trajets</b> : en bas de la liste, continue de faire défiler jusqu'à ce que les quatre barres s'allument.</li></ul><h4>🗺️ Carte</h4><ul><li>Parcours complet dans les couleurs des lignes, marches en pointillés bleus, arrêts avec quai ou voie.</li><li>Position du véhicule (temps réel si disponible, sinon estimée) et son trajet en tirets jusqu'à ton arrêt.</li><li><b>Marche</b> : touche le bandeau de marche pour ouvrir une marche à pied seule, avec escaliers et ascenseurs.</li><li><b>Lancer</b> : marche guidée vers l'arrêt, orientée dans ton sens de marche. Tu peux déplacer ou zoomer, la carte se recentre après 3 s.</li><li>Boutons à droite : clair/sombre, bâtiments 3D, vue 3D/2D, vue d'ensemble.</li></ul><h4>🔖 Suivis</h4><ul><li>« Suivre » enregistre un trajet. L'onglet apparaît avec une pastille indiquant le nombre de suivis. Touche un suivi pour le déplier.</li></ul><h4>🧭 Parcours</h4><ul><li>Recherche un arrêt, une adresse ou un lieu et ajoute-le à tes destinations. Pour une adresse, l'arrêt le plus proche est utilisé.</li></ul><h4>🚏 Itinéraires</h4><ul><li><b>Arrêt le plus proche</b> (activé par défaut) : pour une adresse ou un lieu, les trajets vont jusqu'à l'arrêt le plus proche, puis la marche finale jusqu'à l'adresse est ajoutée au trajet, dans la liste comme sur la carte.</li><li><b>Désactivé</b> : tous les arrêts des environs sont acceptés, avec une marche jusqu'à la destination. Plus de choix de trajets, mais l'arrivée peut se faire à un autre arrêt.</li><li>Réglage dans Paramètres › Itinéraires.</li></ul><h4>🎫 Tickets</h4><ul><li>Tickets SMS de la région où tu te trouves. L'onglet n'apparaît que si un service SMS existe dans le canton où tu te trouves, et peut aussi être masqué dans les paramètres. Vérifie toujours le tarif auprès de l'opérateur.</li><li><b>Villes prises en compte</b> :<div id="smsCities" style="margin-top:4px"></div></li></ul><h4>⚙️ Paramètres</h4><ul><li>Style arrondi ou classique, thème, couleur d'accent, effet Liquid Glass, logo, fond d'écran, carte, itinéraires, tickets, localisation et mouvement/orientation.</li></ul><h4>📡 Sources de données</h4><ul><li><b>Transitous</b> : horaires, temps réel, positions des véhicules, perturbations.</li><li><b>OpenStreetMap</b> : couleurs des lignes, chemins piétons et gares.</li><li><b>OpenFreeMap</b> : fond de carte.</li></ul><h4>🌍 Pays et régions couverts</h4><p class="muted" style="font-size:12px">Couverture fournie par Transitous, qui évolue régulièrement. La qualité (temps réel, quais) varie selon les opérateurs. Liste indicative.</p><div id="countryList"></div><p class="muted" style="font-size:12px;margin-top:12px">Liste complète et à jour : transitous.org/sources</p></div></div></div><div class="toast glass" id="toast"></div>
 
 <script>
-/* ===== Parseur GTFS (tourne dans un Worker ou, à défaut, sur le fil principal) ===== */
-function gtfsParserModule(){
-  const td=new TextDecoder('utf-8');
-  /* ---------- ZIP (lecture aléatoire sur un Blob, décompression en flux) ---------- */
-  async function readZipDir(blob,prefix,all){
-    const size=blob.size, tailLen=Math.min(size,66000);
-    const tail=new Uint8Array(await blob.slice(size-tailLen,size).arrayBuffer());
-    let e=-1; for(let i=tail.length-22;i>=0;i--){ if(tail[i]===0x50&&tail[i+1]===0x4b&&tail[i+2]===5&&tail[i+3]===6){e=i;break} }
-    if(e<0) throw new Error('Archive ZIP invalide');
-    const dv=new DataView(tail.buffer,tail.byteOffset,tail.byteLength);
-    const n=dv.getUint16(e+10,true), cdSize=dv.getUint32(e+12,true), cdOff=dv.getUint32(e+16,true);
-    if(cdOff===0xffffffff||n===0xffff) throw new Error('ZIP64 non pris en charge');
-    const cd=new Uint8Array(await blob.slice(cdOff,cdOff+cdSize).arrayBuffer()), cdv=new DataView(cd.buffer);
-    const entries={}; let p=0;
-    while(p+46<=cd.length&&cdv.getUint32(p,true)===0x02014b50){
-      const method=cdv.getUint16(p+10,true), csize=cdv.getUint32(p+20,true), usize=cdv.getUint32(p+24,true),
-        nl=cdv.getUint16(p+28,true), el=cdv.getUint16(p+30,true), cl=cdv.getUint16(p+32,true), lho=cdv.getUint32(p+42,true);
-      const name=td.decode(cd.subarray(p+46,p+46+nl));
-      if(!name.endsWith('/')){ const en={name,method,csize,usize,lho};
-        if(all){ entries[name]=en } else if(prefix!=null){ if(name.startsWith(prefix)&&name.indexOf('/',prefix.length)<0) entries[name.slice(prefix.length).toLowerCase()]=en }
-        else entries[name.replace(/^.*\//,'').toLowerCase()]=en }
-      p+=46+nl+el+cl;
-    }
-    return entries;
-  }
-  async function openEntry(blob,en){
-    const h=new DataView(await blob.slice(en.lho,en.lho+30).arrayBuffer());
-    const start=en.lho+30+h.getUint16(26,true)+h.getUint16(28,true);
-    const raw=blob.slice(start,start+en.csize).stream();
-    if(en.method===0) return raw;
-    if(en.method===8){ if(typeof DecompressionStream==='undefined') throw new Error('Navigateur trop ancien (DecompressionStream)');
-      if(!opts_forceZlib){ try{ const o=raw.pipeThrough(new DecompressionStream('deflate-raw')); o._tolerate=en.usize||1; return o }catch(e){} }
-      // repli (navigateurs sans « deflate-raw ») : enveloppe zlib factice ; l'erreur finale de somme de contrôle est ignorée (taille connue)
-      const rd=raw.getReader(); let step=0; const wrapped=new ReadableStream({ async pull(c){ if(step===0){ step=1; c.enqueue(new Uint8Array([0x78,0x9c])); return }
-        const {value,done}=await rd.read(); if(done){ c.enqueue(new Uint8Array(4)); c.close() } else c.enqueue(value) } });
-      const out=wrapped.pipeThrough(new DecompressionStream('deflate')); out._tolerate=en.usize; return out }
-    throw new Error('Compression ZIP non prise en charge');
-  }
-  let opts_forceZlib=false;
-  /* ---------- lignes / CSV ---------- */
-  async function eachLine(stream,cb,onBytes){
-    const reader=stream.getReader(), dec=new TextDecoder('utf-8'); let buf='', total=0;
-    for(;;){
-      let r; try{ r=await reader.read() }catch(e){ if(stream._tolerate&&total>0&&(stream._tolerate>=0xffffffff||total>=stream._tolerate||/extra bytes|trailing/i.test(String(e&&e.message)))) break; throw e }
-      const {value,done}=r; if(done) break; total+=value.length;
-      if(onBytes) onBytes(value.length);
-      buf+=dec.decode(value,{stream:true}); let i=0,j;
-      while((j=buf.indexOf('\n',i))>=0){ let line=buf.slice(i,j); if(line.charCodeAt(line.length-1)===13) line=line.slice(0,-1); i=j+1; cb(line) }
-      buf=i?buf.slice(i):buf;
-    }
-    buf+=dec.decode(); if(buf.length) cb(buf.replace(/\r$/,''));
-  }
-  function splitCsv(line){
-    if(line.indexOf('"')<0) return line.split(',');
-    const out=[]; let cur='',q=false;
-    for(let i=0;i<line.length;i++){ const c=line[i];
-      if(q){ if(c==='"'){ if(line[i+1]==='"'){cur+='"';i++} else q=false } else cur+=c }
-      else if(c==='"') q=true; else if(c===','){ out.push(cur); cur='' } else cur+=c }
-    out.push(cur); return out;
-  }
-  async function table(blob,entries,name,cb,onProg){
-    const en=entries[name]; if(!en) return false; let col=null, got=0;
-    await eachLine(await openEntry(blob,en),line=>{
-      if(!line) return;
-      if(!col){ const h=splitCsv(line.replace(/^﻿/,'')); col={}; h.forEach((c,i)=>col[c.trim()]=i); return }
-      cb(splitCsv(line),col);
-    },onProg?(n=>{ got+=n; onProg(en.usize?Math.min(1,got/en.usize):0) }):null);
-    return true;
-  }
-  /* ---------- tableaux extensibles ---------- */
-  class Grow{ constructor(T,n=1024){this.T=T;this.a=new T(n);this.n=0}
-    push(v){ if(this.n===this.a.length){ const b=new this.T(this.a.length*2); b.set(this.a); this.a=b } this.a[this.n++]=v }
-    done(){ return this.a.slice(0,this.n) } }
-  const tsec=s=>{ if(!s) return -1; const p=s.trim().split(':'); if(p.length<2) return -1; return (+p[0])*3600+(+p[1])*60+(+(p[2]||0)) };
-  const dint=s=>{ s=(s||'').trim(); return /^\d{8}$/.test(s)?+s:0 };
-  const g=(r,c,k)=>{ const i=c[k]; return i==null?'':(r[i]||'') };
-
-  async function parse(blob,opts,progress){
-    opts=opts||{}; const P=(stage,f,extra)=>progress&&progress(Object.assign({stage,f},extra||{}));
-    if(opts.region&&opts.region.zip){ // archive imbriquée : on la décompresse d'abord (une région = un petit GTFS)
-      const all=await readZipDir(blob,null,true), en=all[opts.region.zip]; if(!en) throw new Error('Région introuvable dans l\'archive : '+opts.region.zip);
-      blob=await new Response(await openEntry(blob,en)).blob(); }
-    const entries=await readZipDir(blob,opts.region&&opts.region.dir!=null?opts.region.dir:null);
-    if(!entries['stops.txt']||!entries['stop_times.txt']||!entries['trips.txt']) throw new Error('Archive GTFS incomplète (stops, trips ou stop_times manquant)');
-    const z=opts.zone&&Number.isFinite(+opts.zone.lat)&&Number.isFinite(+opts.zone.lon)&&+opts.zone.km>0?opts.zone:null;
-    let zb=null; if(z){ const dl=z.km/111.2, dn=z.km/(111.2*Math.max(.2,Math.cos(z.lat*Math.PI/180))); zb=[z.lat-dl,z.lat+dl,z.lon-dn,z.lon+dn] }
-    const out={v:1,id:opts.id,name:opts.name||'',loadedAt:Date.now(),tz:'Europe/Zurich',zone:z||null,srcBytes:blob.size};
-    /* agency */
-    const agName=[]; const agIdx=new Map();
-    await table(blob,entries,'agency.txt',(r,c)=>{ const id=g(r,c,'agency_id'); agIdx.set(id,agName.length); agName.push(g(r,c,'agency_name')); const tz=g(r,c,'agency_timezone'); if(tz&&agName.length===1) out.tz=tz.trim() });
-    /* stops */
-    P('stops',0);
-    const sid=[],sname=[],slat=[],slon=[],spar=[],splat=[],stype=[], sIdx=new Map();
-    await table(blob,entries,'stops.txt',(r,c)=>{
-      const id=g(r,c,'stop_id'); const lat=parseFloat(g(r,c,'stop_lat')), lon=parseFloat(g(r,c,'stop_lon'));
-      sIdx.set(id,sid.length); sid.push(id); sname.push(g(r,c,'stop_name')); slat.push(Number.isFinite(lat)?lat:NaN); slon.push(Number.isFinite(lon)?lon:NaN);
-      spar.push(g(r,c,'parent_station')); splat.push(g(r,c,'platform_code')); stype.push(+(g(r,c,'location_type')||0)) });
-    const nS0=sid.length;
-    const inZ=i=>!zb||(slat[i]>=zb[0]&&slat[i]<=zb[1]&&slon[i]>=zb[2]&&slon[i]<=zb[3]);
-    /* routes */
-    const rid=[],rshort=[],rlong=[],rtype=[],rcol=[],rtxt=[],ragc=[],rIdx=new Map();
-    await table(blob,entries,'routes.txt',(r,c)=>{ rIdx.set(g(r,c,'route_id'),rid.length); rid.push(g(r,c,'route_id')); rshort.push(g(r,c,'route_short_name')); rlong.push(g(r,c,'route_long_name'));
-      rtype.push(+(g(r,c,'route_type')||3)); rcol.push(g(r,c,'route_color').replace('#','')); rtxt.push(g(r,c,'route_text_color').replace('#','')); const ai=agIdx.get(g(r,c,'agency_id')); ragc.push(ai!=null?agName[ai]:(agName[0]||'')) });
-    /* services */
-    const svId=[],svS=[],svE=[],svM=[],svIdx=new Map(), addL=[],remL=[];
-    const svOf=id=>{ let i=svIdx.get(id); if(i==null){ i=svId.length; svIdx.set(id,i); svId.push(id); svS.push(0); svE.push(0); svM.push(0); addL.push([]); remL.push([]) } return i };
-    let vFrom=99999999, vTo=0;
-    await table(blob,entries,'calendar.txt',(r,c)=>{ const i=svOf(g(r,c,'service_id')); svS[i]=dint(g(r,c,'start_date')); svE[i]=dint(g(r,c,'end_date'));
-      let m=0; ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].forEach((d,k)=>{ if(g(r,c,d)==='1') m|=1<<k }); svM[i]=m;
-      if(svS[i]&&svS[i]<vFrom) vFrom=svS[i]; if(svE[i]>vTo) vTo=svE[i] });
-    await table(blob,entries,'calendar_dates.txt',(r,c)=>{ const i=svOf(g(r,c,'service_id')), d=dint(g(r,c,'date')); if(!d) return;
-      if(g(r,c,'exception_type')==='1'){ addL[i].push(d); if(d<vFrom) vFrom=d; if(d>vTo) vTo=d } else remL[i].push(d) });
-    /* trips */
-    P('trips',0);
-    const tMeta=new Map(); // trip_id -> [route,svc,head,short,shapeId,dir]
-    await table(blob,entries,'trips.txt',(r,c)=>{
-      const ri=rIdx.get(g(r,c,'route_id')); if(ri==null) return;
-      tMeta.set(g(r,c,'trip_id'),[ri,svOf(g(r,c,'service_id')),g(r,c,'trip_headsign'),g(r,c,'trip_short_name'),g(r,c,'shape_id'),+(g(r,c,'direction_id')||0)]) });
-    /* stop_times (flux) */
-    P('stoptimes',0);
-    const stS=new Grow(Int32Array,1<<16), stA=new Grow(Int32Array,1<<16), stD=new Grow(Int32Array,1<<16), stF=new Grow(Uint8Array,1<<16);
-    const tId=[],tRoute=[],tSvc=[],tHead=[],tShort=[],tShapeId=[],tDir=[],tOff=[0];
-    let cur=null, bS=[],bA=[],bD=[],bF=[],bQ=[], sorted=true; const done=new Set(); let kept=0, seen=0;
-    const flush=()=>{
-      if(cur==null) return; const id=cur; cur=null; done.add(id);
-      const meta=tMeta.get(id); if(!meta||bS.length<2){ reset(); return }
-      let idx=bS.map((_,i)=>i); if(!sorted) idx.sort((a,b)=>bQ[a]-bQ[b]);
-      let first=0,last=idx.length-1;
-      if(zb){ first=-1; for(let k=0;k<idx.length;k++){ if(inZ(bS[idx[k]])){ if(first<0) first=k; last=k } } if(first<0){ reset(); return } if(last-first<1){ reset(); return } }
-      // interpolation des horaires manquants
-      const n=last-first+1, A=new Array(n), D=new Array(n);
-      for(let k=0;k<n;k++){ const i=idx[first+k]; A[k]=bA[i]; D[k]=bD[i]; if(A[k]<0) A[k]=D[k]; if(D[k]<0) D[k]=A[k] }
-      let lastKnown=-1; for(let k=0;k<n;k++){ if(D[k]>=0){ if(lastKnown>=0&&k-lastKnown>1){ const t0=D[lastKnown],t1=A[k]; for(let m=lastKnown+1;m<k;m++){ const v=Math.round(t0+(t1-t0)*(m-lastKnown)/(k-lastKnown)); A[m]=v; D[m]=v } } lastKnown=k } }
-      if(A[0]<0||D[n-1]<0||A.some(v=>v<0)){ reset(); return }
-      for(let k=0;k<n;k++){ const i=idx[first+k]; stS.push(bS[i]); stA.push(A[k]); stD.push(D[k]); stF.push(bF[i]) }
-      tId.push(id); tRoute.push(meta[0]); tSvc.push(meta[1]); tHead.push(meta[2]); tShort.push(meta[3]); tShapeId.push(meta[4]); tDir.push(meta[5]); tOff.push(stS.n); kept++;
-      reset();
-    };
-    const reset=()=>{ bS=[];bA=[];bD=[];bF=[];bQ=[];sorted=true };
-    await table(blob,entries,'stop_times.txt',(r,c)=>{
-      const id=g(r,c,'trip_id'); if(id!==cur){ flush(); if(done.has(id)) { cur=null; return } cur=id; seen++ }
-      const si=sIdx.get(g(r,c,'stop_id')); if(si==null||!Number.isFinite(slat[si])) return;
-      const q=+(g(r,c,'stop_sequence')||bS.length); if(bQ.length&&q<bQ[bQ.length-1]) sorted=false;
-      bS.push(si); bA.push(tsec(g(r,c,'arrival_time'))); bD.push(tsec(g(r,c,'departure_time'))); bQ.push(q);
-      bF.push((g(r,c,'pickup_type')==='1'?1:0)|(g(r,c,'drop_off_type')==='1'?2:0));
-    },f=>P('stoptimes',f,{trips:kept}));
-    flush();
-    /* fréquences → courses explicites */
-    const freq=new Map(); let hasFreq=false;
-    await table(blob,entries,'frequencies.txt',(r,c)=>{ const id=g(r,c,'trip_id'); if(!freq.has(id)) freq.set(id,[]); freq.get(id).push([tsec(g(r,c,'start_time')),tsec(g(r,c,'end_time')),+g(r,c,'headway_secs')]); hasFreq=true });
-    let nT=tId.length; const removed=new Uint8Array(nT+1);
-    if(hasFreq){
-      const base=nT; const stSnap={S:stS.a,A:stA.a,D:stD.a,F:stF.a};
-      for(let t=0;t<base;t++){ const fr=freq.get(tId[t]); if(!fr) continue; removed[t]=1; const o0=tOff[t],o1=tOff[t+1], d0=stSnap.D[o0]; let made=0;
-        for(const [a,b,h] of fr){ if(!(h>0)||a<0) continue; for(let s=a;s<b&&made<3000;s+=h,made++){ const sh=s-d0;
-          for(let k=o0;k<o1;k++){ stS.push(stSnap.S[k]); stA.push(stSnap.A[k]+sh); stD.push(stSnap.D[k]+sh); stF.push(stSnap.F[k]) }
-          tId.push(tId[t]+'#'+made+'@'+s); tRoute.push(tRoute[t]); tSvc.push(tSvc[t]); tHead.push(tHead[t]); tShort.push(tShort[t]); tShapeId.push(tShapeId[t]); tDir.push(tDir[t]); tOff.push(stS.n) } } }
-      nT=tId.length; const r2=new Uint8Array(nT+1); r2.set(removed.subarray(0,Math.min(removed.length,nT))); removed.fill(0); for(let i=0;i<r2.length;i++) removed[i]=r2[i];
-    }
-    /* compactage : arrêts utilisés */
-    P('compact',0);
-    const sa=stS.done(), aa=stA.done(), da=stD.done(), fa=stF.done();
-    const used=new Uint8Array(nS0); for(let i=0;i<sa.length;i++) used[sa[i]]=1;
-    for(let i=0;i<nS0;i++) if(used[i]&&spar[i]){ const p=sIdx.get(spar[i]); if(p!=null) used[p]=1 }
-    const remap=new Int32Array(nS0).fill(-1); let ns=0; for(let i=0;i<nS0;i++) if(used[i]) remap[i]=ns++;
-    const fs={id:[],name:[],lat:new Float64Array(ns),lon:new Float64Array(ns),parent:new Int32Array(ns).fill(-1),plat:[],type:new Uint8Array(ns)};
-    for(let i=0;i<nS0;i++){ const j=remap[i]; if(j<0) continue; fs.id[j]=sid[i]; fs.name[j]=sname[i]; fs.lat[j]=slat[i]; fs.lon[j]=slon[i]; fs.plat[j]=splat[i]; fs.type[j]=stype[i];
-      if(spar[i]){ const p=sIdx.get(spar[i]); if(p!=null&&remap[p]>=0) fs.parent[j]=remap[p] } }
-    out.stops=fs;
-    for(let i=0;i<sa.length;i++) sa[i]=remap[sa[i]];
-    /* trips finaux (hors modèles de fréquence) */
-    const keep=[]; for(let t=0;t<nT;t++) if(!removed[t]) keep.push(t);
-    const nk=keep.length, off=new Int32Array(nk+1); let w=0;
-    const finS=new Int32Array(sa.length), finA=new Int32Array(sa.length), finD=new Int32Array(sa.length), finF=new Uint8Array(sa.length);
-    const shapeIdx=new Map(), shapeNeed=[]; const trShape=new Int32Array(nk).fill(-1);
-    const T={id:new Array(nk),route:new Int32Array(nk),service:new Int32Array(nk),head:new Array(nk),short:new Array(nk),shape:trShape,dir:new Uint8Array(nk),off};
-    keep.forEach((t,k)=>{ off[k]=w; const o0=tOff[t],o1=tOff[t+1]; finS.set(sa.subarray(o0,o1),w); finA.set(aa.subarray(o0,o1),w); finD.set(da.subarray(o0,o1),w); finF.set(fa.subarray(o0,o1),w); w+=o1-o0;
-      T.id[k]=tId[t]; T.route[k]=tRoute[t]; T.service[k]=tSvc[t]; T.head[k]=tHead[t]; T.short[k]=tShort[t]; T.dir[k]=tDir[t];
-      const sh=tShapeId[t]; if(sh){ let si=shapeIdx.get(sh); if(si==null){ si=shapeNeed.length; shapeIdx.set(sh,si); shapeNeed.push(sh) } trShape[k]=si } });
-    off[nk]=w; out.trips=T; out.st={stop:finS.slice(0,w),arr:finA.slice(0,w),dep:finD.slice(0,w),flag:finF.slice(0,w)};
-    out.routes={id:rid,short:rshort,long:rlong,type:Uint16Array.from(rtype),color:rcol,text:rtxt,agency:ragc};
-    /* services */
-    const nsv=svId.length, aOff=new Int32Array(nsv+1), rOff=new Int32Array(nsv+1); let na=0,nr=0; for(let i=0;i<nsv;i++){ na+=addL[i].length; nr+=remL[i].length }
-    const aL=new Int32Array(na), rL=new Int32Array(nr); let pa=0,pr=0; for(let i=0;i<nsv;i++){ aOff[i]=pa; rOff[i]=pr; addL[i].forEach(v=>aL[pa++]=v); remL[i].forEach(v=>rL[pr++]=v) } aOff[nsv]=pa; rOff[nsv]=pr;
-    out.services={id:svId,start:Int32Array.from(svS),end:Int32Array.from(svE),mask:Uint8Array.from(svM),addOff:aOff,add:aL,remOff:rOff,rem:rL};
-    if(vFrom===99999999) vFrom=0; out.validFrom=vFrom; out.validTo=vTo;
-    /* shapes (seulement celles utilisées) */
-    P('shapes',0);
-    const shp=new Map();
-    if(entries['shapes.txt']&&shapeNeed.length){
-      await table(blob,entries,'shapes.txt',(r,c)=>{ const id=g(r,c,'shape_id'); if(!shapeIdx.has(id)) return; let a=shp.get(id); if(!a){ a=[]; shp.set(id,a) }
-        a.push([+g(r,c,'shape_pt_sequence'),parseFloat(g(r,c,'shape_pt_lat')),parseFloat(g(r,c,'shape_pt_lon'))]) },f=>P('shapes',f));
-    }
-    const sOffs=new Int32Array(shapeNeed.length+1), sPts=[]; let sp=0;
-    shapeNeed.forEach((id,i)=>{ sOffs[i]=sp; const a=shp.get(id); if(a){ a.sort((x,y)=>x[0]-y[0]); let pl=NaN,pn=NaN;
-      for(const [,la,lo] of a){ if(!Number.isFinite(la)||!Number.isFinite(lo)) continue; if(Number.isFinite(pl)&&Math.abs(la-pl)<1.8e-5&&Math.abs(lo-pn)<2.6e-5) continue; sPts.push(la,lo); pl=la; pn=lo; sp++ } } });
-    sOffs[shapeNeed.length]=sp; out.shapes={id:shapeNeed,off:sOffs,pts:Float32Array.from(sPts)};
-    /* transferts */
-    const tr=[]; await table(blob,entries,'transfers.txt',(r,c)=>{ const a=sIdx.get(g(r,c,'from_stop_id')), b=sIdx.get(g(r,c,'to_stop_id')); if(a==null||b==null||a===b) return;
-      const ty=g(r,c,'transfer_type'); if(ty==='3') return; const A=remap[a],B=remap[b]; if(A<0||B<0) return; tr.push(A,B,Math.max(0,+(g(r,c,'min_transfer_time')||0))) });
-    out.transfers=Int32Array.from(tr);
-    out.stats={stops:ns,routes:rid.length,trips:nk,stopTimes:w,shapes:shapeNeed.length,services:nsv,seenTrips:seen};
-    P('done',1);
-    return out;
-  }
-  async function listRegions(blob){
-    const all=await readZipDir(blob,null,true), names=Object.keys(all), out=[], seen=new Set();
-    const base=n=>n.replace(/^.*\//,'').toLowerCase();
-    for(const n of names){ if(base(n)==='stop_times.txt'){ const d=n.includes('/')?n.slice(0,n.lastIndexOf('/')+1):''; if(seen.has(d)) continue; seen.add(d);
-      const has=f=>!!all[d+f]; if(has('stops.txt')&&has('trips.txt')) out.push({kind:'dir',dir:d,label:d?d.replace(/\/$/,'').replace(/^.*\//,''):'',bytes:all[n].usize}) } }
-    for(const n of names){ if(/\.zip$/i.test(n)&&!/^__macosx\//i.test(n)&&base(n)[0]!=='.') out.push({kind:'zip',zip:n,label:n.replace(/^.*\//,'').replace(/\.zip$/i,''),bytes:all[n].csize}) }
-    out.sort((a,b)=>a.label.localeCompare(b.label)); return out }
-  return {parse,listRegions,_forceZlib:v=>{ opts_forceZlib=!!v }};
-}
-
-/* ===== Moteur GTFS : réseau en mémoire + routage horaire (RAPTOR) ===== */
-const GTFSCore=(function(){
-'use strict';
-const INF=Infinity, RAD=Math.PI/180, WALK_MPS=1.2, DETOUR=1.3, BOARD_BUFFER=60;
-let GTFS_DEBUG=false;
-const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
-function km(aLa,aLo,bLa,bLo){ const dLa=(bLa-aLa)*RAD, dLo=(bLo-aLo)*RAD, x=Math.sin(dLa/2)**2+Math.cos(aLa*RAD)*Math.cos(bLa*RAD)*Math.sin(dLo/2)**2; return 12742*Math.asin(Math.min(1,Math.sqrt(x))) }
-const walkSec=k=>Math.round(k*1000*DETOUR/WALK_MPS);
-const iso=sec=>new Date(sec*1000).toISOString();
-/* ---------- fuseau horaire ---------- */
-let TZ='Europe/Zurich', fmt=null; const dsCache=new Map();
-function setTZ(tz){ TZ=tz||TZ; try{ fmt=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}) }catch{ TZ='Europe/Zurich'; fmt=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}) } dsCache.clear() }
-setTZ(TZ);
-function zparts(ms){ const p={}; for(const x of fmt.formatToParts(new Date(ms))) p[x.type]=x.value; return {y:+p.year,m:+p.month,d:+p.day,h:+p.hour%24,mi:+p.minute,s:+p.second} }
-const dateIntOf=sec=>{ const p=zparts(sec*1000); return p.y*10000+p.m*100+p.d };
-function dayStart(di){ let v=dsCache.get(di); if(v!=null) return v; const y=Math.floor(di/10000), m=Math.floor(di/100)%100, d=di%100;
-  const noon=Date.UTC(y,m-1,d,12)/1000, p=zparts(noon*1000), off=(Date.UTC(p.y,p.m-1,p.d,p.h,p.mi,p.s)/1000)-noon; v=noon-off-43200; dsCache.set(di,v); return v }
-const prevDate=di=>{ const y=Math.floor(di/10000), m=Math.floor(di/100)%100, d=di%100, t=new Date(Date.UTC(y,m-1,d-1)); return t.getUTCFullYear()*10000+(t.getUTCMonth()+1)*100+t.getUTCDate() };
-const nextDate=di=>{ const y=Math.floor(di/10000), m=Math.floor(di/100)%100, d=di%100, t=new Date(Date.UTC(y,m-1,d+1)); return t.getUTCFullYear()*10000+(t.getUTCMonth()+1)*100+t.getUTCDate() };
-const dowMon=di=>{ const y=Math.floor(di/10000), m=Math.floor(di/100)%100, d=di%100; return (new Date(Date.UTC(y,m-1,d)).getUTCDay()+6)%7 };
-/* ---------- polyligne (précision 6) ---------- */
-function encPoly(pts){ // pts: [[lat,lon],...]
-  let out='',pl=0,po=0; const e=v=>{ v=v<0?~(v<<1):(v<<1); let s=''; while(v>=32){ s+=String.fromCharCode((32|(v&31))+63); v>>=5 } return s+String.fromCharCode(v+63) };
-  for(const [la,lo] of pts){ const a=Math.round(la*1e6), b=Math.round(lo*1e6); out+=e(a-pl)+e(b-po); pl=a; po=b } return out }
-/* ---------- stockage IndexedDB (repli mémoire) ---------- */
-const DB_NAME='bd_gtfs'; const memStore=new Map(); let dbp=null;
-function db(){ if(typeof indexedDB==='undefined') return Promise.resolve(null);
-  return dbp||(dbp=new Promise(res=>{ try{ const r=indexedDB.open(DB_NAME,1); r.onupgradeneeded=()=>{ r.result.createObjectStore('feeds') }; r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); r.onblocked=()=>res(null) }catch{ res(null) } })) }
-async function dbPut(k,v){ const d=await db(); if(!d){ memStore.set(k,v); return } return new Promise((ok,ko)=>{ const t=d.transaction('feeds','readwrite'); t.objectStore('feeds').put(v,k); t.oncomplete=()=>ok(); t.onerror=()=>ko(t.error); t.onabort=()=>ko(t.error||new Error('Stockage plein ou refusé')) }) }
-async function dbGet(k){ const d=await db(); if(!d) return memStore.get(k); return new Promise((ok,ko)=>{ const q=d.transaction('feeds').objectStore('feeds').get(k); q.onsuccess=()=>ok(q.result); q.onerror=()=>ko(q.error) }) }
-async function dbDel(k){ const d=await db(); if(!d){ memStore.delete(k); return } return new Promise(ok=>{ const t=d.transaction('feeds','readwrite'); t.objectStore('feeds').delete(k); t.oncomplete=()=>ok(); t.onerror=()=>ok() }) }
-async function dbKeys(){ const d=await db(); if(!d) return [...memStore.keys()]; return new Promise(ok=>{ const q=d.transaction('feeds').objectStore('feeds').getAllKeys(); q.onsuccess=()=>ok(q.result); q.onerror=()=>ok([]) }) }
-
-/* ---------- réseau ---------- */
-let NET=null, NETV=0;
-function buildNetwork(feeds){
-  const net={feeds:feeds.map(f=>({id:f.id,name:f.name,tz:f.tz,validFrom:f.validFrom,validTo:f.validTo,stats:f.stats,zone:f.zone,loadedAt:f.loadedAt,shapes:f.shapes})),v:++NETV};
-  if(feeds[0]) setTZ(feeds[0].tz);
-  let nS=0,nR=0,nSv=0,nT=0,nSt=0; const sOff=[],rOff=[],svOff=[],tOff0=[];
-  feeds.forEach(f=>{ sOff.push(nS); rOff.push(nR); svOff.push(nSv); tOff0.push(nT); nS+=f.stops.id.length; nR+=f.routes.id.length; nSv+=f.services.id.length; nT+=f.trips.id.length; nSt+=f.st.stop.length });
-  net.nS=nS; net.nT=nT; net.sOff=sOff; net.rOff=rOff; net.svOff=svOff; net.tOff0=tOff0;
-  /* arrêts */
-  const sId=new Array(nS), sName=new Array(nS), sLat=new Float64Array(nS), sLon=new Float64Array(nS), sFeed=new Int16Array(nS), sPlat=new Array(nS), sPar=new Int32Array(nS).fill(-1), sCode=new Array(nS);
-  feeds.forEach((f,fi)=>{ const o=sOff[fi]; for(let i=0;i<f.stops.id.length;i++){ const g=o+i; sId[g]=f.id+'~'+f.stops.id[i]; sCode[g]=f.stops.id[i]; sName[g]=f.stops.name[i]; sLat[g]=f.stops.lat[i]; sLon[g]=f.stops.lon[i]; sFeed[g]=fi;
-    let pl=f.stops.plat[i]||''; if(!pl){ const m=/^(\d{5,9}):\d+:(\w+)/.exec(f.stops.id[i]); if(m) pl=m[2] } sPlat[g]=pl; sPar[g]=f.stops.parent[i]>=0?o+f.stops.parent[i]:-1 } });
-  Object.assign(net,{sId,sName,sLat,sLon,sFeed,sPlat,sPar,sCode});
-  /* stations : parent_station, puis fusion des homonymes proches */
-  const root=i=>{ let g=0; while(sPar[i]>=0&&g++<4) i=sPar[i]; return i };
-  const refd=new Uint8Array(nS); feeds.forEach((f,fi)=>{ const o=sOff[fi], a=f.st.stop; for(let k=0;k<a.length;k++) refd[o+a[k]]=1 });
-  const cand=new Map(); // racine -> arrêts desservis
-  for(let i=0;i<nS;i++){ const r=root(i); let c=cand.get(r); if(!c){ c=[]; cand.set(r,c) } if(refd[i]) c.push(i) }
-  const roots=[...cand.keys()], uf=new Int32Array(roots.length).map((_,i)=>i); const find=x=>{ while(uf[x]!==x){ uf[x]=uf[uf[x]]; x=uf[x] } return x };
-  const byName=new Map(); roots.forEach((r,i)=>{ const k=norm(sName[r]); if(!k) return; let a=byName.get(k); if(!a){ a=[]; byName.set(k,a) } a.push(i) });
-  for(const a of byName.values()){ if(a.length<2) continue; for(let x=0;x<a.length;x++) for(let y=x+1;y<a.length;y++){ const A=roots[a[x]],B=roots[a[y]]; if(km(sLat[A],sLon[A],sLat[B],sLon[B])<0.25){ const p=find(a[x]),q=find(a[y]); if(p!==q) uf[q]=p } } }
-  const groups=new Map(); roots.forEach((r,i)=>{ const k=find(i); let a=groups.get(k); if(!a){ a=[]; groups.set(k,a) } a.push(r) });
-  const stId=[],stName=[],stLat=[],stLon=[],stKids=[]; const stationOf=new Int32Array(nS).fill(-1), stAlias=new Map();
-  for(const rs of groups.values()){ const kids=[]; rs.forEach(r=>(cand.get(r)||[]).forEach(c=>kids.push(c))); if(!kids.length) continue;
-    const idx=stId.length; let la=0,lo=0; kids.forEach(c=>{ la+=sLat[c]; lo+=sLon[c] });
-    const idRoot=rs.slice().sort((a,b)=>sId[a]<sId[b]?-1:1)[0];
-    stId.push(sId[idRoot]); stName.push(sName[rs.find(r=>sName[r])||idRoot]); stLat.push(la/kids.length); stLon.push(lo/kids.length); stKids.push(kids);
-    kids.forEach(c=>stationOf[c]=idx); rs.forEach(r=>stAlias.set(sId[r],idx)); kids.forEach(c=>stAlias.set(sId[c],idx)) }
-  Object.assign(net,{stId,stName,stLat:Float64Array.from(stLat),stLon:Float64Array.from(stLon),stKids,stationOf,stAlias,nStations:stId.length});
-  const stationIdx=new Map(); stId.forEach((id,i)=>stationIdx.set(id,i)); net.stationIdx=stationIdx;
-  /* grille des stations */
-  const G=0.01, sg=new Map(); for(let i=0;i<stId.length;i++){ const k=Math.floor(stLat[i]/G)+','+Math.floor(stLon[i]/G); let a=sg.get(k); if(!a){ a=[]; sg.set(k,a) } a.push(i) }
-  net.sg=sg; net.G=G;
-  /* lignes */
-  const rShort=[],rLong=[],rType=new Uint16Array(nR),rColor=[],rText=[],rAgency=[],rFeed=new Int16Array(nR),rCode=[];
-  feeds.forEach((f,fi)=>{ const o=rOff[fi]; for(let i=0;i<f.routes.id.length;i++){ rShort[o+i]=f.routes.short[i]; rLong[o+i]=f.routes.long[i]; rType[o+i]=f.routes.type[i]; rColor[o+i]=f.routes.color[i]; rText[o+i]=f.routes.text[i]; rAgency[o+i]=f.routes.agency[i]; rFeed[o+i]=fi; rCode[o+i]=f.routes.id[i] } });
-  Object.assign(net,{rShort,rLong,rType,rColor,rText,rAgency,rFeed,rCode});
-  /* services */
-  net.svc=[]; feeds.forEach((f,fi)=>{ const s=f.services; for(let i=0;i<s.id.length;i++) net.svc[svOff[fi]+i]={start:s.start[i],end:s.end[i],mask:s.mask[i],add:s.add.subarray(s.addOff[i],s.addOff[i+1]),rem:s.rem.subarray(s.remOff[i],s.remOff[i+1])} });
-  net.nSv=nSv; net.activeCache=new Map();
-  /* courses + horaires concaténés */
-  const tFeed=new Int16Array(nT), tLocal=new Int32Array(nT), tRoute=new Int32Array(nT), tSvc=new Int32Array(nT), tOff=new Int32Array(nT+1), tShape=new Int32Array(nT).fill(-1);
-  const stS=new Int32Array(nSt), stA=new Int32Array(nSt), stD=new Int32Array(nSt), stF=new Uint8Array(nSt); let w=0, tg=0;
-  feeds.forEach((f,fi)=>{ const T=f.trips, so=sOff[fi]; for(let i=0;i<T.id.length;i++,tg++){ tFeed[tg]=fi; tLocal[tg]=i; tRoute[tg]=rOff[fi]+T.route[i]; tSvc[tg]=svOff[fi]+T.service[i]; tShape[tg]=T.shape[i]; tOff[tg]=w;
-      const a=T.off[i], b=T.off[i+1]; for(let k=a;k<b;k++,w++){ stS[w]=so+f.st.stop[k]; stA[w]=f.st.arr[k]; stD[w]=f.st.dep[k]; stF[w]=f.st.flag[k] } } });
-  tOff[nT]=w; Object.assign(net,{tFeed,tLocal,tRoute,tSvc,tOff,tShape,stS,stA,stD,stF}); net._feedsRaw=feeds; net.tripIdx=new Array(feeds.length);
-  /* motifs (patterns) */
-  const patMap=new Map(), pStops=[], pTrips=[], pRoute=[]; const tPat=new Int32Array(nT);
-  for(let t=0;t<nT;t++){ const o=tOff[t], e=tOff[t+1]; let key=tRoute[t]+'|'; for(let k=o;k<e;k++) key+=stS[k]+','; let pi=patMap.get(key);
-    if(pi==null){ pi=pStops.length; patMap.set(key,pi); pStops.push(stS.slice(o,e)); pTrips.push([]); pRoute.push(tRoute[t]) } pTrips[pi].push(t); tPat[t]=pi }
-  for(let pi=0;pi<pTrips.length;pi++){ pTrips[pi].sort((a,b)=>stD[tOff[a]]-stD[tOff[b]]); pTrips[pi]=Int32Array.from(pTrips[pi]) }
-  net.pStops=pStops; net.pTrips=pTrips; net.pRoute=pRoute; net.tPat=tPat; net.nP=pStops.length;
-  const pBox=new Float64Array(pStops.length*4); for(let pi=0;pi<pStops.length;pi++){ let a=90,b=-90,c=180,d=-180; for(const s of pStops[pi]){ if(sLat[s]<a)a=sLat[s]; if(sLat[s]>b)b=sLat[s]; if(sLon[s]<c)c=sLon[s]; if(sLon[s]>d)d=sLon[s] } pBox[pi*4]=a; pBox[pi*4+1]=b; pBox[pi*4+2]=c; pBox[pi*4+3]=d } net.pBox=pBox;
-  /* arrêt -> (motif, position) */
-  const cnt=new Int32Array(nS+1); pStops.forEach(a=>{ for(const s of a) cnt[s+1]++ }); for(let i=0;i<nS;i++) cnt[i+1]+=cnt[i];
-  const spPat=new Int32Array(cnt[nS]), spPos=new Int32Array(cnt[nS]), fill=cnt.slice(0,nS); pStops.forEach((a,pi)=>{ for(let p=0;p<a.length;p++){ const s=a[p], j=fill[s]++; spPat[j]=pi; spPos[j]=p } });
-  net.spOff=cnt; net.spPat=spPat; net.spPos=spPos;
-  /* correspondances à pied */
-  const GC=0.003, grid=new Map(); for(let i=0;i<nS;i++){ if(!(cnt[i+1]-cnt[i])) continue; const k=Math.floor(sLat[i]/GC)+','+Math.floor(sLon[i]/GC); let a=grid.get(k); if(!a){ a=[]; grid.set(k,a) } a.push(i) }
-  const fl=new Array(nS); const tmin=new Map(); feeds.forEach((f,fi)=>{ const t=f.transfers; for(let i=0;i<t.length;i+=3) tmin.set((sOff[fi]+t[i])*4294967296+(sOff[fi]+t[i+1]),t[i+2]) });
-  for(let i=0;i<nS;i++){ if(!(cnt[i+1]-cnt[i])) continue; const la=sLat[i], lo=sLon[i], ci=Math.floor(la/GC), cj=Math.floor(lo/GC), dl=Math.ceil(0.25/(111*Math.max(.3,Math.cos(la*RAD)))/GC); const res=[];
-    for(let a=-1;a<=1;a++) for(let b=-dl;b<=dl;b++){ const arr=grid.get((ci+a)+','+(cj+b)); if(!arr) continue; for(const j of arr){ if(j===i) continue; const d=km(la,lo,sLat[j],sLon[j]);
-      const same=stationOf[i]>=0&&stationOf[i]===stationOf[j]; if(d>0.25&&!same) continue; let sec=same?Math.max(90,walkSec(d)+30):walkSec(d)+30; const tm=tmin.get(i*4294967296+j); if(tm!=null) sec=Math.max(sec,tm); res.push([j,sec,d]) } }
-    res.sort((x,y)=>x[2]-y[2]); fl[i]=res.slice(0,14).map(x=>[x[0],x[1]]) }
-  net.foot=fl;
-  net.rt=null;
-  return net;
-}
-function activeSet(net,di){ let a=net.activeCache.get(di); if(a) return a; a=new Uint8Array(net.nSv); const dw=dowMon(di);
-  for(let i=0;i<net.nSv;i++){ const s=net.svc[i]; let on=0; if(s.start&&di>=s.start&&di<=s.end&&(s.mask>>dw&1)) on=1; if(on&&s.rem.length&&s.rem.indexOf(di)>=0) on=0; if(!on&&s.add.length&&s.add.indexOf(di)>=0) on=1; a[i]=on }
-  if(net.activeCache.size>8) net.activeCache.clear(); net.activeCache.set(di,a); return a }
-
-/* ---------- plus proche : stations ---------- */
-function stationsNear(net,lat,lon,radiusKm,max){
-  const G=net.G, dl=Math.ceil(radiusKm/111.2/G), dn=Math.ceil(radiusKm/(111.2*Math.max(.3,Math.cos(lat*RAD)))/G), ci=Math.floor(lat/G), cj=Math.floor(lon/G), out=[];
-  for(let a=-dl;a<=dl;a++) for(let b=-dn;b<=dn;b++){ const arr=net.sg.get((ci+a)+','+(cj+b)); if(!arr) continue; for(const i of arr){ const d=km(lat,lon,net.stLat[i],net.stLon[i]); if(d<=radiusKm) out.push({i,km:d}) } }
-  out.sort((x,y)=>x.km-y.km); return max?out.slice(0,max):out }
-function resolveStation(net,p){
-  if(!p) return -1;
-  if(p.id!=null){ const i=net.stAlias.get(String(p.id)); if(i!=null) return i }
-  if(p.name&&Number.isFinite(+p.lat)&&Number.isFinite(+p.lon)){ const nn=norm(p.name); const c=stationsNear(net,+p.lat,+p.lon,0.6,30); const e=c.find(x=>norm(net.stName[x.i])===nn)||c.find(x=>{ const m=norm(net.stName[x.i]); return m.includes(nn)||nn.includes(m) }); if(e) return e.i }
-  return -1 }
-
-/* ---------- accès horaires (avec temps réel) ---------- */
-function rtOf(net,t,di,ds){ return net.rt?net.rt.delays(t,di,ds):null }
-/* course la plus proche au motif pi, position p, partant au plus tôt à 'ready' */
-function earliestTrip(net,pi,p,ready,rtc){
-  const trips=net.pTrips[pi], stD=net.stD, tOff=net.tOff, tSvc=net.tSvc, d0=dateIntOf(ready); let best=null;
-  const margin=net.rt?900:0;
-  for(const di of [prevDate(d0),d0,nextDate(d0)]){ const ds=dayStart(di), act=activeSet(net,di), lim=ready-ds-margin;
-    let lo=0,hi=trips.length; while(lo<hi){ const m=(lo+hi)>>1; if(stD[tOff[trips[m]]+p]<lim) lo=m+1; else hi=m }
-    let seen=0; for(let j=lo;j<trips.length&&seen<14;j++){ const t=trips[j]; if(!act[tSvc[t]]) continue; seen++;
-      const o=tOff[t]; const s=stD[o+p]+ds; if(best&&s-margin>=best.dep) break;
-      let dep=s, r=null; if(net.rt){ r=rtOf(net,t,di,ds); if(r){ if(r.cancelled) continue; if(r.skip[p]) continue; dep=s+r.d[p] } }
-      if((net.stF[o+p]&1)) continue; if(dep<ready) continue;
-      if(!best||dep<best.dep) best={t,di,ds,dep,rt:r}; if(!net.rt) break } }
-  return best }
-
-/* ---------- RAPTOR ---------- */
-function raptor(net,origins,targets,opt){
-  const nS=net.nS, K=opt.maxK||5, stD=net.stD, stA=net.stA, stS=net.stS, tOff=net.tOff, stF=net.stF;
-  const best=new Float64Array(nS).fill(INF); const arr=[],pT=[],pTrip=[],pDate=[],pBoard=[],pFrom=[],pSec=[];
-  const alloc=()=>{ arr.push(new Float64Array(nS).fill(INF)); pT.push(new Uint8Array(nS)); pTrip.push(new Int32Array(nS)); pDate.push(new Int32Array(nS)); pBoard.push(new Int32Array(nS)); pFrom.push(new Int32Array(nS)); pSec.push(new Int32Array(nS)) };
-  alloc(); let marked=[]; let bestT=INF;
-  const post=targets; const touchT=(s,a)=>{ const ps=post.get(s); if(ps!=null&&a+ps<bestT) bestT=a+ps };
-  for(const [s,t] of origins){ if(t<arr[0][s]){ arr[0][s]=t; best[s]=Math.min(best[s],t); marked.push(s); touchT(s,t) } }
-  const rtc=new Map(); const horizon=opt.horizon||INF;
-  for(let k=1;k<=K;k++){
-    alloc(); const A=arr[k], PT=pT[k], PTRIP=pTrip[k], PD=pDate[k], PB=pBoard[k], PF=pFrom[k], PS=pSec[k], prevA=arr[k-1], prevT=pT[k-1];
-    const Q=new Map(); for(const s of marked){ for(let e=net.spOff[s];e<net.spOff[s+1];e++){ const pi=net.spPat[e], pos=net.spPos[e]; const c=Q.get(pi); if(c==null||c>pos) Q.set(pi,pos) } }
-    const imp=[];
-    for(const [pi,start] of Q){ const stops=net.pStops[pi]; let cur=-1, curDi=0, curDs=0, curRt=null, boardPos=0, boardStop=0, curO=0;
-      for(let p=start;p<stops.length;p++){ const s=stops[p];
-        if(cur>=0){ let a=curDs+stA[curO+p]; let skip=false; if(curRt){ if(curRt.skip[p]) skip=true; a+=curRt.a[p] }
-          if(!skip&&!(stF[curO+p]&2)&&a<best[s]&&a<bestT&&a<horizon){ A[s]=a; best[s]=a; PT[s]=1; PTRIP[s]=cur; PD[s]=curDi; PB[s]=boardPos; PF[s]=p; imp.push(s); touchT(s,a) } }
-        const pa=prevA[s]; if(pa<INF&&pa<bestT){ const ready=pa+(prevT[s]===1?BOARD_BUFFER:0); const f=earliestTrip(net,pi,p,ready);
-          if(f){ let better=cur<0; if(!better){ let cd=curDs+stD[curO+p]; if(curRt) cd+=curRt.d[p]; better=f.dep<cd } if(better){ cur=f.t; curDi=f.di; curDs=f.ds; curRt=f.rt; boardPos=p; boardStop=s; curO=tOff[f.t] } } } } }
-    // marquer comme arrêts améliorés + correspondances à pied
-    const mk=new Set(imp);
-    for(const s of imp){ const a=A[s]; const fl=net.foot[s]; if(!fl) continue; for(const [s2,sec] of fl){ const t=a+sec; if(t<best[s2]&&t<bestT&&t<horizon){ A[s2]=t; best[s2]=t; PT[s2]=2; PF[s2]=s; PS[s2]=sec; mk.add(s2); touchT(s2,t) } } }
-    marked=[...mk]; if(!marked.length) break;
-  }
-  return {arr,pT,pTrip,pDate,pBoard,pFrom,pSec,best};
-}
-/* chemin remonté depuis (k,s) -> liste d'étapes dans l'ordre chronologique */
-function backtrack(st,k,s){
-  const steps=[]; let guard=0;
-  while(k>0&&guard++<40){ const ty=st.pT[k][s];
-    if(ty===1){ const t=st.pTrip[k][s]; const bp=st.pBoard[k][s], ap=st.pFrom[k][s]; steps.push({kind:'trip',t,di:st.pDate[k][s],posA:bp,posB:ap}); s=NETstopAt(t,bp); k--; }
-    else if(ty===2){ const f=st.pFrom[k][s]; steps.push({kind:'walk',from:f,to:s,sec:st.pSec[k][s]}); s=f; }
-    else break }
-  steps.reverse(); return {steps,origin:s} }
-function NETstopAt(t,pos){ return NET.stS[NET.tOff[t]+pos] }
-
-/* ---------- lieux & jambes au format de l'ancienne API ---------- */
-function platOf(net,stop){ return net.sPlat[stop]||'' }
-function placeOfStop(net,stop,o){ o=o||{}; const st=net.stationOf[stop], r={name:st>=0?net.stName[st]:net.sName[stop],lat:net.sLat[stop],lon:net.sLon[stop],stopId:st>=0?net.stId[st]:net.sId[stop],vertexType:'NORMAL'};
-  const tr=o.trackStop!=null?platOf(net,o.trackStop):platOf(net,stop), sc=platOf(net,stop); if(tr){ r.track=tr; r.scheduledTrack=sc||tr } else if(sc){ r.track=sc; r.scheduledTrack=sc }
-  if(o.arr!=null){ r.arrival=iso(o.arr); r.scheduledArrival=iso(o.sarr!=null?o.sarr:o.arr) } if(o.dep!=null){ r.departure=iso(o.dep); r.scheduledDeparture=iso(o.sdep!=null?o.sdep:o.dep) }
-  if(o.cancelled) r.cancelled=true; if(o.noPick&&o.noDrop){ r.pickupType='NOT_ALLOWED'; r.dropoffType='NOT_ALLOWED' } return r }
-const MODE_OF=t=>{ if(t>=100&&t<200){ if(t===101||t===102) return 'LONG_DISTANCE'; if(t===103) return 'REGIONAL_FAST_RAIL'; if(t===106) return 'REGIONAL_RAIL'; if(t===109) return 'SUBURBAN'; if(t===105) return 'NIGHT_RAIL'; return 'RAIL' }
-  if(t>=200&&t<300) return 'COACH'; if(t>=400&&t<500) return 'SUBWAY'; if(t>=700&&t<800) return 'BUS'; if(t===800) return 'BUS'; if(t>=900&&t<1000) return 'TRAM'; if(t>=1000&&t<1100) return 'FERRY'; if(t>=1100&&t<1200) return 'AIRPLANE'; if(t===1200) return 'FERRY'; if(t>=1300&&t<1400) return 'AERIAL_LIFT'; if(t>=1400&&t<1500) return 'FUNICULAR';
-  switch(t){ case 0: return 'TRAM'; case 1: return 'SUBWAY'; case 2: return 'RAIL'; case 3: return 'BUS'; case 4: return 'FERRY'; case 5: return 'TRAM'; case 6: return 'AERIAL_LIFT'; case 7: return 'FUNICULAR'; case 11: return 'BUS'; case 12: return 'RAIL' } return 'BUS' };
-function shapeSlice(net,t,posA,posB){
-  const o=net.tOff[t], fi=net.tFeed[t], sh=net.tShape[t], F=net.feeds[fi], pts=[];
-  const stopPts=[]; for(let p=posA;p<=posB;p++){ const s=net.stS[o+p]; stopPts.push([net.sLat[s],net.sLon[s]]) }
-  if(sh>=0&&F.shapes&&F.shapes.off){ const a=F.shapes.off[sh], b=F.shapes.off[sh+1], P=F.shapes.pts; if(b-a>=2){
-    const near=(la,lo,from)=>{ let bi=from,bd=INF; for(let i=from;i<b-a;i++){ const dy=P[(a+i)*2]-la, dx=(P[(a+i)*2+1]-lo)*Math.cos(la*RAD); const d=dy*dy+dx*dx; if(d<bd){ bd=d; bi=i } } return bi };
-    const i0=near(stopPts[0][0],stopPts[0][1],0), i1=near(stopPts.at(-1)[0],stopPts.at(-1)[1],i0);
-    if(i1>i0){ pts.push(stopPts[0]); for(let i=i0;i<=i1;i++) pts.push([P[(a+i)*2],P[(a+i)*2+1]]); pts.push(stopPts.at(-1)); return pts } } }
-  return stopPts }
-function pickLeg(net,t,di,posA,posB){
-  const ds=dayStart(di), o=net.tOff[t], r=rtOf(net,t,di,ds), route=net.tRoute[t], fi=net.tFeed[t], F=net._feedsRaw[fi], li=net.tLocal[t];
-  const S=(p,k)=>ds+(k==='a'?net.stA[o+p]:net.stD[o+p]); const Rv=(p,k)=>S(p,k)+(r?(k==='a'?r.a[p]:r.d[p]):0);
-  const mk=(p,withA,withD)=>{ const s=net.stS[o+p], at=r&&r.stopAt&&r.stopAt[p]>=0?r.stopAt[p]:null; const x={trackStop:at,cancelled:!!(r&&r.skip[p]),noPick:!!(net.stF[o+p]&1),noDrop:!!(net.stF[o+p]&2)};
-    if(withA){ x.arr=Rv(p,'a'); x.sarr=S(p,'a') } if(withD){ x.dep=Rv(p,'d'); x.sdep=S(p,'d') } return placeOfStop(net,at!=null?at:s,x) };
-  const from=mk(posA,false,true), to=mk(posB,true,false); const mid=[]; for(let p=posA+1;p<posB;p++) mid.push(mk(p,true,true));
-  const short=net.rShort[route]||net.rLong[route]||'', head=F.trips&&F.trips.head?F.trips.head[li]:(F._h&&F._h[li]);
-  const leg={mode:MODE_OF(net.rType[route]),from,to,startTime:from.departure,endTime:to.arrival,scheduledStartTime:from.scheduledDeparture,scheduledEndTime:to.scheduledArrival,duration:Math.round(Rv(posB,'a')-Rv(posA,'d')),
-    realTime:!!(r&&r.has),headsign:head||net.sName[net.stS[net.tOff[t+1]-1]]||'',routeColor:net.rColor[route]||undefined,routeTextColor:net.rText[route]||undefined,routeShortName:short,routeLongName:net.rLong[route]||'',displayName:short,
-    tripId:tripKey(net,t,di),tripShortName:(F.trips&&F.trips.short&&F.trips.short[li])||'',agencyName:net.rAgency[route]||'',source:net.feeds[fi].name,intermediateStops:mid,alerts:[],cancelled:!!(r&&r.cancelled)};
-  const pts=shapeSlice(net,t,posA,posB); leg.legGeometry={points:encPoly(pts),precision:6,length:pts.length};
-  let d=0; for(let i=1;i<pts.length;i++) d+=km(pts[i-1][0],pts[i-1][1],pts[i][0],pts[i][1]); leg.distance=Math.round(d*1000);
-  if(net.rt&&net.rt.alertsFor) leg.alerts=net.rt.alertsFor(net,t,o,posA,posB,from.departure?+new Date(from.departure):0,to.arrival?+new Date(to.arrival):0);
-  return leg }
-function tripKey(net,t,di){ return net.feeds[net.tFeed[t]].id+'~'+net._feedsRaw[net.tFeed[t]].trips.id[net.tLocal[t]]+'~'+di }
-function walkLeg(from,to,t0,sec,distM,fromName,toName){ const a=iso(t0), b=iso(t0+sec);
-  return {mode:'WALK',from:Object.assign({name:fromName||'',vertexType:'NORMAL'},from,{departure:a,scheduledDeparture:a}),to:Object.assign({name:toName||'',vertexType:'NORMAL'},to,{arrival:b,scheduledArrival:b}),startTime:a,endTime:b,scheduledStartTime:a,scheduledEndTime:b,duration:sec,distance:distM,realTime:false,alerts:[]} }
-
-return {_p2:true, norm,km,walkSec,iso,dateIntOf,dayStart,prevDate,nextDate,encPoly,setTZ,
-  dbPut,dbGet,dbDel,dbKeys,buildNetwork,activeSet,stationsNear,resolveStation,earliestTrip,raptor,backtrack,placeOfStop,pickLeg,tripKey,walkLeg,MODE_OF,
-  get NET(){return NET}, set NET(v){NET=v}, set debug(v){GTFS_DEBUG=!!v}, INF, BOARD_BUFFER, rtOf, shapeSlice, platOf};
-})();
-
-/* ===== GTFS-RT : décodeur protobuf + état temps réel ===== */
-const GTFSRT=(function(){
-'use strict';
-class PB{ constructor(b,p,e){ this.b=b; this.p=p||0; this.e=e==null?b.length:e; this.dv=new DataView(b.buffer,b.byteOffset,b.byteLength); this.lo=0; this.hi=0 }
-  varint(){ let lo=0,hi=0,sh=0,by; do{ by=this.b[this.p++]; if(sh<28) lo|=(by&127)<<sh; else if(sh===28){ lo|=(by&15)<<28; hi=(by&127)>>4 } else hi|=(by&127)<<(sh-32); sh+=7 }while((by&128)&&this.p<this.e&&sh<70);
-    this.lo=lo>>>0; this.hi=hi>>>0; return this.lo+this.hi*4294967296 }
-  i32(){ this.varint(); return this.lo|0 }
-  str(){ const n=this.varint(); const s=new TextDecoder().decode(this.b.subarray(this.p,this.p+n)); this.p+=n; return s }
-  sub(){ const n=this.varint(); const r=new PB(this.b,this.p,this.p+n); this.p+=n; return r }
-  f32(){ const v=this.dv.getFloat32(this.p,true); this.p+=4; return v }
-  f64(){ const v=this.dv.getFloat64(this.p,true); this.p+=8; return v }
-  skip(wt){ if(wt===0) this.varint(); else if(wt===1) this.p+=8; else if(wt===2){ const n=this.varint(); this.p+=n } else if(wt===5) this.p+=4; else throw new Error('protobuf: type de champ inconnu '+wt) } }
-const more=r=>r.p<r.e;
-function tripDesc(r){ const o={tripId:'',startTime:'',startDate:'',rel:0,routeId:'',dir:null}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===2) o.tripId=r.str(); else if(f===2&&w===2) o.startTime=r.str(); else if(f===3&&w===2) o.startDate=r.str(); else if(f===4&&w===0) o.rel=r.varint(); else if(f===5&&w===2) o.routeId=r.str(); else if(f===6&&w===0) o.dir=r.varint(); else r.skip(w) } return o }
-function stopEvent(r){ const o={delay:null,time:null}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7; if(f===1&&w===0) o.delay=r.i32(); else if(f===2&&w===0){ r.varint(); o.time=(r.hi|0)*4294967296+r.lo } else r.skip(w) } return o }
-function stu(r){ const o={seq:null,arr:null,dep:null,stopId:'',rel:0}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===0) o.seq=r.varint(); else if(f===2&&w===2) o.arr=stopEvent(r.sub()); else if(f===3&&w===2) o.dep=stopEvent(r.sub()); else if(f===4&&w===2) o.stopId=r.str(); else if(f===5&&w===0) o.rel=r.varint(); else r.skip(w) } return o }
-function tripUpdate(r){ const o={trip:null,stus:[],ts:0,delay:null}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===2) o.trip=tripDesc(r.sub()); else if(f===2&&w===2) o.stus.push(stu(r.sub())); else if(f===4&&w===0) o.ts=r.varint(); else if(f===5&&w===0) o.delay=r.i32(); else r.skip(w) } return o }
-function position(r){ const o={lat:NaN,lon:NaN,bearing:null,speed:null}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===5) o.lat=r.f32(); else if(f===2&&w===5) o.lon=r.f32(); else if(f===3&&w===5) o.bearing=r.f32(); else if(f===5&&w===5) o.speed=r.f32(); else r.skip(w) } return o }
-function vehicle(r){ const o={trip:null,pos:null,seq:null,status:null,ts:0,stopId:'',id:'',label:''}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===2) o.trip=tripDesc(r.sub()); else if(f===2&&w===2) o.pos=position(r.sub()); else if(f===3&&w===0) o.seq=r.varint(); else if(f===4&&w===0) o.status=r.varint(); else if(f===5&&w===0) o.ts=r.varint(); else if(f===7&&w===2) o.stopId=r.str();
-  else if(f===8&&w===2){ const v=r.sub(); while(more(v)){ const tt=v.varint(),ff=tt>>>3,ww=tt&7; if(ff===1&&ww===2) o.id=v.str(); else if(ff===2&&ww===2) o.label=v.str(); else v.skip(ww) } } else r.skip(w) } return o }
-function translated(r){ const a=[]; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7; if(f===1&&w===2){ const s=r.sub(); const x={text:'',lang:''}; while(more(s)){ const tt=s.varint(),ff=tt>>>3,ww=tt&7; if(ff===1&&ww===2) x.text=s.str(); else if(ff===2&&ww===2) x.lang=s.str(); else s.skip(ww) } a.push(x) } else r.skip(w) } return a }
-const pickLang=(a,langs)=>{ if(!a||!a.length) return ''; for(const l of langs){ const x=a.find(y=>(y.lang||'').toLowerCase().startsWith(l)); if(x&&x.text) return x.text } return (a.find(x=>x.text)||a[0]).text||'' };
-function entitySel(r){ const o={agency:'',route:'',routeType:null,trip:'',stop:''}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===2) o.agency=r.str(); else if(f===2&&w===2) o.route=r.str(); else if(f===3&&w===0) o.routeType=r.i32(); else if(f===4&&w===2) o.trip=tripDesc(r.sub()).tripId; else if(f===5&&w===2) o.stop=r.str(); else r.skip(w) } return o }
-function alertMsg(r){ const o={periods:[],ents:[],cause:1,effect:8,url:[],head:[],desc:[]}; while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-  if(f===1&&w===2){ const s=r.sub(), p={s:0,e:0}; while(more(s)){ const tt=s.varint(),ff=tt>>>3,ww=tt&7; if(ff===1&&ww===0) p.s=s.varint(); else if(ff===2&&ww===0) p.e=s.varint(); else s.skip(ww) } o.periods.push(p) }
-  else if(f===5&&w===2) o.ents.push(entitySel(r.sub())); else if(f===6&&w===0) o.cause=r.varint(); else if(f===7&&w===0) o.effect=r.varint();
-  else if(f===8&&w===2) o.url=translated(r.sub()); else if(f===10&&w===2) o.head=translated(r.sub()); else if(f===11&&w===2) o.desc=translated(r.sub()); else r.skip(w) } return o }
-function decodeFeed(u8){
-  const r=new PB(u8), out={ts:0,entities:[]};
-  while(more(r)){ const t=r.varint(),f=t>>>3,w=t&7;
-    if(f===1&&w===2){ const h=r.sub(); while(more(h)){ const tt=h.varint(),ff=tt>>>3,ww=tt&7; if(ff===3&&ww===0) out.ts=h.varint(); else h.skip(ww) } }
-    else if(f===2&&w===2){ const e=r.sub(), en={id:'',del:false}; while(more(e)){ const tt=e.varint(),ff=tt>>>3,ww=tt&7;
-        if(ff===1&&ww===2) en.id=e.str(); else if(ff===2&&ww===0) en.del=!!e.varint(); else if(ff===3&&ww===2) en.tu=tripUpdate(e.sub()); else if(ff===4&&ww===2) en.vp=vehicle(e.sub()); else if(ff===5&&ww===2) en.al=alertMsg(e.sub()); else e.skip(ww) }
-      out.entities.push(en) }
-    else r.skip(w) }
-  return out }
-const CAUSE=['','UNKNOWN_CAUSE','OTHER_CAUSE','TECHNICAL_PROBLEM','STRIKE','DEMONSTRATION','ACCIDENT','HOLIDAY','WEATHER','MAINTENANCE','CONSTRUCTION','POLICE_ACTIVITY','MEDICAL_EMERGENCY'];
-const EFFECT=['','NO_SERVICE','REDUCED_SERVICE','SIGNIFICANT_DELAYS','DETOUR','ADDITIONAL_SERVICE','MODIFIED_SERVICE','OTHER_EFFECT','UNKNOWN_EFFECT','STOP_MOVED','NO_EFFECT','ACCESSIBILITY_ISSUE'];
-
-/* ---------- état temps réel ---------- */
-function create(opts){
-  opts=opts||{}; const langs=opts.langs||['fr','en','de','it']; const getNet=opts.getNet;
-  const per=new Map(); // srcId -> {feedId,at,ts,trips:Map,veh:Map,alerts:[],counts}
-  const rt={ per, version:0 };
-  const ensureStopIdx=net=>{ if(net._stopIdx) return net._stopIdx; const m=new Map(); for(let i=0;i<net.nS;i++) m.set(net.sId[i],i); return net._stopIdx=m };
-  rt.ingest=function(src,feedId,msg){
-    const trips=new Map(), veh=new Map(), alerts=[]; let nTu=0,nVp=0,nAl=0;
-    for(const en of msg.entities){ if(en.del) continue;
-      if(en.tu&&en.tu.trip){ const tr=en.tu.trip; const cancelled=tr.rel===3||tr.rel===7; const u={cancelled,date:/^\d{8}$/.test(tr.startDate)?+tr.startDate:0,stus:en.tu.stus,delay:en.tu.delay,ts:en.tu.ts||msg.ts,start:tr.startTime,routeId:tr.routeId,added:tr.rel===1};
-        if(tr.tripId) trips.set(feedId+'~'+tr.tripId,u); else if(tr.routeId&&tr.startTime) trips.set(feedId+'~r:'+tr.routeId+'~'+tr.startTime,u); nTu++ }
-      if(en.vp&&en.vp.pos&&Number.isFinite(en.vp.pos.lat)&&Number.isFinite(en.vp.pos.lon)){ const v=en.vp, tid=v.trip&&v.trip.tripId; const rec={lat:v.pos.lat,lon:v.pos.lon,bearing:v.pos.bearing,speed:v.pos.speed,ts:v.ts||msg.ts,stopId:v.stopId,status:v.status,label:v.label||v.id,tripId:tid||'',routeId:(v.trip&&v.trip.routeId)||'',startDate:v.trip&&v.trip.startDate,feedId};
-        veh.set(tid?feedId+'~'+tid:feedId+'~v:'+(v.id||v.label||veh.size),rec); nVp++ }
-      if(en.al){ const a=en.al; const routes=new Set(),trips2=new Set(),stops=new Set(),types=new Set(); for(const s of a.ents){ if(s.route) routes.add(feedId+'~'+s.route); if(s.trip) trips2.add(feedId+'~'+s.trip); if(s.stop) stops.add(feedId+'~'+s.stop); if(s.routeType!=null) types.add(s.routeType) }
-        alerts.push({feedId,routes,trips:trips2,stops,types,anyEntity:a.ents.length>0,headerText:pickLang(a.head,langs),descriptionText:pickLang(a.desc,langs),url:pickLang(a.url,langs),cause:CAUSE[a.cause]||'UNKNOWN_CAUSE',effect:EFFECT[a.effect]||'UNKNOWN_EFFECT',
-          impactPeriod:a.periods.map(p=>({from:p.s?new Date(p.s*1000).toISOString():null,to:p.e?new Date(p.e*1000).toISOString():null}))}); nAl++ } }
-    per.set(src.id,{feedId,at:Date.now(),ts:msg.ts,trips,veh,alerts,counts:{trips:nTu,vehicles:nVp,alerts:nAl}}); rt.version++; return {trips:nTu,vehicles:nVp,alerts:nAl,ts:msg.ts} };
-  rt.drop=id=>{ per.delete(id); rt.version++ };
-  rt.clear=()=>{ per.clear(); rt.version++ };
-  const lookup=(feedId,key)=>{ for(const p of per.values()){ if(p.feedId!==feedId) continue; const u=p.trips.get(key); if(u) return u } return null };
-  /* retards d'une course (t = index global, di = date de service, ds = début de journée en s) */
-  rt.delays=function(t,di,ds){
-    if(!per.size) return null; const net=getNet(); if(!net) return null; const fi=net.tFeed[t], feedId=net.feeds[fi].id, raw=net._feedsRaw[fi];
-    let u=lookup(feedId,feedId+'~'+raw.trips.id[net.tLocal[t]]);
-    if(!u){ const o=net.tOff[t], sec=net.stD[o]; const hh=String(Math.floor(sec/3600)).padStart(2,'0')+':'+String(Math.floor(sec%3600/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0'); u=lookup(feedId,feedId+'~r:'+net.rCode[net.tRoute[t]]+'~'+hh) }
-    if(!u||(u.date&&u.date!==di)) return null;
-    let c=u._c; if(!c){ c=u._c=new Map() } const ck=t*4+0; let r=c.get(ck); if(r&&r.ds===ds) return r;
-    r=compute(net,t,u,ds); r.ds=ds; c.set(ck,r); return r };
-  function compute(net,t,u,ds){
-    const o=net.tOff[t], n=net.tOff[t+1]-o; const res={a:new Int32Array(n),d:new Int32Array(n),skip:new Uint8Array(n),stopAt:new Int32Array(n).fill(-1),cancelled:u.cancelled,has:u.stus.length>0||u.delay!=null,ds};
-    if(u.cancelled) return res;
-    if(!u.stus.length&&u.delay!=null){ res.a.fill(u.delay); res.d.fill(u.delay); return res }
-    const sIdx=ensureStopIdx(net), fi=net.tFeed[t], fid=net.feeds[fi].id; const match=new Array(n).fill(null); let pos=0;
-    for(const s of u.stus){ let found=-1; if(s.stopId){ for(let j=pos;j<n;j++){ if(net.sCode[net.stS[o+j]]===s.stopId&&net.sFeed[net.stS[o+j]]===fi){ found=j; break } }
-        if(found<0){ const ai=net.stAlias.get(fid+'~'+s.stopId); if(ai!=null) for(let j=pos;j<n;j++){ if(net.stationOf[net.stS[o+j]]===ai){ found=j; break } } } }
-      else if(s.seq!=null&&s.seq-1>=pos&&s.seq-1<n) found=s.seq-1;
-      if(found>=0){ match[found]=s; pos=found } }
-    let dA=0,dD=0;
-    for(let j=0;j<n;j++){ const s=match[j]; const sa=ds+net.stA[o+j], sd=ds+net.stD[o+j];
-      if(s){ if(s.rel===1){ res.skip[j]=1 } else if(s.rel===2){ dA=0; dD=0 } else {
-          let a=s.arr?(s.arr.delay!=null?s.arr.delay:(s.arr.time?s.arr.time-sa:null)):null, d=s.dep?(s.dep.delay!=null?s.dep.delay:(s.dep.time?s.dep.time-sd:null)):null;
-          if(a!=null||d!=null){ if(a==null) a=d; if(d==null) d=a>0?Math.max(0,a-(sd-sa)):a; dA=a; dD=d } }
-        const st=net.stS[o+j]; if(s.stopId&&net.sCode[st]!==s.stopId){ const ai=sIdx.get(fid+'~'+s.stopId); if(ai!=null&&net.stationOf[ai]===net.stationOf[st]) res.stopAt[j]=ai } }
-      else { dD=dA>0?Math.max(0,dA-(sd-sa)):dA }
-      res.a[j]=dA; res.d[j]=dD; }
-    return res }
-  /* alertes pour un tronçon [posA,posB] d'une course */
-  rt.alertsFor=function(net,t,o,posA,posB,t0,t1){
-    const out=[]; if(!per.size) return out; const fi=net.tFeed[t], feedId=net.feeds[fi].id, route=net.tRoute[t], rkey=feedId+'~'+net.rCode[route], tkey=feedId+'~'+net._feedsRaw[fi].trips.id[net.tLocal[t]], rtype=net.rType[route];
-    const stops=new Set(), stations=new Set(); for(let p=posA;p<=posB;p++){ const s=net.stS[o+p]; stops.add(feedId+'~'+net.sCode[s]); const st=net.stationOf[s]; if(st>=0) stations.add(net.stId[st]) }
-    for(const p of per.values()){ if(p.feedId!==feedId) continue; for(const a of p.alerts){ if(!a.anyEntity) continue;
-      let hit=a.trips.has(tkey)||a.routes.has(rkey); if(!hit&&a.stops.size){ for(const s of a.stops){ if(stops.has(s)||stations.has(s)){ hit=true; break } } }
-      if(!hit&&a.types.size&&!a.routes.size&&!a.stops.size&&!a.trips.size&&a.types.has(rtype)) hit=true;
-      if(hit&&(a.headerText||a.descriptionText)) out.push({headerText:a.headerText,descriptionText:a.descriptionText,url:a.url||undefined,cause:a.cause,effect:a.effect,impactPeriod:a.impactPeriod}) } }
-    return out };
-  rt.vehicleOf=function(feedId,tripId){ for(const p of per.values()){ if(p.feedId!==feedId) continue; const v=p.veh.get(feedId+'~'+tripId); if(v) return v } return null };
-  rt.vehicles=function(){ const out=[]; for(const p of per.values()) for(const v of p.veh.values()) out.push(v); return out };
-  rt.stats=function(){ const o={}; per.forEach((p,id)=>{ o[id]={at:p.at,ts:p.ts,counts:p.counts} }); return o };
-  return rt;
-}
-return {decodeFeed,create,PB};
-})();
-
-/* ===== Façade GTFS : sources, synchronisation, recherche, trajets ===== */
-const GTFS=(function(core,RT){
-'use strict';
-const INF=Infinity;
-let cfg={sources:[],proxy:'',rtInterval:20,addressSearch:true}, saveCfg=()=>{};
-const loaded=new Map();               // id source -> feed (données compactes)
-const status={feeds:{},rt:{},net:null,building:false,ready:false};
-const rtObj=RT.create({getNet:()=>core.NET});
-const listeners=new Set(); const emit=()=>{ listeners.forEach(f=>{ try{ f() }catch{} }) };
-const on=f=>{ listeners.add(f); return ()=>listeners.delete(f) };
-const sources=()=>cfg.sources||[];
-const statics=()=>sources().filter(s=>s.type==='static');
-const uid=()=>'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
-
-/* ---------- réseau (requêtes) ---------- */
-function reqOf(url,src){
-  let u=url, headers={};
-  String(src.headers||'').split(/\n/).forEach(l=>{ const i=l.indexOf(':'); if(i>0){ const k=l.slice(0,i).trim(), v=l.slice(i+1).trim(); if(k) headers[k]=v } });
-  if(cfg.proxy&&src.viaProxy!==false){ u=cfg.proxy.includes('{url}')?cfg.proxy.replace('{url}',encodeURIComponent(url)):cfg.proxy+encodeURIComponent(url) }
-  return {u,headers} }
-async function netFetch(url,src,o){
-  o=o||{}; const {u,headers}=reqOf(url,src||{}); const ctl=typeof AbortController!=='undefined'?new AbortController():null; const to=ctl?setTimeout(()=>ctl.abort(),o.timeout||30000):null;
-  try{ return await fetch(u,{headers,cache:'no-store',signal:ctl?ctl.signal:undefined,credentials:'omit'}) }
-  catch(e){ if(e&&e.name==='AbortError') throw new Error('Délai dépassé'); throw new Error('Connexion impossible (réseau ou CORS : voir l\'aide)') }
-  finally{ if(to) clearTimeout(to) } }
-function ghRaw(u){ try{ const x=new URL(u); if(x.hostname==='github.com'){ const m=/^\/([^/]+)\/([^/]+)\/(?:blob|raw)\/(.+)$/.exec(x.pathname); if(m) return 'https://raw.githubusercontent.com/'+m[1]+'/'+m[2]+'/'+m[3] } }catch{} return u }
-async function download(src,onP){
-  const r=await netFetch(ghRaw(src.url),src,{timeout:900000}); if(!r.ok) throw new Error('Serveur : HTTP '+r.status);
-  const len=+r.headers.get('content-length')||0;
-  if(!r.body||!r.body.getReader) return await r.blob();
-  const rd=r.body.getReader(), chunks=[]; let got=0;
-  for(;;){ const {value,done}=await rd.read(); if(done) break; chunks.push(value); got+=value.length; onP(len?Math.min(1,got/len):0,got) }
-  return new Blob(chunks) }
-
-/* ---------- analyse (Worker si possible) ---------- */
-function parseInWorker(blob,opts,onP){
-  const direct=()=>gtfsParserModule().parse(blob,opts,onP);
-  if(typeof Worker==='undefined'||typeof URL==='undefined'||!URL.createObjectURL) return direct();
-  return new Promise((ok,ko)=>{
-    let w,url; try{
-      const code='const gtfsParserModule='+gtfsParserModule.toString()+';onmessage=async e=>{try{const P=gtfsParserModule();const f=await P.parse(e.data.blob,e.data.opts,m=>postMessage({t:"p",m}));const tr=[f.st.stop.buffer,f.st.arr.buffer,f.st.dep.buffer,f.st.flag.buffer,f.shapes.pts.buffer,f.stops.lat.buffer,f.stops.lon.buffer];postMessage({t:"d",f},tr)}catch(x){postMessage({t:"e",m:String(x&&x.message||x)})}};';
-      url=URL.createObjectURL(new Blob([code],{type:'text/javascript'})); w=new Worker(url);
-    }catch{ return ok(direct()) }
-    w.onmessage=e=>{ const d=e.data; if(d.t==='p') onP(d.m); else if(d.t==='d'){ w.terminate(); URL.revokeObjectURL(url); ok(d.f) } else if(d.t==='e'){ w.terminate(); URL.revokeObjectURL(url); ko(new Error(d.m)) } };
-    w.onerror=e=>{ try{ w.terminate(); URL.revokeObjectURL(url) }catch{} direct().then(ok,ko) };
-    w.postMessage({blob,opts}); }) }
-
-/* ---------- construction du réseau ---------- */
-let rebuildTimer=null;
-function rebuild(){
-  const feeds=[]; for(const s of statics()){ if(s.enabled===false) continue; const f=loaded.get(s.id); if(f) feeds.push(f) }
-  if(!feeds.length){ core.NET=null; status.net=null; emit(); return }
-  status.building=true; emit();
-  try{ const net=core.buildNetwork(feeds); net.rt=rtObj; core.NET=net; status.net={stops:net.nStations,patterns:net.nP,trips:net.nT,feeds:feeds.length}; }
-  catch(e){ console.error(e); core.NET=null; status.net=null; status.netErr=String(e&&e.message||e) }
-  status.building=false; emit(); if(core.NET&&sources().some(s=>s.type==='rt'&&s.enabled!==false&&s.url)) refreshRT(true).catch(()=>{}); }
-function rebuildSoon(){ clearTimeout(rebuildTimer); rebuildTimer=setTimeout(rebuild,50) }
-function metaOf(f){ return {stops:f.stats.stops,routes:f.stats.routes,trips:f.stats.trips,stopTimes:f.stats.stopTimes,validFrom:f.validFrom,validTo:f.validTo,loadedAt:f.loadedAt,bytes:f.srcBytes,zone:f.zone,tz:f.tz} }
-
-/* ---------- sources statiques ---------- */
-async function syncBlob(id,blob){
-  const src=sources().find(s=>s.id===id); if(!src) throw new Error('Source inconnue');
-  const st=status.feeds[id]={state:'loading',stage:'parse',f:0}; emit();
-  try{
-    const feed=await parseInWorker(blob,{id,name:src.name,region:src.region||null,zone:src.zone&&src.zone.km>0?src.zone:null},m=>{ Object.assign(st,m); emit() });
-    if(!feed.stats.trips) throw new Error('Aucune course trouvée'+(feed.zone?' dans la zone choisie : agrandis le rayon':''));
-    st.stage='save'; st.f=1; emit();
-    await core.dbPut('feed:'+id,feed);
-    loaded.set(id,feed); src.syncedAt=Date.now(); saveCfg();
-    status.feeds[id]={state:'ok',meta:metaOf(feed)}; rebuild();
-  }catch(e){ status.feeds[id]={state:'error',err:String(e&&e.message||e),meta:loaded.get(id)?metaOf(loaded.get(id)):null}; emit(); throw e } }
-async function syncStatic(id){
-  const src=sources().find(s=>s.id===id); if(!src) return; if(!src.url) throw new Error('Adresse manquante');
-  const st=status.feeds[id]={state:'loading',stage:'download',f:0,meta:loaded.get(id)?metaOf(loaded.get(id)):null}; emit();
-  try{ const blob=await download(src,(f,b)=>{ st.f=f; st.bytes=b; emit() }); await syncBlob(id,blob) }
-  catch(e){ status.feeds[id]={state:'error',err:String(e&&e.message||e),meta:loaded.get(id)?metaOf(loaded.get(id)):null}; emit(); throw e } }
-async function removeStatic(id){ loaded.delete(id); delete status.feeds[id]; await core.dbDel('feed:'+id); rebuild() }
-async function wipe(){ const ks=await core.dbKeys(); for(const k of ks) await core.dbDel(k); loaded.clear(); status.feeds={}; rtObj.clear(); rebuild() }
-
-/* ---------- temps réel ---------- */
-const feedOfRT=s=>{ if(s.feed&&loaded.has(s.feed)) return s.feed; const f=statics().find(x=>x.enabled!==false&&loaded.has(x.id)); return f?f.id:null };
-async function refreshRT(force){
-  const now=Date.now(), list=sources().filter(s=>s.type==='rt'&&s.enabled!==false&&s.url);
-  await Promise.all(list.map(async s=>{ const st=status.rt[s.id]||(status.rt[s.id]={}); if(st.busy) return;
-    if(!force&&st.tryAt&&now-st.tryAt<Math.max(5,cfg.rtInterval||20)*800) return; st.busy=true; st.tryAt=now; emit();
-    try{ const fid=feedOfRT(s); if(!fid) throw new Error('Associe cette source à un flux horaires chargé');
-      const r=await netFetch(s.url,s,{timeout:20000}); if(!r.ok) throw new Error('Serveur : HTTP '+r.status);
-      const buf=new Uint8Array(await r.arrayBuffer()); if(!buf.length) throw new Error('Réponse vide');
-      if(buf[0]===0x7b||buf[0]===0x3c) throw new Error('Format non pris en charge : demande le flux protobuf (pas JSON/XML)');
-      const msg=RT.decodeFeed(buf); const c=rtObj.ingest(s,fid,msg); Object.assign(st,{ok:true,at:Date.now(),ts:msg.ts,counts:c,err:null});
-    }catch(e){ st.ok=false; st.err=String(e&&e.message||e) } finally{ st.busy=false } }));
-  emit(); }
-let rtTimer=null;
-function startRT(){ if(rtTimer||typeof setInterval==='undefined') return; const tick=()=>{ if(typeof document!=='undefined'&&document.hidden) return; if(sources().some(s=>s.type==='rt'&&s.enabled!==false&&s.url)) refreshRT(false) };
-  rtTimer=setInterval(tick,Math.max(5,cfg.rtInterval||20)*1000); if(typeof document!=='undefined') document.addEventListener('visibilitychange',()=>{ if(!document.hidden) tick() }); setTimeout(tick,1500) }
-function restartRT(){ if(rtTimer){ clearInterval(rtTimer); rtTimer=null } startRT() }
-async function freshRT(maxAgeMs,waitMs){ const list=sources().filter(s=>s.type==='rt'&&s.enabled!==false&&s.url); if(!list.length) return;
-  const stale=list.some(s=>{ const st=status.rt[s.id]; return !st||!st.tryAt||Date.now()-st.tryAt>maxAgeMs }); if(!stale) return;
-  await Promise.race([refreshRT(true),new Promise(r=>setTimeout(r,waitMs||4000))]) }
-
-/* ---------- initialisation ---------- */
-async function init(o){
-  cfg=o.cfg; saveCfg=o.save||(()=>{}); if(!cfg.sources) cfg.sources=[]; if(cfg.rtInterval==null) cfg.rtInterval=20; if(cfg.addressSearch==null) cfg.addressSearch=true; if(cfg.proxy==null) cfg.proxy='';
-  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist() }catch{}
-  for(const s of statics()){ try{ const f=await core.dbGet('feed:'+s.id); if(f&&f.v===1){ loaded.set(s.id,f); status.feeds[s.id]={state:'ok',meta:metaOf(f)} } }catch(e){ status.feeds[s.id]={state:'error',err:'Lecture locale impossible'} } }
-  rebuild(); status.ready=true; emit(); startRT();
-  setTimeout(()=>autoUpdate(),9000); }
-function autoUpdate(){
-  try{ if(typeof navigator!=='undefined'&&(navigator.onLine===false||(navigator.connection&&navigator.connection.saveData))) return }catch{}
-  for(const s of statics()){ if(s.enabled===false||!s.url||s.autoUpdate===false) continue; const hrs=s.updateHours||168; const age=Date.now()-(s.syncedAt||0);
-    const f=loaded.get(s.id); const expired=f&&f.validTo&&f.validTo<core.dateIntOf(Date.now()/1000);
-    if(!f||age>hrs*3600e3||expired){ syncStatic(s.id).catch(()=>{}) } } }
-
-/* ---------- géocodage ---------- */
-function nnames(net){ if(!net._nn){ net._nn=net.stName.map(n=>core.norm(n)) } return net._nn }
-function geocodeLocal(text,pos,max){
-  const net=core.NET; if(!net) return []; const q=core.norm(text); if(q.length<2) return []; const toks=q.split(' '), nn=nnames(net), out=[];
-  for(let i=0;i<net.nStations;i++){ const n=nn[i]; let sc=0; if(n===q) sc=100; else if(n.startsWith(q)) sc=90; else { const words=n.split(' '); if(toks.every(t=>words.some(w=>w.startsWith(t)))) sc=70; else if(n.includes(q)) sc=50 } if(!sc) continue;
-    const d=pos?core.km(pos.lat,pos.lon,net.stLat[i],net.stLon[i]):0; out.push({i,sc,d}) }
-  out.sort((a,b)=>b.sc-a.sc||a.d-b.d||net.stName[a.i].length-net.stName[b.i].length);
-  return out.slice(0,max||8).map(x=>({type:'STOP',id:net.stId[x.i],name:net.stName[x.i],lat:net.stLat[x.i],lon:net.stLon[x.i],areas:[{name:net.feeds[net.sFeed[net.stKids[x.i][0]]].name||'',default:true}],zip:'',_score:x.sc})) }
-async function geocodeRemote(text,pos){
-  const vb=pos?`&viewbox=${pos.lon-0.6},${pos.lat+0.5},${pos.lon+0.6},${pos.lat-0.5}`:'';
-  const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&accept-language=fr&q=${encodeURIComponent(text)}${vb}`); if(!r.ok) throw new Error('geocode'); const j=await r.json();
-  return j.map(x=>{ const a=x.address||{}, city=a.city||a.town||a.village||a.municipality||a.hamlet||a.suburb||'', road=a.road||a.pedestrian||a.footway||'';
-    const isAddr=x.addresstype==='house'||x.addresstype==='building'||x.category==='highway'||(x.category==='place'&&(x.type==='house'||x.type==='building'));
-    const base={lat:+x.lat,lon:+x.lon,areas:[{name:city,default:true}],zip:a.postcode||'',id:undefined};
-    if(isAddr&&road) return Object.assign(base,{type:'ADDRESS',name:road+(a.house_number?' '+a.house_number:''),street:road,houseNumber:a.house_number||''});
-    return Object.assign(base,{type:'PLACE',name:x.name||(x.display_name||'').split(',')[0],category:x.type||x.category||''}) }) }
-async function geocode(text,pos){
-  const local=geocodeLocal(text,pos,8); let remote=[];
-  if(cfg.addressSearch!==false&&String(text).trim().length>=3){ try{ remote=await geocodeRemote(text,pos) }catch{ if(!local.length) throw new Error('geocode') } }
-  const seen=new Set(local.map(x=>core.norm(x.name))); return local.concat(remote.filter(x=>!(x.type==='PLACE'&&seen.has(core.norm(x.name))))) }
-function stationsNear(lat,lon,radiusKm,max){ const net=core.NET; if(!net) return [];
-  return core.stationsNear(net,lat,lon,radiusKm,max).map(x=>({type:'STOP',id:net.stId[x.i],name:net.stName[x.i],lat:net.stLat[x.i],lon:net.stLon[x.i],km:x.km})) }
-function stationInfo(p){ const net=core.NET; if(!net) return null; const i=core.resolveStation(net,p); if(i<0) return null; return {type:'STOP',id:net.stId[i],name:net.stName[i],lat:net.stLat[i],lon:net.stLon[i]} }
-
-/* ---------- planification ---------- */
-function walkItinerary(from,to,tSec){
-  const d=core.km(from.lat,from.lon,to.lat,to.lon), sec=Math.max(30,core.walkSec(d)), dist=Math.round(d*1000*1.3);
-  const leg=core.walkLeg({lat:from.lat,lon:from.lon},{lat:to.lat,lon:to.lon},tSec,sec,dist,from.name||'START',to.name||'END'); leg.from.name=from.name||'START'; leg.to.name=to.name||'END';
-  return {duration:sec,startTime:leg.startTime,endTime:leg.endTime,transfers:0,legs:[leg]} }
-async function plan(o){
-  const net=core.NET; if(!net||!net.nStations) throw new Error('nodata');
-  await freshRT(15000,3500);
-  const NN=core.NET; if(NN!==net&&!NN) throw new Error('nodata');
-  const from={lat:+o.from.lat,lon:+o.from.lon,name:o.from.name}, to=o.to||{};
-  const N=o.numItineraries||10, win=(o.windowMin||90)*60; const t0=Math.floor((o.time||new Date()).getTime()/1000);
-  let cStart=t0, cEnd=0; const m=o.cursor&&/^([np]):(\d+)$/.exec(o.cursor); if(m){ if(m[1]==='n') cStart=+m[2]; else { cEnd=+m[2]; cStart=cEnd-win } } if(!cEnd) cEnd=cStart+win;
-  /* origine : arrêts à pied autour du point de départ */
-  const maxPre=o.maxPreSec||900, rad=Math.max(0.3,maxPre*1.2/1.3/1000); let near=core.stationsNear(net,from.lat,from.lon,rad,10); if(!near.length) near=core.stationsNear(net,from.lat,from.lon,1.6,6);
-  const originWalk=new Map(); for(const c of near){ for(const s of net.stKids[c.i]){ const d=core.km(from.lat,from.lon,net.sLat[s],net.sLon[s]); let w=core.walkSec(d); if(w<20) w=0; if(w<=Math.max(maxPre,core.walkSec(rad+0.2))) originWalk.set(s,w) } }
-  if(!originWalk.size) return {itineraries:[],direct:[],previousPageCursor:null,nextPageCursor:null};
-  /* destination */
-  const dIdx=to.type==='STOP'?core.resolveStation(net,to):-1; const strict=new Map(); if(dIdx>=0) for(const s of net.stKids[dIdx]) strict.set(s,0);
-  const hasXY=Number.isFinite(+to.lat)&&Number.isFinite(+to.lon);
-  const relaxed=new Map(); if(hasXY){ const mp=o.maxPostSec||600; for(const c of core.stationsNear(net,+to.lat,+to.lon,Math.max(0.2,mp*1.2/1.3/1000),8)) for(const s of net.stKids[c.i]){ const w=core.walkSec(core.km(+to.lat,+to.lon,net.sLat[s],net.sLon[s])); if(w<=mp+60) relaxed.set(s,w<20?0:w) } }
-  const dest=o.to&&hasXY?{lat:+to.lat,lon:+to.lon,name:to.name}:null;
-  const run=targets=>searchWindow(net,{originWalk,targets,from,dest,cStart,cEnd,N});
-  let list=[]; const order=o.relaxed?[relaxed,strict]:[strict,relaxed]; for(const tg of order){ if(tg.size&&!list.length) list=run(tg) }
-  const direct=hasXY&&core.km(from.lat,from.lon,+to.lat,+to.lon)<6?[walkItinerary(from,{lat:+to.lat,lon:+to.lon,name:to.name},Math.max(t0,Math.floor(Date.now()/1000)))]:[];
-  return {itineraries:list,direct,previousPageCursor:'p:'+cStart,nextPageCursor:'n:'+cEnd} }
-
-function stepDep(net,s){ const ds=core.dayStart(s.di), o=net.tOff[s.t], r=core.rtOf(net,s.t,s.di,ds); return ds+net.stD[o+s.posA]+(r?r.d[s.posA]:0) }
-function searchWindow(net,q){
-  const {originWalk,targets,from,dest,cStart,cEnd,N}=q; const found=[], seen=new Set(); let tq=cStart, it=0;
-  const hardEnd=cStart+86400;
-  while(it++<45&&found.length<N){
-    const origins=[]; for(const [s,w] of originWalk) origins.push([s,tq+w]);
-    const st=core.raptor(net,origins,targets,{maxK:5}); const res=[]; let bestSoFar=INF;
-    for(let k=1;k<st.arr.length;k++){ let bt=INF,bs=-1; for(const [s,post] of targets){ const a=st.arr[k][s]; if(a<INF&&st.pT[k][s]>0&&a+post<bt){ bt=a+post; bs=s } } if(bs<0||bt>=bestSoFar) continue; bestSoFar=bt; const bk=core.backtrack(st,k,bs); if(bk.steps.length) res.push({steps:bk.steps,origin:bk.origin,target:bs,post:targets.get(bs)}) }
-    if(!res.length) break;
-    let minFb=INF, minWalk=0; res.forEach(r=>{ const first=r.steps.find(x=>x.kind==='trip'); r.fb=stepDep(net,first); r.w0=originWalk.get(r.origin)||0; if(r.fb<minFb){ minFb=r.fb; minWalk=r.w0 } });
-    const limit=found.length?cEnd:hardEnd; if(minFb>=limit) break;
-    for(const r of res){ if(r.fb>=limit||r.fb<cStart-1) continue; const key=r.steps.filter(x=>x.kind==='trip').map(x=>x.t+':'+x.di+':'+x.posA).join('|'); if(seen.has(key)) continue; seen.add(key); if(found.length>=N) break;
-      found.push(buildItinerary(net,r,tq,from,dest,originWalk)) }
-    tq=Math.max(tq+60,minFb-minWalk+60); if(tq>=hardEnd) break;
-  }
-  found.sort((a,b)=>new Date(a._fb)-new Date(b._fb)); found.forEach(x=>{ delete x._fb }); return found }
-function buildItinerary(net,r,tq,from,dest,originWalk){
-  const legs=[]; const first=r.steps.find(x=>x.kind==='trip'); const w0=originWalk.get(r.origin)||0; const fbT=r.fb;
-  if(w0>0){ const start=Math.max(tq,fbT-w0-20); const pl=core.placeOfStop(net,r.origin); legs.push(core.walkLeg({lat:from.lat,lon:from.lon},{name:pl.name,lat:pl.lat,lon:pl.lon,stopId:pl.stopId,track:pl.track,scheduledTrack:pl.scheduledTrack},start,w0,Math.round(core.km(from.lat,from.lon,pl.lat,pl.lon)*1300),'START',pl.name)) }
-  let endT=0; let trips=0;
-  for(const s of r.steps){
-    if(s.kind==='trip'){ const leg=core.pickLeg(net,s.t,s.di,s.posA,s.posB); legs.push(leg); endT=+new Date(leg.endTime)/1000; trips++ }
-    else { const a=core.placeOfStop(net,s.from), b=core.placeOfStop(net,s.to); const dur=Math.max(30,s.sec-30); const dm=Math.round(core.km(a.lat,a.lon,b.lat,b.lon)*1300);
-      const wl=core.walkLeg({name:a.name,lat:a.lat,lon:a.lon,stopId:a.stopId,track:a.track,scheduledTrack:a.scheduledTrack},{name:b.name,lat:b.lat,lon:b.lon,stopId:b.stopId,track:b.track,scheduledTrack:b.scheduledTrack},endT,dur,dm,a.name,b.name); legs.push(wl); endT+=dur } }
-  if(r.post>0&&dest){ const lastS=core.placeOfStop(net,r.target); const dm=Math.round(core.km(lastS.lat,lastS.lon,dest.lat,dest.lon)*1300); legs.push(core.walkLeg({name:lastS.name,lat:lastS.lat,lon:lastS.lon,stopId:lastS.stopId},{lat:dest.lat,lon:dest.lon},endT,r.post,dm,lastS.name,dest.name||'END')); endT+=r.post }
-  const st=+new Date(legs[0].startTime)/1000;
-  return {duration:Math.round(endT-st),startTime:legs[0].startTime,endTime:core.iso(endT),transfers:Math.max(0,trips-1),legs,_fb:core.iso(r.fb)} }
-
-/* ---------- course, horaires d'un arrêt, véhicules ---------- */
-function tripLookup(net,fi){ let m=net.tripIdx[fi]; if(!m){ m=new Map(); const ids=net._feedsRaw[fi].trips.id, o=net.tOff0[fi]; for(let i=0;i<ids.length;i++) m.set(ids[i],o+i); net.tripIdx[fi]=m } return m }
-function findTrip(net,feedId,tripId){ const fi=net.feeds.findIndex(f=>f.id===feedId); if(fi<0) return -1; const g=tripLookup(net,fi).get(tripId); return g==null?-1:g }
-function parseKey(k){ const a=String(k).indexOf('~'), b=String(k).lastIndexOf('~'); if(a<0||b<=a) return null; return {feed:k.slice(0,a),trip:k.slice(a+1,b),di:+k.slice(b+1)} }
-function trip(key){
-  const net=core.NET; if(!net) return null; const p=parseKey(key); if(!p) return null; const t=findTrip(net,p.feed,p.trip); if(t<0) return null;
-  const n=net.tOff[t+1]-net.tOff[t]; const leg=core.pickLeg(net,t,p.di,0,n-1);
-  return {duration:leg.duration,startTime:leg.startTime,endTime:leg.endTime,transfers:0,legs:[leg]} }
-function stopTimes(o){
-  const net=core.NET; if(!net) return {stopTimes:[]};
-  let stops=[]; if(o.stopId){ const i=net.stAlias.get(String(o.stopId)); if(i!=null) stops=net.stKids[i] } else if(o.center){ for(const c of core.stationsNear(net,o.center[0],o.center[1],o.radius?o.radius/1000:0.1,6)) stops.push(...net.stKids[c.i]) }
-  const n=o.n||40, t=Math.floor((o.time||new Date()).getTime()/1000), arriveBy=!!o.arriveBy, out=[]; const d0=core.dateIntOf(t);
-  for(const s of stops){ for(let e=net.spOff[s];e<net.spOff[s+1];e++){ const pi=net.spPat[e], pos=net.spPos[e], trips=net.pTrips[pi];
-    for(const di of [core.prevDate(d0),d0,core.nextDate(d0)]){ const ds=core.dayStart(di), act=core.activeSet(net,di); let cnt=0;
-      for(let j=0;j<trips.length&&cnt<n;j++){ const tr=trips[j]; if(!act[net.tSvc[tr]]) continue; const oo=net.tOff[tr]; const sa=ds+net.stA[oo+pos], sd=ds+net.stD[oo+pos]; const ref=arriveBy?sa:sd; if(arriveBy?ref>t:ref<t) continue; cnt++;
-        const r=core.rtOf(net,tr,di,ds); out.push({tr,di,pos,ds,ref:ref+(r?(arriveBy?r.a[pos]:r.d[pos]):0),r}) } } } }
-  out.sort((a,b)=>arriveBy?b.ref-a.ref:a.ref-b.ref);
-  const res=out.slice(0,n).map(x=>{ const oo=net.tOff[x.tr], s=net.stS[oo+x.pos], at=x.r&&x.r.stopAt&&x.r.stopAt[x.pos]>=0?x.r.stopAt[x.pos]:null;
-    const place=core.placeOfStop(net,at!=null?at:s,{trackStop:at,arr:x.ds+net.stA[oo+x.pos]+(x.r?x.r.a[x.pos]:0),sarr:x.ds+net.stA[oo+x.pos],dep:x.ds+net.stD[oo+x.pos]+(x.r?x.r.d[x.pos]:0),sdep:x.ds+net.stD[oo+x.pos]});
-    const rt=net.tRoute[x.tr], sn=net.rShort[rt]||net.rLong[rt]||''; const raw=net._feedsRaw[net.tFeed[x.tr]], li=net.tLocal[x.tr];
-    return {place,mode:core.MODE_OF(net.rType[rt]),routeShortName:sn,displayName:sn,headsign:raw.trips.head[li]||'',tripId:core.tripKey(net,x.tr,x.di),realTime:!!(x.r&&x.r.has)} });
-  return {stopTimes:res} }
-/* segments de véhicules en circulation dans une zone (position estimée, ou GPS si flux VehiclePositions) */
-function vehiclesIn(box,t0ms,t1ms){
-  const net=core.NET; if(!net) return []; const now=Math.floor(((t0ms+t1ms)/2)/1000), d0=core.dateIntOf(now), out=[]; const pad=0.02;
-  const A=box.minLat-pad,B=box.maxLat+pad,C=box.minLon-pad,D=box.maxLon+pad;
-  for(let pi=0;pi<net.nP;pi++){ const bx=net.pBox; if(bx[pi*4+1]<A||bx[pi*4]>B||bx[pi*4+3]<C||bx[pi*4+2]>D) continue; const trips=net.pTrips[pi];
-    for(const di of [core.prevDate(d0),d0]){ const ds=core.dayStart(di), act=core.activeSet(net,di);
-      for(let j=0;j<trips.length;j++){ const t=trips[j]; if(!act[net.tSvc[t]]) continue; const o=net.tOff[t], n=net.tOff[t+1]-o; const first=ds+net.stD[o], last=ds+net.stA[o+n-1]; if(first>now+1800||last<now-1800) continue;
-        const r=core.rtOf(net,t,di,ds); if(r&&r.cancelled) continue; let seg=-1;
-        for(let p=0;p<n-1;p++){ const dep=ds+net.stD[o+p]+(r?r.d[p]:0), arr=ds+net.stA[o+p+1]+(r?r.a[p+1]:0); if(now>=dep-20&&now<=arr+20){ seg=p; break } }
-        if(seg<0) continue; const sa=net.stS[o+seg], sb=net.stS[o+seg+1];
-        const inBox=(la,lo)=>la>=box.minLat-pad&&la<=box.maxLat+pad&&lo>=box.minLon-pad&&lo<=box.maxLon+pad; if(!inBox(net.sLat[sa],net.sLon[sa])&&!inBox(net.sLat[sb],net.sLon[sb])) continue;
-        const dep=ds+net.stD[o+seg]+(r?r.d[seg]:0), arr=ds+net.stA[o+seg+1]+(r?r.a[seg+1]:0); const rt=net.tRoute[t], sn=net.rShort[rt]||net.rLong[rt]||''; const feedId=net.feeds[net.tFeed[t]].id, tid=net._feedsRaw[net.tFeed[t]].trips.id[net.tLocal[t]];
-        let pts=core.shapeSlice(net,t,seg,seg+1), depT=dep, live=!!(r&&r.has);
-        const vp=rtObj.vehicleOf(feedId,tid); if(vp&&Date.now()/1000-(vp.ts||0)<120){ const sl=core.shapeSlice(net,t,seg,seg+1); pts=[[vp.lat,vp.lon],...sl.slice(1)]; depT=now; live=true }
-        const pl=core.encPoly(pts.length>1?pts:[pts[0],[net.sLat[sb],net.sLon[sb]]]);
-        const ff=(s)=>({name:net.sName[s],lat:net.sLat[s],lon:net.sLon[s],stopId:net.stationOf[s]>=0?net.stId[net.stationOf[s]]:net.sId[s]});
-        out.push({trips:[{tripId:core.tripKey(net,t,di),routeShortName:sn,displayName:sn,mode:core.MODE_OF(net.rType[rt])}],mode:core.MODE_OF(net.rType[rt]),from:ff(sa),to:ff(sb),departure:core.iso(depT),arrival:core.iso(arr),scheduledArrival:core.iso(ds+net.stA[o+seg+1]),realTime:live,polyline:pl}) } } }
-  return out }
-function vehicleOf(tripKey){ const net=core.NET; const p=parseKey(tripKey); if(!net||!p) return null; const v=rtObj.vehicleOf(p.feed,p.trip); return v&&Date.now()/1000-(v.ts||0)<180?v:null }
-function hasRT(){ return rtObj.per.size>0 }
-
-/* ---------- état pour l'interface ---------- */
-async function storageInfo(){ try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); return {usage:e.usage||0,quota:e.quota||0} } }catch{} return null }
-function getStatus(){ return {feeds:status.feeds,rt:status.rt,net:status.net,building:status.building,ready:status.ready,netErr:status.netErr,rtStats:rtObj.stats()} }
-async function listRegions(blob){ return gtfsParserModule().listRegions(blob) }
-async function fetchPack(url,onP){ return download({url:url,viaProxy:true},onP||(()=>{})) }
-const api={init,on,listRegions,fetchPack,getStatus,uid,syncStatic,syncBlob,removeStatic,wipe,refreshRT,restartRT,startRT,freshRT,geocode,geocodeLocal,stationsNear,stationInfo,plan,walkItinerary,trip,stopTimes,vehiclesIn,vehicleOf,hasRT,storageInfo,rebuild,rebuildSoon,autoUpdate,
-  get netVersion(){ return core.NET?core.NET.v:0 }, get ready(){ return !!core.NET }, get hasData(){ return !!core.NET&&core.NET.nStations>0 }, _core:core, _rt:rtObj, _loaded:loaded};
-return api;
-})(GTFSCore,GTFSRT);
-
-</script>
-<script>
+ 
+const API = 'https://api.transitous.org/api';
+const PLAN_VERSIONS = ['v5','v4','v3','v2','v1'];
 
  
 const store = {
@@ -883,7 +93,8 @@ const store = {
 let S = {
   dests: store.get('dests',[]),
   tracked: store.get('tracked',[]),
-  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:63,blurV2:true,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[],gtfs:{sources:[],proxy:'',rtInterval:20,addressSearch:true}}, store.get('settings',{}))
+  cov: store.get('cov',{}),   // couverture Transitous (mise à jour automatique)
+  settings: Object.assign({theme:'dark',accent:'#e30613',glass:true,blur:63,blurV2:true,alpha:80,sat:100,logo:'ticket',wall:'charcoal',listPage:true,nearestOnly:true,smsOn:false,customLogos:[],customWalls:[]}, store.get('settings',{}))
 };
 if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='#e30613'; S.settings.accentRed=true; }  
 (()=>{const st=S.settings;if(st.blur===22&&st.alpha===55&&st.sat===180&&st.smsOn===true){st.blur=20;st.alpha=80;st.sat=100;st.smsOn=false;store.set('settings',S.settings)}})();
@@ -895,12 +106,6 @@ if(!S.settings.accentRed){ if(S.settings.accent==='#5ec26a') S.settings.accent='
 const customOf=(list,k)=>k&&k.startsWith('c:')?list.find(x=>'c:'+x.id===k):null;
 let pos = null, selDest = null, uploadTarget = null, lastJourneys = [];
 const save = () => { store.set('dests',S.dests); store.set('tracked',S.tracked); store.set('settings',S.settings); };
-/* ===== Sources GTFS / GTFS-RT : interface Paramètres ===== */
-const gtfsReady=GTFS.init({cfg:S.settings.gtfs,save:()=>save()}).catch(e=>console.error('gtfs init',e));
-(()=>{ // migration : les anciens identifiants d'arrêts (autre fournisseur) sont recalculés à partir du nom et des coordonnées
-  if(S.settings.gtfsMig) return; S.settings.gtfsMig=1;
-  [...S.dests,...S.tracked].forEach(d=>{ if(d&&d.nearStop) delete d.nearStop }); delete S.settings.cov; try{ localStorage.removeItem('bd_cov'); localStorage.removeItem('bd_planv') }catch{} save() })();
-
 
  
 const $ = s => document.querySelector(s);
@@ -1125,29 +330,58 @@ function locate(force){
 }
 
  
-async function geocode(text){ await gtfsReady; return GTFS.geocode(text,pos) }
+async function geocode(text){
+  const u = `${API}/v1/geocode?text=${encodeURIComponent(text)}&language=fr`+(pos?`&place=${pos.lat},${pos.lon}`:'');
+  const r = await fetch(u); if(!r.ok) throw new Error('geocode'); return r.json();
+}
+let planVersion=(()=>{try{return localStorage.getItem('bd_planv')}catch{return null}})();
 const placeOf=p=>p.type==='STOP'&&p.id?p.id:`${p.lat},${p.lon}`;
 /* Départ depuis une dalle : comme « Ma position », on part des coordonnées de la dalle pour que le trajet inclue la marche jusqu'à l'arrêt de départ. */
 const fromPlaceOf=p=>Number.isFinite(+p.lat)&&Number.isFinite(+p.lon)?`${p.lat},${p.lon}`:placeOf(p);
 async function plan(dest, time, cursor, from, quick){
   if(!from&&!pos) throw new Error('nopos');
-  await gtfsReady; if(!GTFS.hasData) throw new Error('nodata');
-  const P=(!from&&listPos)?listPos:pos;
-  const o=from&&Number.isFinite(+from.lat)&&Number.isFinite(+from.lon)?{lat:+from.lat,lon:+from.lon,name:from.name}:{lat:P.lat,lon:P.lon};
-  const strictStop=dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false;
-  return GTFS.plan({from:o,to:{type:dest.type,id:dest.id,lat:dest.lat,lon:dest.lon,name:dest.name},time:time||new Date(),cursor,numItineraries:quick?6:10,
-    maxPostSec:strictStop?600:900,relaxed:dest.type==='STOP'&&S.settings.nearestOnly===false});
+  const P=(!from&&listPos)?listPos:pos;    
+  const to = dest.type==='STOP' && dest.id ? dest.id : `${dest.lat},${dest.lon}`;
+   
+  let qs = `fromPlace=${encodeURIComponent(from?fromPlaceOf(from):P.lat+','+P.lon)}&toPlace=${encodeURIComponent(to)}&time=${encodeURIComponent((time||new Date()).toISOString())}`
+    +`&numItineraries=10&maxPreTransitTime=900&preTransitModes=WALK&searchWindow=5400&detailedTransfers=true&joinInterlinedLegs=false`;
+  if(dest.type==='STOP'&&dest.id&&S.settings.nearestOnly!==false) qs+=dest===selDest?.nearStop?`&maxPostTransitTime=0`:`&maxPostTransitTime=600`;    
+  if(cursor) qs+=`&pageCursor=${encodeURIComponent(cursor)}`;
+   
+  const tries=[...(planVersion?[planVersion]:[]),...PLAN_VERSIONS.filter(v=>v!==planVersion)];
+  const light=qs.replace('numItineraries=10','numItineraries=4').replace('searchWindow=5400','searchWindow=1800').replace('maxPreTransitTime=900','maxPreTransitTime=600');
+   
+   
+  const km0=dist(from||P,dest), maxTT=Math.round(Math.min(300,Math.max(60,40+km0*6)));
+  const fast=qs.replace('numItineraries=10','numItineraries=6').replace('searchWindow=5400','searchWindow=2700')+`&maxTransfers=4&maxTravelTime=${maxTT}`;
+  for(const q of (quick?[fast,qs,light]:[qs,light])) for(const v of tries){
+    try{ const r=await fetch(`${API}/${v}/plan?${q}`); if(r.ok){if(planVersion!==v){planVersion=v;try{localStorage.setItem('bd_planv',v)}catch{}}
+        const j=await r.json(); if(q===fast&&!cursor&&!(j.itineraries||[]).length) break;    
+        return j;}
+      if(r.status===404) continue; if(r.status>=400&&r.status<500&&q===light) break }catch(e){}
+  }
+  throw new Error('plan');
 }
-
-
-
+ 
+ 
+ 
 async function nearestStop(p){
-  if(!p||p.type==='STOP'||S.settings.nearestOnly===false) return p;
+  if(!p||p.type==='STOP'||S.settings.nearestOnly===false) return p;    
   if(p.nearStop&&p.nearStop.id) return p.nearStop;
-  await gtfsReady; if(!GTFS.hasData) return p;
+  const pick=list=>{ list=(list||[]).filter(x=>x&&x.lat!=null&&(x.stopId||x.id)); if(!list.length) return null;
+    list.sort((a,b)=>dist(p,a)-dist(p,b)); const st=list[0];
+    return {type:'STOP',id:st.stopId||st.id,name:st.name,lat:st.lat,lon:st.lon} };
   let found=null;
-  for(const r of [0.7,1.5,3]){            // ~700 m, puis 1,5 km, puis 3 km
-    const l=GTFS.stationsNear(p.lat,p.lon,r,1); if(l.length){ found={type:'STOP',id:l[0].id,name:l[0].name,lat:l[0].lat,lon:l[0].lon}; break }
+  for(const d of [0.007,0.015,0.03]){            // ~700 m, puis 1,5 km, puis 3 km
+    for(const v of ['v1','v5','v2']){
+      try{const r=await fetch(`${API}/${v}/map/stops?min=${p.lat+d},${p.lon-d*1.4}&max=${p.lat-d},${p.lon+d*1.4}`); if(!r.ok) continue;
+        found=pick(await r.json()); break}catch{}
+    }
+    if(found) break;
+  }
+  if(!found) for(const v of ['v1','v5']){
+    try{const r=await fetch(`${API}/${v}/reverse-geocode?place=${p.lat},${p.lon}&type=STOP`); if(!r.ok) continue;
+      found=pick((await r.json()).filter(x=>x.type==='STOP')); break}catch{}
   }
   if(found){ p.nearStop=found; const d=S.dests.find(x=>x.uid===p.uid); if(d&&d!==p) d.nearStop=found; save(); return found }
   return p;
@@ -1168,8 +402,12 @@ async function finalWalkFor(orig,stop){
   if(orig._fw&&orig._fw.key===key) return orig._fw;
   let coords=null, dur=null, distM=null;
   try{
-    const g=await Promise.race([walkRouteOSM([stop.lon,stop.lat],orig).catch(()=>null),new Promise(r=>setTimeout(()=>r(null),5000))]);
-    if(g&&g.length>1){ coords=g; let k=0; for(let i=1;i<g.length;i++) k+=kmDist(g[i-1],g[i]); distM=Math.round(k*1000); dur=Math.round(k/4.8*3600) }
+    for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+      const r=await fetch(`${API}/${v}/plan?fromPlace=${encodeURIComponent(stop.id)}&toPlace=${orig.lat},${orig.lon}&directModes=WALK&maxDirectTime=3600&numItineraries=1&detailedTransfers=true`);
+      if(!r.ok) continue; const d=await r.json();
+      const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
+      if(w){ coords=w.legs.flatMap(legCoords); dur=w.duration; distM=w.legs.reduce((a,l)=>a+(l.distance||0),0); w._legs=w.legs } break;
+    }
   }catch{}
   if(!coords){ const km=dist(stop,orig); coords=[[stop.lon,stop.lat],[orig.lon,orig.lat]]; dur=Math.round(km*1.3/4.8*3600); distM=Math.round(km*1300) }
   orig._fw={key,coords,dur:Math.max(60,dur||60),distM}; return orig._fw;
@@ -1186,6 +424,7 @@ function withFinalWalk(list,orig,stop,fw){
   });
 }
  
+(()=>{ const f0=window.fetch.bind(window); window.fetch=(u,o={})=>{ try{ if(typeof u==='string'&&u.startsWith(API)&&!o.signal&&window.AbortController){ const c=new AbortController(); const t=setTimeout(()=>c.abort(),15000); return f0(u,{...o,signal:c.signal}).finally(()=>clearTimeout(t)) } }catch(e){} return f0(u,o) } })();
 async function nextDepartures(dest,from,onMore){
   const origDest=dest;
   dest=await nearestStop(dest);
@@ -1213,9 +452,12 @@ async function walkOnlyFor(d,dest,from){
   const isW=x=>x&&x.legs&&x.legs.length&&x.legs.every(l=>l.mode==='WALK');
   if(dest.type!=='STOP'||!(S.settings.nearestOnly!==false)){ const w=(d.direct||[]).find(isW); if(w) return w }
   const P=from?null:(listPos||pos); if(!from&&!P) return null;
-  const a=from?{lat:+from.lat,lon:+from.lon,name:from.name}:P; if(!Number.isFinite(+dest.lat)||!Number.isFinite(+a.lat)) return null;
-  const w=GTFS.walkItinerary(a,{lat:+dest.lat,lon:+dest.lon,name:dest.name},Math.floor((planTime||new Date()).getTime()/1000));
-  return w.duration>7200?null:w;
+  const fp=from?placeOf(from):P.lat+','+P.lon, tp=dest.type==='STOP'&&dest.id?dest.id:`${dest.lat},${dest.lon}`;
+  for(const v of planVersion?[planVersion]:PLAN_VERSIONS){
+    try{ const r=await fetch(`${API}/${v}/plan?fromPlace=${encodeURIComponent(fp)}&toPlace=${encodeURIComponent(tp)}&directModes=WALK&maxDirectTime=7200&numItineraries=1&detailedTransfers=true&time=${encodeURIComponent((planTime||new Date()).toISOString())}`);
+      if(!r.ok) continue; const j=await r.json(); return (j.direct||[]).find(isW)||(j.itineraries||[]).find(isW)||null }catch(e){}
+  }
+  return null;
 }
 const itDur=it=>(new Date(it.endTime)-new Date(it.startTime))/1000;
 const slowerThanWalk=it=>!!(walkIt&&selDest?.type!=='TRIP'&&itDur(it)>=walkIt.duration);
@@ -1256,7 +498,7 @@ $('#q').addEventListener('input',e=>{
       let res=await geocode(v); if(pos) res=res.map(r=>({...r,_km:kmDist([r.lon,r.lat],[pos.lon,pos.lat])})).sort((a,b)=>a._km-b._km);    
       res=res.slice(0,10);
       if(!res.length){box.innerHTML='<div class="empty">Aucun résultat</div>';return}
-      box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${TYPE_ICON[r.type]||'📍'}</div><div style="flex:1"><div class="n">${esc(r.name)}${resDetail(r)?` <span class="nd">· ${esc(resDetail(r))}</span>`:''}</div><div class="a">${esc([String(r.zip||'').split(';')[0],...(r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2)].filter(Boolean).join(' ')||(r.type==='STOP'?'':r.type))}${r._km!=null?` · ${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(1)+' km'}`:''}</div></div><span>＋</span></div>`).join('');
+      box.innerHTML=res.map((r,i)=>`<div class="res" data-i="${i}"><div class="ic">${TYPE_ICON[r.type]||'📍'}</div><div style="flex:1"><div class="n">${esc(r.name)}${resDetail(r)?` <span class="nd">· ${esc(resDetail(r))}</span>`:''}</div><div class="a">${esc([String(r.zip||'').split(';')[0],...(r.areas||[]).filter(a=>a.default||a.matched).map(a=>a.name).slice(0,2)].filter(Boolean).join(' ')||r.type)}${r._km!=null?` · ${r._km<1?Math.round(r._km*1000)+' m':r._km.toFixed(1)+' km'}`:''}</div></div><span>＋</span></div>`).join('');
       box.querySelectorAll('.res').forEach(el=>el.onclick=()=>addDest(res[+el.dataset.i]));
     }catch{box.innerHTML='<div class="empty">Recherche indisponible</div>'}
   },300);
@@ -1416,9 +658,12 @@ function segPosNow(sg,now){
   return line.at(-1);
 }
 async function fetchTripItinerary(tripId){
-  await gtfsReady; try{ return GTFS.trip(tripId) }catch{ return null }
+  for(const v of ['v5','v4','v3','v2','v1']){
+    try{ const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(tripId)}`,{cache:'no-store'}); if(!r.ok) continue; const d=await r.json(); if(d&&d.legs) return d }catch{}
+  }
+  return null;
 }
-
+ 
 function myHeading(){
   const now=Date.now(), last=posHist.at(-1);
   if(last&&now-last.t<8000&&last.h!=null&&!isNaN(last.h)&&last.v>1) return last.h;
@@ -1438,8 +683,8 @@ async function locateMyTrip(){
   try{
     await freshPos(); if(!pos){ toast('Position indisponible'); return }
     const now=Date.now(), dd=0.004;
-    await gtfsReady; try{ await GTFS.freshRT(10000,3000) }catch{}
-    const segs=GTFS.hasData?GTFS.vehiclesIn({minLat:pos.lat-dd,maxLat:pos.lat+dd,minLon:pos.lon-dd*1.4,maxLon:pos.lon+dd*1.4},now-60000,now+60000):null;
+    const qs=`zoom=16&min=${pos.lat+dd},${pos.lon-dd*1.4}&max=${pos.lat-dd},${pos.lon+dd*1.4}&startTime=${new Date(now-60000).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
+    let segs=null; for(const v of ['v1','v2','v5']){ try{ const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(r.ok){ segs=await r.json(); break } }catch{} }
     if(!segs||!segs.length){ toast('Aucun véhicule détecté autour de toi'); return }
     toast('Analyse de ta direction…'); const myH=await waitHeading(6000);
     if(myH==null){ toast('Tu ne sembles pas te déplacer : impossible de déterminer ton transport'); return }
@@ -1503,7 +748,7 @@ async function loadJourneys(force){ lastListLoad=Date.now();
     if(!data.length){box.innerHTML='<div class="card glass empty">Aucun départ à proximité.</div>';return}
     setListTitle();
     renderJourneyList(); { const liveCandidates=lastJourneys.filter(it=>(it.legs||[]).some(l=>l.mode!=='WALK'&&l.tripId&&+new Date(l.startTime)<=Date.now()+30*60000&&+new Date(l.endTime)>Date.now()-30*60000)).slice(0,5); Promise.all(liveCandidates.map(liveRefreshIt)).then(r=>{ if(r.some(Boolean)&&gen===jGen) renderJourneyList() }) }    
-  }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML=e&&e.message==='nodata'?'<div class="card glass empty">Aucune donnée horaire.<br><button class="btn sm" style="margin-top:10px" onclick="goSettingsSources()">Ajouter une source GTFS</button></div>':'<div class="card glass empty">Impossible de calculer les trajets. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
+  }catch(e){ if(gen===jGen&&(first||!lastJourneys.length)) box.innerHTML='<div class="card glass empty">Impossible de joindre Transitous. Tire vers le bas ou appuie sur Maintenant pour réessayer.</div>'; }
   finally{ if(gen===jGen){ loading=false; $('#jrHead').classList.remove('busy'); if(box.querySelector(':scope > .spin')&&!lastJourneys.length) box.innerHTML='<div class="card glass empty">Aucun départ trouvé. Appuie sur Maintenant pour réessayer.</div>' } }
 }
 let shown=5;
@@ -1810,6 +1055,7 @@ function clearDataCache(){
   try{ for(const k of Object.keys(stopTrackMem)) delete stopTrackMem[k] }catch{}
   try{ for(const k of Object.keys(walkPersist)) delete walkPersist[k] }catch{}
   try{ osmWalkCache.clear(); osmAreas.length=0; walkPrefetched.clear(); osmCardTried.clear(); knownStopPlatforms.clear(); legWalkGeo.clear() }catch{}
+  try{ planVersion=null }catch{}
   try{ refreshColorsUI() }catch{}
   try{ if(mapIt&&$('#mapView')?.classList.contains('open')) drawItinerary(mapIt) }catch{}
   updateCacheInfo(); toast('Cache vidé');
@@ -2174,8 +1420,9 @@ async function measureLiveFix(trip,tripId,center){
    
   if(!center){ const k=kmOnTrip(trip,now); center=k!=null?pointAtKm(trip,k):null } if(!center) return null;
   const coords=[center], lons=[center[0]], lats=[center[1]], pad=.025;
-  for(const v of [1]){ try{
-    const segs=GTFS.vehiclesIn({minLat:Math.min(...lats)-pad,maxLat:Math.max(...lats)+pad,minLon:Math.min(...lons)-pad,maxLon:Math.max(...lons)+pad},now,now+60000);
+  const qs=`zoom=14&min=${Math.max(...lats)+pad},${Math.min(...lons)-pad}&max=${Math.min(...lats)-pad},${Math.max(...lons)+pad}&startTime=${new Date(now).toISOString()}&endTime=${new Date(now+60000).toISOString()}`;
+  for(const v of ['v1','v2','v5']){ try{
+    const r=await fetch(`${API}/${v}/map/trips?${qs}`); if(!r.ok) continue; const segs=await r.json();
     const seg=segs.find(x=>(x.trips||[]).some(t=>t.tripId===tripId)&&now>=+new Date(x.departure)-30000&&now<=+new Date(x.arrival)+30000); if(!seg) return null;
     const nm=String(seg.from?.name||''), sx=trip.stops.find(x=>x.name===nm)||trip.stops.reduce((b,x)=>kmDist([x.lon,x.lat],[seg.from.lon,seg.from.lat])<kmDist([b.lon,b.lat],[seg.from.lon,seg.from.lat])?x:b,trip.stops[0]);
     let off=(+new Date(seg.departure))-sx.d; if(Math.abs(off)>3*3600e3||Math.abs(off)<15000) off=0;
@@ -2567,7 +1814,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applySettin
 $('#accent').oninput=e=>{S.settings.accent=e.target.value;save();applySettings()};
 $('#glassOn').onchange=e=>{S.settings.glass=e.target.checked;save();applySettings()};
 ['blur','alpha','sat'].forEach(k=>$('#'+k).oninput=e=>{S.settings[k]=+e.target.value;save();applySettings()});
-function resetAll(){try{GTFS.wipe()}catch{} try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
+function resetAll(){try{Object.keys(localStorage).filter(k=>k.startsWith('bd_')).forEach(k=>localStorage.removeItem(k))}catch{}location.reload()}
 
  
 let mapDark=null;  
@@ -3043,9 +2290,11 @@ async function loadOsmPlatforms(it){
 /* Quais OSM pour les cartes de parcours : seulement pour les arrêts dont aucun quai n'est connu. */
 const osmCardTried=new Set(); let osmCardBusy=false;
 async function learnTracksFromStopTimes(st,l,atISO,isDep=true){
-  for(const v of [1]){
+  const q=(st.stopId?`stopId=${encodeURIComponent(st.stopId)}`:`center=${st.lat},${st.lon}&radius=100`)+(isDep?'':'&arriveBy=true');
+  for(const v of ['v1','v4','v5']){
     try{
-      const d=GTFS.stopTimes(st.stopId?{stopId:st.stopId,time:new Date(atISO),n:40,arriveBy:!isDep}:{center:[st.lat,st.lon],radius:100,time:new Date(atISO),n:40,arriveBy:!isDep}); let got=false;
+      const r=await fetch(`${API}/${v}/stoptimes?${q}&n=40&time=${atISO}`,{cache:'no-store'}); if(!r.ok)continue;
+      const d=await r.json(); let got=false;
       (d?.stopTimes||[]).forEach(x=>{ const pl=x.place; const tv=platformValue({track:pl?.scheduledTrack})||platformValue(pl); if(!tv)return;
         const lg={mode:x.mode,routeShortName:x.routeShortName||x.displayName,headsign:x.headsign,startTime:pl.scheduledDeparture||pl.departure||pl.scheduledArrival||pl.arrival};
         // même arrêt : mémorise pour cette ligne et direction ; même course : mémorise pour la course exacte
@@ -3126,7 +2375,7 @@ function learnItineraryTracks(it){ (it?.legs||[]).forEach(l=>{ if(l.mode==='WALK
   [l.from,...(l.intermediateStops||[]),l.to].forEach(st=>{ if(!st)return; const v=platformValue({track:st.scheduledTrack})||platformValue(st); if(v)rememberStopTrack(st,l,v) }) }) }
 function platformValue(st){for(const v of [st?.track,st?.platformCode,st?.platform,st?.scheduledTrack])if((typeof v==='string'||typeof v==='number')&&String(v).trim())return String(v).replace(/^(quai|voie)\s*/i,'').trim();return '';}
 /* Lettre / numéro du quai : OpenStreetMap d'abord. Le quai retenu est celui le plus proche de la position du quai
-   (fournie par le GTFS si connue, sinon de l'arrêt), à condition qu'il soit seul ou nettement plus proche que les autres. */
+   (fournie par Transitous si connue, sinon de l'arrêt), à condition qu'il soit seul ou nettement plus proche que les autres. */
 function osmPlatformLabel(st,leg){
  if(!st||!Number.isFinite(+st.lat)||!Number.isFinite(+st.lon))return '';
  const items=OSM_STOP_CACHE[nrmS(st.name)+'|'+(+st.lat).toFixed(5)+'|'+(+st.lon).toFixed(5)]?.items||[]; if(!items.length)return '';
@@ -3163,7 +2412,7 @@ function platformPos(st,leg){
  if(v&&items.length){ // quai OSM dont le numéro correspond à la voie connue (ex. « 7;8 » correspond à 7)
    const m2=items.filter(x=>String(x.label).replace(/^(quai|voie|platform|track)\s*/i,'').toLowerCase().split(/[;,\/\s]+/).includes(v)).map(x=>({...x,d:dist(st,x)*1000})).sort((a,b)=>a.d-b.d)[0];
    if(m2&&m2.d<=90)osmPos={lat:m2.lat,lon:m2.lon} }
- // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par le GTFS
+ // tous les transports : quai dessiné dans OpenStreetMap d'abord, sinon point du quai fourni par Transitous
  return osmPos||memPos;
 }
 /* Gare sans voie connue : la marche rejoint le début (montée) ou la fin (descente) de la ligne colorée du train, et non plus le point de la voie le plus proche de l'arrêt. */
@@ -3359,7 +2608,7 @@ function closeMap(){ clearOsmPlatformMarkers(); $('#mapView').classList.remove('
  
 const tripCache={};
  
-    
+let tripV=null;    
  
 function patchLegFromTrip(l,trip){
   if(!trip?.stops?.length) return false; const nm=x=>nrmS(x?.name); let ch=false;
@@ -3403,9 +2652,9 @@ async function liveRefreshIt(it){   // toutes les étapes d'un parcours, d'aprè
 async function refreshTripTimes(ft,trip){
   if(!trip||!ft?.tripId||Date.now()-(trip._t||0)<15000) return trip;    
   trip._t=Date.now();
-  for(const v of [1]){
-    try{ await GTFS.freshRT(15000,2500); const d=GTFS.trip(ft.tripId); if(!d) break;
-      const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
+  for(const v of tripV?[tripV,...['v5','v4','v3','v2','v1'].filter(x=>x!==tripV)]:['v5','v4','v3','v2','v1']){
+    try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`,{cache:'no-store'}); if(!r.ok) continue; tripV=v;
+      const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
       const fresh=[{arr:leg.startTime,dep:leg.startTime,cancelled:!!leg.from?.cancelled,track:platformValue(leg.from)},...(leg.intermediateStops||[]).map(s=>({arr:s.arrival||s.departure,dep:s.departure||s.arrival,cancelled:!!s.cancelled||(s.pickupType==='NOT_ALLOWED'&&s.dropoffType==='NOT_ALLOWED'),track:platformValue(s)})),{arr:leg.endTime,dep:leg.endTime,cancelled:!!leg.to?.cancelled,track:platformValue(leg.to)}];
       if(fresh.length===trip.stops.length) fresh.forEach((f,i)=>{ trip.stops[i].a=+new Date(f.arr); trip.stops[i].d=+new Date(f.dep); trip.stops[i].arr=f.arr; trip.stops[i].t=f.dep; if(!!trip.stops[i].cancelled!==!!f.cancelled) trip._cxChg=true; trip.stops[i].cancelled=f.cancelled; if(f.track) trip.stops[i].track=f.track }); if(trip._cxChg){ trip._cxChg=false; rerenderAlerts() }
       trip.rt=!!leg.realTime; break;
@@ -3426,7 +2675,7 @@ async function textReplStops(alerts,stops){
   const cx=stops.filter(x=>x.cancelled), c0=cx[0]; if(c0?.lat==null) return;
   const have=new Set(stops.map(x=>nrmS(x.name))), found=[];
   for(const n of [...cand].slice(0,6)){
-    let r=replTextCache.get(n); if(r===undefined){ try{ r=GTFS.geocodeLocal(n,{lat:c0.lat,lon:c0.lon},6) }catch{ r=[] } replTextCache.set(n,r) }
+    let r=replTextCache.get(n); if(r===undefined){ try{ const u=`${API}/v1/geocode?text=${encodeURIComponent(n)}&type=STOP&language=fr&place=${c0.lat},${c0.lon}`; const q=await fetch(u); r=q.ok?await q.json():[] }catch{ r=[] } replTextCache.set(n,r) }
     const best=(r||[]).filter(x=>x.lat!=null&&(!x.type||x.type==='STOP')).map(x=>({...x,km:kmDist([x.lon,x.lat],[c0.lon,c0.lat])})).filter(x=>x.km<1.5&&!have.has(nrmS(x.name))).sort((a,b)=>a.km-b.km)[0];
     if(best&&!found.some(f=>nrmS(f.name)===nrmS(best.name))) found.push(best) }
   if(!found.length) return;
@@ -3460,9 +2709,9 @@ async function loadTrip(ft){
   if(!ft) return null;
   if(ft.tripId&&tripCache[ft.tripId]!==undefined&&tripCache[ft.tripId]) return tripCache[ft.tripId];
   if(ft.tripId){
-    for(const v of [1]){
-      try{ const d=GTFS.trip(ft.tripId); if(!d) break;
-        const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
+    for(const v of ['v5','v4','v3','v2','v1']){
+      try{const r=await fetch(`${API}/${v}/trip?tripId=${encodeURIComponent(ft.tripId)}`); if(!r.ok) continue;
+        const d=await r.json(); const leg=(d.legs||[]).find(l=>l.mode!=='WALK'); if(!leg) break;
         const coords=legCoords(leg);
         const raw=[{...leg.from,arr:leg.startTime,dep:leg.startTime,sarr:leg.scheduledStartTime},...(leg.intermediateStops||[]).map(s=>({...s,arr:s.arrival||s.departure,dep:s.departure||s.arrival,sarr:s.scheduledArrival||s.scheduledDeparture})),{...leg.to,arr:leg.endTime,dep:leg.endTime,sarr:leg.scheduledEndTime}];
         const cum=[0]; for(let i=1;i<coords.length;i++) cum.push(cum[i-1]+kmDist(coords[i-1],coords[i]));
@@ -3932,8 +3181,19 @@ async function walkRouteOSM(me,stop){
   if(!res){ const els2=await osmWalkArea(me,stop,false); if(els2?.length) res=osmWalkGraph(els2,me,stop,true)||osmWalkGraph(els2,me,stop,false) }
   osmWalkCache.set(k,res); if(res) walkPersistSet(k,res); return res;
 }
-async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon ligne droite
-  try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),6000))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}
+async function walkRoute(me,stop){ // itinéraire piéton : trottoirs OpenStreetMap pour les trajets courts, sinon Transitous, sinon ligne droite
+  try{ const g=await Promise.race([walkRouteOSM(me,stop).catch(()=>null),new Promise(r=>setTimeout(()=>r('slow'),6000))]); if(g&&g!=='slow'&&g.length>1) return g }catch{}    
+  try{
+    for(const v of PLAN_VERSIONS){
+       
+      const to=stop.stopId?encodeURIComponent(stop.stopId):`${stop.lat},${stop.lon}`;
+      const r=await fetch(`${API}/${v}/plan?fromPlace=${me[1]},${me[0]}&toPlace=${to}&directModes=WALK&maxDirectTime=5400&numItineraries=1&detailedTransfers=true&pedestrianProfile=FOOT`);
+      if(!r.ok) continue; const d=await r.json();
+      const w=(d.direct||[]).find(x=>x.legs.every(l=>l.mode==='WALK'))||(d.itineraries||[]).find(x=>x.legs.every(l=>l.mode==='WALK'));
+      if(w){ drawStairs('walk',w.legs); return w.legs.flatMap(legCoords); }
+      break;
+    }
+  }catch{}
   return [me,[stop.lon,stop.lat]];
 }
 function onOrient(e){
@@ -3957,8 +3217,137 @@ function stopNav(){
 }
 
  
+const COVERAGE=[
+ ["🇨🇭 Suisse", "Genève, Lausanne, Berne, Zurich, Bâle, Lucerne, Lugano, Bienne, Sion, Neuchâtel, Fribourg, Saint-Gall, Winterthour et tout le réseau national", 0],
+ ["🇱🇮 Liechtenstein", "Vaduz, Schaan", 0],
+ ["🇫🇷 France", "Paris, Lyon, Marseille, Toulouse, Nice, Nantes, Strasbourg, Bordeaux, Lille, Grenoble, Annecy, Montpellier, Rennes et réseaux régionaux TER", 0],
+ ["🇩🇪 Allemagne", "Berlin, Hambourg, Munich, Cologne, Francfort, Stuttgart, Düsseldorf, Leipzig, Dresde, Hanovre, Karlsruhe et tout le réseau national", 0],
+ ["🇦🇹 Autriche", "Vienne, Graz, Linz, Salzbourg, Innsbruck, Wels, Steyr, Bregenz, Dornbirn, Feldkirch", 0],
+ ["🇮🇹 Italie", "Milan, Rome, Turin, Naples, Florence, Bologne, Venise, Gênes, Côme, Sienne, Pise, Livourne, Lucques, Arezzo", 0],
+ ["🇧🇪 Belgique", "Bruxelles, Anvers, Gand, Liège, Charleroi et réseau SNCB", 0],
+ ["🇳🇱 Pays-Bas", "Amsterdam, Rotterdam, La Haye, Utrecht, Eindhoven et tout le pays", 0],
+ ["🇱🇺 Luxembourg", "Luxembourg et tout le pays", 0],
+ ["🇲🇨 Monaco", "Monaco", 1],
+ ["🇦🇩 Andorre", "Andorre-la-Vieille", 0],
+ ["🇪🇸 Espagne", "Madrid, Barcelone, Valence, Séville, Bilbao, Saragosse, Palma de Majorque et réseau Renfe", 0],
+ ["🇵🇹 Portugal", "Lisbonne, Porto, Braga, Faro, Coimbra, Madère", 0],
+ ["🇬🇧 Royaume-Uni", "Londres, Manchester, Birmingham, Liverpool, Nottingham, Cardiff, Édimbourg, Glasgow", 0],
+ ["🇬🇬 Guernesey", "Sercq", 1],
+ ["🇮🇪 Irlande", "Dublin, Cork, Galway, Limerick, Waterford, Wexford", 0],
+ ["🇮🇸 Islande", "Reykjavík et région, Akureyri", 1],
+ ["🇬🇱 Groenland", "Réseau local", 1],
+ ["🇩🇰 Danemark", "Copenhague, Aarhus, Odense, Bornholm, Svendborg, Samsø, Fanø, Ærø", 0],
+ ["🇸🇪 Suède", "Stockholm, Göteborg, Malmö, Skåne, Gotland, Luleå, Kiruna", 0],
+ ["🇳🇴 Norvège", "Oslo, Bergen, Trondheim, Stavanger, Agder, Nordland", 0],
+ ["🇫🇮 Finlande", "Helsinki, Tampere, Turku, Oulu, Kuopio, Rovaniemi", 0],
+ ["🇪🇪 Estonie", "Tallinn, Tartu, Pärnu, Saaremaa, Viljandi", 0],
+ ["🇱🇻 Lettonie", "Riga, Daugavpils, Jelgava, Liepāja, Rēzekne", 0],
+ ["🇱🇹 Lituanie", "Vilnius, Kaunas, Klaipėda, Šiauliai, Panevėžys", 0],
+ ["🇵🇱 Pologne", "Varsovie, Cracovie, Łódź, Poznań, Wrocław, Gdańsk", 0],
+ ["🇨🇿 Tchéquie", "Prague, Brno, Ostrava, Plzeň, Olomouc, Liberec, České Budějovice", 0],
+ ["🇸🇰 Slovaquie", "Bratislava, Košice, Prešov, Žilina, Trenčín, Nitra", 0],
+ ["🇭🇺 Hongrie", "Budapest, Szeged, Debrecen, Győr, Nyíregyháza, Székesfehérvár", 0],
+ ["🇸🇮 Slovénie", "Ljubljana, Maribor, Koper, Nova Gorica, Novo Mesto, Ptuj", 0],
+ ["🇭🇷 Croatie", "Zagreb, Split, Rijeka, Osijek, Zadar, Dubrovnik", 0],
+ ["🇧🇦 Bosnie-Herzégovine", "Sarajevo, Mostar", 0],
+ ["🇷🇸 Serbie", "Belgrade, Novi Sad, Niš, Čačak, Pančevo", 1],
+ ["🇲🇪 Monténégro", "Podgorica", 1],
+ ["🇽🇰 Kosovo", "Réseau local", 1],
+ ["🇲🇰 Macédoine du Nord", "Skopje", 1],
+ ["🇦🇱 Albanie", "Tirana, Vlorë et cars interurbains", 0],
+ ["🇬🇷 Grèce", "Athènes, Thessalonique", 0],
+ ["🇨🇾 Chypre", "Réseau de bus", 1],
+ ["🇷🇴 Roumanie", "Bucarest, Cluj-Napoca, Iași, Craiova, Galați, Suceava, Alba Iulia", 0],
+ ["🇲🇩 Moldavie", "Chișinău, Ungheni", 1],
+ ["🇧🇬 Bulgarie", "Sofia, Plovdiv, Varna, Stara Zagora, Pleven et réseau BDZ", 0],
+ ["🇺🇦 Ukraine", "Kyiv, Lviv, Odessa, Ivano-Frankivsk", 1],
+ ["🇷🇺 Russie", "Moscou", 1],
+ ["🇹🇷 Turquie", "Istanbul, İzmir, Adana, Gaziantep, Erzurum", 1],
+ ["🇦🇲 Arménie", "Erevan et chemins de fer", 0],
+ ["🇬🇪 Géorgie", "Tbilissi", 1],
+ ["🇦🇿 Azerbaïdjan", "Bakou", 1],
+ ["🇮🇱 Israël", "Tel-Aviv, Jérusalem, Ramat Gan, Beer-Sheva, Eilat", 1],
+ ["🇦🇪 Émirats arabes unis", "Réseaux locaux", 1],
+ ["🇴🇲 Oman", "Tout le pays", 1],
+ ["🇲🇦 Maroc", "Réseau ferroviaire ONCF", 1],
+ ["🇩🇿 Algérie", "Réseau ferroviaire SNTF", 1],
+ ["🇹🇳 Tunisie", "Tunis, Sahel", 1],
+ ["🇪🇬 Égypte", "Le Caire", 1],
+ ["🇪🇹 Éthiopie", "Addis-Abeba", 1],
+ ["🇲🇱 Mali", "Bamako", 1],
+ ["🇨🇮 Côte d'Ivoire", "Abidjan (Abobo, Adjamé, Cocody, Yopougon, Treichville), Bingerville", 1],
+ ["🇬🇭 Ghana", "Réseaux locaux", 1],
+ ["🇳🇬 Nigeria", "Lagos", 1],
+ ["🇨🇲 Cameroun", "Bus et taxis collectifs", 1],
+ ["🇿🇦 Afrique du Sud", "Port Elizabeth (Algoa Bus)", 1],
+ ["🇮🇳 Inde", "Delhi, Bangalore, Hyderabad, Andhra Pradesh", 1],
+ ["🇱🇰 Sri Lanka", "Colombo (Lanka Metro Transit)", 1],
+ ["🇹🇭 Thaïlande", "Bangkok, Phuket, Krabi, Pattaya, Hua Hin", 1],
+ ["🇰🇭 Cambodge", "Phnom Penh", 1],
+ ["🇲🇾 Malaisie", "Kuala Lumpur, Penang, Kuantan", 1],
+ ["🇸🇬 Singapour", "Singapour", 1],
+ ["🇮🇩 Indonésie", "Jakarta", 1],
+ ["🇨🇳 Chine", "Réseaux partiels", 1],
+ ["🇭🇰 Hong Kong", "Hong Kong", 1],
+ ["🇹🇼 Taïwan", "Taipei, Kaohsiung, Taichung, Tainan, Hsinchu, Keelung", 1],
+ ["🇰🇷 Corée du Sud", "Séoul, Busan et réseau ferroviaire national", 0],
+ ["🇯🇵 Japon", "Tokyo, Osaka, Fukuoka, Hiroshima, Kumamoto, Kochi, Nagano", 0],
+ ["🇺🇸 États-Unis", "New York, Los Angeles, San Francisco, Chicago, Boston, Seattle, Portland, Washington, Phoenix, Denver, Dallas, Houston, Nashville", 0],
+ ["🇨🇦 Canada", "Montréal, Québec, Toronto, Ottawa, Vancouver, Calgary, Edmonton, Halifax, Winnipeg et VIA Rail", 0],
+ ["🇵🇷 Porto Rico", "Toute l'île", 1],
+ ["🇧🇲 Bermudes", "Hamilton", 0],
+ ["🇲🇽 Mexique", "Mexico, Oaxaca, Zamora", 1],
+ ["🇳🇮 Nicaragua", "Managua, Estelí", 1],
+ ["🇨🇷 Costa Rica", "Réseaux locaux", 1],
+ ["🇨🇴 Colombie", "Bogotá (TransMilenio)", 1],
+ ["🇻🇪 Venezuela", "Maracaibo", 1],
+ ["🇵🇪 Pérou", "Arequipa, Trujillo", 1],
+ ["🇧🇴 Bolivie", "La Paz, El Alto, Cochabamba", 0],
+ ["🇧🇷 Brésil", "São Paulo, Rio de Janeiro, Belo Horizonte, Porto Alegre, Recife, Fortaleza", 1],
+ ["🇨🇱 Chili", "Santiago", 1],
+ ["🇦🇷 Argentine", "Buenos Aires et Trenes Argentinos", 0],
+ ["🇺🇾 Uruguay", "Montevideo", 1],
+ ["🇦🇺 Australie", "Sydney, Melbourne, Brisbane, Perth, Adélaïde, Canberra, Hobart, Darwin, Newcastle, Cairns", 0],
+ ["🇳🇿 Nouvelle-Zélande", "Auckland, Wellington, Christchurch, Tauranga, Dunedin", 0]
+];    
+ 
+const COV_REPO='https://api.github.com/repos/public-transport/transitous/contents/feeds', COV_RAW='https://raw.githubusercontent.com/public-transport/transitous/main/feeds/';
+const ccFlag=cc=>/^[A-Z]{2}$/.test(cc)?String.fromCodePoint(...[...cc].map(c=>0x1F1E6+c.charCodeAt(0)-65)):'🌐';
+const ccName=cc=>{ try{ return new Intl.DisplayNames(['fr'],{type:'region'}).of(cc) }catch{ return cc } };
+const covKnown=()=>new Set([...COVERAGE.map(x=>[...x[0]].slice(0,2).join('')),...((S.cov?.codes)||[]).map(ccFlag)]);
+async function updateCoverage(force){
+  S.cov=S.cov||{}; if(!force&&S.cov.at&&Date.now()-S.cov.at<24*3600e3){ renderCovStat(); return }
+  try{
+    const r=await fetch(COV_REPO,{cache:'no-store'}); if(!r.ok) throw 0; const files=(await r.json()).filter(f=>/\.json$/.test(f.name));
+    const byCC={}; files.forEach(f=>{ const cc=f.name.replace(/\.json$/,'').split(/[-_]/)[0].toUpperCase(); if(/^[A-Z]{2}$/.test(cc)) (byCC[cc]=byCC[cc]||[]).push(f.name) });
+    const known=covKnown(), prevCodes=new Set(S.cov.codes||[]), added=[];
+    for(const cc of Object.keys(byCC)){
+      const isNewCountry=!known.has(ccFlag(cc));
+      const prevFiles=new Set((S.cov.files||{})[cc]||[]), newFiles=byCC[cc].filter(n=>S.cov.files&&!prevFiles.has(n));
+      if(!isNewCountry&&!newFiles.length) continue;
+      const names=[]; for(const fn of (isNewCountry?byCC[cc]:newFiles).slice(0,4)){ try{ const j=await (await fetch(COV_RAW+fn)).json();
+        (j.sources||[]).forEach(x=>{ const n=String(x.name||'').replace(/[-_]/g,' ').trim(); if(n&&names.length<8&&!names.includes(n)) names.push(n) }) }catch{} }
+      added.push({cc,flag:ccFlag(cc),name:ccName(cc),items:names,newCountry:isNewCountry});
+    }
+    S.cov={at:Date.now(),codes:Object.keys(byCC),files:byCC,added:added.length?added:(S.cov.added||[]),addedAt:added.length?Date.now():(S.cov.addedAt||null),extra:[...(S.cov.extra||[]).filter(e=>!added.some(a=>a.cc===e.cc)),...added.filter(a=>a.newCountry)]};
+    store.set('cov',S.cov); $('#countryList')&&($('#countryList').innerHTML='');
+  }catch{ S.cov.err=Date.now() }
+  renderCovStat();
+}
+function renderCovStat(){ const el=$('#covStat'); if(!el) return; const c=S.cov||{};
+  el.textContent=c.at?`Dernière mise à jour : ${new Date(c.at).toLocaleDateString('fr-CH',{day:'numeric',month:'short',year:'numeric'})} à ${hm(c.at)}${c.addedAt&&c.addedAt===c.at&&c.added?.length?` · ${c.added.length} ajout${c.added.length>1?'s':''}`:''}`:(c.err?'Mise à jour impossible pour le moment':'Mise à jour automatique…') }
+function showCovUpdate(){ const c=S.cov||{}, a=c.added||[];
+  let d=document.getElementById('alertDialog'); if(!d){ d=document.createElement('dialog'); d.id='alertDialog'; d.className='glass'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
+  d.innerHTML=`<div class="row between" style="margin-bottom:6px"><h2 style="margin:0;font-size:20px">Pays et villes ajoutés</h2><button class="btn ghost sm" type="button">Fermer</button></div><p class="muted" style="font-size:12px;margin:0 0 10px">${c.addedAt?'Dernière mise à jour avec des ajouts : '+new Date(c.addedAt).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+' à '+hm(c.addedAt):'Aucun ajout détecté depuis la première vérification.'}</p>
+    ${a.length?a.map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join(''):''}
+    <p class="muted" style="font-size:11px;margin-top:10px">Source : liste des données de Transitous, vérifiée automatiquement une fois par jour.</p>`;
+  d.querySelector('button').onclick=()=>d.close(); d.showModal?d.showModal():d.setAttribute('open','');
+}
+setTimeout(()=>updateCoverage(false),4000);
 function toggleInfo(on){
-  const v=$('#infoView'); if(on) $('#countryList').innerHTML=gtCoverageHTML();
+  const v=$('#infoView'); if(on&&!$('#countryList').innerHTML)
+    $('#countryList').innerHTML=`<p class="muted" style="font-size:12px;margin:4px 6px 8px">${COVERAGE.length+((S.cov?.extra)||[]).length} pays et territoires</p>${(()=>{ const c=S.cov||{}, n=(c.added||[]).length;
+      return `<div class="cov"><b>🔄 Mise à jour : ${c.at?new Date(c.at).toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})+' à '+hm(c.at):'pas encore effectuée'}</b><span>${n?`${n} ${n>1?'nouveaux ajouts':'nouvel ajout'}${c.addedAt?' (le '+new Date(c.addedAt).toLocaleDateString('fr-CH',{day:'numeric',month:'long'})+' à '+hm(c.addedAt)+')':''} : `+c.added.map(x=>x.flag+' '+esc(x.name)).join(', '):'Aucun nouvel ajout'}</span></div>` })()}`+COVERAGE.map(([c,t,n])=>`<div class="cov"><b>${c}</b><span>${t}</span></div>`).join('')+((S.cov?.extra)||[]).map(x=>`<div class="cov"><b>${x.flag} ${esc(x.name)}</b><span>${x.items.length?x.items.map(esc).join(', '):'Nouvelles sources'}</span></div>`).join('');    
   if(on) $('#smsCities').innerHTML=REGIONS.map(r=>`<div class="cov"><b>${esc(r.name)}</b><span>${r.sms.map(x=>esc(x.n)+(x.p!=null?' · ≈ CHF '+x.p.toFixed(2):'')).join(' — ')}</span></div>`).join('');
   v.classList.toggle('open',on); document.body.style.overflow=on?'hidden':'';
 }
@@ -4082,152 +3471,6 @@ function fitListGap(){ try{
 try{ const ro=new ResizeObserver(()=>requestAnimationFrame(fitListGap)); ['#timeBar','#listTop'].forEach(id=>{const n=$(id); if(n) ro.observe(n)}); new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#timeBar'),{attributes:true,attributeFilter:['style','class']}) }catch(e){}
 addEventListener('resize',()=>requestAnimationFrame(fitListGap));
 try{ new MutationObserver(()=>requestAnimationFrame(fitListGap)).observe($('#journeys'),{childList:true}) }catch(e){}
-const GT_STAGE={download:'Téléchargement',parse:'Analyse',stops:'Lecture des arrêts',trips:'Lecture des courses',stoptimes:'Lecture des horaires',compact:'Compactage',shapes:'Lecture des tracés',save:'Enregistrement local',done:'Terminé'};
-const gtDate=di=>di?new Date(Math.floor(di/10000),Math.floor(di/100)%100-1,di%100).toLocaleDateString('fr-CH',{day:'numeric',month:'short',year:'numeric'}):'?';
-const gtSize=b=>b<1048576?Math.max(1,Math.round(b/1024))+' Ko':b<1073741824?(b/1048576).toFixed(b<1.05e7?1:0)+' Mo':(b/1073741824).toFixed(1)+' Go';
-const gtNum=n=>Number(n||0).toLocaleString('fr-CH');
-const gtAgo=ts=>{ if(!ts) return ''; const s=Math.max(0,Math.round((Date.now()-ts)/1000)); return s<5?'à l\'instant':s<90?`il y a ${s} s`:s<5400?`il y a ${Math.round(s/60)} min`:s<172800?`il y a ${Math.round(s/3600)} h`:`il y a ${Math.round(s/86400)} j` };
-const gtSrc=id=>S.settings.gtfs.sources.find(s=>s.id===id);
-function gtToday(){ const d=new Date(); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate() }
-function gtStaticHTML(s){
-  const st=GTFS.getStatus().feeds[s.id]||{}, m=st.meta, off=s.enabled===false;
-  let line='';
-  if(st.state==='loading'){ const f=Math.round((st.f||0)*100); line=`<div class="gt-prog"><i style="width:${f}%"></i></div><div class="gt-line">${GT_STAGE[st.stage]||'…'}${st.stage==='download'&&st.bytes?' · '+gtSize(st.bytes):''}${st.f&&st.stage!=='save'?' · '+f+' %':''}</div>` }
-  else if(st.state==='error') line=`<div class="gt-line bad">⚠️ ${esc(st.err)}</div>`+(m?`<div class="gt-line">Données précédentes conservées · ${gtDate(m.validFrom)} → ${gtDate(m.validTo)}</div>`:'');
-  else if(m){ const exp=m.validTo&&m.validTo<gtToday(); line=`<div class="gt-line ${exp?'bad':''}">${exp?'⚠️ Horaires expirés':'✅ Prêt'} · ${gtDate(m.validFrom)} → ${gtDate(m.validTo)}</div><div class="gt-line">${gtNum(m.stops)} arrêts · ${gtNum(m.trips)} courses · ${gtNum(m.stopTimes)} horaires${m.bytes?' · archive '+gtSize(m.bytes):''}</div><div class="gt-line">Mis à jour ${gtAgo(m.loadedAt)}${m.zone?` · zone ${m.zone.km} km`:' · réseau complet'}</div>` }
-  else line='<div class="gt-line">Pas encore téléchargé</div>';
-  const busy=st.state==='loading';
-  return `<div class="gt-item${off?' off':''}" data-id="${esc(s.id)}"><div class="gt-head"><div><b>${esc(s.name||'Sans nom')}</b><div class="gt-url">${esc(s.url?s.url.replace(/^https?:\/\//,'').slice(0,60):'Fichier importé')}</div></div><label class="switch"><input type="checkbox" ${off?'':'checked'} onchange="gtToggle('${esc(s.id)}',this.checked)"><span></span></label></div>${line}
-    <div class="gt-btns"><button class="btn ghost sm" ${busy?'disabled':''} onclick="gtSync('${esc(s.id)}')">${s.url?'Mettre à jour':'Réimporter'}</button><button class="btn ghost sm" onclick="gtEdit('${esc(s.id)}')">Modifier</button><button class="btn ghost sm" onclick="gtRemove('${esc(s.id)}')">Supprimer</button></div></div>` }
-function gtRTHTML(s){
-  const st=GTFS.getStatus().rt[s.id]||{}, off=s.enabled===false; let line;
-  if(st.busy&&!st.at) line='<div class="gt-line">Connexion…</div>';
-  else if(st.ok===false) line=`<div class="gt-line bad">⚠️ ${esc(st.err)}</div>`+(st.at?`<div class="gt-line">Dernière réussite ${gtAgo(st.at)}</div>`:'');
-  else if(st.at){ const c=st.counts||{}; line=`<div class="gt-line">🟢 ${gtAgo(st.at)} · ${gtNum(c.trips)} retards · ${gtNum(c.vehicles)} véhicules · ${gtNum(c.alerts)} alertes</div>` }
-  else line='<div class="gt-line">En attente de la première lecture</div>';
-  const link=s.feed&&gtfsFeedName(s.feed);
-  return `<div class="gt-item${off?' off':''}" data-id="${esc(s.id)}"><div class="gt-head"><div><b>${esc(s.name||'Sans nom')}</b><div class="gt-url">${esc(s.url?s.url.replace(/^https?:\/\//,'').slice(0,60):'')}${link?' · '+esc(link):''}</div></div><label class="switch"><input type="checkbox" ${off?'':'checked'} onchange="gtToggle('${esc(s.id)}',this.checked)"><span></span></label></div>${line}
-    <div class="gt-btns"><button class="btn ghost sm" ${st.busy?'disabled':''} onclick="gtRTNow('${esc(s.id)}')">Actualiser</button><button class="btn ghost sm" onclick="gtEdit('${esc(s.id)}')">Modifier</button><button class="btn ghost sm" onclick="gtRemove('${esc(s.id)}')">Supprimer</button></div></div>` }
-const gtfsFeedName=id=>{ const s=gtSrc(id); return s?s.name:'' };
-function renderGtfsSources(){
-  const box=$('#gtfsBox'); if(!box) return; { const ae=document.activeElement; if(ae&&box.contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)&&ae.type!=='checkbox') return }
-  const g=S.settings.gtfs, stt=GTFS.getStatus(), sts=g.sources.filter(s=>s.type==='static'), rts=g.sources.filter(s=>s.type==='rt');
-  const net=stt.net; const sum=net?`<div class="gt-sum ok"><b>${gtNum(net.stops)}</b> arrêts en mémoire · ${gtNum(net.trips)} courses · ${stt.rtStats&&Object.keys(stt.rtStats).length?'temps réel actif':'horaires théoriques'}</div>`
-    :stt.building?'<div class="gt-sum">Préparation du réseau…</div>':`<div class="gt-sum warn">Aucune donnée horaire : ajoute une source GTFS pour calculer les trajets.</div>`;
-  box.innerHTML=sum+
-    `<div class="gt-sec">Horaires (GTFS)</div>${sts.map(gtStaticHTML).join('')||'<div class="gt-empty">Aucune source d\'horaires.</div>'}<div class="gt-btns"><button class="btn sm" onclick="gtEdit(null,'static')">＋ Horaires GTFS</button><button class="btn ghost sm" onclick="gtImportFile()">Importer un ZIP</button><button class="btn ghost sm" onclick="gtRegions()">Régions (GitHub)</button></div>`+
-    `<div class="gt-sec">Temps réel (GTFS-RT)</div>${rts.map(gtRTHTML).join('')||'<div class="gt-empty">Aucun flux temps réel : les horaires affichés sont théoriques.</div>'}<div class="gt-btns"><button class="btn sm" onclick="gtEdit(null,'rt')" ${sts.length?'':'disabled'}>＋ Flux GTFS-RT</button></div>`+
-    `<div class="gt-sec">Options</div>
-    <div class="set"><div><b>Temps réel</b><div class="muted gt-small">Lecture toutes les…</div></div><div class="seg" id="gtInt">${[10,20,30,60].map(v=>`<button data-v="${v}" class="${(g.rtInterval||20)===v?'on':''}">${v} s</button>`).join('')}</div></div>
-    <div class="set"><div><b>Recherche d'adresses en ligne</b><div class="muted gt-small">Adresses et lieux via OpenStreetMap (Nominatim). Désactivé : arrêts du GTFS seulement.</div></div><label class="switch"><input type="checkbox" id="gtAddr" ${g.addressSearch!==false?'checked':''}><span></span></label></div>
-    <div class="gt-fld"><label>Proxy CORS (facultatif)</label><input id="gtProxy" class="gt-in" placeholder="https://mon-proxy.exemple/?url={url}" value="${esc(g.proxy||'')}" autocapitalize="off" autocorrect="off" spellcheck="false"><div class="muted gt-small">Utile si un fournisseur refuse les requêtes depuis ce site. Le proxy voit les adresses et en-têtes envoyés, n'y mets que des flux publics ou des clés jetables.</div></div>
-    <div class="set"><div><b>Stockage local</b><div class="muted gt-small" id="gtStore">Calcul…</div></div><button class="btn ghost sm" onclick="gtWipe()">Tout effacer</button></div>
-    <details class="gt-help"><summary>Aide : formats, CORS, taille</summary><div class="muted gt-small">
-      <p><b>Horaires</b> : adresse d'une archive <code>.zip</code> GTFS (stops, trips, stop_times, calendar… ). Les données sont lues, compactées et gardées sur cet appareil : les horaires fonctionnent ensuite sans réseau.</p>
-      <p><b>Gros réseaux</b> : une archive nationale peut peser plusieurs centaines de Mo. Active « Limiter à une zone » : seuls les arrêts et courses du rayon choisi sont gardés (traitement plus rapide, stockage bien plus petit).</p>
-      <p><b>Temps réel</b> : flux GTFS-RT au format protobuf (TripUpdates, VehiclePositions et Alerts, séparés ou dans un même flux). Associe-le à la source d'horaires correspondante. Le JSON et le XML ne sont pas lus.</p>
-      <p><b>Clé API</b> : si le fournisseur en exige une, ajoute-la dans les en-têtes (par ex. <code>Authorization: Bearer …</code>) ou dans l'adresse.</p>
-      <p><b>CORS</b> : un navigateur ne lit que les serveurs qui l'autorisent. En cas d'erreur de connexion, utilise un proxy CORS ou importe le ZIP depuis tes fichiers (l'import n'a pas besoin de réseau). Les en-têtes personnalisés déclenchent aussi une vérification CORS côté serveur.</p></div></details>`;
-  $$('#gtInt button').forEach(b=>b.onclick=()=>{ g.rtInterval=+b.dataset.v; save(); GTFS.restartRT(); renderGtfsSources() });
-  const ad=$('#gtAddr'); if(ad) ad.onchange=()=>{ g.addressSearch=ad.checked; save() };
-  const px=$('#gtProxy'); if(px) px.onchange=()=>{ g.proxy=px.value.trim(); save(); toast(g.proxy?'Proxy enregistré':'Proxy retiré') };
-  GTFS.storageInfo().then(i=>{ const el=$('#gtStore'); if(!el) return;
-    el.textContent=i?`${gtSize(i.usage)} utilisés par l'app sur ${gtSize(i.quota)} disponibles`:'Indisponible' }); }
-const $$=s=>document.querySelectorAll(s);
-function gtToggle(id,on){ const s=gtSrc(id); if(!s) return; s.enabled=on; save(); if(s.type==='static') GTFS.rebuild(); else GTFS.refreshRT(true); renderGtfsSources() }
-async function gtSync(id){ const s=gtSrc(id); if(!s) return; if(!s.url){ gtImportFile(id); return } try{ await GTFS.syncStatic(id); toast('Horaires mis à jour') }catch(e){ toast('Échec : '+(e.message||e)) } }
-function gtRTNow(id){ GTFS.refreshRT(true).then(()=>{ const st=GTFS.getStatus().rt[id]; toast(st&&st.ok?'Temps réel actualisé':'Échec : '+(st&&st.err||'?')) }) }
-async function gtRemove(id){ const s=gtSrc(id); if(!s) return; if(!confirm(`Supprimer « ${s.name||'cette source'} » ?`+(s.type==='static'?' Les horaires gardés sur l\'appareil seront effacés.':''))) return;
-  S.settings.gtfs.sources=S.settings.gtfs.sources.filter(x=>x.id!==id); if(s.type==='static'){ S.settings.gtfs.sources.filter(x=>x.feed===id).forEach(x=>delete x.feed); await GTFS.removeStatic(id) } else GTFS._rt.drop(id); save(); renderGtfsSources() }
-async function gtWipe(){ if(!confirm('Effacer toutes les données horaires gardées sur cet appareil ? Les sources restent configurées et pourront être retéléchargées.')) return; await GTFS.wipe(); renderGtfsSources(); toast('Données effacées') }
-function gtZoneHTML(s){ const z=s&&s.zone||{km:40}; return `<div class="set"><div><b>Limiter à une zone</b><div class="muted gt-small">Recommandé pour les gros réseaux : garde seulement les arrêts du rayon choisi</div></div><label class="switch"><input type="checkbox" id="gtZ" ${s&&s.zone&&s.zone.km>0?'checked':''}><span></span></label></div><div id="gtZB" style="display:${s&&s.zone&&s.zone.km>0?'block':'none'}"><div class="gt-row"><div class="gt-fld"><label>Latitude</label><input id="gtLa" class="gt-in" inputmode="decimal" value="${z.lat!=null?z.lat:(pos?pos.lat.toFixed(4):'')}"></div><div class="gt-fld"><label>Longitude</label><input id="gtLo" class="gt-in" inputmode="decimal" value="${z.lon!=null?z.lon:(pos?pos.lon.toFixed(4):'')}"></div><div class="gt-fld" style="max-width:90px"><label>Rayon (km)</label><input id="gtKm" class="gt-in" inputmode="numeric" value="${z.km||40}"></div></div><button class="btn ghost sm" type="button" id="gtMe">Utiliser ma position</button></div>` }
-function gtZoneRead(d,toast_){ if(!d.querySelector('#gtZ').checked) return null; const v=k=>(d.querySelector(k)||{}).value; const la=parseFloat(v('#gtLa')), lo=parseFloat(v('#gtLo')), km=parseFloat(v('#gtKm')); if(!(la>=-90&&la<=90&&lo>=-180&&lo<=180&&km>0)){ toast('Zone invalide : latitude, longitude et rayon requis'); return false } return {lat:la,lon:lo,km} }
-function gtZoneWire(d){ const zc=d.querySelector('#gtZ'); if(zc) zc.onchange=()=>{ d.querySelector('#gtZB').style.display=zc.checked?'block':'none' };
-  const me=d.querySelector('#gtMe'); if(me) me.onclick=()=>{ const set=q=>{ d.querySelector('#gtLa').value=q.lat.toFixed(4); d.querySelector('#gtLo').value=q.lon.toFixed(4) }; if(pos) return set(pos); navigator.geolocation?.getCurrentPosition(r=>set({lat:r.coords.latitude,lon:r.coords.longitude}),()=>toast('Position indisponible')) } }
-function gtImportFile(forId){
-  const s=forId?gtSrc(forId):null;
-  let d=$('#gtDialog'); if(!d){ d=document.createElement('dialog'); d.id='gtDialog'; d.className='glass gt-dlg'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
-  d.innerHTML=`<div class="row between" style="margin-bottom:8px"><h2 style="margin:0;font-size:20px">Importer un ZIP GTFS</h2><button class="btn ghost sm" type="button" id="gtX">Fermer</button></div>
-    ${s?'':`<div class="gt-fld"><label>Nom</label><input id="gtN" class="gt-in" placeholder="Ex. Réseau urbain"></div>`}
-    <div class="gt-fld"><label>Fichier .zip</label><input id="gtFile" class="gt-in" type="file" accept=".zip,application/zip"></div>
-    ${gtZoneHTML(s)}
-    <div class="gt-btns" style="margin-top:12px"><button class="btn" type="button" id="gtOk">Importer</button></div>`;
-  d.querySelector('#gtX').onclick=()=>d.close(); gtZoneWire(d);
-  d.querySelector('#gtOk').onclick=async()=>{
-    const f=d.querySelector('#gtFile').files[0]; if(!f){ toast('Choisis un fichier ZIP'); return }
-    const z=gtZoneRead(d,toast); if(z===false) return;
-    let id=forId, o=s; if(!o){ id=GTFS.uid(); o={id,type:'static',name:((d.querySelector('#gtN').value||'').trim())||f.name.replace(/\.zip$/i,''),url:'',enabled:true,autoUpdate:false}; S.settings.gtfs.sources.push(o) }
-    if(z) o.zone=z; else delete o.zone; save(); d.close(); renderGtfsSources();
-    try{ await GTFS.syncBlob(id,f); toast('Horaires importés') }catch(e){ toast('Échec : '+(e.message||e)) } };
-  d.showModal?d.showModal():d.setAttribute('open','') }
-function gtRegions(){
-  let d=$('#gtDialog'); if(!d){ d=document.createElement('dialog'); d.id='gtDialog'; d.className='glass gt-dlg'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
-  let blob=null, regs=[], url='';
-  const draw=(msg)=>{
-    d.innerHTML=`<div class="row between" style="margin-bottom:8px"><h2 style="margin:0;font-size:20px">Régions depuis un ZIP</h2><button class="btn ghost sm" type="button" id="gtX">Fermer</button></div>
-    <div class="gt-fld"><label>Adresse du ZIP (GitHub ou autre)</label><input id="gtU" class="gt-in" value="${esc(url)}" placeholder="https://github.com/utilisateur/depot/blob/main/regions.zip" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"><div class="muted gt-small">Un lien github.com/…/blob/… est converti automatiquement en lien direct (raw.githubusercontent.com, compatible CORS). Le ZIP peut contenir un dossier GTFS par région, ou un .zip GTFS par région.</div></div>
-    <div class="gt-btns"><button class="btn ghost sm" type="button" id="gtAn">${blob?'Réanalyser':'Analyser'}</button></div>
-    <div id="gtMsg" class="muted gt-small" style="margin:8px 0">${msg||''}</div>
-    ${regs.length?`<div class="gt-sec">Régions trouvées</div><div id="gtRg">${regs.map((r,i)=>`<label class="set" style="cursor:pointer"><div><b>${esc(r.label||'(racine)')}</b><div class="muted gt-small">${r.kind==='zip'?'archive '+gtSize(r.bytes):'dossier · stop_times '+gtSize(r.bytes)}</div></div><span class="switch"><input type="checkbox" data-i="${i}"><span></span></span></label>`).join('')}</div>
-    ${gtZoneHTML(null)}
-    <div class="gt-btns" style="margin-top:12px"><button class="btn" type="button" id="gtOk">Importer la sélection</button></div>`:''}`;
-    d.querySelector('#gtX').onclick=()=>d.close(); if(regs.length) gtZoneWire(d);
-    d.querySelector('#gtAn').onclick=async()=>{
-      url=(d.querySelector('#gtU').value||'').trim(); if(!/^https?:\/\//i.test(url)){ toast('Adresse http(s) invalide'); return }
-      const m=d.querySelector('#gtMsg'); m.textContent='Téléchargement…'; d.querySelector('#gtAn').disabled=true;
-      try{ blob=await GTFS.fetchPack(url,(f,b)=>{ m.textContent='Téléchargement… '+Math.round(f*100)+' % · '+gtSize(b) }); regs=await GTFS.listRegions(blob); draw(regs.length?regs.length+' région(s) trouvée(s) · '+gtSize(blob.size):'Aucune région GTFS trouvée dans cette archive.') }
-      catch(e){ blob=null; regs=[]; draw('⚠️ '+(e.message||e)) } };
-    const ok=d.querySelector('#gtOk'); if(ok) ok.onclick=async()=>{
-      const sel=[...d.querySelectorAll('#gtRg input:checked')].map(x=>regs[+x.dataset.i]); if(!sel.length){ toast('Coche au moins une région'); return }
-      const z=gtZoneRead(d,toast); if(z===false) return; const g=S.settings.gtfs; const ids=[];
-      sel.forEach(r=>{ const o={id:GTFS.uid(),type:'static',name:r.label||'Région',url,region:r.kind==='zip'?{zip:r.zip}:{dir:r.dir},enabled:true,autoUpdate:false,updateHours:168}; if(z) o.zone=z; g.sources.push(o); ids.push(o.id) });
-      save(); d.close(); renderGtfsSources();
-      let okn=0; for(const id of ids){ try{ await GTFS.syncBlob(id,blob); okn++ }catch(e){ toast('Échec : '+(e.message||e)) } }
-      if(okn) toast(okn+' région(s) importée(s)') };
-  };
-  draw(); d.showModal?d.showModal():d.setAttribute('open','') }
-function gtEdit(id,type){
-  const s=id?gtSrc(id):null, t=s?s.type:type, g=S.settings.gtfs; const oldKey=s?JSON.stringify([s.url,s.zone||null]):null; const z=s&&s.zone||{km:40}; const statics=g.sources.filter(x=>x.type==='static');
-  let d=$('#gtDialog'); if(!d){ d=document.createElement('dialog'); d.id='gtDialog'; d.className='glass gt-dlg'; document.body.appendChild(d); d.addEventListener('click',e=>{ if(e.target===d) d.close() }) }
-  d.innerHTML=`<div class="row between" style="margin-bottom:8px"><h2 style="margin:0;font-size:20px">${s?'Modifier':'Ajouter'} · ${t==='static'?'horaires GTFS':'temps réel GTFS-RT'}</h2><button class="btn ghost sm" type="button" id="gtX">Fermer</button></div>
-    <div class="gt-fld"><label>Nom</label><input id="gtN" class="gt-in" value="${esc(s?s.name:'')}" placeholder="${t==='static'?'Ex. Réseau urbain':'Ex. Temps réel urbain'}"></div>
-    <div class="gt-fld"><label>Adresse ${t==='static'?'de l\'archive .zip':'du flux protobuf'}</label><input id="gtU" class="gt-in" value="${esc(s?s.url:'')}" placeholder="https://…" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-    ${t==='rt'?`<div class="gt-fld"><label>Associé aux horaires</label><select id="gtF" class="gt-in">${statics.map(x=>`<option value="${esc(x.id)}" ${s&&s.feed===x.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></div>`:
-    `<div class="set"><div><b>Limiter à une zone</b><div class="muted gt-small">Recommandé pour les gros réseaux : garde seulement les arrêts du rayon choisi</div></div><label class="switch"><input type="checkbox" id="gtZ" ${s&&s.zone&&s.zone.km>0?'checked':''}><span></span></label></div>
-    <div id="gtZB" style="display:${s&&s.zone&&s.zone.km>0?'block':'none'}"><div class="gt-row"><div class="gt-fld"><label>Latitude</label><input id="gtLa" class="gt-in" inputmode="decimal" value="${z.lat!=null?z.lat:(pos?pos.lat.toFixed(4):'')}"></div><div class="gt-fld"><label>Longitude</label><input id="gtLo" class="gt-in" inputmode="decimal" value="${z.lon!=null?z.lon:(pos?pos.lon.toFixed(4):'')}"></div><div class="gt-fld" style="max-width:90px"><label>Rayon (km)</label><input id="gtKm" class="gt-in" inputmode="numeric" value="${z.km||40}"></div></div><button class="btn ghost sm" type="button" id="gtMe">Utiliser ma position</button></div>
-    <div class="set"><div><b>Mise à jour automatique</b><div class="muted gt-small">Retélécharge quand les données sont trop anciennes ou expirées</div></div><label class="switch"><input type="checkbox" id="gtAu" ${!s||s.autoUpdate!==false?'checked':''}><span></span></label></div>
-    <div class="gt-fld"><label>Fréquence</label><select id="gtH" class="gt-in">${[[24,'Chaque jour'],[72,'Tous les 3 jours'],[168,'Chaque semaine'],[720,'Chaque mois']].map(([v,l])=>`<option value="${v}" ${((s&&s.updateHours)||168)===v?'selected':''}>${l}</option>`).join('')}</select></div>`}
-    <details class="gt-help" ${s&&s.headers?'open':''}><summary>En-têtes HTTP (clé API…)</summary><textarea id="gtHd" class="gt-in" rows="3" placeholder="Authorization: Bearer …" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(s?s.headers||'':'')}</textarea></details>
-    ${g.proxy?`<div class="set"><div><b>Passer par le proxy</b></div><label class="switch"><input type="checkbox" id="gtPx" ${!s||s.viaProxy!==false?'checked':''}><span></span></label></div>`:''}
-    <div class="gt-btns" style="margin-top:12px"><button class="btn" type="button" id="gtOk">${s?'Enregistrer':'Ajouter'}</button></div>`;
-  d.querySelector('#gtX').onclick=()=>d.close();
-  const zc=d.querySelector('#gtZ'); if(zc) zc.onchange=()=>{ d.querySelector('#gtZB').style.display=zc.checked?'block':'none' };
-  const me=d.querySelector('#gtMe'); if(me) me.onclick=()=>{ const set=p=>{ d.querySelector('#gtLa').value=p.lat.toFixed(4); d.querySelector('#gtLo').value=p.lon.toFixed(4) }; if(pos) return set(pos); navigator.geolocation?.getCurrentPosition(r=>set({lat:r.coords.latitude,lon:r.coords.longitude}),()=>toast('Position indisponible')) };
-  d.querySelector('#gtOk').onclick=async()=>{
-    const v=k=>(d.querySelector(k)||{}).value; const name=(v('#gtN')||'').trim(), url=(v('#gtU')||'').trim();
-    if(!url||!/^https?:\/\//i.test(url)){ toast('Adresse http(s) invalide'); return }
-    const o=s||{id:GTFS.uid(),type:t,enabled:true}; o.name=name||(t==='static'?'Horaires':'Temps réel'); o.url=url; o.headers=(v('#gtHd')||'').trim(); const px=d.querySelector('#gtPx'); o.viaProxy=px?px.checked:true;
-    if(t==='rt'){ o.feed=v('#gtF')||undefined } else {
-      o.autoUpdate=d.querySelector('#gtAu').checked; o.updateHours=+v('#gtH')||168;
-      if(d.querySelector('#gtZ').checked){ const la=parseFloat(v('#gtLa')), lo=parseFloat(v('#gtLo')), km=parseFloat(v('#gtKm')); if(!(la>=-90&&la<=90&&lo>=-180&&lo<=180&&km>0)){ toast('Zone invalide : latitude, longitude et rayon requis'); return } o.zone={lat:la,lon:lo,km} } else delete o.zone }
-    const isNew=!s; if(isNew) g.sources.push(o); save(); d.close(); renderGtfsSources();
-    if(t==='static'){ if(isNew||oldKey!==JSON.stringify([o.url,o.zone||null])){ try{ await GTFS.syncStatic(o.id); toast('Horaires prêts') }catch(e){ toast('Échec : '+(e.message||e)) } } }
-    else { GTFS.restartRT(); GTFS.refreshRT(true) } };
-  d.showModal?d.showModal():d.setAttribute('open','') }
-function goSettingsSources(){ try{ closeList(true) }catch{} document.querySelector('#tabs button[data-v="parametres"]')?.click(); setTimeout(()=>$('#gtfsBox')?.scrollIntoView({behavior:'smooth',block:'start'}),250) }
-(()=>{ let raf=0, last=0; GTFS.on(()=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; const now=Date.now(); if(now-last<250) { setTimeout(renderGtfsSources,250); return } last=now; renderGtfsSources();
-    // nouveau réseau : les arrêts les plus proches mémorisés sont recalculés ; la liste ouverte est rechargée
-    const v=GTFS._core.NET?GTFS._core.NET.v:0; if(v!==gtfsSeen){ gtfsSeen=v; if(v){ S.dests.forEach(d=>{ if(d.type!=='STOP') delete d.nearStop }); save(); S.dests.filter(d=>d.type!=='STOP').forEach(d=>nearestStop(d)); try{ if(selDest&&listOpen()&&!lastJourneys.length) loadJourneys(true) }catch{} } } }) }) })();
-let gtfsSeen=0;
-document.addEventListener('DOMContentLoaded',()=>{ renderGtfsSources(); document.querySelector('#tabs button[data-v="parametres"]')?.addEventListener('click',renderGtfsSources) });
-setTimeout(renderGtfsSources,800);
-setInterval(()=>{ if($('#v-parametres')?.classList.contains('active')&&!document.hidden) renderGtfsSources() },15000);
-
-function gtCoverageHTML(){ const st=GTFS.getStatus(), g=S.settings.gtfs;
-  const rows=g.sources.filter(s=>s.type==='static').map(s=>{ const m=(st.feeds[s.id]||{}).meta; return `<div class="cov"><b>${esc(s.name)}</b><span>${m?`${gtNum(m.stops)} arrêts · ${gtDate(m.validFrom)} → ${gtDate(m.validTo)}${m.zone?` · rayon ${m.zone.km} km autour de ${(+m.zone.lat).toFixed(2)}, ${(+m.zone.lon).toFixed(2)}`:' · réseau complet'}`:'Pas de données chargées'}</span></div>` });
-  const rt=g.sources.filter(s=>s.type==='rt').map(s=>{ const r=st.rt[s.id]||{}; return `<div class="cov"><b>${esc(s.name)} (temps réel)</b><span>${r.at?'Dernière lecture '+gtAgo(r.at):(r.err?esc(r.err):'Pas encore lu')}</span></div>` });
-  return rows.concat(rt).join('')||'<p class="muted" style="font-size:12px">Aucune source configurée. Ajoute-en dans Paramètres › Sources de données.</p>' }
-
 </script>
 
 <script>
